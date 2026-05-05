@@ -5,7 +5,7 @@ yarn.lock
 package-lock.json
 
 # Build
-lib/
+/lib/
 dist/
 build/
 
