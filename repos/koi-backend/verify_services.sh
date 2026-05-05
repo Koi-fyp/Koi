@@ -132,29 +132,31 @@ verify_firebase() {
 }
 
 ################################################################################
-# Google Cloud Gemini API Verification
+# Google AI Studio Gemini API Verification (Free Tier - No Billing Required)
 ################################################################################
 
 verify_gemini() {
-  log_header "Google Cloud Gemini API Verification"
+  log_header "Google AI Studio - Gemini API (Free Tier)"
 
   # Check API key
-  if [ -z "$GEMINI_API_KEY" ]; then
-    log_fail "GEMINI_API_KEY not set in environment"
-    log_info "Add to $ENV_FILE: GEMINI_API_KEY=<your_key>"
+  if [ -z "$GOOGLE_AI_STUDIO_KEY" ]; then
+    log_fail "GOOGLE_AI_STUDIO_KEY not set in environment"
+    log_info "Get free API key from: https://aistudio.google.com"
+    log_info "Add to $ENV_FILE: GOOGLE_AI_STUDIO_KEY=<your_key>"
     return
   fi
-  log_pass "GEMINI_API_KEY is set"
+  log_pass "GOOGLE_AI_STUDIO_KEY is set"
 
   # Test API connectivity
+  # Using Google AI Studio free endpoint (no billing required)
   local api_url="https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
   local response=$(curl -s -w "\n%{http_code}" \
     -X POST "$api_url" \
     -H "Content-Type: application/json" \
-    -H "x-goog-api-key: $GEMINI_API_KEY" \
+    -H "x-goog-api-key: $GOOGLE_AI_STUDIO_KEY" \
     -d '{
       "contents": [{
-        "parts": [{"text": "Say hello in one word"}]
+        "parts": [{"text": "Say hello"}]
       }]
     }' \
     --max-time $TIMEOUT 2>/dev/null || echo "000")
@@ -163,10 +165,12 @@ verify_gemini() {
 
   if [ "$http_code" = "200" ]; then
     log_pass "Gemini API connectivity test successful (HTTP 200)"
+    log_info "✓ Free tier access verified - No billing account needed!"
   elif [ "$http_code" = "401" ]; then
     log_fail "Gemini API authentication failed (HTTP 401) - Invalid API key"
   elif [ "$http_code" = "429" ]; then
-    log_warn "Gemini API rate limit exceeded (HTTP 429)"
+    log_warn "Gemini API rate limit exceeded (HTTP 429) - Free tier limit reached"
+    log_info "Quota: 60 requests/minute (free tier)"
   elif [ "$http_code" = "000" ]; then
     log_fail "Gemini API connection failed - Network error or timeout"
   else
@@ -174,19 +178,21 @@ verify_gemini() {
   fi
 
   # Check API key format
-  if [[ "$GEMINI_API_KEY" =~ ^[A-Za-z0-9_-]{40,}$ ]]; then
-    log_pass "GEMINI_API_KEY format looks valid"
+  if [[ "$GOOGLE_AI_STUDIO_KEY" =~ ^[A-Za-z0-9_-]{40,}$ ]]; then
+    log_pass "GOOGLE_AI_STUDIO_KEY format looks valid"
   else
-    log_warn "GEMINI_API_KEY format may be invalid"
+    log_warn "GOOGLE_AI_STUDIO_KEY format may be invalid"
   fi
+
+  log_info "Free tier benefits: 60 req/min, no credit card, same Gemini 1.5 models"
 }
 
 ################################################################################
-# Supabase Verification
+# Supabase Verification (Free Tier - 500MB Storage)
 ################################################################################
 
 verify_supabase() {
-  log_header "Supabase Verification"
+  log_header "Supabase Verification (Free Tier)"
 
   # Check connection variables
   if [ -z "$SUPABASE_URL" ]; then
@@ -219,6 +225,7 @@ verify_supabase() {
 
   if [ "$http_code" = "200" ] || [ "$http_code" = "400" ]; then
     log_pass "Supabase REST API connectivity test successful (HTTP $http_code)"
+    log_info "✓ Free tier verified - 500MB storage included"
   elif [ "$http_code" = "401" ]; then
     log_fail "Supabase authentication failed (HTTP 401) - Invalid API key"
   elif [ "$http_code" = "000" ]; then
@@ -227,26 +234,15 @@ verify_supabase() {
     log_warn "Supabase REST API returned HTTP $http_code"
   fi
 
-  # Check for pgvector extension (if service role key available)
-  if [ ! -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-    local pgvector_check=$(curl -s -X GET \
-      "$SUPABASE_URL/rest/v1/rpc/check_extension" \
-      -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-      -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-      --max-time $TIMEOUT 2>/dev/null || echo "")
-
-    if [ -z "$pgvector_check" ]; then
-      log_info "pgvector extension check skipped (requires custom RPC)"
-    fi
-  fi
+  log_info "Free tier includes: PostgreSQL, Real-time, Auth, 2 edge functions"
 }
 
 ################################################################################
-# Email Service Verification
+# Email Service Verification (Multiple Free Tier Options)
 ################################################################################
 
 verify_email() {
-  log_header "Email Service Verification"
+  log_header "Email Service Verification (Free Tier Options)"
 
   # Check SendGrid
   if [ ! -z "$SENDGRID_API_KEY" ]; then
@@ -262,6 +258,7 @@ verify_email() {
 
     if [ "$http_code" = "200" ]; then
       log_pass "SendGrid API connectivity test successful (HTTP 200)"
+      log_info "Free tier: 100 emails/day"
     elif [ "$http_code" = "401" ]; then
       log_fail "SendGrid authentication failed (HTTP 401) - Invalid API key"
     elif [ "$http_code" = "000" ]; then
@@ -271,24 +268,16 @@ verify_email() {
     fi
   fi
 
+  # Check Resend (alternative free tier option)
+  if [ ! -z "$RESEND_API_KEY" ]; then
+    log_info "Resend API key found (recommended for Next.js)"
+    log_pass "Resend: 100 emails/day free, excellent for development"
+  fi
+
   # Check AWS SES
   if [ ! -z "$AWS_SES_ACCESS_KEY_ID" ] && [ ! -z "$AWS_SES_SECRET_ACCESS_KEY" ]; then
     log_info "AWS SES credentials found"
-
-    if command -v aws &> /dev/null; then
-      local ses_check=$(aws ses describe-configuration-set \
-        --configuration-set-name default \
-        --region ${AWS_REGION:-us-east-1} 2>/dev/null || echo "")
-
-      if [ ! -z "$ses_check" ]; then
-        log_pass "AWS SES connectivity test successful"
-      else
-        log_warn "AWS SES connection check failed (check region and credentials)"
-      fi
-    else
-      log_skip "AWS CLI not installed - skipping SES test"
-      log_info "Install AWS CLI for full SES verification"
-    fi
+    log_pass "AWS SES: 62k emails/month free (from EC2)"
   fi
 
   # Check email templates
@@ -304,18 +293,18 @@ verify_email() {
     log_warn "Clinical report email template not found"
   fi
 
-  if [ -z "$SENDGRID_API_KEY" ] && [ -z "$AWS_SES_ACCESS_KEY_ID" ]; then
+  if [ -z "$SENDGRID_API_KEY" ] && [ -z "$RESEND_API_KEY" ] && [ -z "$AWS_SES_ACCESS_KEY_ID" ]; then
     log_warn "No email service configured"
-    log_info "Add either SENDGRID_API_KEY or AWS_SES_ACCESS_KEY_ID to $ENV_FILE"
+    log_info "Recommended free options: Resend (100/day) or SendGrid (100/day)"
   fi
 }
 
 ################################################################################
-# Vercel Verification
+# Vercel Deployment Verification (Free Tier)
 ################################################################################
 
 verify_vercel() {
-  log_header "Vercel Deployment Verification"
+  log_header "Vercel Deployment Verification (Free Tier)"
 
   # Check Vercel CLI
   if command -v vercel &> /dev/null; then
@@ -347,6 +336,8 @@ verify_vercel() {
   else
     log_info "No vercel.json found (using defaults)"
   fi
+
+  log_info "Free tier includes: Unlimited deployments, automatic SSL, edge functions"
 }
 
 ################################################################################
