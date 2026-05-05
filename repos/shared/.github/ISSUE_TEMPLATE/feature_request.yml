@@ -1,0 +1,108 @@
+name: Feature Request
+description: Request a new feature or enhancement
+title: "[FEATURE] "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please fill out the form below to help us understand your request.
+
+  - type: input
+    id: title
+    attributes:
+      label: Feature Title
+      description: Brief title of the feature request
+      placeholder: e.g., "Add biometric authentication"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Detailed description of the feature
+      placeholder: |
+        Describe the feature you'd like to see implemented.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem It Solves
+      description: What problem or use case does this feature address?
+      placeholder: |
+        Currently, users have to enter their password every time they log in.
+        This feature would allow them to authenticate with their fingerprint.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like to see this feature implemented?
+      placeholder: |
+        Add a biometric authentication option during login:
+        1. Check device for biometric capability
+        2. If available, show fingerprint option
+        3. Use device's native biometric API
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Other approaches you've considered
+      placeholder: |
+        - Magic links sent via email
+        - Two-factor authentication codes
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature?
+      options:
+        - Critical (high business value, frequently requested)
+        - High (important, would improve UX significantly)
+        - Medium (nice to have)
+        - Low (future consideration)
+    validations:
+      required: true
+
+  - type: input
+    id: affected_areas
+    attributes:
+      label: Affected Areas
+      description: Which parts of the app would this affect?
+      placeholder: "e.g., Authentication, User Profile, Settings"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How would we know this feature is complete?
+      placeholder: |
+        - [ ] Users can enable biometric authentication in settings
+        - [ ] Authentication succeeds with registered fingerprint
+        - [ ] Works on iOS 13+ and Android 9+
+        - [ ] Documentation is updated
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues for duplicates
+          required: true
+        - label: This feature aligns with the project goals
+          required: false
+        - label: I have provided sufficient context and examples
+          required: true

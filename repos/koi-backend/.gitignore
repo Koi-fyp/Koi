@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnp/
+yarn.lock
+package-lock.json
+
+# Build
+lib/
+dist/
+build/
+
+# Firebase
+.firebase/
+.firebaserc
+firebase-debug.log
+*.log
+
+# Environment
+.env
+.env.local
+.runtimeconfig.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output
+
+# Misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log

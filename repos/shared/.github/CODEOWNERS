@@ -1,0 +1,60 @@
+# CODEOWNERS template for KOI project repositories
+# Copy this to .github/CODEOWNERS in each repository and customize
+
+# Default owners for all files
+* @team-lead
+
+# Frontend/UI owners
+/src/components/ @frontend-team
+/src/pages/ @frontend-team
+/src/styles/ @frontend-team
+/public/ @frontend-team
+
+# Backend/API owners
+/api/ @backend-team
+/functions/src/routes/ @backend-team
+/functions/src/services/ @backend-team
+/src/services/ @backend-team
+
+# Database/Infrastructure owners
+/src/database/ @database-team
+/firebase/ @infrastructure-team
+/infra/ @infrastructure-team
+
+# Testing owners
+/test/ @qa-team
+/__tests__/ @qa-team
+/tests/ @qa-team
+
+# Documentation owners
+/docs/ @tech-writers
+README.md @team-lead
+CONTRIBUTING.md @team-lead
+
+# CI/CD and configuration owners
+/.github/ @devops-team
+/.github/workflows/ @devops-team
+Dockerfile @devops-team
+docker-compose.yml @devops-team
+.env.example @devops-team
+
+# Security and compliance
+security/ @security-team
+auth/ @security-team
+.env* @security-team
+
+# Version and release
+CHANGELOG.md @release-manager
+package.json @release-manager
+version.json @release-manager
+
+# Architecture and design decisions
+/architecture/ @architecture-team
+/design/ @design-team
+
+# Specific file types
+*.yml @devops-team
+*.yaml @devops-team
+*.tf @infrastructure-team
+Makefile @devops-team
+Dockerfile @devops-team

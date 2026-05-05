@@ -1,0 +1,37 @@
+# Flutter
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+Thumbs.db
+
+# Testing
+coverage/
+.coverage
+
+# Build outputs
+*.apk
+*.ipa
+*.dmg
+
+# Misc
+*.log
+.dart_analyzer_plugin
