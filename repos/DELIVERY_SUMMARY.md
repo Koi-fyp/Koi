@@ -169,7 +169,7 @@ chmod +x create_repos.sh setup_repo.sh
 
 2. **Run Setup**: Execute `master_setup.sh` to automate repository creation and configuration
 
-3. **Configure Branch Protection**: 
+3. **Configure Branch Protection**:
    - Follow `BRANCH_PROTECTION_RULES.md`
    - Apply rules to main and develop branches
 
@@ -305,10 +305,10 @@ All files are ready to be deployed to the `koi-fyp` organization repositories.
 
 The KOI Project GitHub organization infrastructure is **fully implemented** and ready for deployment.
 
-**Status**: ✅ COMPLETE  
-**Date**: May 5, 2026  
-**Deployment Location**: https://github.com/Ahsulem/Koi/tree/main/repos  
-**Organization Target**: koi-fyp  
+**Status**: ✅ COMPLETE
+**Date**: May 5, 2026
+**Deployment Location**: https://github.com/Ahsulem/Koi/tree/main/repos
+**Organization Target**: koi-fyp
 **Ready for**: Immediate deployment and team onboarding
 
 ---

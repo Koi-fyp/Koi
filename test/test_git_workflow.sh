@@ -13,7 +13,7 @@ ORG="koi-fyp"
 test_repo_exists() {
     local repo=$1
     echo -n "Test: Repository $repo exists... "
-    
+
     if gh repo view "$ORG/$repo" &> /dev/null; then
         echo "✓ PASS"
         return 0
@@ -27,9 +27,9 @@ test_repo_exists() {
 test_default_branch() {
     local repo=$1
     echo -n "Test: Default branch is 'main'... "
-    
+
     default_branch=$(gh repo view "$ORG/$repo" --json defaultBranchRef --jq '.defaultBranchRef.name')
-    
+
     if [ "$default_branch" = "main" ]; then
         echo "✓ PASS"
         return 0
@@ -43,7 +43,7 @@ test_default_branch() {
 test_develop_branch() {
     local repo=$1
     echo -n "Test: Develop branch exists... "
-    
+
     if gh api "repos/$ORG/$repo/branches/develop" &> /dev/null; then
         echo "✓ PASS"
         return 0
@@ -57,9 +57,9 @@ test_develop_branch() {
 test_branch_protection() {
     local repo=$1
     echo -n "Test: Branch protection on main... "
-    
+
     protection=$(gh api "repos/$ORG/$repo/branches/main/protection" 2>/dev/null)
-    
+
     if [ -n "$protection" ]; then
         # Check if PR reviews are required
         if echo "$protection" | jq -e '.required_pull_request_reviews' > /dev/null; then
@@ -67,7 +67,7 @@ test_branch_protection() {
             return 0
         fi
     fi
-    
+
     echo "✗ FAIL"
     return 1
 }
@@ -76,7 +76,7 @@ test_branch_protection() {
 test_gitignore_exists() {
     local repo=$1
     echo -n "Test: .gitignore exists... "
-    
+
     if gh api "repos/$ORG/$repo/contents/.gitignore" &> /dev/null; then
         echo "✓ PASS"
         return 0
@@ -90,9 +90,9 @@ test_gitignore_exists() {
 test_github_actions() {
     local repo=$1
     echo -n "Test: GitHub Actions configured... "
-    
+
     workflows=$(gh api "repos/$ORG/$repo/contents/.github/workflows" 2>/dev/null)
-    
+
     if [ -n "$workflows" ]; then
         echo "✓ PASS"
         return 0
@@ -105,7 +105,7 @@ test_github_actions() {
 # Test 7: Commit Message Validation
 test_commit_message_validation() {
     echo -n "Test: Commit message hook... "
-    
+
     if [ -f ".git/hooks/commit-msg" ] && [ -x ".git/hooks/commit-msg" ]; then
         echo "✓ PASS"
         return 0
@@ -118,21 +118,21 @@ test_commit_message_validation() {
 # Test 8: Valid Commit Message Format
 test_commit_format() {
     echo "Test: Commit message validation..."
-    
+
     valid_messages=(
         "feat(auth): add OAuth support"
         "fix(api): resolve timeout issue"
         "docs: update README"
         "chore: update dependencies"
     )
-    
+
     invalid_messages=(
         "added new feature"
         "Fixed bug"
         "Update docs"
         "WIP"
     )
-    
+
     # Test valid messages
     for msg in "${valid_messages[@]}"; do
         if ./.git/hooks/commit-msg <(echo "$msg") 2>/dev/null; then
@@ -142,7 +142,7 @@ test_commit_format() {
             return 1
         fi
     done
-    
+
     # Test invalid messages
     for msg in "${invalid_messages[@]}"; do
         if ! ./.git/hooks/commit-msg <(echo "$msg") 2>/dev/null; then
@@ -152,7 +152,7 @@ test_commit_format() {
             return 1
         fi
     done
-    
+
     echo "  ✓ All commit format tests passed"
     return 0
 }
@@ -169,25 +169,25 @@ PASSED_TESTS=0
 for repo in "${REPOS[@]}"; do
     echo "Repository: $repo"
     echo "----------"
-    
+
     test_repo_exists "$repo" && ((PASSED_TESTS++))
     ((TOTAL_TESTS++))
-    
+
     test_default_branch "$repo" && ((PASSED_TESTS++))
     ((TOTAL_TESTS++))
-    
+
     test_develop_branch "$repo" && ((PASSED_TESTS++))
     ((TOTAL_TESTS++))
-    
+
     test_branch_protection "$repo" && ((PASSED_TESTS++))
     ((TOTAL_TESTS++))
-    
+
     test_gitignore_exists "$repo" && ((PASSED_TESTS++))
     ((TOTAL_TESTS++))
-    
+
     test_github_actions "$repo" && ((PASSED_TESTS++))
     ((TOTAL_TESTS++))
-    
+
     echo ""
 done
 
