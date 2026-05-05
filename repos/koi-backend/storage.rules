@@ -1,0 +1,70 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns the file
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function to validate file size (10MB max)
+    function isValidFileSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Helper function to validate image type
+    function isValidImage() {
+      return request.resource.contentType.matches('image/(png|jpeg|jpg|gif|webp)');
+    }
+
+    // Helper function to validate document type
+    function isValidDocument() {
+      return request.resource.contentType.matches('(application/(pdf|msword|vnd\.openxmlformats-officedocument\..+)|text/plain)');
+    }
+
+    // User profile pictures
+    match /users/{userId}/profile-picture {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) && isValidImage() && isValidFileSize();
+      allow delete: if isOwner(userId);
+    }
+
+    // Diagnostic report files
+    match /diagnosticReports/{reportId} {
+      match /files/{fileName} {
+        allow read: if isAuthenticated() &&
+          (isOwner(request.resource.metadata.owner) ||
+           request.auth.token.role == 'admin');
+
+        allow write: if isAuthenticated() && isValidDocument() && isValidFileSize();
+        allow delete: if isAuthenticated();
+      }
+    }
+
+    // Medical images (scans, etc.)
+    match /medicalImages/{imageId} {
+      match /images/{fileName} {
+        allow read: if isAuthenticated();
+
+        allow write: if isAuthenticated() && isValidImage() && isValidFileSize();
+        allow delete: if isAuthenticated();
+      }
+    }
+
+    // Temporary uploads (client staging area)
+    match /temp/{userId}/uploads/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && isValidFileSize();
+      allow delete: if isOwner(userId);
+    }
+
+    // Deny all other access by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

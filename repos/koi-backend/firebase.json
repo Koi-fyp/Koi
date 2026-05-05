@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "koi-companion-fyp"
+  },
+  "targets": {},
+  "etags": {},
+  "cloudFunctions": [
+    {
+      "codebase": "default",
+      "source": "functions",
+      "runtime": "nodejs20"
+    }
+  ]
+}

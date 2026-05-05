@@ -1,0 +1,20 @@
+{
+  "projects": {
+    "default": "koi-companion-fyp",
+    "development": "koi-companion-fyp-dev",
+    "staging": "koi-companion-fyp-staging"
+  },
+  "targets": {
+    "koi-companion-fyp": {
+      "hosting": [
+        "koi-web"
+      ],
+      "functions": [
+        "koi-api"
+      ]
+    }
+  },
+  "etags": {},
+  "resourceApiVersion": "v1",
+  "firebaseVersion": "9.23.0"
+}

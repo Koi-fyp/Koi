@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // TEMPORARY DEVELOPMENT RULES - MUST BE SECURED IN PRODUCTION
+    // Phase 1: Implementation of proper security rules
+
+    // User profiles collection
+    match /users/{userId} {
+      // Allow read if user owns document or is admin
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Allow write if user owns document
+      allow write: if isOwner(userId);
+
+      // Subcollection: preferences
+      match /preferences/{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Diagnostic reports collection
+    match /diagnosticReports/{reportId} {
+      // Allow read if user owns or is admin
+      allow read: if isAuthenticated() &&
+        (isOwner(resource.data.userId) || isAdmin());
+
+      // Allow write if user owns
+      allow write: if isAuthenticated() && isOwner(resource.data.userId);
+
+      // Subcollection: analysis results
+      match /analysis/{document=**} {
+        allow read, write: if isAuthenticated() &&
+          isOwner(get(/databases/$(database)/documents/diagnosticReports/$(reportId)).data.userId);
+      }
+    }
+
+    // Public content (articles, resources)
+    match /publicContent/{document=**} {
+      // Allow read for everyone
+      allow read: if true;
+
+      // Allow write only for admins
+      allow write: if isAdmin();
+    }
+
+    // Analytics collection (anonymized)
+    match /analytics/{document=**} {
+      // Allow write for authenticated users only
+      allow write: if isAuthenticated();
+
+      // Allow read only for admins
+      allow read: if isAdmin();
+    }
+
+    // Deny all other access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
