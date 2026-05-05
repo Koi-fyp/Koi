@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter doctor *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(ssh -T git@github.com -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes)",
+      "Bash(echo \"SSH_EXIT:$?\")",
+      "Bash(command -v gh)",
+      "Bash(gh --version)"
+    ]
+  }
+}

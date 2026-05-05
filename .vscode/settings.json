@@ -1,0 +1,212 @@
+{
+  // ==========================================================================
+  // KOI — VS Code Workspace Settings
+  // Covers: Flutter/Dart, Next.js/TypeScript, Firebase, general editor config
+  // ==========================================================================
+
+  // --------------------------------------------------------------------------
+  // EDITOR — universal
+  // --------------------------------------------------------------------------
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.rulers": [80, 120],
+  "editor.wordWrap": "off",
+  "editor.minimap.enabled": false,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "editor.inlineSuggest.enabled": true,
+  "editor.linkedEditing": true,
+
+  // --------------------------------------------------------------------------
+  // FILES
+  // --------------------------------------------------------------------------
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.eol": "\n",
+  "files.exclude": {
+    "**/.dart_tool": true,
+    "**/.flutter-plugins": true,
+    "**/.flutter-plugins-dependencies": true,
+    "**/build": false,
+    "**/.packages": true,
+    "**/.pub-cache": true,
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/coverage": false,
+    "**/*.g.dart": false,
+    "**/*.freezed.dart": false
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.dart_tool": true,
+    "**/build": true,
+    "**/.next": true,
+    "**/coverage": true
+  },
+
+  // --------------------------------------------------------------------------
+  // DART & FLUTTER
+  // --------------------------------------------------------------------------
+  "[dart]": {
+    "editor.defaultFormatter": "Dart-Code.dart-code",
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.selectionHighlight": false,
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "editor.tabSize": 2,
+    "editor.wordBasedSuggestions": "off"
+  },
+  "dart.flutterSdkPath": null,
+  "dart.lineLength": 80,
+  "dart.showDartDeveloperLogs": true,
+  "dart.openDevTools": "flutter",
+  "dart.debugExternalPackageLibraries": false,
+  "dart.debugSdkLibraries": false,
+  "dart.enableSdkFormatter": true,
+  "dart.hotReloadOnSave": "all",
+  "dart.closingLabels": true,
+  "dart.previewFlutterUiGuides": true,
+  "dart.previewFlutterUiGuidesCustomTracking": true,
+  "dart.analysisExcludedFolders": [
+    "${env:HOME}/.pub-cache",
+    "${env:HOME}/flutter"
+  ],
+
+  // --------------------------------------------------------------------------
+  // TYPESCRIPT & JAVASCRIPT  (Next.js web layer)
+  // --------------------------------------------------------------------------
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.suggest.autoImports": true,
+  "javascript.suggest.autoImports": true,
+
+  // --------------------------------------------------------------------------
+  // ESLINT
+  // --------------------------------------------------------------------------
+  "eslint.enable": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "eslint.run": "onSave",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "never"
+  },
+
+  // --------------------------------------------------------------------------
+  // PRETTIER
+  // --------------------------------------------------------------------------
+  "prettier.requireConfig": true,
+  "prettier.singleQuote": true,
+  "prettier.semi": true,
+  "prettier.trailingComma": "es5",
+  "prettier.printWidth": 80,
+
+  // --------------------------------------------------------------------------
+  // JSON  (Firebase rules, pubspec, package.json, etc.)
+  // --------------------------------------------------------------------------
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+
+  // --------------------------------------------------------------------------
+  // YAML  (GitHub Actions, Firebase configs)
+  // --------------------------------------------------------------------------
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2
+  },
+
+  // --------------------------------------------------------------------------
+  // SHELL SCRIPTS
+  // --------------------------------------------------------------------------
+  "[shellscript]": {
+    "editor.formatOnSave": false
+  },
+  "shellcheck.enable": true,
+
+  // --------------------------------------------------------------------------
+  // MARKDOWN
+  // --------------------------------------------------------------------------
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // GIT / SOURCE CONTROL
+  // --------------------------------------------------------------------------
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": false,
+  "gitlens.hovers.currentLine.over": "line",
+  "gitlens.currentLine.enabled": true,
+  "gitlens.codeLens.enabled": false,
+
+  // --------------------------------------------------------------------------
+  // TERMINAL
+  // --------------------------------------------------------------------------
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "terminal.integrated.env.osx": {
+    "PATH": "${env:HOME}/flutter/bin:${env:PATH}"
+  },
+  "terminal.integrated.env.linux": {
+    "PATH": "${env:HOME}/flutter/bin:${env:PATH}"
+  },
+
+  // --------------------------------------------------------------------------
+  // TESTING
+  // --------------------------------------------------------------------------
+  "dart.runPubGetOnPubspecChanges": "prompt",
+  "testing.openTesting": "openOnTestStart",
+
+  // --------------------------------------------------------------------------
+  // EMMET  (Next.js JSX support)
+  // --------------------------------------------------------------------------
+  "emmet.includeLanguages": {
+    "javascript": "javascriptreact",
+    "typescript": "typescriptreact"
+  },
+
+  // --------------------------------------------------------------------------
+  // WORKSPACE-LEVEL EXTENSION SUGGESTIONS
+  // --------------------------------------------------------------------------
+  "extensions.ignoreRecommendations": false
+}

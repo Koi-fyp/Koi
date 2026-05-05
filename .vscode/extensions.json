@@ -1,0 +1,78 @@
+{
+  // ==========================================================================
+  // KOI — Recommended VS Code Extensions
+  //
+  // VS Code will prompt team members to install these when they open the
+  // workspace. Extensions marked (REQUIRED) block development if missing;
+  // those marked (RECOMMENDED) improve DX but are not strictly necessary.
+  // ==========================================================================
+  "recommendations": [
+
+    // -------------------------------------------------------------------------
+    // FLUTTER / DART  (REQUIRED)
+    // -------------------------------------------------------------------------
+    "Dart-Code.dart-code",       // Dart language support, formatter, debugger
+    "Dart-Code.flutter",         // Flutter-specific tooling, hot reload, DevTools
+
+    // -------------------------------------------------------------------------
+    // TYPESCRIPT / NEXT.JS  (REQUIRED)
+    // -------------------------------------------------------------------------
+    "dbaeumer.vscode-eslint",          // ESLint integration — lint on save
+    "esbenp.prettier-vscode",          // Prettier formatter for TS/JS/JSON/CSS
+    "ms-vscode.vscode-typescript-next", // Latest TypeScript language server
+
+    // -------------------------------------------------------------------------
+    // STYLING  (REQUIRED for web layer)
+    // -------------------------------------------------------------------------
+    "bradlc.vscode-tailwindcss",  // Tailwind CSS IntelliSense & class completion
+
+    // -------------------------------------------------------------------------
+    // FIREBASE  (REQUIRED)
+    // -------------------------------------------------------------------------
+    "jsayol.firebase-explorer",   // Firebase project explorer & Firestore viewer
+
+    // -------------------------------------------------------------------------
+    // GIT / SOURCE CONTROL  (REQUIRED)
+    // -------------------------------------------------------------------------
+    "eamodio.gitlens",            // Enhanced git blame, history, code lens
+
+    // -------------------------------------------------------------------------
+    // AI & PRODUCTIVITY  (RECOMMENDED)
+    // -------------------------------------------------------------------------
+    "GitHub.copilot",             // AI pair programming
+    "GitHub.copilot-chat",        // AI chat sidebar
+
+    // -------------------------------------------------------------------------
+    // EDITOR QUALITY OF LIFE  (RECOMMENDED)
+    // -------------------------------------------------------------------------
+    "streetsidesoftware.code-spell-checker", // Spell check in code & docs
+    "usernamehw.errorlens",                  // Inline error/warning display
+    "oderwat.indent-rainbow",                // Indentation visualisation
+    "christian-kohler.path-intellisense",    // File path autocomplete
+    "aaron-bond.better-comments",           // Colour-coded comment annotations
+    "formulahendry.auto-rename-tag",         // Auto-rename paired HTML/JSX tags
+    "ms-vsliveshare.vsliveshare",            // Real-time collaborative editing
+
+    // -------------------------------------------------------------------------
+    // TESTING  (RECOMMENDED)
+    // -------------------------------------------------------------------------
+    "hbenl.vscode-test-explorer",            // Unified test explorer sidebar
+    "kavod-io.vscode-jest-test-adapter",     // Jest test adapter for Next.js tests
+
+    // -------------------------------------------------------------------------
+    // DEVOPS / CONFIG  (RECOMMENDED)
+    // -------------------------------------------------------------------------
+    "redhat.vscode-yaml",                    // YAML schema validation
+    "ms-azuretools.vscode-docker",           // Docker container management
+    "GitHub.vscode-github-actions",          // GitHub Actions workflow editing
+    "timonwong.shellcheck"                   // Shell script linting (shellcheck)
+  ],
+
+  // --------------------------------------------------------------------------
+  // Extensions to NOT recommend (conflicts with workspace config)
+  // --------------------------------------------------------------------------
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-js-profile-flame",   // Profile tooling not needed
+    "formulahendry.auto-close-tag"         // Conflicts with Flutter formatter
+  ]
+}
