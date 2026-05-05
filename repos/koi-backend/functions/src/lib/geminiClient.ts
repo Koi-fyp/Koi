@@ -29,7 +29,7 @@ Respond with a JSON object only:
   "crisis_flag": true/false,
   "sentiment_score": -1 to 1
 }
-crisis_flag is true if the message contains expressions of self-harm, hopelessness, or suicidal ideation.`;
+crisis_flag MUST be true for ANY of: self-harm, suicidal ideation, hopelessness ("no reason to live/go on/keep going"), worthlessness, wanting to disappear or die, or giving up on life. When in doubt, set crisis_flag to true.`;
 
 const STRICT_JSON_SUFFIX =
   '\n\nIMPORTANT: Your entire response must be valid JSON only. No markdown, no code blocks, no extra text.';
@@ -42,6 +42,34 @@ const SAFETY_SETTINGS = [
 ];
 
 const VALID_EMOTIONS: Emotion[] = ['happy', 'sad', 'anxious', 'calm', 'neutral'];
+
+const CRISIS_KEYWORDS = [
+  'no reason to keep going',
+  "don't see a reason to keep going",
+  'no reason to live',
+  'no reason to go on',
+  'want to die',
+  'want to disappear',
+  'end it all',
+  'end my life',
+  'kill myself',
+  'hurt myself',
+  'self-harm',
+  'suicidal',
+  'suicide',
+  'not worth living',
+  'rather be dead',
+  'can\'t go on',
+  'cannot go on',
+  'hopeless',
+  'worthless',
+  'like a burden',
+];
+
+function hasCrisisLanguage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return CRISIS_KEYWORDS.some((kw) => lower.includes(kw));
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -111,7 +139,12 @@ export class GeminiClient {
       if (waitMs > 0) await sleep(waitMs);
     }
 
-    return this._sendWithRetry(message, context, userProfile, userId, false);
+    const result = await this._sendWithRetry(message, context, userProfile, userId, false);
+    // Safety net applied after all paths (including fallback)
+    if (!result.crisis_flag && hasCrisisLanguage(message)) {
+      result.crisis_flag = true;
+    }
+    return result;
   }
 
   private async _sendWithRetry(
@@ -128,6 +161,10 @@ export class GeminiClient {
     try {
       const result = await this._callGemini(message, context, userProfile, strictJson);
       incrementCount(userId);
+      // Safety net: keyword patterns override model under-detection
+      if (!result.crisis_flag && hasCrisisLanguage(message)) {
+        result.crisis_flag = true;
+      }
       return result;
     } catch (err) {
       const isParseError = err instanceof SyntaxError || (err instanceof Error && err.message.includes('reply'));

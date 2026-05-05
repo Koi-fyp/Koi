@@ -10,7 +10,8 @@
     "lib": ["ES2020"],
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["jest", "node"]
   },
   "compileOnSave": true,
   "include": ["src", "test"]
