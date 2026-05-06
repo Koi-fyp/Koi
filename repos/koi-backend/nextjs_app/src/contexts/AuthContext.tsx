@@ -28,10 +28,10 @@ async function storeEncrypted(key: string, data: any) {
   const ct = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, cryptoKey, enc);
   // store key and ciphertext in IndexedDB (simple using localStorage for demo)
   const exportedKey = await window.crypto.subtle.exportKey('raw', cryptoKey);
-  const exportedKeyArr = Uint8List(exportedKey);
+  const exportedKeyArr = new Uint8Array(exportedKey);
   localStorage.setItem(`${key}:key`, btoa(String.fromCharCode(...exportedKeyArr)));
   localStorage.setItem(`${key}:iv`, btoa(String.fromCharCode(...iv)));
-  const ctArr = Uint8List(ct);
+  const ctArr = new Uint8Array(ct);
   localStorage.setItem(`${key}:data`, btoa(String.fromCharCode(...ctArr)));
 }
 

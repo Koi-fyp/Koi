@@ -31,6 +31,7 @@ function validateInput(data: unknown): SendMessageInput {
 
 export const sendMessage = onCall(
   {
+    cors: true,
     enforceAppCheck: false,
     timeoutSeconds: 30,
     memory: '256MiB',
@@ -47,16 +48,21 @@ export const sendMessage = onCall(
       throw new HttpsError('permission-denied', 'userId does not match authenticated user');
     }
 
-    const geminiResult = await geminiClient.sendMessage(
-      input.message.trim(),
-      input.context.slice(-5),
-      input.userProfile,
-      input.userId,
-    );
+    try {
+      const geminiResult = await geminiClient.sendMessage(
+        input.message.trim(),
+        input.context.slice(-5),
+        input.userProfile,
+        input.userId,
+      );
 
-    return {
-      ...geminiResult,
-      conversationId: input.conversationId,
-    };
+      return {
+        ...geminiResult,
+        conversationId: input.conversationId,
+      };
+    } catch (err) {
+      console.error('[KOI] Cloud Function internal error:', err);
+      throw new HttpsError('internal', `Gemini call failed: ${(err as Error)?.message}`);
+    }
   },
 );

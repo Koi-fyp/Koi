@@ -1,18 +1,13 @@
 import admin from 'firebase-admin';
 
-let app: admin.app.App;
-
-if (!admin.apps.length) {
-  const raw = process.env.FIREBASE_ADMIN_SDK || '';
-  if (!raw) {
-    throw new Error('FIREBASE_ADMIN_SDK env var is required (JSON string)');
-  }
-  const cred = JSON.parse(raw);
-  app = admin.initializeApp({ credential: admin.credential.cert(cred) });
-} else {
-  app = admin.app();
+function getAdminApp(): admin.app.App {
+  if (admin.apps.length > 0) return admin.app();
+  const raw = process.env.FIREBASE_ADMIN_SDK;
+  if (!raw) throw new Error('FIREBASE_ADMIN_SDK env var is required (JSON string)');
+  const cred = JSON.parse(raw) as admin.ServiceAccount;
+  return admin.initializeApp({ credential: admin.credential.cert(cred) });
 }
 
 export { admin };
-export const adminAuth = admin.auth();
-export const adminFirestore = admin.firestore();
+export const adminAuth = getAdminApp().auth();
+export const adminFirestore = getAdminApp().firestore();

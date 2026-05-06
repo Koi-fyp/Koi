@@ -42,9 +42,9 @@ export async function completeOnboarding(data: OnboardingData): Promise<void> {
   // Firestore write — fails silently so onboarding always completes locally
   try {
     if (uid) {
-      const { getFirestore, doc, setDoc } = await import('firebase/firestore');
-      const app = (await import('./firebase')).default;
-      const firestore = getFirestore(app);
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { firestore } = await import('./firebase');
+      if (!firestore?.app) throw new Error("Firestore not properly initialized");
       await setDoc(
         doc(firestore, 'users', uid),
         {
