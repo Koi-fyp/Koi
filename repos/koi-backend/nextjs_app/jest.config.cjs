@@ -1,6 +1,13 @@
 module.exports = {
   preset: 'ts-jest',
-  testEnvironment: 'jsdom',
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.test.json',
+    },
+  },
+  testEnvironment: 'jest-environment-jsdom',
+  setupFiles: ['fake-indexeddb/auto'],
+  setupFilesAfterEnv: ['@testing-library/jest-dom', '<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^next/navigation$': '<rootDir>/src/__mocks__/next-navigation.ts',
@@ -8,12 +15,13 @@ module.exports = {
     '^dexie$': '<rootDir>/src/__mocks__/dexie.ts',
   },
   transform: {
-    '^.+\\.tsx?$': 'ts-jest'
+    '^.+\\.tsx?$': 'ts-jest',
   },
-  testMatch: ['**/__tests__/**/*.test.{ts,tsx}'],
-  setupFiles: ['<rootDir>/src/__tests__/setup.env.ts'],
-  setupFilesAfterEnv: ['@testing-library/jest-dom'],
+  testMatch: [
+    '**/__tests__/**/*.test.{ts,tsx}',
+    '**/test/**/*.test.{ts,tsx}',
+  ],
   transformIgnorePatterns: [
-    'node_modules/(?!(firebase|@firebase|dexie)/)'
-  ]
+    'node_modules/(?!(firebase|@firebase|dexie)/)',
+  ],
 };

@@ -6,7 +6,12 @@
       "Bash(ssh -T git@github.com -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes)",
       "Bash(echo \"SSH_EXIT:$?\")",
       "Bash(command -v gh)",
-      "Bash(gh --version)"
+      "Bash(gh --version)",
+      "Bash(npm install *)",
+      "Bash(npx jest *)",
+      "Bash(dir E:\\\\Koi\\\\Koi-App\\\\repos\\\\koi-backend\\\\nextjs_app\\\\node_modules\\\\dexie *)",
+      "Bash(dir E:\\\\Koi\\\\Koi-App\\\\repos\\\\koi-backend\\\\nextjs_app\\\\node_modules\\\\dexie\\\\dist *)",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute"
     ]
   }
 }

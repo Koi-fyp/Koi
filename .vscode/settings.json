@@ -208,5 +208,6 @@
   // --------------------------------------------------------------------------
   // WORKSPACE-LEVEL EXTENSION SUGGESTIONS
   // --------------------------------------------------------------------------
-  "extensions.ignoreRecommendations": false
+  "extensions.ignoreRecommendations": false,
+  "testing.automaticallyOpenTestResults": "openOnTestStart"
 }
