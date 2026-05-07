@@ -427,3 +427,17 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Next.js build cache
+.next/
+
+# Flutter build artifacts
+.dart_tool/
+flutter/build/
+
+# Logs
+firebase-debug.log
+*.log
+
+# Screenshots/temp
+temporary_screenshots/
