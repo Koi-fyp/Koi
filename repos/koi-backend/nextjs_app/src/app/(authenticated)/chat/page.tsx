@@ -1,21 +1,13 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useChat } from '@/hooks/useChat';
 import MessageList from '@/components/chat/MessageList';
 import InputBar from '@/components/chat/InputBar';
-import AvatarRenderer from '@/components/avatar/AvatarRenderer';
-import type { Emotion } from '@/lib/conversation/conversationService';
-
-const EMOTION_TINTS: Record<Emotion, string> = {
-  happy:   'radial-gradient(ellipse at 50% 100%, #FFF9C4 0%, #FAF8F5 70%)',
-  sad:     'radial-gradient(ellipse at 50% 100%, #E3F2FD 0%, #FAF8F5 70%)',
-  anxious: 'radial-gradient(ellipse at 50% 100%, #FFF3E0 0%, #FAF8F5 70%)',
-  calm:    'radial-gradient(ellipse at 50% 100%, #E8F5E9 0%, #FAF8F5 70%)',
-  neutral: 'radial-gradient(ellipse at 50% 100%, #F5F0EB 0%, #FAF8F5 70%)',
-};
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
+
   useEffect(() => {
     const on  = () => setOffline(false);
     const off = () => setOffline(true);
@@ -33,12 +25,15 @@ function OfflineBanner() {
     <div
       role="alert"
       style={{
-        background: 'var(--koi-brand, #B85C38)',
-        color: '#fff',
+        background: 'var(--neo-yellow)',
+        color: '#000',
         textAlign: 'center',
         fontSize: '0.8rem',
-        padding: '6px 16px',
-        letterSpacing: '0.02em',
+        fontFamily: 'var(--font-display)',
+        fontWeight: 700,
+        padding: '7px 16px',
+        letterSpacing: '0.03em',
+        borderBottom: '2px solid #000',
       }}
     >
       You&rsquo;re offline — your message will send when reconnected
@@ -47,72 +42,96 @@ function OfflineBanner() {
 }
 
 export default function ChatPage() {
-  const { messages, isTyping, currentEmotion, send } = useChat();
+  const { messages, isTyping, send } = useChat();
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const hasMessages = messages.length > 0;
 
   return (
     <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 4rem)',
-        background: '#FAF8F5',
-        overflow: 'hidden',
-      }}
+      className="flex flex-col-reverse sm:flex-row"
+      style={{ height: 'calc(100svh - 66px)', overflow: 'hidden', background: '#ffe5d9' }}
     >
-      {/* Avatar panel */}
+      {/* ── Chat column (left on desktop, bottom on mobile) ── */}
       <div
-        role="img"
-        aria-label="KOI avatar"
-        style={{
-          height: '200px',
-          flexShrink: 0,
-          background: EMOTION_TINTS[currentEmotion],
-          transition: 'background 0.6s ease',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
+        className="flex flex-col min-w-0 overflow-hidden"
+        style={{ flex: 1 }}
       >
-        <svg
-          aria-hidden="true"
-          style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            opacity: 0.04, pointerEvents: 'none',
-          }}
-        >
-          <filter id="koi-grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#koi-grain)" />
-        </svg>
-
-        <AvatarRenderer emotion={currentEmotion} />
-
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '12px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontFamily: 'Georgia, serif',
-            fontStyle: 'italic',
-            fontSize: '0.78rem',
-            color: '#9E8C82',
-            letterSpacing: '0.12em',
-            pointerEvents: 'none',
-          }}
-        >
-          koi
-        </div>
+        <OfflineBanner />
+        <MessageList messages={messages} isTyping={isTyping} />
+        <InputBar onSend={send} disabled={isTyping} inputRef={inputRef} />
       </div>
 
-      <OfflineBanner />
+      {/* ── Avatar panel (right on desktop, top on mobile) ── */}
+      <div
+        className={`flex flex-col gap-3 ${hasMessages ? 'hidden sm:flex' : 'flex'}`}
+        style={{
+          width: '100%',
+          maxWidth: '340px',
+          flexShrink: 0,
+          padding: '16px 16px 16px 0',
+        }}
+      >
+        <div className="h-full w-full flex items-center justify-center">
+          <div
+            className="w-full max-w-[340px] max-h-[80vh] overflow-hidden rounded-[1.5rem] border-[3px] border-black bg-[#FFD100] shadow-[6px_6px_0_0_#000] flex items-center justify-center"
+            style={{ maxHeight: '80vh' }}
+          >
+            <Image
+              src="/Male.png"
+              alt="KOI companion"
+              width={800}
+              height={1000}
+              priority
+              sizes="(min-width: 640px) 340px, 90vw"
+              className="h-auto w-full object-contain"
+              style={{ objectFit: 'contain' }}
+            />
+          </div>
+        </div>
 
-      {/* Message list */}
-      <MessageList messages={messages} isTyping={isTyping} />
-
-      {/* Input bar */}
-      <InputBar onSend={send} disabled={isTyping} />
+        {/* CTA — visible only before first message */}
+        {!hasMessages && (
+          <button
+            onClick={() => inputRef.current?.focus()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '14px 20px',
+              background: '#fff',
+              border: '2.5px solid #000',
+              borderRadius: '9999px',
+              boxShadow: '4px 4px 0 0 #000',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = 'translate(2px,2px)';
+              e.currentTarget.style.boxShadow = '2px 2px 0 0 #000';
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = '';
+              e.currentTarget.style.boxShadow = '4px 4px 0 0 #000';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = '';
+              e.currentTarget.style.boxShadow = '4px 4px 0 0 #000';
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Start a conversation with KOI
+          </button>
+        )}
+      </div>
     </div>
   );
 }

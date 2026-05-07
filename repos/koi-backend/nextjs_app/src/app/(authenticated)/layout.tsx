@@ -16,16 +16,48 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
 
   if (loading || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2E75B6]" />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100svh',
+          background: '#ffe5d9',
+        }}
+      >
+        <div
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '10px',
+            background: 'var(--neo-blue)',
+            border: '2.5px solid #000',
+            boxShadow: '4px 4px 0 0 #000',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: 'fadeUp 0.4s ease both',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '1.2rem',
+              color: '#fff',
+            }}
+          >
+            K
+          </span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen pb-16">
-      <main className="flex-1">{children}</main>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100svh', paddingTop: '66px' }}>
       <BottomNav />
+      <main style={{ flex: 1 }}>{children}</main>
     </div>
   );
 }

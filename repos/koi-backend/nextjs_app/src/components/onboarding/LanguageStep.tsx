@@ -1,50 +1,102 @@
 'use client';
 import { useState } from 'react';
+import NeoButton from '@/components/ui/NeoButton';
 
 type Language = 'en' | 'ur';
 
 interface Props {
-  onNext: (language: Language) => void;
+  readonly onNext: (language: Language) => void;
 }
 
 const LANGUAGES = [
-  { id: 'en' as Language, label: 'English', native: 'English' },
-  { id: 'ur' as Language, label: 'Urdu', native: 'اردو' },
+  { id: 'en' as Language, label: 'English', native: 'English', flag: '🇬🇧' },
+  { id: 'ur' as Language, label: 'Urdu',    native: 'اردو',    flag: '🇵🇰' },
 ];
 
-export default function LanguageStep({ onNext }: Props) {
+export default function LanguageStep({ onNext }: Readonly<Props>) {
   const [selected, setSelected] = useState<Language>('en');
 
   return (
-    <div className="flex flex-col flex-1 p-6">
-      <div className="flex-1">
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">Select Language</h2>
-        <p className="text-gray-500 mb-6 text-sm">Choose your preferred language.</p>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        padding: '1.5rem',
+        maxWidth: '480px',
+        margin: '0 auto',
+        width: '100%',
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: '2rem',
+            letterSpacing: '-0.03em',
+            color: '#000',
+            marginBottom: '0.375rem',
+          }}
+        >
+          Select Language
+        </h2>
+        <p style={{ fontFamily: 'var(--font-body)', color: '#777', fontSize: '0.9rem', marginBottom: '1.75rem' }}>
+          Choose your preferred language.
+        </p>
 
-        <div className="space-y-3">
-          {LANGUAGES.map((lang) => (
-            <button
-              key={lang.id}
-              onClick={() => setSelected(lang.id)}
-              className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
-                selected === lang.id
-                  ? 'border-[#2E75B6] bg-blue-50'
-                  : 'border-gray-200 bg-white'
-              }`}
-            >
-              <span className="font-semibold text-gray-900">{lang.label}</span>
-              <span className="text-gray-500 text-lg">{lang.native}</span>
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {LANGUAGES.map((lang) => {
+            const isSelected = selected === lang.id;
+            return (
+              <button
+                key={lang.id}
+                onClick={() => setSelected(lang.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '1rem 1.25rem',
+                  borderRadius: '12px',
+                  border: isSelected ? '2.5px solid #000' : '2px solid #ddd',
+                  background: isSelected ? 'var(--neo-blue)' : '#fff',
+                  boxShadow: isSelected ? '4px 4px 0 0 #000' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.1s ease',
+                  transform: isSelected ? 'translate(-2px, -2px)' : 'none',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                  <span style={{ fontSize: '1.5rem' }}>{lang.flag}</span>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontWeight: 700,
+                      fontSize: '1rem',
+                      color: isSelected ? '#fff' : '#000',
+                    }}
+                  >
+                    {lang.label}
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '1.1rem',
+                    color: isSelected ? 'rgba(255,255,255,0.75)' : '#999',
+                  }}
+                >
+                  {lang.native}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <button
-        onClick={() => onNext(selected)}
-        className="w-full py-3 bg-[#2E75B6] text-white rounded-xl font-semibold text-lg mt-6"
-      >
-        Continue
-      </button>
+      <NeoButton onClick={() => onNext(selected)} fullWidth style={{ marginTop: '1.5rem' }}>
+        Continue →
+      </NeoButton>
     </div>
   );
 }

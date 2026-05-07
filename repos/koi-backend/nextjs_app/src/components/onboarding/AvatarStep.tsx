@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import NeoButton from '@/components/ui/NeoButton';
 
 type AvatarId = 'female_human' | 'male_human' | 'fox';
 
@@ -8,54 +9,112 @@ interface AvatarOption {
   label: string;
   emoji: string;
   description: string;
+  color: string;
 }
 
 const AVATARS: AvatarOption[] = [
-  { id: 'female_human', label: 'Aisha', emoji: '👩', description: 'Warm & caring' },
-  { id: 'male_human', label: 'Raza', emoji: '👨', description: 'Calm & grounded' },
-  { id: 'fox', label: 'Koi', emoji: '🦊', description: 'Playful & curious' },
+  { id: 'female_human', label: 'Aisha', emoji: '👩', description: 'Warm & caring',     color: 'var(--neo-coral)'  },
+  { id: 'male_human',   label: 'Raza',  emoji: '👨', description: 'Calm & grounded',   color: 'var(--neo-blue)'   },
+  { id: 'fox',          label: 'Koi',   emoji: '🦊', description: 'Playful & curious', color: 'var(--neo-orange)' },
 ];
 
 interface Props {
-  onNext: (avatar: AvatarId) => void;
+  readonly onNext: (avatar: AvatarId) => void;
 }
 
-export default function AvatarStep({ onNext }: Props) {
+export default function AvatarStep(props: Readonly<Props>) {
+  const { onNext } = props;
   const [selected, setSelected] = useState<AvatarId | null>(null);
 
   return (
-    <div className="flex flex-col flex-1 p-6">
-      <div className="flex-1">
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">Choose Your Companion</h2>
-        <p className="text-gray-500 mb-6 text-sm">Who would you like to talk with?</p>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        padding: '1.5rem',
+        maxWidth: '480px',
+        margin: '0 auto',
+        width: '100%',
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: '2rem',
+            letterSpacing: '-0.03em',
+            color: '#000',
+            marginBottom: '0.375rem',
+          }}
+        >
+          Choose Your Avatar
+        </h2>
+        <p style={{ fontFamily: 'var(--font-body)', color: '#777', fontSize: '0.9rem', marginBottom: '1.75rem' }}>
+          Pick the look that feels most like you
+        </p>
 
-        <div className="grid grid-cols-3 gap-3">
-          {AVATARS.map((avatar) => (
-            <button
-              key={avatar.id}
-              data-testid={`avatar-${avatar.id}`}
-              onClick={() => setSelected(avatar.id)}
-              className={`flex flex-col items-center p-4 rounded-2xl border-2 transition-all ${
-                selected === avatar.id
-                  ? 'border-[#2E75B6] bg-blue-50 ring-2 ring-[#2E75B6]'
-                  : 'border-gray-200 bg-white'
-              }`}
-            >
-              <span className="text-4xl mb-2">{avatar.emoji}</span>
-              <span className="font-semibold text-sm text-gray-900">{avatar.label}</span>
-              <span className="text-xs text-gray-500 mt-0.5 text-center">{avatar.description}</span>
-            </button>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+          {AVATARS.map((avatar) => {
+            const isSelected = selected === avatar.id;
+            return (
+              <button
+                key={avatar.id}
+                data-testid={`avatar-${avatar.id}`}
+                onClick={() => setSelected(avatar.id)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '1rem 0.75rem',
+                  borderRadius: '12px',
+                  border: isSelected ? '2.5px solid #000' : '2px solid #ddd',
+                  background: isSelected ? avatar.color : '#fff',
+                  boxShadow: isSelected ? '4px 4px 0 0 #000' : 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.1s ease',
+                  transform: isSelected ? 'translate(-2px, -2px)' : 'none',
+                }}
+              >
+                <span style={{ fontSize: '2.5rem', marginBottom: '0.5rem', lineHeight: 1 }}>
+                  {avatar.emoji}
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 700,
+                    fontSize: '0.875rem',
+                    color: isSelected ? '#fff' : '#000',
+                  }}
+                >
+                  {avatar.label}
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.72rem',
+                    color: isSelected ? 'rgba(255,255,255,0.8)' : '#888',
+                    marginTop: '2px',
+                    textAlign: 'center',
+                  }}
+                >
+                  {avatar.description}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <button
+      <NeoButton
         onClick={() => selected && onNext(selected)}
         disabled={!selected}
-        className="w-full py-3 bg-[#2E75B6] text-white rounded-xl font-semibold text-lg mt-6 disabled:opacity-40 disabled:cursor-not-allowed"
+        fullWidth
+        style={{ marginTop: '1.5rem' }}
       >
-        Continue
-      </button>
+        Continue →
+      </NeoButton>
     </div>
   );
 }

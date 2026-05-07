@@ -1,5 +1,7 @@
 'use client';
 import { useState } from 'react';
+import NeoButton from '@/components/ui/NeoButton';
+import NeoCard from '@/components/ui/NeoCard';
 
 interface Props {
   onComplete: (notificationTime: string, notificationsEnabled: boolean) => void;
@@ -7,39 +9,95 @@ interface Props {
 
 export default function NotificationStep({ onComplete }: Props) {
   const [enabled, setEnabled] = useState(true);
-  const [time, setTime] = useState('20:00');
+  const [time, setTime]       = useState('20:00');
 
   return (
-    <div className="flex flex-col flex-1 p-6">
-      <div className="flex-1">
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">Daily Check-ins</h2>
-        <p className="text-gray-500 mb-6 text-sm">
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        padding: '1.5rem',
+        maxWidth: '480px',
+        margin: '0 auto',
+        width: '100%',
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: '2rem',
+            letterSpacing: '-0.03em',
+            color: '#000',
+            marginBottom: '0.375rem',
+          }}
+        >
+          Daily Check-ins
+        </h2>
+        <p style={{ fontFamily: 'var(--font-body)', color: '#777', fontSize: '0.9rem', marginBottom: '1.75rem' }}>
           KOI can gently check in with you each day to see how you&apos;re feeling.
         </p>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-3">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-gray-900 text-sm">Enable daily reminders</span>
+        {/* Toggle */}
+        <NeoCard className="p-4 mb-3">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: '#000' }}>
+                Enable daily reminders
+              </p>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: '#999', marginTop: '2px' }}>
+                A gentle nudge each day
+              </p>
+            </div>
             <button
               role="switch"
               aria-checked={enabled}
               onClick={() => setEnabled((v) => !v)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
-                enabled ? 'bg-[#2E75B6]' : 'bg-gray-300'
-              }`}
+              style={{
+                position: 'relative',
+                width: '52px',
+                height: '28px',
+                borderRadius: '14px',
+                border: '2px solid #000',
+                background: enabled ? 'var(--neo-blue)' : '#ddd',
+                cursor: 'pointer',
+                transition: 'background 0.2s ease',
+                flexShrink: 0,
+                padding: 0,
+              }}
             >
               <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  enabled ? 'translate-x-6' : 'translate-x-0'
-                }`}
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: enabled ? '24px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '10px',
+                  background: '#fff',
+                  border: '1.5px solid #000',
+                  transition: 'left 0.2s ease',
+                }}
               />
             </button>
           </div>
-        </div>
+        </NeoCard>
 
         {enabled && (
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <label htmlFor="notif-time" className="block text-sm font-medium text-gray-700 mb-2">
+          <NeoCard className="p-4">
+            <label
+              htmlFor="notif-time"
+              style={{
+                display: 'block',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                color: '#000',
+                marginBottom: '0.625rem',
+              }}
+            >
               Reminder time
             </label>
             <input
@@ -49,19 +107,30 @@ export default function NotificationStep({ onComplete }: Props) {
               min="06:00"
               max="23:00"
               onChange={(e) => setTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-lg font-mono focus:outline-none focus:border-[#2E75B6]"
+              className="neo-input"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: '1.5rem',
+                textAlign: 'center',
+                letterSpacing: '0.04em',
+              }}
             />
-            <p className="text-xs text-gray-400 mt-1">Available 6:00 AM – 11:00 PM</p>
-          </div>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.72rem', color: '#aaa', marginTop: '0.5rem' }}>
+              Available 6:00 AM – 11:00 PM
+            </p>
+          </NeoCard>
         )}
       </div>
 
-      <button
+      <NeoButton
+        variant="secondary"
         onClick={() => onComplete(time, enabled)}
-        className="w-full py-3 bg-[#2E75B6] text-white rounded-xl font-semibold text-lg mt-6"
+        fullWidth
+        style={{ marginTop: '1.5rem' }}
       >
-        Get Started
-      </button>
+        Let&apos;s Go ✦
+      </NeoButton>
     </div>
   );
 }

@@ -3,13 +3,15 @@ import React, { useEffect, useRef } from 'react';
 import { ChatMessage } from '@/hooks/useChat';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
+import HeroText from './HeroText';
 
 interface MessageListProps {
-  messages: ChatMessage[];
-  isTyping: boolean;
+  readonly messages: ChatMessage[];
+  readonly isTyping: boolean;
 }
 
-export default function MessageList({ messages, isTyping }: MessageListProps) {
+export default function MessageList(props: Readonly<MessageListProps>) {
+  const { messages, isTyping } = props;
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,10 +28,10 @@ export default function MessageList({ messages, isTyping }: MessageListProps) {
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
+        gap: '6px',
         padding: '16px 0 8px',
         scrollbarWidth: 'thin',
-        scrollbarColor: 'var(--koi-border) transparent',
+        scrollbarColor: '#e5e5e5 transparent',
       }}
     >
       {messages.length === 0 && (
@@ -37,24 +39,21 @@ export default function MessageList({ messages, isTyping }: MessageListProps) {
           style={{
             flex: 1,
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
             justifyContent: 'center',
-            color: 'var(--koi-muted)',
-            fontFamily: 'var(--font-serif)',
-            fontSize: '1rem',
-            fontStyle: 'italic',
-            textAlign: 'center',
-            padding: '0 2rem',
-            lineHeight: 1.7,
+            padding: '0 1.5rem',
           }}
         >
-          I&rsquo;m here with you. What&rsquo;s on your mind?
+          <HeroText />
         </div>
       )}
 
-      {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} />
-      ))}
+      {messages.map((msg, i) => {
+        const showAvatar =
+          msg.sender === 'ai' && (i === 0 || messages[i - 1].sender !== 'ai');
+        return <MessageBubble key={msg.id} message={msg} showAvatar={showAvatar} />;
+      })}
 
       {isTyping && <TypingIndicator />}
 

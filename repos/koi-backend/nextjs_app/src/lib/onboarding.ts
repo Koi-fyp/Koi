@@ -2,6 +2,7 @@ import { auth } from './firebase';
 
 export interface OnboardingData {
   avatar: 'female_human' | 'male_human' | 'fox';
+  companion: 'aisha' | 'raza' | 'koi';
   language: 'en' | 'ur';
   notificationTime: string;
   notificationsEnabled: boolean;
@@ -18,20 +19,21 @@ export async function completeOnboarding(data: OnboardingData): Promise<void> {
     const { db } = await import('./db');
     if (uid) {
       const existing = await db.users.where('uid').equals(uid).first();
-      if (existing?.id != null) {
-        await db.users.update(existing.id, {
-          avatar: data.avatar,
-          language: data.language,
-          notificationTime: data.notificationTime,
-          notificationsEnabled: data.notificationsEnabled,
-          onboardingComplete: true,
-        });
-      } else {
+      if (existing?.id == null) {
         await db.users.add({
           uid,
           ...data,
           onboardingComplete: true,
           createdAt: new Date().toISOString(),
+        });
+      } else {
+        await db.users.update(existing.id, {
+          avatar: data.avatar,
+          companion: data.companion,
+          language: data.language,
+          notificationTime: data.notificationTime,
+          notificationsEnabled: data.notificationsEnabled,
+          onboardingComplete: true,
         });
       }
     }
@@ -50,6 +52,7 @@ export async function completeOnboarding(data: OnboardingData): Promise<void> {
         {
           profile: {
             avatar: data.avatar,
+            companion: data.companion,
             language: data.language,
             notificationTime: data.notificationTime,
           },
@@ -64,6 +67,7 @@ export async function completeOnboarding(data: OnboardingData): Promise<void> {
 }
 
 export function isOnboardingComplete(): boolean {
-  if (typeof window === 'undefined') return false;
-  return localStorage.getItem('koi_onboarding_complete') === 'true';
+  const win = globalThis.window;
+  if (!win) return false;
+  return win.localStorage.getItem('koi_onboarding_complete') === 'true';
 }

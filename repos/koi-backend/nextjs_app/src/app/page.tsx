@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { isOnboardingComplete } from '@/lib/onboarding';
 
 /* ── Colour Grid Data ──────────────────────────────────── */
 const BLOCKS = [
@@ -39,11 +38,7 @@ export default function RootPage() {
 
   useEffect(() => {
     if (loading || !user) return;
-    if (isOnboardingComplete()) {
-      router.replace('/chat');
-    } else {
-      router.replace('/onboarding');
-    }
+    router.replace('/onboarding');
   }, [user, loading, router]);
 
   const handleGetStarted = useCallback(async () => {
@@ -58,7 +53,7 @@ export default function RootPage() {
   const isLoading = starting || loading;
 
   return (
-    <div className="min-h-screen bg-white font-inter overflow-x-hidden">
+    <div className="min-h-screen font-inter overflow-x-hidden">
 
       {/* ── NAV ─────────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b-2 border-black">

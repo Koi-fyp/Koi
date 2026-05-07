@@ -1,3 +1,6 @@
+import NeoButton from '@/components/ui/NeoButton';
+import NeoCard from '@/components/ui/NeoCard';
+
 interface Props {
   onNext: () => void;
 }
@@ -18,46 +21,137 @@ const NOT_STORED = [
 
 export default function PrivacyStep({ onNext }: Props) {
   return (
-    <div className="flex flex-col flex-1 p-6">
-      <div className="flex-1 overflow-y-auto">
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">Privacy Matters</h2>
-        <p className="text-gray-500 mb-6 text-sm">Here&apos;s what you should know about your data.</p>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        padding: '1.5rem',
+        maxWidth: '480px',
+        margin: '0 auto',
+        width: '100%',
+      }}
+    >
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '1rem' }}>
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: '2rem',
+            letterSpacing: '-0.03em',
+            color: '#000',
+            marginBottom: '0.375rem',
+          }}
+        >
+          Privacy Matters
+        </h2>
+        <p
+          style={{
+            fontFamily: 'var(--font-body)',
+            color: '#777',
+            fontSize: '0.9rem',
+            marginBottom: '1.5rem',
+          }}
+        >
+          Here&apos;s what you should know about your data.
+        </p>
 
-        <section className="mb-6">
-          <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <span className="text-green-500 text-lg">✓</span> What we store
+        <NeoCard className="p-4 mb-4">
+          <h3
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              marginBottom: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: '#000',
+            }}
+          >
+            <span
+              style={{
+                width: '20px',
+                height: '20px',
+                background: 'var(--neo-mint)',
+                border: '2px solid #000',
+                borderRadius: '4px',
+                flexShrink: 0,
+                display: 'inline-block',
+              }}
+            />
+            What we store
           </h3>
-          <ul className="space-y-2">
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', listStyle: 'none', padding: 0, margin: 0 }}>
             {STORED.map((item) => (
-              <li key={item} className="flex items-start gap-2 text-gray-600 text-sm">
-                <span className="text-green-400 mt-0.5 shrink-0">•</span>
+              <li
+                key={item}
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.875rem',
+                  color: '#444',
+                  display: 'flex',
+                  gap: '0.625rem',
+                  alignItems: 'flex-start',
+                }}
+              >
+                <span style={{ color: 'var(--neo-mint)', fontWeight: 700, flexShrink: 0, marginTop: '1px' }}>✓</span>
                 {item}
               </li>
             ))}
           </ul>
-        </section>
+        </NeoCard>
 
-        <section>
-          <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <span className="text-red-400 text-lg">✗</span> What we never store
+        <NeoCard className="p-4">
+          <h3
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              marginBottom: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: '#000',
+            }}
+          >
+            <span
+              style={{
+                width: '20px',
+                height: '20px',
+                background: 'var(--neo-coral)',
+                border: '2px solid #000',
+                borderRadius: '4px',
+                flexShrink: 0,
+                display: 'inline-block',
+              }}
+            />
+            What we never store
           </h3>
-          <ul className="space-y-2">
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', listStyle: 'none', padding: 0, margin: 0 }}>
             {NOT_STORED.map((item) => (
-              <li key={item} className="flex items-start gap-2 text-gray-600 text-sm">
-                <span className="text-red-300 mt-0.5 shrink-0">•</span>
+              <li
+                key={item}
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.875rem',
+                  color: '#444',
+                  display: 'flex',
+                  gap: '0.625rem',
+                  alignItems: 'flex-start',
+                }}
+              >
+                <span style={{ color: 'var(--neo-coral)', fontWeight: 700, flexShrink: 0, marginTop: '1px' }}>✗</span>
                 {item}
               </li>
             ))}
           </ul>
-        </section>
+        </NeoCard>
       </div>
 
-      <button
-        onClick={onNext}
-        className="w-full py-3 bg-[#2E75B6] text-white rounded-xl font-semibold text-lg mt-6"
-      >
-        I Understand
-      </button>
+      <NeoButton onClick={onNext} fullWidth style={{ marginTop: '1rem' }}>
+        I Understand →
+      </NeoButton>
     </div>
   );
 }

@@ -20,6 +20,7 @@ export interface UserRecord {
   id?: number;
   uid: string;
   avatar?: 'female_human' | 'male_human' | 'fox';
+  companion?: 'aisha' | 'raza' | 'koi';
   language?: 'en' | 'ur';
   notificationTime?: string;
   notificationsEnabled?: boolean;

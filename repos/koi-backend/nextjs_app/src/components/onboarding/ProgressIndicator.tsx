@@ -5,19 +5,37 @@ interface Props {
 
 export default function ProgressIndicator({ currentStep, totalSteps }: Props) {
   return (
-    <div className="flex gap-1.5 justify-center py-3 px-6">
-      {Array.from({ length: totalSteps }).map((_, i) => (
-        <div
-          key={i}
-          className={`h-1.5 rounded-full transition-all duration-300 ${
-            i === currentStep
-              ? 'w-6 bg-[#2E75B6]'
-              : i < currentStep
-              ? 'w-1.5 bg-[#2E75B6] opacity-50'
-              : 'w-1.5 bg-gray-300'
-          }`}
-        />
-      ))}
+    <div
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        background: '#fff',
+        borderBottom: '2px solid #000',
+        padding: '10px 20px',
+        display: 'flex',
+        gap: '6px',
+        alignItems: 'center',
+      }}
+    >
+      {Array.from({ length: totalSteps }).map((_, i) => {
+        const isActive = i === currentStep;
+        const isDone   = i < currentStep;
+        return (
+          <div
+            key={i}
+            style={{
+              height: '4px',
+              flex: isActive ? 2 : 1,
+              borderRadius: '2px',
+              border: '1px solid #000',
+              background: isDone || isActive ? 'var(--neo-blue)' : '#E5E5E5',
+              opacity: isDone ? 0.55 : 1,
+              transition: 'flex 0.3s ease, background 0.3s ease',
+            }}
+          />
+        );
+      })}
     </div>
   );
 }

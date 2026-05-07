@@ -4,9 +4,18 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import OnboardingPage from '@/app/onboarding/page';
 
 describe('Onboarding Flow', () => {
+  describe('Companion Selection', () => {
+    it('should render the companion selector at step 2', () => {
+      render(<OnboardingPage initialStep={2} />);
+
+      expect(screen.getByText('Choose Your Companion')).toBeInTheDocument();
+      expect(screen.getByText('Continue with Koi')).toBeInTheDocument();
+    });
+  });
+
   describe('AI Disclosure Screen', () => {
     it('should disable I Agree button until both checkboxes checked', () => {
-      render(<OnboardingPage initialStep={2} />);
+      render(<OnboardingPage initialStep={3} />);
 
       const agreeButton = screen.getByText('I Agree');
       expect(agreeButton).toBeDisabled();
@@ -19,7 +28,7 @@ describe('Onboarding Flow', () => {
     });
 
     it('should always show crisis helplines on disclosure screen', () => {
-      render(<OnboardingPage initialStep={2} />);
+      render(<OnboardingPage initialStep={3} />);
       expect(screen.getByText('0311-7786264')).toBeInTheDocument();
       expect(screen.getByText('0800-22444')).toBeInTheDocument();
     });
@@ -27,13 +36,13 @@ describe('Onboarding Flow', () => {
 
   describe('Avatar Selection', () => {
     it('should select avatar and highlight it', () => {
-      render(<OnboardingPage initialStep={3} />);
+      render(<OnboardingPage initialStep={4} />);
       fireEvent.click(screen.getByTestId('avatar-fox'));
       expect(screen.getByTestId('avatar-fox')).toHaveClass('ring-2');
     });
 
     it('should not allow Continue without avatar selection', () => {
-      render(<OnboardingPage initialStep={3} />);
+      render(<OnboardingPage initialStep={4} />);
       expect(screen.getByText('Continue')).toBeDisabled();
     });
   });
@@ -43,6 +52,7 @@ describe('Onboarding Flow', () => {
       const { completeOnboarding } = await import('@/lib/onboarding');
       await completeOnboarding({
         avatar: 'fox',
+        companion: 'koi',
         language: 'en',
         notificationTime: '20:00',
         notificationsEnabled: true,
