@@ -11,7 +11,9 @@
       "Bash(npx jest *)",
       "Bash(dir E:\\\\Koi\\\\Koi-App\\\\repos\\\\koi-backend\\\\nextjs_app\\\\node_modules\\\\dexie *)",
       "Bash(dir E:\\\\Koi\\\\Koi-App\\\\repos\\\\koi-backend\\\\nextjs_app\\\\node_modules\\\\dexie\\\\dist *)",
-      "mcp__plugin_context-mode_context-mode__ctx_batch_execute"
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "Bash(Get-ChildItem -Path \"e:\\\\Koi\\\\Koi-App\" -Force)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

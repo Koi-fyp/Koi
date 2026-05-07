@@ -3,18 +3,16 @@ import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
-  title: 'KOI — AI Companion',
-  description: 'Your companion in moments of loneliness',
+  title: 'KOI — Your AI Companion',
+  description: 'A thoughtful AI friend that listens, remembers, and grows with you. Start a conversation in seconds — no account needed.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="bg-[#F5F5F5] min-h-screen">
+    <html lang="en" className="font-inter">
+      <body className="bg-white min-h-screen">
         <AuthProvider>
-          <div className="mx-auto max-w-[480px] min-h-screen flex flex-col">
-            {children}
-          </div>
+          {children}
         </AuthProvider>
       </body>
     </html>

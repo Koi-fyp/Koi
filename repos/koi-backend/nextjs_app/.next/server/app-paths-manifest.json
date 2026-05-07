@@ -1,0 +1,8 @@
+{
+  "/page": "app/page.js",
+  "/api/auth/anonymous/route": "app/api/auth/anonymous/route.js",
+  "/onboarding/page": "app/onboarding/page.js",
+  "/(authenticated)/chat/page": "app/(authenticated)/chat/page.js",
+  "/(authenticated)/settings/page": "app/(authenticated)/settings/page.js",
+  "/(authenticated)/progress/page": "app/(authenticated)/progress/page.js"
+}
