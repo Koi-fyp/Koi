@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useChat } from '@/hooks/useChat';
 import MessageList from '@/components/chat/MessageList';
 import InputBar from '@/components/chat/InputBar';
@@ -45,6 +46,11 @@ export default function ChatPage() {
   const { messages, isTyping, send } = useChat();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const hasMessages = messages.length > 0;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div
@@ -71,11 +77,63 @@ export default function ChatPage() {
           padding: '16px 16px 16px 0',
         }}
       >
-        <div className="h-full w-full flex items-center justify-center">
+        <div
+          className="h-full w-full flex items-center justify-center"
+          style={{
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? 'translateY(0)' : 'translateY(20px)',
+            transition: 'opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          }}
+        >
           <div
-            className="w-full max-w-[340px] max-h-[80vh] overflow-hidden rounded-[1.5rem] border-[3px] border-black bg-[#FFD100] shadow-[6px_6px_0_0_#000] flex items-center justify-center"
+            className="w-full max-w-[340px] max-h-[80vh] overflow-hidden rounded-[1.5rem] border-[3px] border-black bg-[#FFD100] shadow-[6px_6px_0_0_#000] flex items-center justify-center relative"
             style={{ maxHeight: '80vh' }}
           >
+            {/* Thinking bubbles - show when typing */}
+            {isTyping && (
+              <>
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '35%',
+                    right: '15%',
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.15)',
+                    animation: 'thinkBubble1 2s ease-in-out infinite',
+                    zIndex: 1,
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '45%',
+                    right: '10%',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.12)',
+                    animation: 'thinkBubble2 2s ease-in-out 0.3s infinite',
+                    zIndex: 1,
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '52%',
+                    right: '8%',
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.1)',
+                    animation: 'thinkBubble3 2s ease-in-out 0.6s infinite',
+                    zIndex: 1,
+                  }}
+                />
+              </>
+            )}
+
             <Image
               src="/Male.png"
               alt="KOI companion"
@@ -83,8 +141,10 @@ export default function ChatPage() {
               height={1000}
               priority
               sizes="(min-width: 640px) 340px, 90vw"
-              className="h-auto w-full object-contain"
-              style={{ objectFit: 'contain' }}
+              className="h-auto w-full object-contain relative z-10"
+              style={{
+                objectFit: 'contain',
+              }}
             />
           </div>
         </div>
@@ -110,6 +170,9 @@ export default function ChatPage() {
               whiteSpace: 'nowrap',
               flexShrink: 0,
               transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+              opacity: mounted ? 1 : 0,
+              transform: mounted ? 'translateY(0)' : 'translateY(10px)',
+              transitionDelay: '0.3s',
             }}
             onMouseDown={(e) => {
               e.currentTarget.style.transform = 'translate(2px,2px)';
@@ -128,10 +191,45 @@ export default function ChatPage() {
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Start a conversation with KOI
+            Try other avatars too!
           </button>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes thinkBubble1 {
+          0%, 100% {
+            transform: scale(0.8) translateY(0);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1) translateY(-10px);
+            opacity: 0.6;
+          }
+        }
+
+        @keyframes thinkBubble2 {
+          0%, 100% {
+            transform: scale(0.8) translateY(0);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1) translateY(-8px);
+            opacity: 0.5;
+          }
+        }
+
+        @keyframes thinkBubble3 {
+          0%, 100% {
+            transform: scale(0.8) translateY(0);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1) translateY(-6px);
+            opacity: 0.4;
+          }
+        }
+      `}</style>
     </div>
   );
 }

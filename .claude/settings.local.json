@@ -17,7 +17,10 @@
       "Skill(gsd-fast)",
       "PowerShell(New-Item *)",
       "PowerShell(Get-NetTCPConnection *)",
-      "PowerShell(Copy-Item *)"
+      "PowerShell(Copy-Item *)",
+      "Bash(firebase emulators:start --only functions)",
+      "Bash(Start-Sleep -Seconds 20)",
+      "Bash(Get-Content \"C:\\\\Users\\\\ahmad\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\E--Koi-Koi-App\\\\01584771-683f-44b2-a222-17c8d7d24a1a\\\\tasks\\\\be5cs3zwa.output\" -Raw)"
     ]
   }
 }
