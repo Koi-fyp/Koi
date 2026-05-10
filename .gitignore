@@ -441,3 +441,21 @@ firebase-debug.log
 
 # Screenshots/temp
 temporary_screenshots/
+
+# --- KOI PROJECT SPECIFIC ---
+# Next.js binaries and heavy compiler artifacts
+*.node
+*.map
+.next/
+out/
+.vercel/
+
+# Multimodal Assets (Keep repo light)
+# If you move videos/audio to S3/Cloudinary, ignore the local copies:
+public/videos/
+public/audio/
+
+# Environment Secrets (CRITICAL for security)
+.env
+.env.local
+.env.development.local
