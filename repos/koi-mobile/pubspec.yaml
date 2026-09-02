@@ -1,0 +1,17 @@
+name: koi_mobile
+description: "KOI - Keep Open Interactions, mobile client"
+publish_to: 'none'
+version: 0.0.1
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter_lib:
+  path: ../koi-backend/flutter_lib
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

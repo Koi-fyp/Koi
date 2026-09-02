@@ -3,7 +3,7 @@ import { getApp } from 'firebase/app';
 import { db, MessageRecord } from '../db';
 import { syncQueue } from '../firestore/sync';
 import { v4 as uuidv4 } from 'uuid';
-
+import { encrypt, getActiveCryptoContext } from '../crypto';
 // Instantiate once at module level so connectFunctionsEmulator is only called once
 const functions = getFunctions(getApp());
 if (process.env.NODE_ENV === 'development') {
@@ -27,12 +27,18 @@ interface FirebaseCallPayload {
   userProfile: unknown;
 }
 
-async function saveMessage(record: MessageRecord): Promise<void> {
-  await db.messages.put(record);
+async function saveMessage(record: MessageRecord, uid: string): Promise<void> {
+  const { secret, saltB64 } = await getActiveCryptoContext(uid);
+  const encryptedRecord: MessageRecord = {
+    ...record,
+    content: await encrypt(record.content, secret, saltB64),
+  };
+
+  await db.messages.put(encryptedRecord);
   syncQueue.enqueue({
     collection: `conversations/${record.conversationId}/messages`,
     docId: record.id,
-    data: record as unknown as Record<string, unknown>,
+    data: encryptedRecord as unknown as Record<string, unknown>,
     priority: 3,
   });
 }
@@ -57,7 +63,7 @@ export async function sendMessage(
     sentiment_score: 0,
     crisis_flag: false,
     synced: false,
-  });
+  }, userId);
 
   try {
     const callable = httpsCallable<FirebaseCallPayload, SendMessageResult>(
@@ -77,7 +83,7 @@ export async function sendMessage(
       sentiment_score: result.data.sentiment_score,
       crisis_flag: result.data.crisis_flag,
       synced: false,
-    });
+    }, userId);
 
     return result.data;
   } catch (err) {
@@ -95,7 +101,7 @@ export async function sendMessage(
       sentiment_score: 0,
       crisis_flag: false,
       synced: false,
-    });
+    }, userId);
 
     return {
       reply: fallbackReply,
