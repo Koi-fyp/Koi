@@ -1,10 +1,63 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase';
-import { signInWithCustomToken, signOut as firebaseSignOut } from 'firebase/auth';
+import {
+  onAuthStateChanged,
+  signInWithCustomToken,
+  signOut as firebaseSignOut,
+  User,
+} from 'firebase/auth';
+
+/**
+ * 🆕 [SESSION FIX — see SESSION_HANDOFF.md §22.3 addition]
+ *
+ * This file previously restored sessions via a hand-rolled
+ * storeEncrypted()/decryptStored() pair. That mechanism has been REMOVED
+ * for two independent reasons, found during review for the
+ * getActiveCryptoContext() offline/new-device fix:
+ *
+ *   1. NOT SECURE — it generated a random AES-GCM key per call, then
+ *      exported and stored that key in localStorage right next to the
+ *      ciphertext it encrypted (`${key}:key`, `${key}:iv`, `${key}:data`
+ *      all in the same, equally-readable storage). This provided no real
+ *      confidentiality — anyone with devtools access to the browser could
+ *      decrypt `koi_auth:data` immediately. It did not use the locked
+ *      PBKDF2+AES-GCM pipeline already implemented in `crypto.ts` in this
+ *      same codebase.
+ *
+ *   2. NOT NECESSARY — Firebase Auth's JS SDK persists sessions locally
+ *      (IndexedDB, `browserLocalPersistence` by default in web
+ *      environments) and restores them automatically, including OFFLINE —
+ *      `onAuthStateChanged` fires with the cached user before any network
+ *      round-trip completes. The custom mechanism was solving a problem
+ *      Firebase already solves correctly, for free.
+ *
+ * Replaced with `onAuthStateChanged`, Firebase's own listener. This also
+ * fixes a real bug: the previous `signInWithCustomToken` restore call was
+ * a network request with no offline path — on an offline app launch, it
+ * threw, was silently swallowed by a `catch`, and `user` stayed `null`
+ * even for an already-signed-in person. That is fixed as a side effect of
+ * this change, not a separate patch.
+ *
+ * `isAnonymous` and `isLinked` are newly exposed here — needed by
+ * `getActiveCryptoContext()`'s locked block/retry logic to distinguish a
+ * previously-linked user (who must block on missing salt+offline) from an
+ * anonymous one (for whom local salt generation remains correct, per
+ * existing accepted behavior).
+ *
+ * NOT fixed here, flagged rather than silently assumed away: linked-phase
+ * `secret` (the user's password) has no session re-entry path anywhere in
+ * this file. `linkWithEmail()` only ever sees a password at the moment of
+ * initial linking. A "re-enter password to unlock" step for a *returning*
+ * linked session does not exist yet. Callers needing a linked user's
+ * secret (e.g. `getActiveCryptoContext`) must be supplied one from
+ * wherever that future step lives — this file does not provide it.
+ */
 
 interface AuthContextType {
-  user: any | null;
+  user: User | null;
+  isAnonymous: boolean;
+  isLinked: boolean;
   loading: boolean;
   error: Error | null;
   signInAnonymously: () => Promise<void>;
@@ -20,62 +73,29 @@ export const useAuth = () => {
   return ctx;
 };
 
-async function storeEncrypted(key: string, data: any) {
-  const raw = JSON.stringify(data);
-  const enc = new TextEncoder().encode(raw);
-  const cryptoKey = await window.crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ["encrypt", "decrypt"]);
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  const ct = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, cryptoKey, enc);
-  // store key and ciphertext in IndexedDB (simple using localStorage for demo)
-  const exportedKey = await window.crypto.subtle.exportKey('raw', cryptoKey);
-  const exportedKeyArr = new Uint8Array(exportedKey);
-  localStorage.setItem(`${key}:key`, btoa(String.fromCharCode(...exportedKeyArr)));
-  localStorage.setItem(`${key}:iv`, btoa(String.fromCharCode(...iv)));
-  const ctArr = new Uint8Array(ct);
-  localStorage.setItem(`${key}:data`, btoa(String.fromCharCode(...ctArr)));
-}
-
-function Uint8List(buf: ArrayBuffer) {
-  return new Uint8Array(buf);
-}
-
-async function decryptStored(key: string) {
-  try {
-    const k = localStorage.getItem(`${key}:key`);
-    const ivB = localStorage.getItem(`${key}:iv`);
-    const dataB = localStorage.getItem(`${key}:data`);
-    if (!k || !ivB || !dataB) return null;
-    const keyBytes = Uint8Array.from(atob(k), c => c.charCodeAt(0));
-    const iv = Uint8Array.from(atob(ivB), c => c.charCodeAt(0));
-    const dataBytes = Uint8Array.from(atob(dataB), c => c.charCodeAt(0));
-    const cryptoKey = await window.crypto.subtle.importKey('raw', keyBytes.buffer, 'AES-GCM', true, ['decrypt']);
-    const plain = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, dataBytes);
-    return JSON.parse(new TextDecoder().decode(plain));
-  } catch (e) {
-    console.warn('decryptStored failed', e);
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    (async () => {
-      // Try to restore encrypted session
-      const stored = await decryptStored('koi_auth');
-      if (stored && stored.authToken) {
-        try {
-          await signInWithCustomToken(auth, stored.authToken);
-        } catch (e) {
-          console.warn('Token sign-in failed', e);
-        }
-      }
+    // Firebase's own persisted-session listener. Fires synchronously with
+    // the cached user (if any) before any network call completes, so this
+    // works offline. Updates again once/if a fresh token round-trip
+    // resolves. No manual encryption/decryption needed — see file header.
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setLoading(false);
-    })();
+    });
+    return () => unsubscribe();
   }, []);
+
+  // Derived, not stored — always reflects Firebase's own live user object.
+  const isAnonymous = user?.isAnonymous ?? false;
+  const isLinked =
+    user != null &&
+    !user.isAnonymous &&
+    user.providerData.some((p) => p.providerId === 'password');
 
   const signInAnonymously = async () => {
     setLoading(true);
@@ -85,9 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error('Failed to create anonymous session');
       const data = await res.json();
       await signInWithCustomToken(auth, data.token);
-      // store encrypted
-      await storeEncrypted('koi_auth', { userId: data.userId, authToken: data.token, lastActive: new Date().toISOString() });
-      setUser({ uid: data.userId });
+      // No manual storeEncrypted() call needed — onAuthStateChanged above
+      // picks up the new session automatically, and Firebase persists it.
     } catch (e: any) {
       setError(e);
     } finally {
@@ -99,7 +118,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      // Get current idToken for verification
       const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/auth/link-email', {
         method: 'POST',
@@ -108,7 +126,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (!res.ok) throw new Error('Failed to link email');
       const payload = await res.json();
-      // The server provides a verification link; client should show user the verification step
+      // Caller is responsible for triggering reencryptOnLinking() (see
+      // crypto.ts) using this same `password` value before it goes out of
+      // scope — this function does not do that itself, unchanged from
+      // before this patch.
       return payload;
     } catch (e: any) {
       setError(e);
@@ -123,10 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       await firebaseSignOut(auth);
-      // clear stored encrypted data but keep for offline sign-in if needed - per privacy we keep user key but here we clear
-      localStorage.removeItem('koi_auth:key');
-      localStorage.removeItem('koi_auth:iv');
-      localStorage.removeItem('koi_auth:data');
+      // No manual localStorage cleanup needed — nothing is written there
+      // by this file anymore. Firebase clears its own persisted session.
       setUser(null);
     } catch (e: any) {
       setError(e);
@@ -137,10 +156,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextType = {
     user,
+    isAnonymous,
+    isLinked,
     loading,
     error,
     signInAnonymously,
-    linkWithEmail: async (e, p) => await linkWithEmail(e, p),
+    linkWithEmail,
     signOut,
   };
 

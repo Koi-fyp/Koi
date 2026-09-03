@@ -16,27 +16,22 @@ import { syncQueue } from './firestore/sync';
  * never leaving the client unencrypted.
  *
  * LOCKED DECISION — secret source (resolved via KOI_UX_FLOWS_LOCKED_v1_1.md
- * §8, "Account Upgrade": linking is optional, not mandatory onboarding;
- * cross-device sign-in is explicitly a consequence of linking, not
- * available to anonymous users. Encryption follows the same shape:
+ * §8, "Account Upgrade"):
  *
  *   1. ANONYMOUS phase: `secret` is a locally-generated random value,
- *      stored in this browser's localStorage. Device-local by design —
- *      matches the fact that anonymous users have no cross-device sign-in
- *      either, per §8. This is NOT a bug; it's the intended MVP boundary.
+ *      stored in this browser's localStorage. Device-local by design.
  *
  *   2. LINKED phase (after linkWithEmailAndPassword succeeds): `secret`
  *      becomes the user's password, entered at each session, never
  *      stored. All data encrypted during the anonymous phase must be
  *      re-encrypted under this new secret — see `reencryptOnLinking()`.
+ *      🆕 NOT YET WIRED: nothing currently re-collects this password on a
+ *      *returning* linked session (see AuthContext.tsx header comment).
+ *      Callers must supply `linkedSecret` themselves until that exists.
  *
- * Both phases use the exact same PBKDF2 + AES-GCM + versioned-format
- * pipeline below — only the source of `secret` differs.
- *
- * NOTE: "Master Password" as a separate standalone passphrase concept
- * was considered and explicitly rejected — see chat discussion. There is
- * no dedicated app-specific passphrase; `secret` is always either the
- * anonymous-phase random value or the linked account's password.
+ * NOTE: "Master Password" as a separate standalone passphrase concept was
+ * explicitly rejected. `secret` is always either the anonymous-phase
+ * random value or the linked account's password.
  */
 
 const PBKDF2_ITERATIONS = 600_000;
@@ -77,11 +72,6 @@ export function generateSalt(): string {
 
 // ---------- anonymous-phase secret ----------
 
-/**
- * Returns this device's anonymous-phase secret, generating and persisting
- * one to localStorage on first call. Device-local and intentionally NOT
- * synced — matches §8's "no cross-device until linking" behavior.
- */
 export function getOrCreateAnonymousSecret(): string {
   const existing = localStorage.getItem(ANON_SECRET_STORAGE_KEY);
   if (existing) return existing;
@@ -90,8 +80,6 @@ export function getOrCreateAnonymousSecret(): string {
   return generated;
 }
 
-/** Call after successful migration in reencryptOnLinking() to remove the
- * now-obsolete anonymous secret. Do NOT call before migration completes. */
 export function clearAnonymousSecret(): void {
   localStorage.removeItem(ANON_SECRET_STORAGE_KEY);
 }
@@ -119,20 +107,13 @@ async function deriveKey(secret: string, saltB64: string): Promise<CryptoKey> {
     },
     baseKey,
     { name: "AES-GCM", length: 256 },
-    false, // not extractable — key material never leaves this derivation
+    false,
     ["encrypt", "decrypt"]
   );
 }
 
 // ---------- public encrypt / decrypt ----------
 
-/**
- * Encrypts `plaintext` under a key derived from `secret` + `saltB64`.
- * Returns: v1:PBKDF2:base64(salt):base64(nonce):base64(ciphertext_with_mac)
- *
- * Web Crypto's AES-GCM output already appends the auth tag to the
- * ciphertext, so the final segment already IS ciphertext_with_mac.
- */
 export async function encrypt(
   plaintext: string,
   secret: string,
@@ -157,11 +138,6 @@ export async function encrypt(
   ].join(":");
 }
 
-/**
- * Decrypts a payload produced by `encrypt()`. Parses and validates the
- * versioned format, failing loudly on anything malformed or unrecognized
- * rather than guessing.
- */
 export async function decrypt(payload: string, secret: string): Promise<string> {
   const parts = payload.split(":");
   if (parts.length !== 5) {
@@ -194,23 +170,6 @@ export async function decrypt(payload: string, secret: string): Promise<string> 
 
 // ---------- linking migration ----------
 
-/**
- * Re-encrypts every payload from the anonymous-phase secret to the new
- * password-derived secret. Call this once, immediately after
- * AuthService.linkWithEmailAndPassword() succeeds, BEFORE clearing the
- * anonymous secret from localStorage.
- *
- * Caller is responsible for:
- *   1. Fetching every stored encrypted payload for this user.
- *   2. Calling this function to get the re-encrypted versions.
- *   3. Writing the re-encrypted payloads back to Firestore/local storage.
- *   4. Updating users/{uid}.public_crypto_metadata.salt to newSaltB64.
- *   5. Only THEN calling clearAnonymousSecret().
- *
- * If any step 3 write fails partway through, do NOT clear the anonymous
- * secret — the old payloads are still decryptable with it, so a retry
- * remains possible. Clearing it early on partial failure is unrecoverable.
- */
 export async function reencryptOnLinking(
   payloads: string[],
   anonymousSecret: string,
@@ -233,52 +192,99 @@ export interface CryptoContext {
   saltB64: string;
 }
 
+export interface AuthState {
+  /** From AuthContext's isLinked — true if this user has linked email/password. */
+  isLinked: boolean;
+  /**
+   * Required when isLinked is true. The user's password for this session.
+   * 🆕 Not currently sourced anywhere — see AuthContext.tsx header comment.
+   * Caller must supply it once that session re-entry step exists.
+   */
+  linkedSecret?: string;
+}
+
+/**
+ * 🆕 [SESSION FIX — see SESSION_HANDOFF.md §22.3 addition]
+ *
+ * Distinguishes WHY a salt fetch is blocked, so the UI layer can show one
+ * of two distinct messages (locked decision, this session):
+ *   - 'no-network'   → device has no connectivity at all
+ *   - 'fetch-failed' → device reports online, but the Firestore read did
+ *                      not succeed (flaky connection, captive portal,
+ *                      transient server issue, etc.)
+ */
+export type SaltBlockedReason = 'no-network' | 'fetch-failed';
+
+export class SaltFetchBlockedError extends Error {
+  reason: SaltBlockedReason;
+  constructor(reason: SaltBlockedReason) {
+    super(`Salt fetch blocked: ${reason}`);
+    this.name = 'SaltFetchBlockedError';
+    this.reason = reason;
+  }
+}
+
 /**
  * Returns the secret + salt to use for the current user's encrypt()/decrypt()
- * calls. Offline-first, matching the pattern already established in
- * sync.ts — local cache is checked before any network call, and salt
- * writes go through the existing syncQueue rather than a new mechanism.
+ * calls. Offline-first: local cache is checked before any network call.
  *
- * CURRENT SCOPE — anonymous-phase only. This does not check whether the
- * user has linked an email/password, because the web app's linking flow
- * (AuthContext.tsx) hasn't been reviewed yet. Once linking exists here,
- * this needs a branch: linked users' `secret` becomes their password
- * instead of getOrCreateAnonymousSecret(), and reencryptOnLinking() must
- * run at the moment linking succeeds. Flagging rather than guessing at
- * unreviewed auth code.
+ * 🆕 [SESSION FIX] LOCKED BLOCK DECISION, implemented here:
+ * A previously-linked user, on a device with no cached salt, who is
+ * offline (or whose fetch fails despite looking online) is BLOCKED —
+ * this throws SaltFetchBlockedError rather than silently generating a
+ * fresh local salt. Silent generation in that specific case would
+ * diverge from their real salt and break cross-device decryption later.
  *
- * ⚠️ KNOWN OPEN GAP, DEFERRED TO END-OF-SESSION DOC UPDATE — NOT FIXED:
- * If this device has never cached a salt for this uid AND is offline on
- * this first call, there's no way to know whether a salt already exists
- * remotely (e.g. this is a returning linked user opening the app on a
- * new device before ever syncing). Generating a fresh local salt in that
- * case would silently diverge from their real salt and break cross-device
- * decryption later. This function currently generates locally in that
- * situation, which is safe for brand-new anonymous users but NOT provably
- * safe for a returning user's first-ever offline session on a new device.
- * Needs a UX decision (block/warn vs. silent generation) before this is
- * fully correct — not just a code fix. See SESSION_HANDOFF for tracking.
+ * Anonymous users are UNAFFECTED by this change — local salt generation
+ * on first use remains correct behavior for them, same as before.
+ * Already-synced devices going offline again are also UNAFFECTED — the
+ * cache-hit path above returns immediately, same as before this fix.
+ *
+ * This function makes exactly ONE attempt. Retrying (auto-watch +
+ * manual button, 5 attempts with backoff, per the locked UX decision) is
+ * the caller's responsibility — see `resolveSaltWithRetry()` below, which
+ * is what UI code should actually call.
  */
-export async function getActiveCryptoContext(uid: string): Promise<CryptoContext> {
-  const secret = getOrCreateAnonymousSecret();
+export async function getActiveCryptoContext(
+  uid: string,
+  authState: AuthState
+): Promise<CryptoContext> {
+  if (authState.isLinked && !authState.linkedSecret) {
+    // Not a network/offline condition — a real caller-side bug (linked
+    // user, but no session secret supplied). Fail loudly, not silently.
+    throw new Error(
+      'getActiveCryptoContext: authState.isLinked is true but no linkedSecret was supplied.'
+    );
+  }
+  const secret = authState.isLinked
+    ? (authState.linkedSecret as string)
+    : getOrCreateAnonymousSecret();
+
   const cacheKey = `${SALT_CACHE_PREFIX}${uid}`;
 
-  // 1. Local cache first — matches offline-first pattern, avoids a
-  //    network round-trip on every single message send/load.
+  // 1. Local cache first.
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
     return { secret, saltB64: cached };
   }
 
-  // 2. Not cached — try Firestore, but don't let a network failure here
-  //    block the user from sending a message at all.
+  // 2. No cache. This is the branch point for the locked block decision.
+  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : false;
+
+  if (authState.isLinked && !isOnline) {
+    throw new SaltFetchBlockedError('no-network');
+  }
+
   let existingSalt: string | undefined;
   try {
     const userDocRef = doc(firestore, 'users', uid);
     const snapshot = await getDoc(userDocRef);
     existingSalt = snapshot.data()?.public_crypto_metadata?.salt as string | undefined;
   } catch {
-    // Offline or Firestore unreachable — see KNOWN OPEN GAP above.
+    if (authState.isLinked) {
+      throw new SaltFetchBlockedError('fetch-failed');
+    }
+    // Anonymous: unaffected by this fix, same fallback behavior as before.
     existingSalt = undefined;
   }
 
@@ -287,10 +293,17 @@ export async function getActiveCryptoContext(uid: string): Promise<CryptoContext
     return { secret, saltB64: existingSalt };
   }
 
-  // 3. Brand new — generate, cache locally immediately (so encryption
-  //    works right now regardless of network), then queue the Firestore
-  //    write through the existing syncQueue so it retries automatically
-  //    if we're currently offline, same as messages/mood data do.
+  if (authState.isLinked) {
+    // Reached only if Firestore responded successfully but genuinely has
+    // no salt on record for a linked user — an inconsistent-account-state
+    // case, not the offline case this fix targets. Block rather than
+    // guess, same reasoning as above.
+    throw new SaltFetchBlockedError('fetch-failed');
+  }
+
+  // 3. Brand new ANONYMOUS user only — generate, cache locally, queue the
+  // Firestore write through the existing syncQueue. Unchanged from before
+  // this fix.
   const saltB64 = generateSalt();
   localStorage.setItem(cacheKey, saltB64);
 
@@ -303,3 +316,51 @@ export async function getActiveCryptoContext(uid: string): Promise<CryptoContext
 
   return { secret, saltB64 };
 }
+
+/**
+ * 🆕 [SESSION FIX] UI-facing retry driver for the locked block decision.
+ *
+ * Attempts getActiveCryptoContext() up to `maxAttempts` times (locked: 5),
+ * with exponential backoff between attempts (1s, 2s, 4s, 8s — 4 waits
+ * between 5 attempts). Intended to be triggered by EITHER a connectivity
+ * "online" event listener OR a manual retry button — both drive the same
+ * call, per the locked "auto-watch + manual button" decision. This
+ * function does not register the listener or render the button itself;
+ * that's UI-layer wiring (React component), kept separate from this
+ * module's existing pattern of pure logic with no UI dependencies.
+ *
+ * `onAttempt` lets the caller update on-screen messaging per the locked
+ * two-message decision: report the SaltBlockedReason from each failed
+ * attempt so the UI can distinguish "no network" from "online, retrying"
+ * while attempts are still in progress.
+ */
+export async function resolveSaltWithRetry(
+  uid: string,
+  authState: AuthState,
+  onAttempt?: (attemptNumber: number, maxAttempts: number, reason: SaltBlockedReason) => void,
+  maxAttempts: number = 5
+): Promise<CryptoContext> {
+  let lastReason: SaltBlockedReason = 'no-network';
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await getActiveCryptoContext(uid, authState);
+    } catch (e) {
+      if (!(e instanceof SaltFetchBlockedError)) {
+        throw e; // Not our error to retry — propagate immediately.
+      }
+      lastReason = e.reason;
+      onAttempt?.(attempt, maxAttempts, lastReason);
+
+      if (attempt < maxAttempts) {
+        const delayMs = 1000 * Math.pow(2, attempt - 1); // 1s, 2s, 4s, 8s
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  // All attempts exhausted — surface the final error state to the caller.
+  throw new SaltFetchBlockedError(lastReason);
+}
+
+
