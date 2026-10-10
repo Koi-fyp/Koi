@@ -1,9 +1,29 @@
+"""
+🆕 [PHASE 2 REBUILD] CARRIED OVER, functionally unchanged from the
+previous version of this file — this was the one piece of the old
+`koi-ai-engine` codebase confirmed correct against locked canon during
+the pre-rebuild audit:
+
+  - Uses `firebase_admin.auth.verify_id_token()` — real JWKS verification
+    via the vetted `firebase-admin` SDK, not a hand-rolled signature
+    check. Satisfies the CRITICAL requirement in
+    TRACK_AI_BACKEND_FINAL_v4_13.md line 98 / Blueprint §4.1's
+    "SECURITY RULE."
+  - Identity is read only from the verified token's decoded claims
+    (`current_user.get('uid')` at call sites) — never from a
+    client-supplied JSON field. `ChatRequest` (see schemas.py) has no
+    user-identity field at all, by design, matching "Reject JSON
+    user_id payloads."
+
+No changes made here beyond this header comment.
+"""
+
 import json
 from typing import Any, Dict
 
 import firebase_admin
 from firebase_admin import auth as firebase_auth, credentials
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import HTTPException, Request, status
 from jose import JWTError
 
 from app.core.config import settings

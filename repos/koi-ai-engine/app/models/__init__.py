@@ -1,3 +1,3 @@
-from app.models.schemas import HealthStatus, InferenceRequest, InferenceResponse, WarmupResponse
+from app.models.schemas import ChatRequest, ChatResponse, CompanionState, SessionTurn, HealthStatus
 
-__all__ = ['HealthStatus', 'InferenceRequest', 'InferenceResponse', 'WarmupResponse']
+__all__ = ['ChatRequest', 'ChatResponse', 'CompanionState', 'SessionTurn', 'HealthStatus']

@@ -1,0 +1,19 @@
+/**
+ * ⚠️ TEMPORARY — COMMITTEE-REJECTED ARCHITECTURE, SCHEDULED FOR REMOVAL ⚠️
+ *
+ * This file is part of the original architecture rejected at committee
+ * review for violating the Zero External AI APIs constraint on the
+ * Companion LLM (a core, inviolable component — see SESSION_HANDOFF.md
+ * canon and KOI_ULTIMATE_MASTER_BLUEPRINT_v4_13.md).
+ *
+ * It remains live ONLY to keep chat functional until the self-hosted
+ * Companion LLM endpoint in koi-ai-engine (FastAPI + vLLM/Ollama, LoRA
+ * fine-tuned base model) is built, tested, and cut over.
+ *
+ * DO NOT extend, refactor, or build new features on top of this file.
+ * DO NOT treat this as reference architecture for anything else.
+ * Removal is tracked as the AI-backend team's top-priority task,
+ * immediately following the current repo-cleanup branch.
+ *
+ * See: repo-cleanup branch discussion, [add issue/PR link once opened]
+ */

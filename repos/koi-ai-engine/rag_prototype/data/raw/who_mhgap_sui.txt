@@ -1,0 +1,37 @@
+SOURCE: WHO mhGAP guideline for mental, neurological and substance use disorders, Third edition, 20 November 2023. ISBN 978-92-4-008427-8. Licence: CC BY-NC-SA 3.0 IGO.
+FETCHED: live PDF fetch this session, from files-hivpreventioncoalition.unaids.org mirror of the official WHO publication.
+NOTE: this session's PDF extraction reached Table 1 (executive summary, headline recommendations for all 11 modules) but did not reach the full §3.11 Self-harm and suicide (SUI) narrative section (page 108 — justification/remarks/research-gaps/implementation-considerations subsections), which sits deeper in the 184-page document than this session's fetch tooling retrieved. The three SUI recommendations below are the verbatim headline text from Table 1. Full narrative ingestion of §3.11 is a Day 2 continuation item, not fabricated here.
+
+===CHUNK===
+ID: sui1
+Module: Self-harm and suicide (SUI)
+Recommendation: SUI1 (new)
+Text: Safety planning type-interventions, i.e. interventions based on principles of safety planning which are multicomponent or supplemented with follow-up or support, can be considered.
+Strength of recommendation: Conditional
+Certainty of evidence: Very low
+
+===CHUNK===
+ID: sui2
+Module: Self-harm and suicide (SUI)
+Recommendation: SUI2
+Text: The evidence regarding effectiveness of stand-alone media campaigns (to raise awareness and sensitize the general public about suicide and its prevention) in reducing deaths from suicide, suicide attempts and acts of self-harm is insufficient to make a recommendation.
+Strength of recommendation: n/a (insufficient evidence)
+Certainty of evidence: n/a
+
+===CHUNK===
+ID: sui3
+Module: Self-harm and suicide (SUI)
+Recommendation: SUI3 (new)
+Text: Stand-alone digital interventions based on evidence-based interventions such as cognitive behavioural therapy (CBT), dialectical behaviour therapy (DBT), problem-solving therapy (PST) and mindfulness should be considered as support for persons with suicidal thoughts.
+Strength of recommendation: Conditional
+Certainty of evidence: Low
+
+===CHUNK===
+ID: glossary_selfharm
+Module: Glossary (applies across guideline, relevant to SUI)
+Text: Self-harm: Intentional self-inflicted poisoning or injury, which may or may not have a fatal intent or outcome.
+
+===CHUNK===
+ID: glossary_suicidal_ideation
+Module: Glossary (applies across guideline, relevant to SUI)
+Text: Suicidal thoughts/ideation: Thoughts, ideas or ruminations about the possibility of ending one's life, ranging from thinking that one would be better off dead to formulation of elaborate plans.

@@ -1,8 +1,6 @@
 "use client";
 import Dexie, { type Table } from 'dexie';
-
 export type Emotion = 'happy' | 'sad' | 'anxious' | 'calm' | 'neutral';
-
 export interface ConversationMessageRecord {
   id: string;
   conversationId: string;
@@ -15,11 +13,10 @@ export interface ConversationMessageRecord {
   crisis_flag: boolean;
   synced: boolean;
 }
-
 export interface UserRecord {
   id?: number;
   uid: string;
-  avatar?: 'female_human' | 'male_human' | 'fox';
+  avatar?: 'female_human' | 'male_human';
   companion?: 'aisha' | 'raza' | 'koi';
   language?: 'en' | 'ur';
   notificationTime?: string;
@@ -27,7 +24,6 @@ export interface UserRecord {
   onboardingComplete?: boolean;
   createdAt?: string;
 }
-
 export interface JigsawProgressRecord {
   uid: string;
   jigsaw_pieces: number;
@@ -41,7 +37,6 @@ export interface JigsawProgressRecord {
   milestones_reached: number[];
   last_updated: Date;
 }
-
 export interface MoodEntryRecord {
   id: string;
   userId: string;
@@ -52,9 +47,7 @@ export interface MoodEntryRecord {
   loneliness_score: number;
   synced: boolean;
 }
-
 export interface MessageRecord extends ConversationMessageRecord {}
-
 export interface SyncQueueRecord {
   id?: number;
   collection: string;
@@ -63,14 +56,12 @@ export interface SyncQueueRecord {
   priority: number;
   createdAt: Date;
 }
-
 export class KoiDatabase extends Dexie {
   users!: Table<UserRecord, number>;
   messages!: Table<MessageRecord, string>;
   moodEntries!: Table<MoodEntryRecord, string>;
   jigsawProgress!: Table<JigsawProgressRecord, string>;
   syncQueue!: Table<SyncQueueRecord, number>;
-
   constructor() {
     super('KoiDB');
     this.version(1).stores({
@@ -82,5 +73,4 @@ export class KoiDatabase extends Dexie {
     });
   }
 }
-
 export const db = new KoiDatabase();

@@ -3,11 +3,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { db, MessageRecord } from '@/lib/db';
 import { auth } from '@/lib/firebase';
+import { decrypt, getActiveCryptoContext } from '@/lib/crypto';
 import {
   sendMessage as callService,
   Emotion,
 } from '@/lib/conversation/conversationService';
-
 export interface ChatMessage {
   id: string;
   conversationId: string;
@@ -16,7 +16,6 @@ export interface ChatMessage {
   timestamp: Date;
   emotion: Emotion;
 }
-
 interface UseChatReturn {
   messages: ChatMessage[];
   isTyping: boolean;
@@ -24,37 +23,43 @@ interface UseChatReturn {
   conversationId: string;
   send: (text: string) => Promise<void>;
 }
-
-function toChat(r: MessageRecord): ChatMessage {
+async function toChat(r: MessageRecord, secret: string): Promise<ChatMessage> {
+  let content = r.content;
+  try {
+    content = await decrypt(r.content, secret);
+  } catch {
+    console.warn('[KOI] Failed to decrypt message, showing raw content:', r.id);
+  }
   return {
     id: r.id,
     conversationId: r.conversationId,
     sender: r.sender,
-    content: r.content,
+    content,
     timestamp: r.timestamp,
     emotion: (r.emotion as Emotion) ?? 'neutral',
   };
 }
-
 export function useChat(): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState<Emotion>('neutral');
   const conversationId = useRef(uuidv4());
   const offlineQueue = useRef<Array<() => Promise<void>>>([]);
-
   // Read uid at call time — auth.currentUser is populated after signInWithCustomToken
   const getUserId = () => auth.currentUser?.uid ?? 'anonymous';
-
   useEffect(() => {
+    const uid = getUserId();
     db.messages
       .where('conversationId')
       .equals(conversationId.current)
       .sortBy('timestamp')
-      .then((rows) => setMessages(rows.map(toChat)))
+      .then(async (rows) => {
+        const { secret } = await getActiveCryptoContext(uid);
+        const decrypted = await Promise.all(rows.map((r) => toChat(r, secret)));
+        setMessages(decrypted);
+      })
       .catch(() => {});
   }, []);
-
   useEffect(() => {
     const flush = async () => {
       const tasks = offlineQueue.current.splice(0);
@@ -63,13 +68,11 @@ export function useChat(): UseChatReturn {
       }
     };
     window.addEventListener('online', flush);
-    return () => window.removeEventListener('online', flush);
+    return () => window.removeEventListener('online',flush);
   }, []);
-
   const send = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-
     const optimistic: ChatMessage = {
       id: uuidv4(),
       conversationId: conversationId.current,
@@ -78,14 +81,12 @@ export function useChat(): UseChatReturn {
       timestamp: new Date(),
       emotion: 'neutral',
     };
-
     setMessages((prev) => [...prev, optimistic]);
     setIsTyping(true);
-
     const doSend = async () => {
       try {
         // Build last-5 context for the AI
-        const context = messages.slice(-5).map((m) => ({
+        const context = messages.slice(-5).map((m) =>({
           role: (m.sender === 'user' ? 'user' : 'model') as 'user' | 'model',
           content: m.content,
         }));
@@ -94,9 +95,8 @@ export function useChat(): UseChatReturn {
           conversationId.current,
           trimmed,
           context,
-          { severity: 'mild', profile: 'disconnected', avatar: 'fox' },
+          { severity: 'mild', profile: 'disconnected', avatar: 'male_human' },
         );
-
         setCurrentEmotion(result.emotion);
         setMessages((prev) => [
           ...prev,
@@ -113,7 +113,6 @@ export function useChat(): UseChatReturn {
         setIsTyping(false);
       }
     };
-
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       offlineQueue.current.push(doSend);
       setIsTyping(false);
@@ -121,7 +120,6 @@ export function useChat(): UseChatReturn {
       await doSend();
     }
   }, []);
-
   return {
     messages,
     isTyping,
