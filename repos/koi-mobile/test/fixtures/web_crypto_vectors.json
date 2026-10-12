@@ -1,0 +1,48 @@
+{
+  "description": "Web-generated KOI crypto test vectors. Produced by tool/web_crypto_parity.mjs using logic copied from repos/koi-backend/nextjs_app/src/lib/crypto.ts. Pre-check only; does not close Gate 1-J.",
+  "generator": "node v22.18.0",
+  "cases": [
+    {
+      "name": "ascii",
+      "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "salt": "oKGio6SlpqeoqaqrrK2urw==",
+      "plaintext": "Hello, KOI! 123 :colons: ok",
+      "payload": "v1:PBKDF2:oKGio6SlpqeoqaqrrK2urw==:ZnvViCGRhvUvTkIy:XD1xWv7DKj9Ncdcxs6G/67SS/EIImI3P3ZEvP/vNWjCginyxsYQ3nOXedA=="
+    },
+    {
+      "name": "urdu",
+      "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "salt": "oKGio6SlpqeoqaqrrK2urw==",
+      "plaintext": "آج میں بہت پریشان ہوں، لیکن میں ٹھیک ہو جاؤں گا۔",
+      "payload": "v1:PBKDF2:oKGio6SlpqeoqaqrrK2urw==:hEX2aDOcGeWz+Vcu:u15/4+OVD5o4DsCDc0/fxTRaiefPDsPPn8z74+6mSIsKllJKhdtx7PTMvxHOs+qK/QsskTmbk+O7glnc1mq7oRrBRASrQZVJSE4FG1p9GrfLBq3959LLRlNydOHanyN3SK2YxJ+x"
+    },
+    {
+      "name": "emoji",
+      "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "salt": "oKGio6SlpqeoqaqrrK2urw==",
+      "plaintext": "😀👍🏽 🐟💙 👨‍👩‍👧 ✨",
+      "payload": "v1:PBKDF2:oKGio6SlpqeoqaqrrK2urw==:prJ9Burp1VqGqgOM:zbLuhSNFDTHy7IBbX6YI5jbVxQOPVZlwacKXHWEh0n8QY3NOJMv4q3bU1LgMZy4FrF6gLeP7n7EjE3Qi"
+    },
+    {
+      "name": "empty",
+      "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "salt": "oKGio6SlpqeoqaqrrK2urw==",
+      "plaintext": "",
+      "payload": "v1:PBKDF2:oKGio6SlpqeoqaqrrK2urw==:HssOmmPNC/MdfRyP:XpCFoDDeMNl9ghbue1bomA=="
+    },
+    {
+      "name": "long_multiblock",
+      "secret": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "salt": "oKGio6SlpqeoqaqrrK2urw==",
+      "plaintext": "KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI KOI ",
+      "payload": "v1:PBKDF2:oKGio6SlpqeoqaqrrK2urw==:HeJQmjM+doZOtisk:b5BoLSzWdR7uI8bYAU7wMEqa8fYi9ZK9N5QShQX1o0ddcx3GJup4/woqVscJ0FNdfrT3nw5QoFeaAcoUXlKgJ4mz3jkXrUeVujcsBJi/clCYMY/EMmp0QUkvGmhJ2dMbAgrcjQk4Ih6yFNKlP55jtfKwOhUAMPA957bwHJb9aQhewXXymoj1yfreLyL+lqsAAUKC29VLLY55gtPdTJXk8LzN9e34jLExrPZIEoabOupU9ipY90y+pSU/h2djG54UN+FM4zXA1OlpRPI8rXv9+tyF/1+Dd4ULaJBMoWLCU8OD1JhhLrp7SfRKBq7cLyzA1yjbkmlyuiAdvK0/HkQP6/gc+CKWoF0lJ3F5wINx5ipiBVahjQMyVNByiCO0Jm/1O+c4OtsfcINTIhckhvk4mxvPokp4UzI1hBpJywYcjfxKsP60wKHybrRAgsxehrbzYLuUYjRqF2EwlxUm85ZmUKDO5JmdvcW3pvuhJvowZIzcLTTqPSPjNmGxV60PYZ66ga0evigFesWmrerqs2WYE3gL35RaDyv45It4rdA36FoJeQwA+NMS9K82Nj2m7XELnru3a8f+oK7ux0mdpogeE+ii1xJQ/dXEPmO/JuiIg05pcS+FFUVe57rugb5Z7Cjiih+deZPNQotnEjJWijDjoiEXyKt/9JAPOL07fJjL/+/E1K+/wxuHoCZH3rYlKMHDMdGPzCOrTXQH2URK7ZPMqlLcRKdHQUxkC7ehgFOQIxHuFc4JKuF/RcVmeJessDhzJh6WJC44t+XBRDrsBIfIoU+WA3iG8BkNZrX+Dt+zPLhD6c8fOfhhEZH23DiJEzoR46mlVxt0U7bynAkJkrOeA5SVeuMhRiuWVn5JEmZP6mvwV09epbIgGe71RVmJIcblhNKoD8l5Um9TqVEnfsDypoQR8Z7EWlaaFnZlfFUBTl2JuRDBRvqFQW0nX9R5k40ZifVlDzfBSafpau29EsyJR6yMR5+wiY57o3VPVQp1F6grfa7KQ4E6LTs0MI9+Z0Xo9JvMppjzqU0hs7RO3zKGGZjgsg4fRjlZttNI1vbwBihrbaSk8GlaV4QUTHCOv9ry4pb3scP67hp+OXzcNqyO8HncFeuGitm3bZ6lrhcHhTt35jJjnbB6slPj6TCJCHZ0hq8D9fv8zEoXDPUmZ88SO8n609G8J/aSJWBi06oviPv9wz273L3TjyCAeriXB2ak2x/zFOhlU7uY/MmjsmmKqpgOdHhs7db0Mp+fRUSWeaA9FnTtcWFAnBDlfRaqMao1GjLOSRkuQTS6e2rYebUd2BqccgPTyBSXOHUGZEMpO/pUqR6bGqOtuZAAcRBVA4tXdQyhLEGOPrndXEkpADsZQQoZHvvQbuyN24bY7SDqCSI//NQgbasc4YWYb0abYogb7KoPZPw72c1WOulJdMImshFW9YCF1AoRjFrxUA3VmEWMRJ+l3t+AOYz2hJf6pi72cRXB3lXqmqsRGH7fVE80VdBKCuH4GG+ETAensc8S7bdrsqGLN9GPKbwMBn/se79Ne/hLTG+DeTCaym03qJ+yjcNOHhYMBCRLH6ODK6QXPmLHESR2XXlNoII9tFmwhTdBsYGbbOVj6fAVUy6z/Gvh9Q=="
+    },
+    {
+      "name": "linked_secret_mixed",
+      "secret": "pässwörd-کوئی-🔑",
+      "salt": "oKGio6SlpqeoqaqrrK2urw==",
+      "plaintext": "Mixed: hello / سلام / 🙂",
+      "payload": "v1:PBKDF2:oKGio6SlpqeoqaqrrK2urw==:xxJGH5bKbvbbVfre:6UWkJDLwQ8+CBJuFMNeO53KIBviOcO32vWLqney09uj6WKbq4QmmoeK0KQz/og=="
+    }
+  ]
+}
