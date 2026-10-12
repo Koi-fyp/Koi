@@ -1,5 +1,5 @@
 name: koi_mobile
-description: "A new Flutter project."
+description: "KOI - Keep Open Interactions, mobile client"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 0.0.1
 
 environment:
   sdk: ^3.13.5
@@ -31,13 +31,20 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
- # koi_flutter_lib:
-    # path: ../koi-backend/flutter_lib
+  koi_flutter_lib:
+    path: ../koi-backend/flutter_lib
   google_fonts: ^6.2.1
-  go_router: ^14.0.0
   flutter_riverpod: ^2.4.0
   dio: ^5.4.0
   webview_flutter: ^4.7.0
+  # Constraints below match repos/koi-backend/flutter_lib/pubspec.yaml
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  flutter_secure_storage: ^9.0.0
+  cryptography: ^2.7.0
+  firebase_core: ^2.24.0
+  firebase_auth: ^4.15.0
+  cloud_firestore: ^4.13.0
 
 dev_dependencies:
   flutter_test:
@@ -60,6 +67,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    # Copied from repos/koi-backend/nextjs_app/public/Male.png (chat header image)
+    - assets/images/Male.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

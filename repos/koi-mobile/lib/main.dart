@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+// TODO(firebase): Firebase is NOT initialised yet. No google-services.json has
+// been provided. Once android/app/google-services.json exists (or
+// `flutterfire configure` has been run against the KOI Firebase project), add
+// the Google Services Gradle plugin and call
+// `await Firebase.initializeApp()` here, after
+// `WidgetsFlutterBinding.ensureInitialized()`. Do not hand-write any config.
 void main() {
   runApp(const MyApp());
 }

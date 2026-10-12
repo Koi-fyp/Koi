@@ -17,7 +17,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.47.7'
 
       - name: Get dependencies
         run: flutter pub get
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.47.7'
 
       - name: Get dependencies
         run: flutter pub get
@@ -63,19 +63,20 @@ jobs:
           name: koi-mobile.apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-  build-ios:
-    needs: test
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.0'
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Build iOS
-        run: flutter build ios --release --no-codesign
+  # iOS is out of scope for now (Android only) - build-ios job disabled.
+#  build-ios:
+#    needs: test
+#    runs-on: macos-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#
+#      - name: Setup Flutter
+#        uses: subosito/flutter-action@v2
+#        with:
+#          flutter-version: '3.47.7'
+#
+#      - name: Get dependencies
+#        run: flutter pub get
+#
+#      - name: Build iOS
+#        run: flutter build ios --release --no-codesign
