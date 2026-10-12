@@ -197,9 +197,9 @@ class DesignGallery extends StatelessWidget {
                   label: 'Textarea', placeholder: 'multiline', multiline: true),
               const SizedBox(height: 16),
               const NeoInput(placeholder: 'disabled', enabled: false),
-              _section('Not built (see report)'),
-              Text('BubblyButton, BubblyCard: koi-primary / koi-pastel* '
-                  'colours are not defined in the web Tailwind config.',
+              _section('Not built'),
+              Text('BubblyButton, BubblyCard: skipped (unused on web; their '
+                  'koi-primary / koi-pastel* colours are undefined there).',
                   style: KoiText.body(fontSize: 14)),
               const SizedBox(height: 48),
             ],

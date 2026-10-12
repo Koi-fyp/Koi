@@ -13,8 +13,8 @@ import '../theme/koi_text.dart';
 /// Error border: NeoInput.tsx adds Tailwind `border-red-500` when `error` is
 /// set, but in the compiled web CSS `.neo-input` (unlayered, emitted after the
 /// Tailwind utilities, same specificity) re-declares `border: 2px solid #000`,
-/// so the browser shows a black border. Mobile renders what the web renders:
-/// black border, red error text. (Open question in the Prompt 2 report.)
+/// so the browser shows a black border. Mobile intentionally matches what the
+/// browser shows: black border, red error text (decided Prompt 2 review).
 class NeoInput extends StatefulWidget {
   const NeoInput({
     super.key,

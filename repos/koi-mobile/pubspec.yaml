@@ -71,6 +71,9 @@ flutter:
   assets:
     # Copied from repos/koi-backend/nextjs_app/public/Male.png (chat header image)
     - assets/images/Male.png
+    # Bricolage Grotesque + DM Sans (SIL OFL 1.1), bundled so google_fonts
+    # works offline. Exact files google_fonts 6.3.3 fetches (hash-verified).
+    - assets/google_fonts/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

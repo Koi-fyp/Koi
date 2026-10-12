@@ -13,8 +13,11 @@ import 'koi_colors.dart';
 /// - src/app/globals.css --font-display / --font-body, .neo-hero-text,
 ///   .neo-display
 ///
-/// Fonts are loaded at runtime by google_fonts, the same source the web uses
-/// (globals.css @import from fonts.googleapis.com).
+/// The web loads these from Google Fonts (globals.css @import). Mobile bundles
+/// the same Google Fonts files in assets/google_fonts/ (web ranges: Bricolage
+/// 200-800; DM Sans 300-700, italic 300-400) and main.dart disables runtime
+/// fetching, so text renders correctly offline. Weights outside those ranges
+/// are not bundled and must not be used.
 abstract final class KoiText {
   static const String displayFamily = 'Bricolage Grotesque';
   static const String bodyFamily = 'DM Sans';

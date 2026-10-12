@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'dev/design_gallery.dart';
 
@@ -15,7 +17,22 @@ const bool showDesignGallery =
 // `await Firebase.initializeApp()` here, after
 // `WidgetsFlutterBinding.ensureInitialized()`. Do not hand-write any config.
 void main() {
+  // Fonts are bundled in assets/google_fonts/; never download them at runtime
+  // (the app must render correctly offline).
+  GoogleFonts.config.allowRuntimeFetching = false;
+  LicenseRegistry.addLicense(_bundledFontLicenses);
   runApp(const MyApp());
+}
+
+/// Registers the OFL licenses of the bundled fonts with Flutter's license page.
+Stream<LicenseEntry> _bundledFontLicenses() async* {
+  for (final (package, file) in const [
+    ('Bricolage Grotesque', 'OFL-BricolageGrotesque.txt'),
+    ('DM Sans', 'OFL-DMSans.txt'),
+  ]) {
+    final text = await rootBundle.loadString('assets/google_fonts/$file');
+    yield LicenseEntryWithLineBreaks([package], text);
+  }
 }
 
 class MyApp extends StatelessWidget {
