@@ -1,4 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import 'dev/design_gallery.dart';
+
+/// Debug-only Design Gallery switch. Never on in profile/release builds.
+/// Run with: flutter run --dart-define=KOI_DESIGN_GALLERY=true
+const bool showDesignGallery =
+    kDebugMode && bool.fromEnvironment('KOI_DESIGN_GALLERY');
 
 // TODO(firebase): Firebase is NOT initialised yet. No google-services.json has
 // been provided. Once android/app/google-services.json exists (or
@@ -36,7 +44,9 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: showDesignGallery
+          ? const DesignGallery()
+          : const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
