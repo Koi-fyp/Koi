@@ -23,25 +23,40 @@ typedef TelOpener = Future<void> Function(Uri uri);
 /// the same (authenticated) layout, so the top nav stays visible; a nested
 /// Navigator does the same here, and Android back pops it first.
 class SettingsTab extends StatefulWidget {
-  const SettingsTab({super.key, this.openTel = AIDisclosureStep.defaultOpen});
+  const SettingsTab({
+    super.key,
+    this.openTel = AIDisclosureStep.defaultOpen,
+    this.navigatorKey,
+  });
   final TelOpener openTel;
+
+  /// When the shell passes a key, the shell's own back handler pops this
+  /// nested navigator first (so back from Privacy goes to Settings, not to
+  /// Chat) and this tab installs no handler of its own. Without a key (e.g.
+  /// used on its own), the tab handles back itself.
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
   State<SettingsTab> createState() => _SettingsTabState();
 }
 
 class _SettingsTabState extends State<SettingsTab> {
-  final GlobalKey<NavigatorState> _nav = GlobalKey<NavigatorState>();
+  late final GlobalKey<NavigatorState> _nav =
+      widget.navigatorKey ?? GlobalKey<NavigatorState>();
 
   @override
-  Widget build(BuildContext context) => NavigatorPopHandler(
-    onPopWithResult: (_) => _nav.currentState?.maybePop(),
-    child: Navigator(
+  Widget build(BuildContext context) {
+    final navigator = Navigator(
       key: _nav,
       onGenerateRoute: (settings) =>
           settingsRoute(SettingsScreen(openTel: widget.openTel)),
-    ),
-  );
+    );
+    if (widget.navigatorKey != null) return navigator;
+    return NavigatorPopHandler(
+      onPopWithResult: (_) => _nav.currentState?.maybePop(),
+      child: navigator,
+    );
+  }
 }
 
 /// Web route changes are instant (no page transition).

@@ -39,6 +39,15 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   /// is most likely a web bug; when web fixes it, change this to step + 1.
   static const int stepAfterDisclosure = 5;
 
+  /// The step Android back returns to from [step] (decision 2026-10-14).
+  /// Mirrors the forward path, so with the Q8 skip, Language (5) goes back
+  /// to AI Disclosure (3), not Avatar (4). Null on Welcome.
+  static int? previousStep(int step) {
+    if (step <= 0) return null;
+    if (step == OnboardingScreen.stepAfterDisclosure) return 3;
+    return step - 1;
+  }
+
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
@@ -50,6 +59,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _companion = 'koi';
 
   void _advance() => setState(() => _step++);
+
+  /// Android back. Web keeps the step in component state, so browser back
+  /// leaves /onboarding and the landing page sends a signed-in user straight
+  /// back. Mobile instead steps back; on Welcome it signs out (dropping the
+  /// anonymous session created by "Start Talking") so the root router shows
+  /// the landing page (decision 2026-10-14, option a).
+  void _onBack(bool didPop, Object? _) {
+    if (didPop) return;
+    final prev = OnboardingScreen.previousStep(_step);
+    if (prev != null) {
+      setState(() => _step = prev);
+    } else {
+      ref.read(authServiceProvider).signOut();
+    }
+  }
 
   Future<void> _handleComplete(String notifTime, bool notifEnabled) async {
     // Web: `avatar || 'fox'`. Mobile (Q7): `avatar ?? 'male_human'`.
@@ -104,6 +128,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _ => const SizedBox.shrink(),
     };
 
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: _onBack,
+      child: _scaffold(step),
+    );
+  }
+
+  Widget _scaffold(Widget step) {
     return Scaffold(
       backgroundColor: KoiColors.background,
       body: SafeArea(
