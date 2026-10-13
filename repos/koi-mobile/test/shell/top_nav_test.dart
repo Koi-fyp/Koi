@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/screens/placeholders.dart';
+import 'package:koi_mobile/chat/chat_screen.dart';
+import 'package:koi_mobile/core/auth/auth_service.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
 import 'package:koi_mobile/shell/mode_selector.dart';
 import 'package:koi_mobile/theme/koi_colors.dart';
 
+import '../support/fake_auth.dart';
 import '../support/real_fonts.dart';
 
 void main() {
@@ -16,7 +20,17 @@ void main() {
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = Size(widthDp * 3, 2400);
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(const MaterialApp(home: AppShell()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: overridesFor(
+          FakeAuthService(
+            fakeUser: const KoiUser(uid: 'u1', isAnonymous: true),
+          ),
+          onboardingStore(complete: true),
+        ),
+        child: const MaterialApp(home: AppShell()),
+      ),
+    );
     await tester.pump(const Duration(seconds: 1));
   }
 
@@ -117,7 +131,7 @@ void main() {
     // The web logo links to the root, which sends a signed-in user to chat.
     await tester.tap(find.byKey(const Key('nav-logo')));
     await tester.pump();
-    expect(find.byType(ChatPlaceholder), findsOneWidget);
+    expect(find.byType(ChatScreen), findsOneWidget);
   });
 
   testWidgets('mode selector: tap opens, 3 locked modes, Text selectable', (

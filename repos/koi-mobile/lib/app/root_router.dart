@@ -14,16 +14,19 @@ enum RootRoute { splash, landing, onboarding, chat }
 /// (signed in → isOnboardingComplete() ? '/chat' : '/onboarding') and
 /// (authenticated)/layout.tsx (splash while loading; signed out → '/').
 ///
-/// One deliberate difference, per the Prompt 4 spec: web's '/' renders the
-/// landing page while auth is loading; mobile shows the layout.tsx splash for
-/// every loading state.
+/// The splash shows while the saved session is first restored. After that,
+/// like web (decided 2026-10-13): signed out → the landing page, even while
+/// signing in (its buttons show "Getting ready…"); signed in + loading → the
+/// layout.tsx splash.
 RootRoute resolveRootRoute({
+  required bool restored,
   required bool loading,
   required bool signedIn,
   required bool onboardingComplete,
 }) {
-  if (loading) return RootRoute.splash;
+  if (!restored) return RootRoute.splash;
   if (!signedIn) return RootRoute.landing;
+  if (loading) return RootRoute.splash;
   return onboardingComplete ? RootRoute.chat : RootRoute.onboarding;
 }
 
@@ -35,6 +38,7 @@ class RootRouter extends ConsumerWidget {
     final auth = ref.watch(authServiceProvider);
     final onboarding = ref.watch(onboardingStoreProvider);
     final route = resolveRootRoute(
+      restored: auth.sessionRestored,
       loading: auth.loading,
       signedIn: auth.user != null,
       onboardingComplete: onboarding.isComplete,

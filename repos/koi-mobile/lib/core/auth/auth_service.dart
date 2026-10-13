@@ -51,6 +51,17 @@ abstract class AuthService extends ChangeNotifier {
     return u != null && !u.isAnonymous && u.providerIds.contains('password');
   }
 
+  /// True once the persisted session has been restored at app start (web:
+  /// the first onAuthStateChanged callback has fired). Only before that does
+  /// the root show the splash; later loading states (e.g. sign-in on the
+  /// landing page) keep the current screen, like web (decided 2026-10-13).
+  bool get sessionRestored;
+
+  /// Firebase `user.getIdToken()` for the chat endpoint's Bearer header.
+  /// Throws when there is no Firebase user (web: "No authenticated Firebase
+  /// user -- cannot call /api/v1/chat"), which takes the fallback path.
+  Future<String> getIdToken();
+
   Future<void> signInAnonymously();
   Future<void> signOut();
 }

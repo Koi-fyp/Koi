@@ -5,9 +5,29 @@ import 'package:koi_mobile/core/key_value_store.dart';
 import 'package:koi_mobile/core/onboarding_store.dart';
 import 'package:koi_mobile/onboarding/onboarding_service.dart';
 
+import 'chat_fakes.dart';
+
 /// Scriptable AuthService for routing tests.
 class FakeAuthService extends AuthService {
-  FakeAuthService({this.fakeUser, this.fakeLoading = false, this.fakeError});
+  FakeAuthService({
+    this.fakeUser,
+    this.fakeLoading = false,
+    this.fakeError,
+    this.fakeRestored = true,
+    this.fakeToken,
+  });
+
+  bool fakeRestored;
+
+  /// null = no Firebase user (getIdToken throws, like the stand-in).
+  String? fakeToken;
+
+  @override
+  bool get sessionRestored => fakeRestored;
+
+  @override
+  Future<String> getIdToken() async =>
+      fakeToken ?? (throw StateError('no Firebase user'));
 
   KoiUser? fakeUser;
   bool fakeLoading;
@@ -52,6 +72,7 @@ List<Override> overridesFor(
   onboardingUserWriterProvider.overrideWithValue(
     users ?? RecordingUserWriter(),
   ),
+  ...chatOverrides(),
 ];
 
 /// Records local user-record writes (stands in for flutter_lib's Hive box).

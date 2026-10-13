@@ -9,10 +9,13 @@ import 'package:koi_flutter_lib/storage/repositories/user_repository.dart';
 
 import 'app/providers.dart';
 import 'app/root_router.dart';
+import 'chat/message_record.dart';
 import 'core/auth/auth_service.dart';
 import 'core/auth/debug_local_auth_service.dart';
+import 'core/koi_cryptography.dart';
 import 'core/key_value_store.dart';
 import 'core/onboarding_store.dart';
+import 'core/sync_queue.dart';
 import 'dev/design_gallery.dart';
 import 'onboarding/onboarding_service.dart';
 import 'theme/koi_theme.dart';
@@ -34,6 +37,8 @@ Future<void> main() async {
   // (the app must render correctly offline).
   GoogleFonts.config.allowRuntimeFetching = false;
   LicenseRegistry.addLicense(_bundledFontLicenses);
+  // Native PBKDF2 + per-session key cache for KoiCryptoService (Prompt 6).
+  KoiCryptography.install();
 
   await Hive.initFlutter();
   // flutter_lib's encrypted boxes (users, messages, ...). Like web's
@@ -47,6 +52,14 @@ Future<void> main() async {
   final onboarding = OnboardingStore(
     await HiveKeyValueStore.open(OnboardingStore.boxName),
   );
+  final messages = await HiveMessageStore.open();
+  final online = ConnectivityOnlineStatus();
+  final syncQueue = PersistentSyncQueue(
+    store: await HiveKeyValueStore.open(PersistentSyncQueue.boxName),
+    // TODO(firebase): a cloud_firestore writer once Firebase is connected.
+    remote: const FirestoreNotConnectedWriter(),
+    onlineChanges: online.changes,
+  );
 
   runApp(
     ProviderScope(
@@ -56,6 +69,9 @@ Future<void> main() async {
         onboardingUserWriterProvider.overrideWithValue(
           HiveUserOnboardingWriter(UserRepository()),
         ),
+        onlineStatusProvider.overrideWithValue(online),
+        messageStoreProvider.overrideWithValue(messages),
+        syncQueueProvider.overrideWithValue(syncQueue),
       ],
       child: const KoiApp(),
     ),
@@ -74,6 +90,10 @@ AuthService _createAuthService() {
     () => HiveKeyValueStore.open(DebugLocalAuthService.boxName),
   );
   service.restoreSession();
+  // Forget derived keys when the user signs out.
+  service.addListener(() {
+    if (service.user == null) CachingPbkdf2.clear();
+  });
   return service;
 }
 

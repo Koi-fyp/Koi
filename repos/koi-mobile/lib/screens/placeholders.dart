@@ -46,13 +46,6 @@ class _PlaceholderBody extends StatelessWidget {
   );
 }
 
-class ChatPlaceholder extends StatelessWidget {
-  const ChatPlaceholder({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      const _PlaceholderBody(title: 'Chat (placeholder — Prompt 6)');
-}
-
 class ProgressPlaceholder extends StatelessWidget {
   const ProgressPlaceholder({super.key});
   @override

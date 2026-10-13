@@ -51,7 +51,7 @@ void main() {
   });
 
   test('unsupported commands fail loudly', () {
-    expect(() => parseSvgPath('M0 0C1 1 2 2 3 3'), throwsFormatException);
+    expect(() => parseSvgPath('M0 0Q1 1 2 2'), throwsFormatException);
     expect(() => parseSvgPolyline('1 2 3'), throwsFormatException);
   });
 }

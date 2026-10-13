@@ -8,8 +8,8 @@ import 'package:koi_mobile/core/key_value_store.dart';
 import 'package:koi_mobile/core/onboarding_store.dart';
 import 'package:koi_mobile/landing/landing_screen.dart';
 import 'package:koi_mobile/onboarding/onboarding_screen.dart';
-import 'package:koi_mobile/screens/placeholders.dart';
 import 'package:koi_mobile/screens/splash_screen.dart';
+import 'package:koi_mobile/chat/chat_screen.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
 
 import '../support/fake_auth.dart';
@@ -21,18 +21,31 @@ void main() {
   useRealFonts();
 
   group('resolveRootRoute (page.tsx + (authenticated)/layout.tsx)', () {
-    RootRoute r(bool loading, bool signedIn, bool complete) => resolveRootRoute(
+    RootRoute r(
+      bool loading,
+      bool signedIn,
+      bool complete, {
+      bool restored = true,
+    }) => resolveRootRoute(
+      restored: restored,
       loading: loading,
       signedIn: signedIn,
       onboardingComplete: complete,
     );
 
-    test('loading always shows the splash', () {
-      for (final signedIn in [false, true]) {
-        for (final complete in [false, true]) {
-          expect(r(true, signedIn, complete), RootRoute.splash);
+    test('session not restored yet → splash, whatever else', () {
+      for (final loading in [false, true]) {
+        for (final signedIn in [false, true]) {
+          expect(r(loading, signedIn, true, restored: false), RootRoute.splash);
         }
       }
+    });
+    test('signing in (loading, signed out) stays on landing like web', () {
+      expect(r(true, false, false), RootRoute.landing);
+    });
+    test('signed in + loading → layout.tsx splash', () {
+      expect(r(true, true, true), RootRoute.splash);
+      expect(r(true, true, false), RootRoute.splash);
     });
     test('signed out → landing, whatever the flag says', () {
       expect(r(false, false, false), RootRoute.landing);
@@ -66,7 +79,7 @@ void main() {
   testWidgets('loading → splash', (tester) async {
     await pumpRouter(
       tester,
-      FakeAuthService(fakeLoading: true),
+      FakeAuthService(fakeLoading: true, fakeRestored: false),
       onboardingStore(),
     );
     expect(find.byType(SplashScreen), findsOneWidget);
@@ -109,7 +122,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       expect(onboarding.isComplete, isTrue);
       expect(find.byType(AppShell), findsOneWidget);
-      expect(find.byType(ChatPlaceholder), findsOneWidget);
+      expect(find.byType(ChatScreen), findsOneWidget);
     },
   );
 
@@ -119,7 +132,7 @@ void main() {
     final auth = FakeAuthService(fakeUser: _user);
     final onboarding = onboardingStore(complete: true);
     await pumpRouter(tester, auth, onboarding);
-    expect(find.byType(ChatPlaceholder), findsOneWidget);
+    expect(find.byType(ChatScreen), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('nav-tab-settings')));
     await tester.pump(const Duration(seconds: 1));
@@ -143,6 +156,6 @@ void main() {
 
     await auth.restoreSession();
     await tester.pump(const Duration(seconds: 1));
-    expect(find.byType(ChatPlaceholder), findsOneWidget);
+    expect(find.byType(ChatScreen), findsOneWidget);
   });
 }

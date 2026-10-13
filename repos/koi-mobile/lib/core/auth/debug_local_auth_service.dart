@@ -30,6 +30,7 @@ class DebugLocalAuthService extends AuthService {
 
   KoiUser? _user;
   bool _loading = true;
+  bool _restored = false;
   Object? _error;
 
   @override
@@ -38,6 +39,13 @@ class DebugLocalAuthService extends AuthService {
   bool get loading => _loading;
   @override
   Object? get error => _error;
+  @override
+  bool get sessionRestored => _restored;
+
+  /// The stand-in has no Firebase user, so there is never an ID token.
+  @override
+  Future<String> getIdToken() =>
+      Future.error(StateError('No Firebase user (debug stand-in, Q1)'));
 
   /// Web: the first onAuthStateChanged callback delivers the cached user (or
   /// null) and sets loading=false.
@@ -50,6 +58,7 @@ class DebugLocalAuthService extends AuthService {
       _error = e;
     } finally {
       _loading = false;
+      _restored = true;
       notifyListeners();
     }
   }
