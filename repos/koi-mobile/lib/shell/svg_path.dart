@@ -3,8 +3,8 @@ import 'dart:ui';
 /// Minimal SVG path-data parser, enough to draw the web nav icons from their
 /// exact path strings (no SVG package is on the approved list).
 ///
-/// Supports M/m, L/l, H/h, V/v, C/c, A/a and Z/z, the commands used
-/// by the web nav and chat icons. Throws [FormatException] on anything
+/// Supports M/m, L/l, H/h, V/v, C/c, S/s, A/a and Z/z, the commands used
+/// by the web nav, chat and progress icons. Throws [FormatException] on anything
 /// else so an unsupported icon fails loudly instead of drawing wrong.
 Path parseSvgPath(String d) {
   final tokens = RegExp(
@@ -16,6 +16,9 @@ Path parseSvgPath(String d) {
   var i = 0;
   var cmd = '';
   var x = 0.0, y = 0.0, startX = 0.0, startY = 0.0;
+  // For S/s: the previous segment's second control point, if it was C/S.
+  var lastCtrlX = 0.0, lastCtrlY = 0.0;
+  var lastWasCubic = false;
 
   bool isCommand(String t) => RegExp(r'^[A-Za-z]$').hasMatch(t);
   double next() => double.parse(tokens[i++]);
@@ -52,6 +55,23 @@ Path parseSvgPath(String d) {
         x = next() + (rel ? x : 0);
         y = next() + (rel ? y : 0);
         path.cubicTo(x1, y1, x2, y2, x, y);
+        lastCtrlX = x2;
+        lastCtrlY = y2;
+        lastWasCubic = true;
+        continue;
+      case 'S':
+        // First control point = reflection of the previous C/S second
+        // control point about the current point (else the current point).
+        final x1 = lastWasCubic ? 2 * x - lastCtrlX : x;
+        final y1 = lastWasCubic ? 2 * y - lastCtrlY : y;
+        final x2 = next() + (rel ? x : 0), y2 = next() + (rel ? y : 0);
+        x = next() + (rel ? x : 0);
+        y = next() + (rel ? y : 0);
+        path.cubicTo(x1, y1, x2, y2, x, y);
+        lastCtrlX = x2;
+        lastCtrlY = y2;
+        lastWasCubic = true;
+        continue;
       case 'A':
         final rx = next(), ry = next(), rotation = next();
         final largeArc = next() != 0, sweep = next() != 0;
@@ -71,6 +91,8 @@ Path parseSvgPath(String d) {
       default:
         throw FormatException('Unsupported SVG path command "$cmd"', d);
     }
+    // C/S `continue` above; any other command breaks the S reflection.
+    lastWasCubic = false;
   }
   return path;
 }

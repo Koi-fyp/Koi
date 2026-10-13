@@ -50,6 +50,44 @@ void main() {
     );
   });
 
+  group('S/s smooth cubic (progress icons)', () {
+    /// Points along both paths at several fractions of their length.
+    void expectSameCurve(Path a, Path b) {
+      final ma = a.computeMetrics().toList();
+      final mb = b.computeMetrics().toList();
+      expect(ma.length, mb.length);
+      for (var k = 0; k < ma.length; k++) {
+        expect(ma[k].length, closeTo(mb[k].length, 0.01));
+        for (final f in [0.1, 0.25, 0.5, 0.75, 0.9]) {
+          final pa = ma[k].getTangentForOffset(ma[k].length * f)!.position;
+          final pb = mb[k].getTangentForOffset(mb[k].length * f)!.position;
+          expect((pa - pb).distance, lessThan(0.01), reason: 'at $f');
+        }
+      }
+    }
+
+    test('S reflects the previous C control point', () {
+      expectSameCurve(
+        parseSvgPath('M0 0C0 2 2 2 2 0S4 -2 4 0'),
+        parseSvgPath('M0 0C0 2 2 2 2 0C2 -2 4 -2 4 0'),
+      );
+    });
+
+    test('relative s, chained', () {
+      expectSameCurve(
+        parseSvgPath('M1 1c0 2 2 2 2 0s2 -2 2 0s2 2 2 0'),
+        parseSvgPath('M1 1C1 3 3 3 3 1C3 -1 5 -1 5 1C5 3 7 3 7 1'),
+      );
+    });
+
+    test('S after a non-curve uses the current point as control 1', () {
+      expectSameCurve(
+        parseSvgPath('M0 0L2 0S4 2 6 0'),
+        parseSvgPath('M0 0L2 0C2 0 4 2 6 0'),
+      );
+    });
+  });
+
   test('unsupported commands fail loudly', () {
     expect(() => parseSvgPath('M0 0Q1 1 2 2'), throwsFormatException);
     expect(() => parseSvgPolyline('1 2 3'), throwsFormatException);

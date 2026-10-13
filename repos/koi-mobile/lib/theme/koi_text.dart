@@ -37,7 +37,7 @@ abstract final class KoiText {
   }) {
     final base = TextStyle(
       fontSize: fontSize,
-      fontWeight: fontWeight,
+      fontWeight: _clamp(fontWeight, FontWeight.w200, FontWeight.w800),
       color: color,
       height: height,
       letterSpacing: letterSpacing,
@@ -57,7 +57,7 @@ abstract final class KoiText {
   }) {
     final base = TextStyle(
       fontSize: fontSize,
-      fontWeight: fontWeight,
+      fontWeight: _clamp(fontWeight, FontWeight.w300, FontWeight.w700),
       color: color,
       height: height,
       letterSpacing: letterSpacing,
@@ -65,6 +65,18 @@ abstract final class KoiText {
     return useGoogleFonts
         ? GoogleFonts.dmSans(textStyle: base)
         : base.copyWith(fontFamily: bodyFamily);
+  }
+
+  /// Clamps [w] to the bundled weight range. A weight outside it (e.g. web's
+  /// font-weight 800/900 on DM Sans text) would make google_fonts look for a
+  /// font file that isn't bundled, fail, and fall back to the system font.
+  /// Browsers render such weights with the nearest loaded face, which is
+  /// what clamping does.
+  static FontWeight? _clamp(FontWeight? w, FontWeight min, FontWeight max) {
+    if (w == null) return null;
+    if (w.value < min.value) return min;
+    if (w.value > max.value) return max;
+    return w;
   }
 
   /// .neo-hero-text: font-size clamp(3rem, 8vw, 6rem); weight 800;

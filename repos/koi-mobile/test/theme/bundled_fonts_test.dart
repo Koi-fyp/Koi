@@ -32,6 +32,26 @@ void main() {
     await GoogleFonts.pendingFonts(styles);
   });
 
+  test('weights outside the bundled range are clamped and still load', () async {
+    // Web uses font-weight 800/900 on DM Sans text (e.g. settings and
+    // progress headings); without clamping google_fonts would look for
+    // DMSans-ExtraBold/Black, which are not bundled, and fail.
+    final heavyBody = KoiText.body(fontWeight: FontWeight.w900);
+    final heavyBody800 = KoiText.body(fontWeight: FontWeight.w800);
+    final lightBody = KoiText.body(fontWeight: FontWeight.w100);
+    final heavyDisplay = KoiText.display(fontWeight: FontWeight.w900);
+    final lightDisplay = KoiText.display(fontWeight: FontWeight.w100);
+    expect(heavyBody.fontWeight, FontWeight.w700);
+    expect(heavyBody800.fontWeight, FontWeight.w700);
+    expect(lightBody.fontWeight, FontWeight.w300);
+    expect(heavyDisplay.fontWeight, FontWeight.w800);
+    expect(lightDisplay.fontWeight, FontWeight.w200);
+    expect(KoiText.body().fontWeight, isNull); // unset stays unset
+    // Throws if any of them points at a font file that isn't bundled.
+    await GoogleFonts.pendingFonts(
+        [heavyBody, heavyBody800, lightBody, heavyDisplay, lightDisplay]);
+  });
+
   // Reads assets/google_fonts/ on disk (flutter test's own asset copy in
   // build/ can be stale). Hashes are the expectedFileHash values in
   // google_fonts 6.3.3 lib/src/google_fonts_parts/part_b.g.dart (Bricolage)

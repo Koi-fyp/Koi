@@ -412,8 +412,12 @@ class SettingsToastLayer extends StatelessWidget {
       left: 0,
       right: 0,
       bottom: 80 + MediaQuery.viewPaddingOf(context).bottom,
-      child: Center(
-        child: SettingsToast(toast: t, onClose: onClose),
+      // The toast has no actions; let taps reach what is underneath (e.g.
+      // the Progress Share button right after a Download toast).
+      child: IgnorePointer(
+        child: Center(
+          child: SettingsToast(toast: t, onClose: onClose),
+        ),
       ),
     );
   }

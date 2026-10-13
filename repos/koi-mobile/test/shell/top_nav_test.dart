@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:koi_mobile/screens/placeholders.dart';
+import 'package:koi_mobile/progress/progress_screen.dart';
 import 'package:koi_mobile/chat/chat_screen.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
 import 'package:koi_mobile/settings/settings_screen.dart';
@@ -121,7 +121,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('nav-tab-progress')));
     await tester.pump();
-    expect(find.byType(ProgressPlaceholder), findsOneWidget);
+    expect(find.byType(ProgressScreen), findsOneWidget);
     expect(tabDecoration(tester, 'progress')!.color, KoiColors.neoBlack);
     expect(tabDecoration(tester, 'chat'), isNull);
 

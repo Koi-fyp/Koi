@@ -14,7 +14,12 @@ void useRealFonts() {
     await GoogleFonts.pendingFonts([
       for (final w in [FontWeight.w600, FontWeight.w700, FontWeight.w800])
         KoiText.display(fontWeight: w),
-      for (final w in [FontWeight.w600, FontWeight.w700])
+      for (final w in [
+        FontWeight.w400,
+        FontWeight.w500,
+        FontWeight.w600,
+        FontWeight.w700,
+      ])
         KoiText.body(fontWeight: w),
     ]);
   });

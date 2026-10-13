@@ -4,7 +4,7 @@ import '../theme/koi_colors.dart';
 import '../theme/koi_text.dart';
 
 /// PLACEHOLDER screens so routing and the shell can be exercised. The real
-/// screens come in later prompts (Progress: 8, About/How it works: 9).
+/// screens come in a later prompt (About/How it works: 9).
 ///
 /// Strings marked "developer label" are not product copy and are never meant
 /// to ship. Strings marked with a web source are copied word for word.
@@ -32,13 +32,6 @@ class _PlaceholderBody extends StatelessWidget {
       ),
     ),
   );
-}
-
-class ProgressPlaceholder extends StatelessWidget {
-  const ProgressPlaceholder({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      const _PlaceholderBody(title: 'Progress (placeholder — Prompt 8)');
 }
 
 /// About / How it works placeholders (Prompt 9), opened from the landing
