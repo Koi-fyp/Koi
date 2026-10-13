@@ -119,8 +119,14 @@ class _NeoInputState extends State<NeoInput> {
             : widget.keyboardType,
         minLines: widget.multiline ? NeoInput.textareaRows : 1,
         maxLines: widget.multiline ? null : 1,
-        // font-family body, font-size 1rem, color #000
-        style: KoiText.body(fontSize: 16, color: KoiColors.neoBlack),
+        // font-family body, font-size 1rem, color #000. letter-spacing is
+        // unset on web (CSS normal = 0); without an explicit 0 the Material 3
+        // theme leaks in (bodyLarge 0.5, bodyMedium 0.25).
+        style: KoiText.body(
+          fontSize: 16,
+          color: KoiColors.neoBlack,
+          letterSpacing: 0,
+        ),
         // caret-color: auto → currentColor (#000)
         cursorColor: KoiColors.neoBlack,
         decoration: InputDecoration(
@@ -133,6 +139,7 @@ class _NeoInputState extends State<NeoInput> {
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: KoiColors.inputPlaceholder,
+            letterSpacing: 0,
           ),
         ),
       ),
@@ -150,6 +157,7 @@ class _NeoInputState extends State<NeoInput> {
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: KoiColors.neoBlack,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: NeoInput.gap),
@@ -164,6 +172,7 @@ class _NeoInputState extends State<NeoInput> {
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: KoiColors.danger,
+              letterSpacing: 0,
             ),
           ),
         ],
