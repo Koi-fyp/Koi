@@ -6,6 +6,8 @@ import 'package:koi_mobile/core/auth/auth_service.dart';
 import 'package:koi_mobile/core/auth/debug_local_auth_service.dart';
 import 'package:koi_mobile/core/key_value_store.dart';
 import 'package:koi_mobile/core/onboarding_store.dart';
+import 'package:koi_mobile/landing/landing_screen.dart';
+import 'package:koi_mobile/onboarding/onboarding_screen.dart';
 import 'package:koi_mobile/screens/placeholders.dart';
 import 'package:koi_mobile/screens/splash_screen.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
@@ -75,13 +77,13 @@ void main() {
   ) async {
     final auth = FakeAuthService();
     await pumpRouter(tester, auth, onboardingStore());
-    expect(find.byType(LandingPlaceholder), findsOneWidget);
-    expect(find.text(LandingPlaceholder.startLabel), findsOneWidget);
+    expect(find.byType(LandingScreen), findsOneWidget);
+    expect(find.text(LandingScreen.startLabel), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('landing-start')));
     await tester.pump(const Duration(seconds: 1));
     expect(auth.signInCalls, 1);
-    expect(find.byType(OnboardingPlaceholder), findsOneWidget);
+    expect(find.byType(OnboardingScreen), findsOneWidget);
   });
 
   testWidgets('sign-in error shows the web error copy and Try Again', (
@@ -92,8 +94,8 @@ void main() {
       FakeAuthService(fakeError: Exception('x')),
       onboardingStore(),
     );
-    expect(find.text(LandingPlaceholder.errorText), findsOneWidget);
-    expect(find.text(LandingPlaceholder.retryLabel), findsOneWidget);
+    expect(find.text(LandingScreen.errorText), findsOneWidget);
+    expect(find.text(LandingScreen.retryLabel), findsOneWidget);
   });
 
   testWidgets(
@@ -101,9 +103,9 @@ void main() {
     (tester) async {
       final onboarding = onboardingStore();
       await pumpRouter(tester, FakeAuthService(fakeUser: _user), onboarding);
-      expect(find.byType(OnboardingPlaceholder), findsOneWidget);
+      expect(find.byType(OnboardingScreen), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('debug-complete-onboarding')));
+      await onboarding.markComplete(); // the last onboarding step's effect
       await tester.pump(const Duration(seconds: 1));
       expect(onboarding.isComplete, isTrue);
       expect(find.byType(AppShell), findsOneWidget);
@@ -125,7 +127,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(auth.signOutCalls, 1);
-    expect(find.byType(LandingPlaceholder), findsOneWidget);
+    expect(find.byType(LandingScreen), findsOneWidget);
     expect(onboarding.isComplete, isTrue); // web never clears it on sign-out
   });
 

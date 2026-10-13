@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:koi_flutter_lib/storage/hive_manager.dart';
+import 'package:koi_flutter_lib/storage/repositories/user_repository.dart';
 
 import 'app/providers.dart';
 import 'app/root_router.dart';
@@ -12,6 +14,7 @@ import 'core/auth/debug_local_auth_service.dart';
 import 'core/key_value_store.dart';
 import 'core/onboarding_store.dart';
 import 'dev/design_gallery.dart';
+import 'onboarding/onboarding_service.dart';
 import 'theme/koi_theme.dart';
 
 /// Debug-only Design Gallery switch. Never on in profile/release builds.
@@ -33,6 +36,14 @@ Future<void> main() async {
   LicenseRegistry.addLicense(_bundledFontLicenses);
 
   await Hive.initFlutter();
+  // flutter_lib's encrypted boxes (users, messages, ...). Like web's
+  // IndexedDB write, a failure here must not block the app: the user-record
+  // write in completeOnboarding then fails and is only logged.
+  try {
+    await HiveManager.init();
+  } catch (e) {
+    debugPrint('KOI: HiveManager.init failed: $e');
+  }
   final onboarding = OnboardingStore(
     await HiveKeyValueStore.open(OnboardingStore.boxName),
   );
@@ -42,6 +53,9 @@ Future<void> main() async {
       overrides: [
         authServiceProvider.overrideWith((ref) => _createAuthService()),
         onboardingStoreProvider.overrideWith((ref) => onboarding),
+        onboardingUserWriterProvider.overrideWithValue(
+          HiveUserOnboardingWriter(UserRepository()),
+        ),
       ],
       child: const KoiApp(),
     ),

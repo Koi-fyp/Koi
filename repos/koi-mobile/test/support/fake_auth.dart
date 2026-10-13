@@ -3,6 +3,7 @@ import 'package:koi_mobile/app/providers.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
 import 'package:koi_mobile/core/key_value_store.dart';
 import 'package:koi_mobile/core/onboarding_store.dart';
+import 'package:koi_mobile/onboarding/onboarding_service.dart';
 
 /// Scriptable AuthService for routing tests.
 class FakeAuthService extends AuthService {
@@ -41,10 +42,30 @@ class FakeAuthService extends AuthService {
   }
 }
 
-List<Override> overridesFor(AuthService auth, OnboardingStore onboarding) => [
+List<Override> overridesFor(
+  AuthService auth,
+  OnboardingStore onboarding, {
+  OnboardingUserWriter? users,
+}) => [
   authServiceProvider.overrideWith((ref) => auth),
   onboardingStoreProvider.overrideWith((ref) => onboarding),
+  onboardingUserWriterProvider.overrideWithValue(
+    users ?? RecordingUserWriter(),
+  ),
 ];
+
+/// Records local user-record writes (stands in for flutter_lib's Hive box).
+class RecordingUserWriter implements OnboardingUserWriter {
+  RecordingUserWriter({this.fail = false});
+  final bool fail;
+  final saved = <(String, OnboardingData)>[];
+
+  @override
+  Future<void> save(String uid, OnboardingData data) async {
+    if (fail) throw StateError('disk full');
+    saved.add((uid, data));
+  }
+}
 
 OnboardingStore onboardingStore({bool complete = false}) => OnboardingStore(
   MemoryKeyValueStore({if (complete) OnboardingStore.key: 'true'}),

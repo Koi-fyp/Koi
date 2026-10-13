@@ -8,7 +8,10 @@ import '../theme/koi_motion.dart';
 /// 1rem (16px) circle, `border: 2px solid currentColor`,
 /// `border-top-color: transparent`, `animation: spin 0.7s linear infinite`.
 class NeoSpinner extends StatelessWidget {
-  const NeoSpinner({super.key, required this.color});
+  const NeoSpinner({super.key, required this.color, this.dimension = size});
+
+  /// Inline size override (e.g. page.tsx nav spinner `w-3.5 h-3.5` = 14).
+  final double dimension;
 
   /// CSS `currentColor`: the text colour of the surrounding button.
   final Color color;
@@ -18,12 +21,12 @@ class NeoSpinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => KoiSpin(
-        spec: KoiMotion.neoSpinner,
-        child: SizedBox.square(
-          dimension: size,
-          child: CustomPaint(painter: _SpinnerPainter(color)),
-        ),
-      );
+    spec: KoiMotion.neoSpinner,
+    child: SizedBox.square(
+      dimension: dimension,
+      child: CustomPaint(painter: _SpinnerPainter(color)),
+    ),
+  );
 }
 
 class _SpinnerPainter extends CustomPainter {

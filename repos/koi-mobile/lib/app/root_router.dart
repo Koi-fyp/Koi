@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../screens/placeholders.dart';
+import '../landing/landing_screen.dart';
+import '../onboarding/onboarding_screen.dart';
 import '../screens/splash_screen.dart';
 import '../shell/app_shell.dart';
 import 'providers.dart';
@@ -42,8 +43,8 @@ class RootRouter extends ConsumerWidget {
     // root simply swaps its child.
     return switch (route) {
       RootRoute.splash => const SplashScreen(),
-      RootRoute.landing => const LandingPlaceholder(),
-      RootRoute.onboarding => const OnboardingPlaceholder(),
+      RootRoute.landing => const LandingScreen(),
+      RootRoute.onboarding => const OnboardingScreen(),
       RootRoute.chat => const AppShell(),
     };
   }

@@ -22,6 +22,8 @@ class NeoButton extends StatefulWidget {
     this.variant = NeoButtonVariant.primary,
     this.loading = false,
     this.fullWidth = false,
+    this.customPadding,
+    this.customFontSize,
   });
 
   final Widget child;
@@ -36,16 +38,25 @@ class NeoButton extends StatefulWidget {
   /// NeoButton.tsx `fullWidth` → `w-full`.
   final bool fullWidth;
 
+  /// Per-use inline `style={{ padding }}` override (default [NeoButton.padding]).
+  final EdgeInsetsGeometry? customPadding;
+
+  /// Per-use inline `style={{ fontSize }}` override (default 1rem = 16).
+  final double? customFontSize;
+
   /// NeoButton.tsx loading label (U+2026 ellipsis, as in the web source).
   static const String loadingLabel = 'Loading…';
 
   // globals.css shared .neo-btn-* rules (1rem = 16px)
   static const double borderWidth = 2.5; // border: 2.5px solid #000
-  static const EdgeInsets padding =
-      EdgeInsets.symmetric(vertical: 14, horizontal: 28); // 0.875rem 1.75rem
+  static const EdgeInsets padding = EdgeInsets.symmetric(
+    vertical: 14,
+    horizontal: 28,
+  ); // 0.875rem 1.75rem
   static const double gap = 8; // gap: 0.5rem
-  static const Duration transition =
-      Duration(milliseconds: 100); // transform/box-shadow 0.1s ease
+  static const Duration transition = Duration(
+    milliseconds: 100,
+  ); // transform/box-shadow 0.1s ease
   static const double disabledOpacity = 0.5; // :disabled { opacity: 0.5 }
   static const double pressedDy = 2; // :active translateY(2px)
 
@@ -56,8 +67,12 @@ class NeoButton extends StatefulWidget {
 /// Per-variant values from globals.css.
 @immutable
 class _VariantStyle {
-  const _VariantStyle(this.background, this.foreground, this.shadow,
-      this.pressedShadow);
+  const _VariantStyle(
+    this.background,
+    this.foreground,
+    this.shadow,
+    this.pressedShadow,
+  );
 
   final Color background;
   final Color foreground;
@@ -67,17 +82,33 @@ class _VariantStyle {
 
 const Map<NeoButtonVariant, _VariantStyle> _styles = {
   // .neo-btn-primary: var(--neo-blue), #fff, 4px; :active 2px
-  NeoButtonVariant.primary:
-      _VariantStyle(KoiColors.neoBlue, KoiColors.neoWhite, 4, 2),
+  NeoButtonVariant.primary: _VariantStyle(
+    KoiColors.neoBlue,
+    KoiColors.neoWhite,
+    4,
+    2,
+  ),
   // .neo-btn-secondary: var(--neo-yellow), #000, 4px; :active 2px
-  NeoButtonVariant.secondary:
-      _VariantStyle(KoiColors.neoYellow, KoiColors.neoBlack, 4, 2),
+  NeoButtonVariant.secondary: _VariantStyle(
+    KoiColors.neoYellow,
+    KoiColors.neoBlack,
+    4,
+    2,
+  ),
   // .neo-btn-ghost: transparent, #000, 3px; :active 1px
-  NeoButtonVariant.ghost:
-      _VariantStyle(Color(0x00000000), KoiColors.neoBlack, 3, 1),
+  NeoButtonVariant.ghost: _VariantStyle(
+    Color(0x00000000),
+    KoiColors.neoBlack,
+    3,
+    1,
+  ),
   // .neo-btn-danger: #FF4136, #fff, 4px; :active 2px
-  NeoButtonVariant.danger:
-      _VariantStyle(KoiColors.danger, KoiColors.neoWhite, 4, 2),
+  NeoButtonVariant.danger: _VariantStyle(
+    KoiColors.danger,
+    KoiColors.neoWhite,
+    4,
+    2,
+  ),
 };
 
 class _NeoButtonState extends State<NeoButton> {
@@ -96,7 +127,7 @@ class _NeoButtonState extends State<NeoButton> {
 
     // font-family display, weight 700, size 1rem; white-space: nowrap
     final textStyle = KoiText.display(
-      fontSize: 16,
+      fontSize: widget.customFontSize ?? 16,
       fontWeight: FontWeight.w700,
       color: style.foreground,
     );
@@ -116,9 +147,12 @@ class _NeoButtonState extends State<NeoButton> {
       duration: NeoButton.transition,
       curve: Curves.ease,
       transform: Matrix4.translationValues(
-          0, pressed ? NeoButton.pressedDy : 0, 0),
+        0,
+        pressed ? NeoButton.pressedDy : 0,
+        0,
+      ),
       width: widget.fullWidth ? double.infinity : null,
-      padding: NeoButton.padding,
+      padding: widget.customPadding ?? NeoButton.padding,
       decoration: ShapeDecoration(
         color: style.background,
         shape: const StadiumBorder(
@@ -132,8 +166,9 @@ class _NeoButtonState extends State<NeoButton> {
         child: IconTheme(
           data: IconThemeData(color: style.foreground),
           child: Row(
-            mainAxisSize:
-                widget.fullWidth ? MainAxisSize.max : MainAxisSize.min,
+            mainAxisSize: widget.fullWidth
+                ? MainAxisSize.max
+                : MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [content],
           ),
