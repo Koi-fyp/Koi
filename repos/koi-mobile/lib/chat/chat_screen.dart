@@ -306,7 +306,11 @@ class _EntranceState extends State<_Entrance> {
 
 /// "Try other avatars too!" — white pill, 2.5px border, 4px shadow, display
 /// 700 0.88rem; mousedown translate(2px,2px) + 2px shadow. Web focuses the
-/// message input when tapped.
+/// message input when tapped (chat/page.tsx:155,
+/// `onClick={() => inputRef.current?.focus()}`); it opens no avatar picker
+/// or Settings despite the label. Mobile mirrors that (decision 2026-10-13),
+/// so nothing visible happens if the keyboard is already open. Reported in
+/// WEB_BUGS_FOUND_DURING_MOBILE.md.
 class _CtaButton extends StatefulWidget {
   const _CtaButton({required this.onTap});
   final VoidCallback onTap;

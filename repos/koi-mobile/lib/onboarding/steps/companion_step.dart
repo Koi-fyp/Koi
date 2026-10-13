@@ -73,7 +73,7 @@ class _CompanionSelectionStepState extends State<CompanionSelectionStep> {
                 i++
               ) ...[
                 if (i > 0) const SizedBox(height: 24), // gap-6
-                _CompanionCard(
+                CompanionCard(
                   companion: CompanionSelectionStep.companions[i],
                   isSelected:
                       CompanionSelectionStep.companions[i].id == _selected,
@@ -97,16 +97,24 @@ class _CompanionSelectionStepState extends State<CompanionSelectionStep> {
   }
 }
 
-class _CompanionCard extends StatelessWidget {
-  const _CompanionCard({
+/// CompanionCard from CompanionSelectionStep.tsx. The Settings AvatarPicker
+/// (settings/components/AvatarPicker.tsx) has its own copy with the same
+/// classes and styles, so both screens use this widget.
+class CompanionCard extends StatelessWidget {
+  const CompanionCard({
+    super.key,
     required this.companion,
     required this.isSelected,
     required this.onSelect,
+    this.keyPrefix = 'companion',
   });
 
   final KoiCompanion companion;
   final bool isSelected;
   final VoidCallback onSelect;
+
+  /// Tap target key is '$keyPrefix-' + the companion id.
+  final String keyPrefix;
 
   static const Color cyan = Color(0xFF06B6D4);
   static const Color idleTop = Color(0xFFF0F0F0);
@@ -125,7 +133,7 @@ class _CompanionCard extends StatelessWidget {
       button: true,
       selected: isSelected,
       child: GestureDetector(
-        key: Key('companion-${companion.id}'),
+        key: Key('$keyPrefix-${companion.id}'),
         behavior: HitTestBehavior.opaque,
         onTap: onSelect,
         child: AnimatedContainer(

@@ -10,6 +10,7 @@ import '../core/sync_queue.dart';
 import '../core/auth/auth_service.dart';
 import '../core/onboarding_store.dart';
 import '../onboarding/onboarding_service.dart';
+import '../settings/settings_prefs.dart';
 
 /// Overridden in main.dart (and in tests) with a concrete implementation.
 final authServiceProvider = ChangeNotifierProvider<AuthService>(
@@ -135,3 +136,11 @@ final chatControllerProvider = ChangeNotifierProvider.autoDispose
       controller.loadHistory().then((_) => controller.warmUpKey());
       return controller;
     });
+
+// ── Settings (Prompt 7) ─────────────────────────────────────────────────────
+
+/// Overridden in main.dart (flutter_lib UserRepository) and in tests.
+final settingsPrefsStoreProvider = Provider<SettingsPrefsStore>(
+  (ref) =>
+      throw UnimplementedError('settingsPrefsStoreProvider must be overridden'),
+);

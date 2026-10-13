@@ -18,6 +18,7 @@ import 'core/onboarding_store.dart';
 import 'core/sync_queue.dart';
 import 'dev/design_gallery.dart';
 import 'onboarding/onboarding_service.dart';
+import 'settings/settings_prefs.dart';
 import 'theme/koi_theme.dart';
 
 /// Debug-only Design Gallery switch. Never on in profile/release builds.
@@ -68,6 +69,9 @@ Future<void> main() async {
         onboardingStoreProvider.overrideWith((ref) => onboarding),
         onboardingUserWriterProvider.overrideWithValue(
           HiveUserOnboardingWriter(UserRepository()),
+        ),
+        settingsPrefsStoreProvider.overrideWithValue(
+          HiveUserSettingsStore(UserRepository()),
         ),
         onlineStatusProvider.overrideWithValue(online),
         messageStoreProvider.overrideWithValue(messages),

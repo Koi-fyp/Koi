@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_screen.dart';
 import '../screens/placeholders.dart';
+import '../settings/settings_screen.dart';
 import '../theme/koi_colors.dart';
 import 'top_nav.dart';
 
@@ -39,7 +40,7 @@ class _AppShellState extends State<AppShell> {
             child: switch (_tab) {
               KoiTab.chat => const ChatScreen(),
               KoiTab.progress => const ProgressPlaceholder(),
-              KoiTab.settings => const SettingsPlaceholder(),
+              KoiTab.settings => const SettingsTab(),
             },
           ),
         ],

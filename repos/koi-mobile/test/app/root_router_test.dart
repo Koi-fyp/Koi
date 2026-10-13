@@ -136,6 +136,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('nav-tab-settings')));
     await tester.pump(const Duration(seconds: 1));
+    // Settings is a scroll view; the debug button sits at the bottom.
+    await tester.ensureVisible(find.byKey(const Key('debug-sign-out')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('debug-sign-out')));
     await tester.pump(const Duration(seconds: 1));
 

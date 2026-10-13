@@ -4,6 +4,7 @@ import 'package:koi_mobile/core/auth/auth_service.dart';
 import 'package:koi_mobile/core/key_value_store.dart';
 import 'package:koi_mobile/core/onboarding_store.dart';
 import 'package:koi_mobile/onboarding/onboarding_service.dart';
+import 'package:koi_mobile/settings/settings_prefs.dart';
 
 import 'chat_fakes.dart';
 
@@ -66,11 +67,15 @@ List<Override> overridesFor(
   AuthService auth,
   OnboardingStore onboarding, {
   OnboardingUserWriter? users,
+  SettingsPrefsStore? settings,
 }) => [
   authServiceProvider.overrideWith((ref) => auth),
   onboardingStoreProvider.overrideWith((ref) => onboarding),
   onboardingUserWriterProvider.overrideWithValue(
     users ?? RecordingUserWriter(),
+  ),
+  settingsPrefsStoreProvider.overrideWithValue(
+    settings ?? MemorySettingsPrefsStore(),
   ),
   ...chatOverrides(),
 ];

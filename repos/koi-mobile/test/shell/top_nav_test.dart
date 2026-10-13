@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/screens/placeholders.dart';
 import 'package:koi_mobile/chat/chat_screen.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
+import 'package:koi_mobile/settings/settings_screen.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
 import 'package:koi_mobile/shell/mode_selector.dart';
 import 'package:koi_mobile/theme/koi_colors.dart';
@@ -126,7 +127,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('nav-tab-settings')));
     await tester.pump();
-    expect(find.byType(SettingsPlaceholder), findsOneWidget);
+    expect(find.byType(SettingsScreen), findsOneWidget);
 
     // The web logo links to the root, which sends a signed-in user to chat.
     await tester.tap(find.byKey(const Key('nav-logo')));
