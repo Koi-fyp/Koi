@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
@@ -50,32 +51,84 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return ColoredBox(
       color: KoiColors.background,
-      child: Column(
+      child: CustomMultiChildLayout(
+        delegate: _ChatLayout(),
         children: [
-          if (!hasMessages)
-            _AvatarPanel(mounted: _mounted, onCta: () => _input.requestFocus()),
-          Expanded(
-            child: Column(
-              children: [
-                const _OfflineBannerHost(),
-                Expanded(
-                  child: MessageList(
-                    messages: chat.messages,
-                    isTyping: chat.isTyping,
-                  ),
-                ),
-                InputBar(
-                  onSend: chat.send,
-                  disabled: chat.isTyping,
-                  focusNode: _input,
-                ),
-              ],
+          LayoutId(
+            id: _Slot.panel,
+            child: hasMessages
+                ? const SizedBox.shrink()
+                : _AvatarPanel(mounted: _mounted, onCta: _focusInput),
+          ),
+          LayoutId(id: _Slot.banner, child: const _OfflineBannerHost()),
+          LayoutId(
+            id: _Slot.list,
+            child: MessageList(
+              messages: chat.messages,
+              isTyping: chat.isTyping,
+            ),
+          ),
+          LayoutId(
+            id: _Slot.input,
+            child: InputBar(
+              onSend: chat.send,
+              disabled: chat.isTyping,
+              focusNode: _input,
             ),
           ),
         ],
       ),
     );
   }
+
+  /// Web: `inputRef.current?.focus()`. On Android, focusing a field that is
+  /// already focused (keyboard dismissed with Back) does not bring the
+  /// keyboard back, so ask for it explicitly in that case.
+  void _focusInput() {
+    if (_input.hasFocus) {
+      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+    } else {
+      _input.requestFocus();
+    }
+  }
+}
+
+enum _Slot { panel, banner, list, input }
+
+/// Web stacks the panel above the chat column in a fixed-height,
+/// `overflow: hidden` box where the panel never shrinks, so on a short
+/// screen (e.g. 360x800dp with the keyboard open) the chat column is
+/// squeezed out. Mobile-only adaptation: the input bar and banner always get
+/// their natural height, the message list keeps at least [minList], and the
+/// avatar panel gets what is left (its card shrinks, or the whole panel
+/// hides when even a small card no longer fits; see [_AvatarPanel]).
+class _ChatLayout extends MultiChildLayoutDelegate {
+  _ChatLayout();
+
+  static const double minList = 120;
+
+  @override
+  void performLayout(Size size) {
+    final w = size.width;
+    final loose = BoxConstraints(maxWidth: w, maxHeight: size.height);
+    final input = layoutChild(_Slot.input, loose).height;
+    final banner = layoutChild(_Slot.banner, loose).height;
+    final rest = (size.height - input - banner).clamp(0.0, size.height);
+    final panel = layoutChild(
+      _Slot.panel,
+      BoxConstraints(maxWidth: w, maxHeight: (rest - minList).clamp(0.0, rest)),
+    ).height;
+    final list = (rest - panel).clamp(0.0, rest);
+    layoutChild(_Slot.list, BoxConstraints.tightFor(width: w, height: list));
+
+    positionChild(_Slot.panel, Offset.zero);
+    positionChild(_Slot.banner, Offset(0, panel));
+    positionChild(_Slot.list, Offset(0, panel + banner));
+    positionChild(_Slot.input, Offset(0, panel + banner + list));
+  }
+
+  @override
+  bool shouldRelayout(_ChatLayout oldDelegate) => false;
 }
 
 /// Shows [OfflineBanner] while the device is offline (web: navigator.onLine
@@ -92,6 +145,11 @@ class _OfflineBannerHost extends ConsumerWidget {
 
 /// The avatar panel: `width:100%; max-width:340px; padding:16px 16px 16px 0;
 /// flex-col gap-3` with the yellow Male.png card and the CTA.
+///
+/// Mobile-only: when [_ChatLayout] gives it less than its natural height
+/// the card shrinks (keeping Male.png's aspect ratio instead of web's
+/// overflow clip); below [minCard] the whole panel hides, e.g. while the
+/// keyboard is open on a 360x800dp phone.
 class _AvatarPanel extends StatelessWidget {
   const _AvatarPanel({required this.mounted, required this.onCta});
   final bool mounted;
@@ -100,62 +158,79 @@ class _AvatarPanel extends StatelessWidget {
   // transition: opacity/transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)
   static const Curve springy = Cubic(0.34, 1.56, 0.64, 1);
 
+  static const double minCard = 120;
+  static const double _padY = 16 + 16, _gap = 12; // padding, gap-3
+  static const double _imageAspect = 491 / 525; // assets/images/Male.png
+
   @override
   Widget build(BuildContext context) {
     final maxCardHeight = MediaQuery.sizeOf(context).height * 0.8; // 80vh
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 340),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(0, 16, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Entrance(
-                visible: mounted,
-                dy: 20,
-                duration: const Duration(milliseconds: 800),
-                curve: springy,
-                child: Center(
-                  child: Container(
-                    key: const Key('avatar-card'),
-                    constraints: BoxConstraints(
-                      maxWidth: 340,
-                      maxHeight: maxCardHeight,
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    // rounded-[1.5rem] border-[3px] border-black
-                    // bg-[#FFD100] shadow-[6px_6px_0_0_#000]
-                    decoration: BoxDecoration(
-                      color: KoiColors.neoYellow,
-                      border: Border.all(width: 3),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: const [BoxShadow(offset: Offset(6, 6))],
-                    ),
-                    child: Image.asset(
-                      'assets/images/Male.png', // public/Male.png
-                      semanticLabel: 'KOI companion',
-                      fit: BoxFit.contain,
-                      width: double.infinity,
+    final ctaHeight = _CtaButton.heightFor(MediaQuery.textScalerOf(context));
+    return LayoutBuilder(
+      builder: (context, c) {
+        if (c.maxHeight < _padY + minCard + _gap + ctaHeight) {
+          return const SizedBox.shrink();
+        }
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 340),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 16, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Flexible(
+                    child: _Entrance(
+                      visible: mounted,
+                      dy: 20,
+                      duration: const Duration(milliseconds: 800),
+                      curve: springy,
+                      child: Center(
+                        heightFactor: 1,
+                        child: Container(
+                          key: const Key('avatar-card'),
+                          constraints: BoxConstraints(
+                            maxWidth: 340,
+                            maxHeight: maxCardHeight,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          // rounded-[1.5rem] border-[3px] border-black
+                          // bg-[#FFD100] shadow-[6px_6px_0_0_#000]
+                          decoration: BoxDecoration(
+                            color: KoiColors.neoYellow,
+                            border: Border.all(width: 3),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: const [BoxShadow(offset: Offset(6, 6))],
+                          ),
+                          child: AspectRatio(
+                            aspectRatio: _imageAspect,
+                            child: Image.asset(
+                              'assets/images/Male.png', // public/Male.png
+                              semanticLabel: 'KOI companion',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: _gap),
+                  _Entrance(
+                    visible: mounted,
+                    dy: 10,
+                    delay: const Duration(milliseconds: 300), // transitionDelay
+                    duration: const Duration(milliseconds: 100),
+                    curve: Curves.ease,
+                    child: _CtaButton(onTap: onCta),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12), // gap-3
-              _Entrance(
-                visible: mounted,
-                dy: 10,
-                delay: const Duration(milliseconds: 300), // transitionDelay
-                duration: const Duration(milliseconds: 100),
-                curve: Curves.ease,
-                child: _CtaButton(onTap: onCta),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -236,6 +311,22 @@ class _CtaButton extends StatefulWidget {
   const _CtaButton({required this.onTap});
   final VoidCallback onTap;
 
+  static TextStyle get _style => displayText(14.08);
+
+  /// Laid-out height: padding 14*2 + border 2.5*2 + the taller of the 16px
+  /// icon and the single (softWrap: false) text line.
+  static double heightFor(TextScaler scaler) {
+    final line = TextPainter(
+      text: TextSpan(text: 'Try other avatars too!', style: _style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    final h = line.height;
+    line.dispose();
+    return 28 + 5 + (h > 16 ? h : 16);
+  }
+
   @override
   State<_CtaButton> createState() => _CtaButtonState();
 }
@@ -280,7 +371,7 @@ class _CtaButtonState extends State<_CtaButton> {
           Text(
             'Try other avatars too!',
             softWrap: false,
-            style: displayText(14.08),
+            style: _CtaButton._style,
           ),
         ],
       ),

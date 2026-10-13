@@ -439,11 +439,13 @@ class _MessageListState extends State<MessageList> {
     super.didUpdateWidget(old);
     if (old.messages.length != widget.messages.length ||
         old.isTyping != widget.isTyping) {
-      // bottomRef.scrollIntoView({ behavior: 'smooth' })
+      // bottomRef.scrollIntoView({ behavior: 'smooth' }); the list is
+      // reversed, so the bottom is offset 0 (exact, unlike maxScrollExtent,
+      // which a lazy list only estimates and can overshoot).
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scroll.hasClients) {
           _scroll.animateTo(
-            _scroll.position.maxScrollExtent,
+            0,
             duration: const Duration(milliseconds: 300),
             curve: Curves.ease,
           );
@@ -478,27 +480,36 @@ class _MessageListState extends State<MessageList> {
         ),
       );
     }
+    final items = <Widget>[
+      for (var i = 0; i < msgs.length; i++) ...[
+        if (i > 0) const SizedBox(height: 6), // gap 6px
+        MessageBubble(
+          key: ValueKey(msgs[i].id),
+          message: msgs[i],
+          showAvatar: !msgs[i].isUser && (i == 0 || msgs[i - 1].isUser),
+        ),
+      ],
+      if (widget.isTyping) ...[
+        const SizedBox(height: 6),
+        const TypingIndicator(),
+      ],
+    ];
     return Semantics(
       label: 'Conversation', // role="log" aria-label
       liveRegion: true,
-      child: ListView(
-        key: const Key('message-list'),
-        controller: _scroll,
-        padding: const EdgeInsets.only(top: 16, bottom: 8),
-        children: [
-          for (var i = 0; i < msgs.length; i++) ...[
-            if (i > 0) const SizedBox(height: 6), // gap 6px
-            MessageBubble(
-              key: ValueKey(msgs[i].id),
-              message: msgs[i],
-              showAvatar: !msgs[i].isUser && (i == 0 || msgs[i - 1].isUser),
-            ),
-          ],
-          if (widget.isTyping) ...[
-            const SizedBox(height: 6),
-            const TypingIndicator(),
-          ],
-        ],
+      // Reversed + shrink-wrapped and top-aligned: a short conversation
+      // still starts at the top like web, a long one stays pinned to the
+      // newest message.
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ListView(
+          key: const Key('message-list'),
+          controller: _scroll,
+          reverse: true,
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(top: 16, bottom: 8),
+          children: items.reversed.toList(),
+        ),
       ),
     );
   }
