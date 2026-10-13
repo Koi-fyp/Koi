@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
 import '../onboarding/step_layout.dart';
-import '../screens/placeholders.dart';
+import '../info/about_screen.dart';
+import '../info/how_it_works_screen.dart';
+import '../info/info_widgets.dart' show InfoLinks;
 import '../theme/koi_colors.dart';
 import '../theme/koi_motion.dart';
 import '../theme/koi_text.dart';
@@ -13,6 +15,7 @@ import '../widgets/neo_button.dart';
 import '../widgets/neo_spinner.dart';
 import 'color_grid.dart';
 import 'faq_accordion.dart';
+import 'koi_footer.dart';
 import 'reveal.dart';
 
 /// Landing page. Mirrors repos/koi-backend/nextjs_app/src/app/page.tsx at
@@ -132,6 +135,22 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
 
   void _open(Widget page) =>
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+
+  /// Back to this page (web `<Link href="/">`): pops About / How it works.
+  void _popToLanding() =>
+      Navigator.of(context).popUntil((route) => route.isFirst);
+
+  /// Links used by the About and How it works pages.
+  late final InfoLinks _infoLinks = InfoLinks(
+    home: _popToLanding,
+    faq: () {
+      // `/#faq`: back to the landing page, then scroll to the FAQ.
+      _popToLanding();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToFaq());
+    },
+    about: () => _open(AboutScreen(links: _infoLinks)),
+    howItWorks: () => _open(HowItWorksScreen(links: _infoLinks)),
+  );
 
   // `<a href="#faq">` with html { scroll-behavior: smooth }
   void _scrollToFaq() {
@@ -458,7 +477,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 vertical: 16,
                 horizontal: 32,
               ),
-              onPressed: () => _open(const HowItWorksPlaceholder()),
+              onPressed: () => _infoLinks.howItWorks(),
               child: const Text('How We Do It →'),
             ),
           ],
@@ -538,142 +557,13 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
   }
 
   // ── FOOTER ─────────────────────────────────────────────────────────────
-  Widget _footer() {
-    Widget link(String label, VoidCallback onTap) => GestureDetector(
-      key: Key('footer-$label'),
-      onTap: onTap,
-      child: Text(
-        label,
-        style: bodyText(
-          14,
-          weight: FontWeight.w600,
-          color: const Color(0x99000000),
-          height: 20 / 14,
-        ), // black/60
-      ),
-    );
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40), // px-6 pb-10
-      child: Container(
-        // .koi-footer-wrapper: border 3px; radius 8px; box-shadow 4px 4px
-        // #000; background linear-gradient(#2D63EB30) under
-        // linear-gradient(90deg, #f1f1f1f5 19%, #0000)
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: const Color(0x302D63EB),
-          border: Border.all(width: 3),
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: const [BoxShadow(offset: Offset(4, 4))],
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(48), // padding: 3rem
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              // CSS interpolates in premultiplied space; ending on a
-              // transparent #f1f1f1 matches that.
-              colors: [Color(0xF5F1F1F1), Color(0xF5F1F1F1), Color(0x00F1F1F1)],
-              stops: [0, 0.19, 1],
-            ),
-          ),
-          child: Column(
-            children: [
-              // flex-col items-center gap-6
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D63EB),
-                      border: Border.all(width: 1.5),
-                      borderRadius: BorderRadius.circular(8), // rounded-lg
-                    ),
-                    child: Text(
-                      'K',
-                      style: bodyText(
-                        14,
-                        weight: FontWeight.w700,
-                        color: KoiColors.neoWhite,
-                        height: 20 / 14,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'KOI',
-                    style: bodyText(
-                      14,
-                      weight: FontWeight.w700,
-                      height: 20 / 14,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  link('About', () => _open(const AboutPlaceholder())),
-                  const SizedBox(width: 24),
-                  link(
-                    'How It Works',
-                    () => _open(const HowItWorksPlaceholder()),
-                  ),
-                  const SizedBox(width: 24),
-                  link('FAQ', _scrollToFaq),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Private · No account needed · Always here for you',
-                style: bodyText(
-                  12,
-                  weight: FontWeight.w500,
-                  color: _gray400,
-                  height: 16 / 12,
-                ),
-              ),
-              const SizedBox(height: 24), // mt-6
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.only(top: 24), // pt-6
-                decoration: const BoxDecoration(
-                  border: Border(
-                    top: BorderSide(width: 2, color: Color(0x1A000000)),
-                  ), // black/10
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      '© 2025 KOI · All rights reserved',
-                      style: bodyText(
-                        12,
-                        weight: FontWeight.w600,
-                        color: const Color(0x66000000),
-                        height: 16 / 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8), // gap-2
-                    Text(
-                      'Built with care in Pakistan 🇵🇰',
-                      style: bodyText(
-                        12,
-                        color: const Color(0x4D000000),
-                        height: 16 / 12,
-                      ),
-                    ), // black/30
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _footer() => KoiFooter(
+    links: [
+      ('About', _infoLinks.about),
+      ('How It Works', _infoLinks.howItWorks),
+      ('FAQ', _scrollToFaq),
+    ],
+  );
 }
 
 /// The fixed top nav. Unscrolled: 64px, white/75; scrolled (>20px): 52px,

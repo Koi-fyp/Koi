@@ -12,7 +12,7 @@ import '../chat_controller.dart';
 // 1rem/1.5rem, leading-relaxed 1.625, gray-600 #4b5563, gray-400 #9ca3af);
 // text without a font class is body DM Sans (font-black → 700).
 
-/// A stroked SVG icon (viewBox 0 0 24 24, round caps/joins).
+/// A stroked SVG icon (square viewBox, 24 by default; round caps/joins).
 class StrokeIcon extends StatelessWidget {
   const StrokeIcon({
     super.key,
@@ -20,6 +20,7 @@ class StrokeIcon extends StatelessWidget {
     required this.size,
     required this.color,
     required this.strokeWidth,
+    this.viewBox = 24,
   });
 
   final List<Path> paths;
@@ -27,22 +28,28 @@ class StrokeIcon extends StatelessWidget {
   final Color color;
   final double strokeWidth;
 
+  /// Side of the SVG's square viewBox.
+  final double viewBox;
+
   @override
   Widget build(BuildContext context) => SizedBox.square(
     dimension: size,
-    child: CustomPaint(painter: _StrokePainter(paths, color, strokeWidth)),
+    child: CustomPaint(
+      painter: _StrokePainter(paths, color, strokeWidth, viewBox),
+    ),
   );
 }
 
 class _StrokePainter extends CustomPainter {
-  _StrokePainter(this.paths, this.color, this.strokeWidth);
+  _StrokePainter(this.paths, this.color, this.strokeWidth, this.viewBox);
   final List<Path> paths;
   final Color color;
   final double strokeWidth;
+  final double viewBox;
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.scale(size.width / 24, size.height / 24);
+    canvas.scale(size.width / viewBox, size.height / viewBox);
     final p = Paint()
       ..style = PaintingStyle.stroke
       ..color = color
@@ -56,7 +63,9 @@ class _StrokePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_StrokePainter old) =>
-      old.color != color || old.strokeWidth != strokeWidth;
+      old.color != color ||
+      old.strokeWidth != strokeWidth ||
+      old.viewBox != viewBox;
 }
 
 // InputBar.tsx send icon

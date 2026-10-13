@@ -8,14 +8,32 @@ import 'package:flutter/widgets.dart';
 /// an optional `transitionDelay`. It never hides again (web only adds the
 /// class).
 class Reveal extends StatefulWidget {
-  const Reveal({super.key, required this.child, this.delay = Duration.zero});
+  const Reveal({
+    super.key,
+    required this.child,
+    this.delay = Duration.zero,
+    this.threshold = Reveal.defaultThreshold,
+    this.duration = Reveal.defaultDuration,
+    this.curve = Curves.ease,
+  });
 
   final Widget child;
   final Duration delay;
 
-  static const Duration duration = Duration(milliseconds: 600);
+  /// IntersectionObserver threshold (about/page.tsx 0.12, how-it-works 0.1,
+  /// about TeamCards 0.15).
+  final double threshold;
+
+  /// Transition length (.reveal 0.6s; TeamCards 0.5s).
+  final Duration duration;
+
+  /// Transition timing (.reveal ease; TeamCards' transform uses
+  /// cubic-bezier(0.34,1.2,0.64,1)).
+  final Curve curve;
+
+  static const Duration defaultDuration = Duration(milliseconds: 600);
   static const double fromDy = 28;
-  static const double threshold = 0.12;
+  static const double defaultThreshold = 0.12;
 
   @override
   State<Reveal> createState() => _RevealState();
@@ -43,7 +61,7 @@ class _RevealState extends State<Reveal> {
     final viewport = MediaQuery.sizeOf(context).height;
     final shown =
         (top + box.size.height).clamp(0, viewport) - top.clamp(0, viewport);
-    if (shown >= Reveal.threshold * box.size.height) {
+    if (shown >= widget.threshold * box.size.height) {
       _position?.removeListener(_check);
       _delay = Timer(widget.delay, () {
         if (mounted) setState(() => _visible = true);
@@ -61,11 +79,11 @@ class _RevealState extends State<Reveal> {
   @override
   Widget build(BuildContext context) => AnimatedOpacity(
     opacity: _visible ? 1 : 0,
-    duration: Reveal.duration,
-    curve: Curves.ease,
+    duration: widget.duration,
+    curve: Curves.ease, // opacity is always ease on web
     child: AnimatedContainer(
-      duration: Reveal.duration,
-      curve: Curves.ease,
+      duration: widget.duration,
+      curve: widget.curve,
       transform: Matrix4.translationValues(0, _visible ? 0 : Reveal.fromDy, 0),
       child: widget.child,
     ),

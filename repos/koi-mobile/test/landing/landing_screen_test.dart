@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/landing/color_grid.dart';
 import 'package:koi_mobile/landing/landing_screen.dart';
-import 'package:koi_mobile/screens/placeholders.dart';
+import 'package:koi_mobile/info/about_screen.dart';
+import 'package:koi_mobile/info/how_it_works_screen.dart';
 
 import '../support/fake_auth.dart';
 import '../support/real_fonts.dart';
@@ -156,23 +157,57 @@ void main() {
     expect(h(find.text(LandingScreen.faqs[1].a)), 0);
   });
 
-  testWidgets('How We Do It / About open placeholders', (tester) async {
+  testWidgets('How We Do It / About open the info pages', (tester) async {
     await pumpLanding(tester);
     final how = find.byKey(const Key('landing-how-it-works'));
     await scrollTo(tester, how);
     await tester.tap(how);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(find.byType(HowItWorksPlaceholder), findsOneWidget);
-    await tester.pageBack();
+    expect(find.byType(HowItWorksScreen), findsOneWidget);
+    // The KOI logo is web's <Link href="/">: back to the landing page.
+    await tester.tap(find.byKey(const Key('info-nav-logo')));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(HowItWorksScreen), findsNothing);
 
     final about = find.byKey(const Key('footer-About'));
     await scrollTo(tester, about);
     await tester.tap(about);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(find.byType(AboutPlaceholder), findsOneWidget);
+    expect(find.byType(AboutScreen), findsOneWidget);
+  });
+
+  testWidgets('About → FAQ link returns here and scrolls to the FAQ', (
+    tester,
+  ) async {
+    await pumpLanding(tester);
+    final about = find.byKey(const Key('footer-About'));
+    await scrollTo(tester, about);
+    await tester.tap(about);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(AboutScreen), findsOneWidget);
+
+    final faq = find.byKey(const Key('footer-FAQ'));
+    // Mid-screen, clear of the fixed nav.
+    Scrollable.ensureVisible(tester.element(faq), alignment: 0.5);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(faq);
+    await tester.pump();
+    // Pop, then the 0.5s smooth scroll to #faq, frame by frame.
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.byType(AboutScreen), findsNothing);
+    final q = tester.getRect(find.text(LandingScreen.faqs.first.q));
+    expect(q.top, greaterThanOrEqualTo(0));
+    expect(
+      q.bottom,
+      lessThanOrEqualTo(
+        tester.view.physicalSize.height / tester.view.devicePixelRatio,
+      ),
+    );
   });
 }
