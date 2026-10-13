@@ -4,6 +4,7 @@ import '../theme/koi_colors.dart';
 import '../theme/koi_shadows.dart';
 import '../theme/koi_text.dart';
 import 'neo_spinner.dart';
+import 'outer_shadow.dart';
 
 /// Mirrors src/components/ui/NeoButton.tsx: variant 'primary' | 'secondary' |
 /// 'ghost' | 'danger'.
@@ -143,6 +144,10 @@ class _NeoButtonState extends State<NeoButton> {
           )
         : widget.child;
 
+    // A see-through fill (ghost) must not show its own shadow through it;
+    // see OuterStadiumShadowPainter.
+    final transparent = style.background.a < 1;
+
     final button = AnimatedContainer(
       duration: NeoButton.transition,
       curve: Curves.ease,
@@ -152,27 +157,31 @@ class _NeoButtonState extends State<NeoButton> {
         0,
       ),
       width: widget.fullWidth ? double.infinity : null,
-      padding: widget.customPadding ?? NeoButton.padding,
-      decoration: ShapeDecoration(
-        color: style.background,
-        shape: const StadiumBorder(
-          side: BorderSide(width: NeoButton.borderWidth),
-        ),
-        shadows: KoiShadows.hard(pressed ? style.pressedShadow : style.shadow),
-      ),
-      child: DefaultTextStyle(
-        style: textStyle,
-        softWrap: false,
-        child: IconTheme(
-          data: IconThemeData(color: style.foreground),
-          child: Row(
-            mainAxisSize: widget.fullWidth
-                ? MainAxisSize.max
-                : MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [content],
+      // transition: box-shadow 0.1s ease
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(end: pressed ? style.pressedShadow : style.shadow),
+        duration: NeoButton.transition,
+        curve: Curves.ease,
+        builder: (context, px, child) => CustomPaint(
+          painter: transparent
+              ? OuterStadiumShadowPainter(
+                  color: KoiColors.neoBlack,
+                  offset: Offset(px, px),
+                )
+              : null,
+          child: Container(
+            padding: widget.customPadding ?? NeoButton.padding,
+            decoration: ShapeDecoration(
+              color: style.background,
+              shape: const StadiumBorder(
+                side: BorderSide(width: NeoButton.borderWidth),
+              ),
+              shadows: transparent ? null : KoiShadows.hard(px),
+            ),
+            child: child,
           ),
         ),
+        child: _content(style, textStyle, content),
       ),
     );
 
@@ -192,4 +201,20 @@ class _NeoButtonState extends State<NeoButton> {
       ),
     );
   }
+
+  Widget _content(_VariantStyle style, TextStyle textStyle, Widget content) =>
+      DefaultTextStyle(
+        style: textStyle,
+        softWrap: false,
+        child: IconTheme(
+          data: IconThemeData(color: style.foreground),
+          child: Row(
+            mainAxisSize: widget.fullWidth
+                ? MainAxisSize.max
+                : MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [content],
+          ),
+        ),
+      );
 }

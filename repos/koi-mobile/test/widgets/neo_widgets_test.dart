@@ -5,15 +5,31 @@ import 'package:koi_mobile/widgets/neo_button.dart';
 import 'package:koi_mobile/widgets/neo_card.dart';
 import 'package:koi_mobile/widgets/neo_input.dart';
 import 'package:koi_mobile/widgets/neo_spinner.dart';
+import 'package:koi_mobile/widgets/outer_shadow.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
       home: Scaffold(body: Center(child: child)),
     );
 
 ShapeDecoration _buttonDecoration(WidgetTester tester) => tester
-    .widget<AnimatedContainer>(find.descendant(
-        of: find.byType(NeoButton), matching: find.byType(AnimatedContainer)))
+    .widgetList<Container>(find.descendant(
+        of: find.byType(NeoButton), matching: find.byType(Container)))
+    .firstWhere((c) => c.decoration is ShapeDecoration)
     .decoration! as ShapeDecoration;
+
+/// The shadow offset, wherever NeoButton paints it: on the decoration
+/// (opaque variants) or outside-only via the painter (ghost).
+Offset _shadowOffset(WidgetTester tester) {
+  final shadows = _buttonDecoration(tester).shadows;
+  if (shadows != null) return shadows.single.offset;
+  return tester
+      .widgetList<CustomPaint>(find.descendant(
+          of: find.byType(NeoButton), matching: find.byType(CustomPaint)))
+      .map((c) => c.painter)
+      .whereType<OuterStadiumShadowPainter>()
+      .single
+      .offset;
+}
 
 void main() {
   group('NeoButton', () {
@@ -29,9 +45,14 @@ void main() {
           in expected.entries) {
         await tester.pumpWidget(_wrap(NeoButton(
             variant: variant, onPressed: () {}, child: const Text('x'))));
+        // The shadow tweens from the previous variant's value.
+        await tester.pumpAndSettle();
         final d = _buttonDecoration(tester);
         expect(d.color, color, reason: '$variant');
-        expect(d.shadows!.single.offset, Offset(shadow, shadow));
+        expect(_shadowOffset(tester), Offset(shadow, shadow));
+        // Transparent fill: no Flutter BoxShadow under it (it would show
+        // through as a solid block; web's CSS shadow never does).
+        if (variant == NeoButtonVariant.ghost) expect(d.shadows, isNull);
         final side = (d.shape as StadiumBorder).side;
         expect(side.width, 2.5);
         expect(side.color, KoiColors.neoBlack);

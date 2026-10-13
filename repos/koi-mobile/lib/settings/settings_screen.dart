@@ -317,10 +317,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onTap: _toggleHelp,
               body: const _HelpBody(
                 children: [
-                  // Copied as written, including "Web App" (see report).
                   _LabelledLine('Release Date:', ' January 2025', bottom: 8),
                   _LabelledLine('Build:', ' Production', bottom: 8),
-                  _LabelledLine('Platform:', ' Web App'),
+                  // settings/page.tsx:439 says "Web App"; mobile says
+                  // "Mobile App" (decision 2026-10-13).
+                  _LabelledLine('Platform:', ' Mobile App'),
                 ],
               ),
             ),

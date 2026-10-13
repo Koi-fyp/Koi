@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_motion.dart';
 import '../theme/koi_text.dart';
+import '../widgets/outer_shadow.dart';
 import 'widgets/settings_widgets.dart';
 
 /// Mirrors src/app/(authenticated)/settings/privacy/page.tsx.
@@ -447,7 +448,10 @@ class _DeleteAccountButtonState extends State<_DeleteAccountButton> {
         child: CustomPaint(
           // background: transparent, so the shadow must only be painted
           // OUTSIDE the button (CSS box-shadow never shows through it).
-          painter: const _OuterStadiumShadow(KoiColors.danger, Offset(0, 3)),
+          painter: const OuterStadiumShadowPainter(
+            color: KoiColors.danger,
+            offset: Offset(0, 3),
+          ),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 28),
             alignment: Alignment.center,
@@ -472,28 +476,4 @@ class _DeleteAccountButtonState extends State<_DeleteAccountButton> {
       ),
     ),
   );
-}
-
-/// A zero-blur stadium shadow painted only where it sticks out from under
-/// the (transparent) button.
-class _OuterStadiumShadow extends CustomPainter {
-  const _OuterStadiumShadow(this.color, this.offset);
-  final Color color;
-  final Offset offset;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final r = Radius.circular(size.height / 2);
-    final box = RRect.fromRectAndRadius(Offset.zero & size, r);
-    final shadow = Path.combine(
-      PathOperation.difference,
-      Path()..addRRect(box.shift(offset)),
-      Path()..addRRect(box),
-    );
-    canvas.drawPath(shadow, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(_OuterStadiumShadow old) =>
-      old.color != color || old.offset != offset;
 }

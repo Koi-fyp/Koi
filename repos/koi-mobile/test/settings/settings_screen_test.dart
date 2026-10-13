@@ -240,6 +240,11 @@ void main() {
         find.text('Release Date: January 2025', findRichText: true),
         findsOneWidget,
       );
+      // web: "Web App" (settings/page.tsx:439); mobile decision 2026-10-13
+      expect(
+        find.text('Platform: Mobile App', findRichText: true),
+        findsOneWidget,
+      );
       await tapVisible(tester, find.byKey(const Key('help-whatsnew')));
       await tester.pump(const Duration(milliseconds: 400));
       expect(h('version'), 0);
