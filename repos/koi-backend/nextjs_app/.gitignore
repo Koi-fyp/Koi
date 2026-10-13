@@ -1,0 +1,2 @@
+# Keep the canonical dependency lockfile reviewable despite the parent ignore rule.
+!package-lock.json

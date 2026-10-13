@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "incremental": false,
+    "baseUrl": "../..",
+    "paths": { "@/*": ["src/*"] }
+  },
+  "include": ["next-env.d.ts", "app/**/*.ts", "app/**/*.tsx", "../../src/components/avatar/VRMAvatarRenderer.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "../../node_modules"]
+}
