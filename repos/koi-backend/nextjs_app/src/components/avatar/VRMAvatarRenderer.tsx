@@ -1,4 +1,5 @@
 'use client';
+import type { SpeechTimeline } from '../../lib/speech/mouthCues';
 
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -17,6 +18,8 @@ export interface VRMAvatarRendererProps {
   exposeController?: boolean;
   animationSeed?: number;
   onLoadError?: () => void;
+  speechSource?: SpeechTimeline;
+  onReady?: () => void;
 }
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -38,12 +41,14 @@ function disposeModel(model: THREE.Object3D) {
   bitmaps.forEach((bitmap) => bitmap.close());
 }
 
-export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2, emotion = 'neutral', emotionIntensity = 0, conversationState = 'idle', exposeController = false, animationSeed = 0x4b4f49, onLoadError }: VRMAvatarRendererProps) {
+export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2, emotion = 'neutral', emotionIntensity = 0, conversationState = 'idle', exposeController = false, animationSeed = 0x4b4f49, onLoadError, speechSource, onReady }: VRMAvatarRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
 
+  const speechRef = useRef(speechSource); speechRef.current = speechSource;
+  const readyRef = useRef(onReady); readyRef.current = onReady;
   const loadErrorRef = useRef(onLoadError);
   loadErrorRef.current = onLoadError;
   const commandsRef = useRef<AvatarCommandBridge | null>(null);
@@ -110,6 +115,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
       if (disposed || !renderer) return;
       try {
         const delta = Math.min(clock.getDelta(), 0.05);
+        controller?.setSpeechSource(speechRef.current);
         controller?.update(delta);
         vrm?.update(delta);
         renderer.render(scene, camera);
@@ -117,6 +123,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
           readyReported = true;
           setState('ready');
           commands?.markReady(controller);
+          readyRef.current?.();
         }
         frame = requestAnimationFrame(tick);
       } catch (cause) { fail(cause); }

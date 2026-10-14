@@ -1,3 +1,5 @@
+import { VRMMouthController, type MouthSnapshot } from './VRMMouthController';
+import type { SpeechTimeline } from '../../lib/speech/mouthCues';
 import { Euler, Quaternion, Vector3, type Object3D } from 'three';
 import type { VRMExpressionManager, VRMHumanoid } from '@pixiv/three-vrm';
 
@@ -24,6 +26,7 @@ export interface AvatarAnimationSnapshot {
   weights: Record<string, number>; mouthWeights: Record<string, number>; blinkWeight: number; nextBlinkIn: number;
   headRotation: number[]; chestOffset: number; reducedMotion: boolean; disposed: boolean;
   availableEmotions: KoiEmotion[];
+  speech: MouthSnapshot;
 }
 export interface AvatarAnimationController {
   setEmotion(emotion: KoiEmotion, intensity: number): boolean;
@@ -36,6 +39,7 @@ export interface AvatarAnimationController {
 /** No timers or rendering ownership. Call update BEFORE vrm.update in the existing loop. */
 export class VRMAvatarController implements AvatarAnimationController {
   private readonly manager;
+  private readonly mouth: VRMMouthController;
   private readonly head?: BoneBase;
   private readonly chest?: BoneBase;
   private readonly blinkNames: string[];
@@ -61,6 +65,7 @@ export class VRMAvatarController implements AvatarAnimationController {
 
   constructor(rig: AnimationRig, options: { seed?: number; reducedMotion?: boolean } = {}) {
     this.manager = rig.expressionManager;
+    this.mouth = new VRMMouthController(this.manager);
     this.seed = this.initialSeed = (options.seed ?? 0x4b4f49) >>> 0;
     this.reducedMotion = options.reducedMotion ?? false;
     const capture = (node: Object3D | null): BoneBase | undefined => node ? { node, position: node.position.clone(), quaternion: node.quaternion.clone() } : undefined;
@@ -103,10 +108,12 @@ export class VRMAvatarController implements AvatarAnimationController {
     return supported;
   }
   setConversationState(state: ConversationState) { if (!this.disposed) this.state = normalizeConversationState(state); }
+  setSpeechSource(source?: SpeechTimeline) { this.mouth.setSource(source); }
   setReducedMotion(reduced: boolean) { if (!this.disposed) this.reducedMotion = reduced; }
   reset() {
     if (this.disposed) return;
     this.setEmotion('neutral', 0);
+    this.mouth.reset();
     this.state = 'idle'; this.time = 0; this.pitch = this.yaw = this.roll = 0;
     this.seed = this.initialSeed; this.nextBlink = this.blinkInterval(); this.blinkTime = -1; this.blinkWeight = 0;
     for (const name of this.blinkNames) this.write(name, 0);
@@ -176,10 +183,10 @@ export class VRMAvatarController implements AvatarAnimationController {
     if (this.disposed || !Number.isFinite(deltaTime) || deltaTime <= 0) return;
     const delta = Math.min(deltaTime, 0.1); // Avoid a burst after background-tab stalls.
     this.time += delta;
-    this.updateEmotion(delta); this.updateBlink(delta); this.updatePosture(delta);
+    this.updateEmotion(delta); this.updateBlink(delta); this.updatePosture(delta); this.mouth.update();
   }
   getSnapshot(): AvatarAnimationSnapshot {
-    return { emotion: this.targetEmotion, intensity: this.intensity, conversationState: this.state,
+    return { speech: this.mouth.getSnapshot(), emotion: this.targetEmotion, intensity: this.intensity, conversationState: this.state,
       weights: Object.fromEntries(presets.map((name) => [name, this.manager?.getValue(name) ?? 0])),
       mouthWeights: Object.fromEntries(['aa', 'ih', 'ou', 'ee', 'oh'].map((name) => [name, this.manager?.getValue(name) ?? 0])),
       blinkWeight: this.blinkWeight, nextBlinkIn: this.nextBlink,
@@ -190,6 +197,7 @@ export class VRMAvatarController implements AvatarAnimationController {
   }
   dispose() {
     if (this.disposed) return;
+    this.mouth.dispose();
     this.clearOwnedExpressions(); this.restoreBones(); this.fade = null; this.weight = 0; this.blinkWeight = 0; this.active = null; this.disposed = true;
   }
 }

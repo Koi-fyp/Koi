@@ -96,3 +96,16 @@ additive metadata strategy and Stage B configuration/verification blockers.
 Run node scripts/test-chat-contract.cjs, python scripts/verify_backend_chat_contract.py
 (source-only audit), and node scripts/verify-mock-chat.cjs. Browser artifacts
 are under .next/verification/increment-5. No live end-to-end pass is claimed.
+
+
+## Increment 6A: local speech/lip-sync lab
+
+Generate local test audio with `powershell -NoProfile -File scripts/create-speech-fixture.ps1`,
+then run `npm run dev:avatar` and open http://127.0.0.1:3001/speech-lab.
+Uses Windows David speech synthesis and explicitly authored approximate cues,
+not Piper or Rhubarb extraction. Generated files are ignored under `.fixtures/`.
+Play/pause/resume/stop, emotion preview and male/female switching are development-only.
+No microphone/camera/backend/Firebase access. Production routes are unchanged.
+Run `node scripts/test-speech.cjs` and `node scripts/verify-speech.cjs`.
+See [speech architecture](../../src/lib/speech/SPEECH_ARCHITECTURE.md) for provenance,
+upstream feasibility sources, lifecycle boundaries and verification limits.

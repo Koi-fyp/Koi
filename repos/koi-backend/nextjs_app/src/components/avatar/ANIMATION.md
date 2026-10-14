@@ -1,6 +1,6 @@
 # KOI avatar animation foundation (Increment 4)
 
-`VRMAvatarController` owns only emotional presets, blink presets, and normalized
+`VRMAvatarController` owns emotional presets, blink presets, and normalized
 head/chest offsets. It has no renderer, timers, media, authentication or backend.
 The existing renderer calls controller.update(delta), then vrm.update(delta),
 then renders in its one requestAnimationFrame loop. Each loaded model receives
@@ -18,8 +18,10 @@ its own controller after orientation, relaxed pose, scale and framing are set.
 - Smoothstep interpolation uses elapsed seconds, supports interruptions and
   repeated commands, and never makes opposing emotional presets nonzero together.
 - Three-VRM retains ownership of expression overrides; metadata is not rewritten.
-- aa/ih/ou/ee/oh are never written, including reset/dispose. Emotion morphs may
-  naturally include a smile/mouth shape, but there is no speech or lip sync.
+- Without a SpeechTimeline, aa/ih/ou/ee/oh remain untouched, including reset/dispose.
+  Increment 6A optionally attaches VRMMouthController in the same update loop.
+  Actual media time plus validated cues drive only the five mouth presets;
+  speaking state alone never drives mouth motion. See ../../lib/speech/SPEECH_ARCHITECTURE.md.
 
 ## Blink and posture
 
