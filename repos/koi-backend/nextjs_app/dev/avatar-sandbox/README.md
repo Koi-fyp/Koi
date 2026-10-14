@@ -82,3 +82,17 @@ reduced-motion behavior and the opt-in JavaScript ready/not-ready contract.
 writes expression screenshots and lifecycle results to
 `.next/verification/increment-4`. Existing viewer/UI test commands still apply.
 No backend, voice, lip sync, camera or Flutter integration has been added.
+
+## Increment 5 Stage A mock JSON chat
+
+Open /mock-chat from the sandbox home. Only scripted sample commands are
+accepted; responses are development fixtures, never real inference. The same
+pure conversation session and wire contract drive the authenticated integration,
+without importing Firebase/services into this route. Failure, cancel, rapid
+replacement, avatar switching and text-only fallback are available for testing.
+
+See src/lib/conversation/INTEGRATION.md for the reconciled JSON contract,
+additive metadata strategy and Stage B configuration/verification blockers.
+Run node scripts/test-chat-contract.cjs, python scripts/verify_backend_chat_contract.py
+(source-only audit), and node scripts/verify-mock-chat.cjs. Browser artifacts
+are under .next/verification/increment-5. No live end-to-end pass is claimed.

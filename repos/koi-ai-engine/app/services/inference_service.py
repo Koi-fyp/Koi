@@ -260,11 +260,9 @@ class InferenceService:
             if parsed is not None:
                 return parsed
             logger.warning(
-                "Structured output parse/order failed on attempt %d/%d. "
-                "Raw output: %r",
+                "Structured output parse/order failed on attempt %d/%d.",
                 attempt,
                 _MAX_JSON_RETRY_ATTEMPTS,
-                last_raw[:500],
             )
 
         # All retries exhausted. Per this project's "flag rather than
@@ -274,8 +272,7 @@ class InferenceService:
         # but contains made-up content.
         raise ModelNotLoadedError(
             f"Failed to obtain validly-ordered structured JSON output after "
-            f"{_MAX_JSON_RETRY_ATTEMPTS} attempts. Last raw output: "
-            f"{last_raw[:500]!r}"
+            f"{_MAX_JSON_RETRY_ATTEMPTS} attempts."
         )
 
     def generate_reply(

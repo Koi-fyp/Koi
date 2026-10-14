@@ -37,13 +37,13 @@ function OfflineBanner() {
         borderBottom: '2px solid #000',
       }}
     >
-      You&rsquo;re offline — your message will send when reconnected
+      You&rsquo;re offline — please reconnect before sending a message
     </div>
   );
 }
 
 export default function ChatPage() {
-  const { messages, isTyping, send } = useChat();
+  const { messages, isTyping, send, error, blocked } = useChat();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const hasMessages = messages.length > 0;
   const [mounted, setMounted] = useState(false);
@@ -63,8 +63,10 @@ export default function ChatPage() {
         style={{ flex: 1 }}
       >
         <OfflineBanner />
+        <Link href="/companion-scene" style={{ padding: '8px 16px' }}>Open avatar conversation</Link>
+        {error && <p role="alert" style={{ padding: '0 16px' }}>{error}</p>}
         <MessageList messages={messages} isTyping={isTyping} />
-        <InputBar onSend={send} disabled={isTyping} inputRef={inputRef} />
+        <InputBar onSend={send} disabled={isTyping || blocked} inputRef={inputRef} />
       </div>
 
       {/* ── Avatar panel (right on desktop, top on mobile) ── */}

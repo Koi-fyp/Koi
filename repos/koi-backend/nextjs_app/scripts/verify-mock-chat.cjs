@@ -1,0 +1,62 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const { chromium } = require('playwright');
+const attachAudit = require('./avatar-browser-audit.cjs');
+(async () => {
+  const origin = 'http://127.0.0.1:3001', output = path.resolve('dev/avatar-sandbox/.next/verification/increment-5');
+  await fs.mkdir(output, { recursive: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.KOI_AVATAR_BROWSER, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    const audit = await attachAudit(page, origin), requests = [];
+    page.on('request', (request) => requests.push(request.url()));
+    const ready = () => page.waitForFunction(() => window.AvatarController?.ready, null, { timeout: 120000 });
+    const subtitle = page.getByRole('region', { name: 'Companion subtitles' });
+    await page.goto(origin + '/mock-chat'); await ready();
+    assert.equal(await page.getByRole('textbox', { name: 'Development mock message' }).getAttribute('readonly'), '');
+    await page.getByRole('button', { name: 'Sample joy', exact: true }).click();
+    await page.waitForFunction(() => window.AvatarController.getSnapshot().animation.weights.happy > 0.45);
+    assert.match(await subtitle.innerText(), /joy/);
+    assert.equal(await page.evaluate(() => window.AvatarController.getSnapshot().animation.conversationState), 'speaking');
+    await page.getByRole('button', { name: 'Sample sorrow', exact: true }).click();
+    await page.waitForFunction(() => window.AvatarController.getSnapshot().animation.weights.sad > 0.45);
+    await page.getByRole('button', { name: 'Text conversation', exact: true }).click();
+    const log = page.getByRole('log', { name: 'Conversation transcript' });
+    assert.match(await log.innerText(), /Sample joy/); assert.match(await log.innerText(), /Sample sorrow/);
+    await page.screenshot({ path: path.join(output, 'desktop-mock-chat.png') });
+    await page.getByRole('button', { name: 'Sample failure', exact: true }).click();
+    await page.locator('main [role=alert]').waitFor(); assert.match(await page.locator('main [role=alert]').innerText(), /simulation/);
+    assert.equal(await page.evaluate(() => window.AvatarController.getSnapshot().animation.conversationState), 'idle');
+    assert.equal(await log.getByText(/companion unavailable/).count(), 0); // No synthetic AI error reply.
+    await page.getByRole('button', { name: 'Sample slow', exact: true }).click();
+    await page.getByRole('button', { name: 'Cancel request' }).click(); await page.waitForTimeout(1600);
+    assert.equal(await page.getByRole('button', { name: 'Cancel request' }).count(), 0);
+    assert.match(await log.innerText(), /cancelled/);
+    await page.getByRole('button', { name: 'Sample slow', exact: true }).click();
+    await page.getByRole('button', { name: 'Sample angry', exact: true }).click();
+    await page.waitForFunction(() => window.AvatarController.getSnapshot().animation.weights.angry > 0.45);
+    await page.waitForTimeout(1600); assert.match(await subtitle.innerText(), /angry/);
+    await page.getByRole('button', { name: 'Preview settings' }).click(); await page.getByLabel('Preview model', { exact: true }).selectOption('female');
+    await page.waitForFunction(() => window.AvatarController?.ready && window.AvatarController.getSnapshot().modelUrl === '/models/koi-female.vrm');
+    await page.getByRole('button', { name: 'Preview settings' }).click();
+    await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: path.join(output, 'mobile-mock-chat.png') });
+    await page.getByRole('button', { name: 'End conversation' }).click(); await page.getByRole('heading', { name: 'KOI development sandbox' }).waitFor();
+    await page.route('**/models/koi-male.vrm', (route) => route.fulfill({ status: 404, body: 'missing fixture' }));
+    await page.getByRole('link', { name: 'Open mock JSON chat' }).click();
+    await page.getByRole('log', { name: 'Conversation transcript' }).waitFor();
+    assert.equal(await page.locator('canvas').count(), 0);
+    await page.getByRole('button', { name: 'Sample fun', exact: true }).click();
+    await page.getByRole('log', { name: 'Conversation transcript' }).getByText(/scripted response.*fun/).waitFor();
+    await page.getByRole('button', { name: 'End conversation' }).click(); await page.getByRole('heading', { name: 'KOI development sandbox' }).waitFor(); await page.waitForTimeout(300);
+    const cleanup = await page.evaluate(() => ({ frames: window.__avatarAudit.pending.size, observers: window.__avatarAudit.observers.size,
+      contexts: window.__avatarAudit.contexts.filter((gl) => !gl.isContextLost()).length, mediaCalls: window.__avatarAudit.mediaCalls }));
+    assert.deepEqual(cleanup, { frames: 0, observers: 0, contexts: 0, mediaCalls: 0 });
+    assert.deepEqual(audit.errors, []); assert.deepEqual(audit.consoleErrors, []); assert.deepEqual(audit.external, []);
+    assert(!requests.some((url) => /\/api\//.test(url)));
+    const result = { passed: true, scope: 'Stage A local mock integration only', cleanup, ...audit };
+    await fs.writeFile(path.join(output, 'results.json'), JSON.stringify(result, null, 2)); console.log(JSON.stringify(result, null, 2));
+  } finally { await browser.close(); }
+})().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -25,26 +25,32 @@ export interface CompanionSceneProps {
   notice?: string;
   transcriptNotice?: string;
   settings?: ReactNode;
+  composer?: ReactNode;
+  avatarEnabled?: boolean;
+  onAvatarFailure?: () => void;
+  viewportOffset?: number;
+  backLabel?: string;
 }
 export default function CompanionScene({ companionName, modelUrl, messages, subtitle, subtitleLanguage,
-  subtitleUpdating, onBack, onEnd, notice, transcriptNotice, settings, emotion, emotionIntensity, conversationState, exposeController }: CompanionSceneProps) {
+  subtitleUpdating, onBack, onEnd, notice, transcriptNotice, settings, emotion, emotionIntensity, conversationState, exposeController, composer, avatarEnabled = true, onAvatarFailure, viewportOffset = 0, backLabel }: CompanionSceneProps) {
   const [textOpen, setTextOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const closeText = () => { setTextOpen(false); toggleRef.current?.focus(); };
-  return <main className={styles.scene} onKeyDown={(event) => {
+  return <main className={styles.scene} style={viewportOffset ? { height: `calc(100dvh - ${viewportOffset}px)` } : undefined} onKeyDown={(event) => {
     if (event.key === 'Escape') { if (textOpen) closeText(); setSettingsOpen(false); }
   }}>
-    <CompanionHeader name={companionName} onBack={onBack} onSettings={settings ? () => setSettingsOpen((open) => !open) : undefined} settingsOpen={settingsOpen} />
+    <CompanionHeader backLabel={backLabel} name={companionName} onBack={onBack} onSettings={settings ? () => setSettingsOpen((open) => !open) : undefined} settingsOpen={settingsOpen} />
     {notice && <p className={styles.notice}>{notice}</p>}
     {settingsOpen && <section id="companion-settings" className={styles.settings} aria-label="Development preview settings">{settings}</section>}
-    <div className={`${styles.workspace} ${textOpen ? styles.withText : ''}`}>
-      <section className={styles.stage} aria-label="Companion avatar">
-        <div className={styles.renderer}><VRMAvatarRenderer modelUrl={modelUrl} emotion={emotion} emotionIntensity={emotionIntensity} conversationState={conversationState} exposeController={exposeController} minHeight={0} maxPixelRatio={1.5} /></div>
+    <div className={`${styles.workspace} ${textOpen && avatarEnabled ? styles.withText : ''}`}>
+      {avatarEnabled && <section className={styles.stage} aria-label="Companion avatar">
+        <div className={styles.renderer}><VRMAvatarRenderer modelUrl={modelUrl} emotion={emotion} emotionIntensity={emotionIntensity} conversationState={conversationState} exposeController={exposeController} onLoadError={onAvatarFailure} minHeight={0} maxPixelRatio={1.5} /></div>
         <ConversationSubtitles text={subtitle} language={subtitleLanguage} updating={subtitleUpdating} />
-      </section>
-      {textOpen && <ConversationTextPanel messages={messages} companionName={companionName} notice={transcriptNotice} onClose={closeText} />}
+      </section>}
+      {(textOpen || !avatarEnabled) && <ConversationTextPanel messages={messages} companionName={companionName} notice={transcriptNotice} allowClose={avatarEnabled} onClose={closeText} />}
     </div>
-    <ConversationControls textOpen={textOpen} toggleRef={toggleRef} onToggleText={() => setTextOpen((open) => !open)} onEnd={onEnd} />
+    {composer && <div style={{ flexShrink: 0, paddingTop: 10 }}>{composer}</div>}
+    <ConversationControls textOpen={textOpen || !avatarEnabled} textLocked={!avatarEnabled} toggleRef={toggleRef} onToggleText={() => setTextOpen((open) => !open)} onEnd={onEnd} />
   </main>;
 }

@@ -16,6 +16,7 @@ export interface VRMAvatarRendererProps {
   conversationState?: ConversationState;
   exposeController?: boolean;
   animationSeed?: number;
+  onLoadError?: () => void;
 }
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -37,12 +38,14 @@ function disposeModel(model: THREE.Object3D) {
   bitmaps.forEach((bitmap) => bitmap.close());
 }
 
-export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2, emotion = 'neutral', emotionIntensity = 0, conversationState = 'idle', exposeController = false, animationSeed = 0x4b4f49 }: VRMAvatarRendererProps) {
+export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2, emotion = 'neutral', emotionIntensity = 0, conversationState = 'idle', exposeController = false, animationSeed = 0x4b4f49, onLoadError }: VRMAvatarRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
 
+  const loadErrorRef = useRef(onLoadError);
+  loadErrorRef.current = onLoadError;
   const commandsRef = useRef<AvatarCommandBridge | null>(null);
   const initialCommands = useRef({ emotion, emotionIntensity, conversationState });
   initialCommands.current = { emotion, emotionIntensity, conversationState };
@@ -88,6 +91,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
       if (controller) { commands?.detach(controller); controller.dispose(); }
       setError(cause instanceof Error ? cause.message : 'Unable to render this model.');
       setState('error');
+      loadErrorRef.current?.();
     };
     const resize = () => {
       if (!renderer || disposed) return;

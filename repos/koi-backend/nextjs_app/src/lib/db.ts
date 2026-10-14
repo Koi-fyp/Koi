@@ -8,9 +8,11 @@ export interface ConversationMessageRecord {
   content: string;
   timestamp: Date;
   emotion: Emotion;
-  emotion_confidence: number;
-  sentiment_score: number;
-  crisis_flag: boolean;
+  emotion_confidence?: number;
+  sentiment_score?: number;
+  crisis_flag?: boolean;
+  /** Optional additive presentation metadata; legacy records require no rewrite/index migration. */
+  companion_state?: import('./conversation/chatContract').CompanionState;
   synced: boolean;
 }
 export interface UserRecord {

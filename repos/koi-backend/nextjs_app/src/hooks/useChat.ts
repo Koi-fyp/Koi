@@ -1,130 +1,48 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { db, MessageRecord } from '@/lib/db';
-import { auth } from '@/lib/firebase';
-import { decrypt, getActiveCryptoContext } from '@/lib/crypto';
-import {
-  sendMessage as callService,
-  Emotion,
-} from '@/lib/conversation/conversationService';
-export interface ChatMessage {
-  id: string;
-  conversationId: string;
-  sender: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-  emotion: Emotion;
-}
-interface UseChatReturn {
-  messages: ChatMessage[];
-  isTyping: boolean;
-  currentEmotion: Emotion;
-  conversationId: string;
-  send: (text: string) => Promise<void>;
-}
-async function toChat(r: MessageRecord, secret: string): Promise<ChatMessage> {
-  let content = r.content;
-  try {
-    content = await decrypt(r.content, secret);
-  } catch {
-    console.warn('[KOI] Failed to decrypt message, showing raw content:', r.id);
-  }
-  return {
-    id: r.id,
-    conversationId: r.conversationId,
-    sender: r.sender,
-    content,
-    timestamp: r.timestamp,
-    emotion: (r.emotion as Emotion) ?? 'neutral',
-  };
-}
-export function useChat(): UseChatReturn {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const [currentEmotion, setCurrentEmotion] = useState<Emotion>('neutral');
-  const conversationId = useRef(uuidv4());
-  const offlineQueue = useRef<Array<() => Promise<void>>>([]);
-  // Read uid at call time — auth.currentUser is populated after signInWithCustomToken
-  const getUserId = () => auth.currentUser?.uid ?? 'anonymous';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/db';
+import { decrypt, getActiveCryptoContext, type AuthState } from '@/lib/crypto';
+import { sendMessage } from '@/lib/conversation/conversationService';
+import { ChatError, type ChatAdapter, type CompanionState } from '@/lib/conversation/chatContract';
+import { useConversationSession } from './useConversationSession';
+import type { SessionMessage } from '@/lib/conversation/ConversationSession';
+import type { KoiEmotion } from '@/components/avatar/VRMAvatarController';
+export interface ChatMessage extends SessionMessage { emotion: KoiEmotion; }
+export function useChat({ linkedSecret }: { linkedSecret?: string } = {}) {
+  const { user, isLinked } = useAuth();
+  const current = useRef({ user, isLinked, linkedSecret }); current.current = { user, isLinked, linkedSecret };
+  const owner = useRef<string | null>(user?.uid ?? null);
+  if (!owner.current && user) owner.current = user.uid;
+  const [readError, setReadError] = useState<string | null>(null);
+  const sessionId = useRef<string | null>(null);
+  const [adapter] = useState<ChatAdapter>(() => ({ send: async (request, options) => {
+    const account = current.current;
+    if (!account.user || account.user.uid !== owner.current) throw new ChatError('authentication', 'An authenticated, unchanged KOI session is required.');
+    const authState: AuthState = { isLinked: account.isLinked, linkedSecret: account.linkedSecret };
+    return sendMessage(account.user.uid, sessionId.current!, request.message, request.session_history, authState, options);
+  } }));
+  const chat = useConversationSession(adapter); sessionId.current = chat.session.conversationId;
   useEffect(() => {
-    const uid = getUserId();
-    db.messages
-      .where('conversationId')
-      .equals(conversationId.current)
-      .sortBy('timestamp')
-      .then(async (rows) => {
-        const { secret } = await getActiveCryptoContext(uid);
-        const decrypted = await Promise.all(rows.map((r) => toChat(r, secret)));
-        setMessages(decrypted);
-      })
-      .catch(() => {});
-  }, []);
-  useEffect(() => {
-    const flush = async () => {
-      const tasks = offlineQueue.current.splice(0);
-      for (const task of tasks) {
-        try { await task(); } catch { /* keep going */ }
-      }
-    };
-    window.addEventListener('online', flush);
-    return () => window.removeEventListener('online',flush);
-  }, []);
-  const send = useCallback(async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    const optimistic: ChatMessage = {
-      id: uuidv4(),
-      conversationId: conversationId.current,
-      sender: 'user',
-      content: trimmed,
-      timestamp: new Date(),
-      emotion: 'neutral',
-    };
-    setMessages((prev) => [...prev, optimistic]);
-    setIsTyping(true);
-    const doSend = async () => {
-      try {
-        // Build last-5 context for the AI
-        const context = messages.slice(-5).map((m) =>({
-          role: (m.sender === 'user' ? 'user' : 'model') as 'user' | 'model',
-          content: m.content,
-        }));
-        const result = await callService(
-          getUserId(),
-          conversationId.current,
-          trimmed,
-          context,
-          { severity: 'mild', profile: 'disconnected', avatar: 'male_human' },
-        );
-        setCurrentEmotion(result.emotion);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: uuidv4(),
-            conversationId: conversationId.current,
-            sender: 'ai',
-            content: result.reply,
-            timestamp: new Date(),
-            emotion: result.emotion,
-          },
-        ]);
-      } finally {
-        setIsTyping(false);
-      }
-    };
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      offlineQueue.current.push(doSend);
-      setIsTyping(false);
-    } else {
-      await doSend();
-    }
-  }, []);
-  return {
-    messages,
-    isTyping,
-    currentEmotion,
-    conversationId: conversationId.current,
-    send,
-  };
+    if (!user || user.uid !== owner.current) return;
+    let cancelled = false; const versionMessages = chat.session.getSnapshot().messages;
+    setReadError(null);
+    void (async () => {
+      const rows = await db.messages.where('conversationId').equals(chat.session.conversationId).sortBy('timestamp');
+      if (!rows.length) return;
+      const { secret } = await getActiveCryptoContext(user.uid, { isLinked, linkedSecret });
+      const messages: SessionMessage[] = await Promise.all(rows.map(async (row) => {
+        const legacy: CompanionState = { emotion: row.emotion === 'happy' ? 'joy' : row.emotion === 'sad' ? 'sorrow' : 'neutral', intensity: row.emotion === 'happy' || row.emotion === 'sad' ? 0.5 : 0 };
+        return { id: row.id, conversationId: row.conversationId, sender: row.sender, content: await decrypt(row.content, secret),
+          timestamp: row.timestamp, status: 'completed', companion_state: row.companion_state ?? legacy };
+      }));
+      if (!cancelled && chat.session.getSnapshot().messages === versionMessages) chat.session.replaceMessages(messages);
+    })().catch(() => { if (!cancelled) setReadError(isLinked && !linkedSecret ? 'Unlock your linked account before chatting.' : 'Conversation storage could not be unlocked.'); });
+    return () => { cancelled = true; chat.cancel(); };
+  }, [user?.uid, isLinked, linkedSecret, chat.session]);
+  const accountChanged = owner.current !== null && user?.uid !== owner.current;
+  const messages: ChatMessage[] = (accountChanged ? [] : chat.messages).map((message) => ({ ...message, emotion: message.companion_state?.emotion ?? 'neutral' }));
+  return { ...chat, messages, subtitle: accountChanged ? '' : chat.subtitle, isTyping: chat.pending, currentEmotion: accountChanged ? 'neutral' as const : chat.companion.emotion,
+    currentIntensity: accountChanged ? 0 : chat.companion.intensity, conversationId: chat.session.conversationId,
+    blocked: accountChanged || !user || (isLinked && !linkedSecret), error: accountChanged ? 'Your account changed. Start a new chat session.' : chat.error ?? (isLinked && !linkedSecret ? 'Unlock your linked account before chatting.' : readError) };
 }
