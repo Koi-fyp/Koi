@@ -1,3 +1,5 @@
+> Historical Increment 6A audit/results. Increment 6B.1 now verifies local Piper/Rhubarb; see [REAL_SPEECH.md](./REAL_SPEECH.md).
+
 # Increment 6A: local playback and VRM mouth proof of concept
 
 ## Audit and implementation boundaries

@@ -109,3 +109,22 @@ No microphone/camera/backend/Firebase access. Production routes are unchanged.
 Run `node scripts/test-speech.cjs` and `node scripts/verify-speech.cjs`.
 See [speech architecture](../../src/lib/speech/SPEECH_ARCHITECTURE.md) for provenance,
 upstream feasibility sources, lifecycle boundaries and verification limits.
+
+
+## Increment 6B.1: actual local Piper/Rhubarb samples
+
+On Windows x64 with Python 3.14:
+
+```powershell
+python scripts/setup-speech-tools.py
+python scripts/generate-piper-samples.py
+npm run dev:avatar
+```
+
+Open `/speech-lab` and select a Piper sample. The Windows/manual 6A baseline stays
+the default. Tools/voices stay ignored under `.speech-tools/`; generated paired
+WAV/JSON/raw cues stay under `.fixtures/`. Urdu, English and mixed inputs use the
+male Fasih Urdu voice; the latter two are quality-unverified feasibility probes.
+Run `python scripts/test-piper-pipeline.py` and `node scripts/verify-piper-speech.cjs`.
+See [real speech workflow](../../src/lib/speech/REAL_SPEECH.md) for pinned downloads,
+measured timings, licensing, limits and the proposed (not deployed) backend contract.

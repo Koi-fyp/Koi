@@ -1,2 +1,5 @@
 # Reproducible local speech output; do not redistribute the installed Windows voice assets.
 .fixtures/
+
+# Local Piper virtual environment, voice binaries and Rhubarb release.
+.speech-tools/

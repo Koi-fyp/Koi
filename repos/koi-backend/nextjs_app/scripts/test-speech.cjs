@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict'), fs = require('node:fs'), ts = require('typescript');
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, fileName: filename }).outputText, filename);
 const { parseMouthCues, mouthAt, MOUTH_PRESETS } = require('../src/lib/speech/mouthCues.ts');
+const { parseSpeechSample } = require('../src/lib/speech/speechSample.ts');
 const { SpeechPlayback } = require('../src/lib/speech/SpeechPlayback.ts');
 const { VRMAvatarController } = require('../src/components/avatar/VRMAvatarController.ts');
 const { VRMExpressionManager, VRMExpression } = require('@pixiv/three-vrm');
@@ -13,6 +14,13 @@ test('finite ordered second-based cues, unknown/closed values, half-open boundar
   assert.equal(mouthAt({ active: true, time: 1, cues }).preset, 'ou');
   assert.equal(mouthAt({ active: true, time: 2.5, cues }).weight, 0);
   assert.equal(mouthAt({ active: true, time: NaN, cues }).weight, 0);
+});
+test('sample provenance and audio-time bounds; baseline remains manual', () => {
+  const sample = { transcript: 'Test', cueSource: 'Manually authored test', durationSeconds: 4, sha256: 'a'.repeat(64), mouthCues: cues };
+  assert.equal(parseSpeechSample(sample).kind, 'manual');
+  assert.throws(() => parseSpeechSample({ ...sample, cueSource: 'unknown' }));
+  assert.throws(() => parseSpeechSample({ ...sample, durationSeconds: 1 }));
+  assert.throws(() => parseSpeechSample({ ...sample, kind: 'rhubarb', voice: 'fake' }));
 });
 test('actual source clock controls weight, backward seeks and pause; emotion/blink ownership preserved', () => {
   const manager = new VRMExpressionManager(); for (const name of ['happy', 'angry', 'sad', 'relaxed', 'neutral', 'blink', ...MOUTH_PRESETS]) manager.registerExpression(new VRMExpression(name));
