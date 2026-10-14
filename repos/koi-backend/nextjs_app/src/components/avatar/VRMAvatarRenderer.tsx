@@ -4,11 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { type VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+import { VRMAvatarController, type KoiEmotion, type ConversationState } from './VRMAvatarController';
+import { AvatarCommandBridge, registerAvatarCommands } from './avatarCommandBridge';
 
 export interface VRMAvatarRendererProps {
   modelUrl?: string;
   minHeight?: number;
   maxPixelRatio?: number;
+  emotion?: KoiEmotion;
+  emotionIntensity?: number;
+  conversationState?: ConversationState;
+  exposeController?: boolean;
+  animationSeed?: number;
 }
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -30,11 +37,25 @@ function disposeModel(model: THREE.Object3D) {
   bitmaps.forEach((bitmap) => bitmap.close());
 }
 
-export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2 }: VRMAvatarRendererProps) {
+export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2, emotion = 'neutral', emotionIntensity = 0, conversationState = 'idle', exposeController = false, animationSeed = 0x4b4f49 }: VRMAvatarRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
+
+  const commandsRef = useRef<AvatarCommandBridge | null>(null);
+  const initialCommands = useRef({ emotion, emotionIntensity, conversationState });
+  initialCommands.current = { emotion, emotionIntensity, conversationState };
+  useEffect(() => {
+    const bridge = new AvatarCommandBridge();
+    commandsRef.current = bridge;
+    bridge.setEmotion(initialCommands.current.emotion, initialCommands.current.emotionIntensity);
+    bridge.setConversationState(initialCommands.current.conversationState);
+    const unregister = exposeController ? registerAvatarCommands(bridge) : undefined;
+    return () => { unregister?.(); bridge.dispose(); if (commandsRef.current === bridge) commandsRef.current = null; };
+  }, [exposeController]);
+  useEffect(() => { commandsRef.current?.setEmotion(emotion, emotionIntensity); }, [emotion, emotionIntensity]);
+  useEffect(() => { commandsRef.current?.setConversationState(conversationState); }, [conversationState]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -43,6 +64,11 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
     let renderer: THREE.WebGLRenderer | undefined;
     let observer: ResizeObserver | undefined;
     let vrm: VRM | undefined;
+    let controller: VRMAvatarController | undefined;
+    const commands = commandsRef.current;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const motionChanged = () => controller?.setReducedMotion(reducedMotion.matches);
+    reducedMotion.addEventListener('change', motionChanged);
     let frame = 0;
     let model: THREE.Object3D | undefined;
     let readyReported = false;
@@ -59,6 +85,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
     const fail = (cause: unknown) => {
       if (disposed) return;
       cancelAnimationFrame(frame);
+      if (controller) { commands?.detach(controller); controller.dispose(); }
       setError(cause instanceof Error ? cause.message : 'Unable to render this model.');
       setState('error');
     };
@@ -78,11 +105,14 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
     const tick = () => {
       if (disposed || !renderer) return;
       try {
-        vrm?.update(Math.min(clock.getDelta(), 0.05));
+        const delta = Math.min(clock.getDelta(), 0.05);
+        controller?.update(delta);
+        vrm?.update(delta);
         renderer.render(scene, camera);
-        if (vrm && !readyReported) {
+        if (vrm && controller && !readyReported) {
           readyReported = true;
           setState('ready');
+          commands?.markReady(controller);
         }
         frame = requestAnimationFrame(tick);
       } catch (cause) { fail(cause); }
@@ -163,6 +193,8 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
           ? leftShoulder.getWorldPosition(new THREE.Vector3()).distanceTo(rightShoulder.getWorldPosition(new THREE.Vector3())) + 0.35
           : 0.8;
         resize();
+        controller = new VRMAvatarController(vrm, { seed: animationSeed, reducedMotion: reducedMotion.matches });
+        commands?.bind(controller, modelUrl);
       })().catch(fail);
     } catch (cause) { fail(cause); }
 
@@ -171,6 +203,8 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
       abort.abort();
       cancelAnimationFrame(frame);
       observer?.disconnect();
+      reducedMotion.removeEventListener('change', motionChanged);
+      if (controller) { commands?.detach(controller); controller.dispose(); }
       window.removeEventListener('resize', resize);
       if (model) { scene.remove(model); disposeModel(model); }
       if (renderer) {
@@ -182,7 +216,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
       }
       scene.clear();
     };
-  }, [modelUrl, attempt, maxPixelRatio]);
+  }, [modelUrl, attempt, maxPixelRatio, exposeController, animationSeed]);
 
   return (
     <div data-avatar-state={state} style={{ position: 'relative', width: '100%', height: '100%', minHeight,

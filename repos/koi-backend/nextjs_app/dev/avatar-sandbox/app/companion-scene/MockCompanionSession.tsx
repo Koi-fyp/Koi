@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { KoiEmotion, ConversationState } from '@/components/avatar/VRMAvatarController';
 import CompanionScene from '@/components/companion/CompanionScene';
 import type { ConversationMessage } from '@/components/companion/types';
 
@@ -16,12 +17,26 @@ export default function MockCompanionSession() {
   const [model, setModel] = useState<'male' | 'female'>('male');
   const [language, setLanguage] = useState<'en' | 'ur'>('en');
   const router = useRouter();
+  const [emotion, setEmotion] = useState<KoiEmotion>('neutral');
+  const [intensity, setIntensity] = useState(0.5);
+  const [conversationState, setConversationState] = useState<ConversationState>('idle');
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const changed = () => setReady(window.AvatarController?.ready ?? false);
+    window.addEventListener('AVATAR_READY', changed); window.addEventListener('AVATAR_NOT_READY', changed); changed();
+    return () => { window.removeEventListener('AVATAR_READY', changed); window.removeEventListener('AVATAR_NOT_READY', changed); };
+  }, []);
   return <CompanionScene companionName={model === 'male' ? 'Raza' : 'Aisha'} modelUrl={`/models/koi-${model}.vrm`}
+    emotion={emotion} emotionIntensity={intensity} conversationState={conversationState} exposeController
     messages={messages} subtitle={language === 'en' ? english : urdu} subtitleLanguage={language}
     onBack={() => router.push('/')} onEnd={() => router.push('/')}
     notice="Development-only mock session &#183; Scripted content, not AI-generated"
     transcriptNotice="Development mock transcript &#183; No messages are sent or saved"
-    settings={<><label>Preview model<select aria-label="Preview model" value={model} onChange={(event) => setModel(event.target.value as 'male' | 'female')}><option value="male">Raza &middot; Male (default)</option><option value="female">Aisha &middot; Female (preview)</option></select></label>
+    settings={<><h2 style={{ fontSize: 14, margin: '0 0 12px' }}>Animation tools &middot; Development only</h2><p role="status">Controller: {ready ? 'ready' : 'not ready'}</p><label>Preview model<select aria-label="Preview model" value={model} onChange={(event) => setModel(event.target.value as 'male' | 'female')}><option value="male">Raza &middot; Male (default)</option><option value="female">Aisha &middot; Female (preview)</option></select></label>
       <label>Subtitle language<select aria-label="Subtitle language" value={language} onChange={(event) => setLanguage(event.target.value as 'en' | 'ur')}><option value="en">English</option><option value="ur">Urdu</option></select></label>
+      <label>KOI emotion<select aria-label="KOI emotion" value={emotion} onChange={(event) => setEmotion(event.target.value as KoiEmotion)}>{(['neutral', 'joy', 'angry', 'sorrow', 'fun'] as const).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label>Emotion intensity: {intensity.toFixed(2)}<input type="range" aria-label="Emotion intensity" min="0" max="1" step="0.05" value={intensity} onChange={(event) => setIntensity(Number(event.target.value))} style={{ width: '100%', display: 'block', marginTop: 8 }} /></label>
+      <label>Conversation state<select aria-label="Conversation state" value={conversationState} onChange={(event) => setConversationState(event.target.value as ConversationState)}>{(['idle', 'listening', 'thinking', 'speaking'] as const).map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      <button type="button" onClick={() => { window.AvatarController?.reset(); setEmotion('neutral'); setIntensity(0.5); setConversationState('idle'); }} style={{ padding: '8px 12px', marginBottom: 12, borderRadius: 8, border: '1px solid #c9b6a5', background: '#ffd100' }}>Reset avatar</button>
       <p>Local development previews only. Microphone and camera are unavailable.</p></>} />;
 }

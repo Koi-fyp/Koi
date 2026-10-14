@@ -68,3 +68,17 @@ The female selector is a sandbox preview, not production selection integration.
 No facial animation, speech, lip sync, inference or camera processing is added.
 The existing full-application html2pdf.js and unrelated TypeScript failures
 remain outside this increment.
+
+## Increment 4 animation controls
+
+Open Preview settings on /companion-scene for development-only emotion,
+intensity, conversation-state and Reset controls. Both models reuse the same
+controller and renderer. All messages remain scripted mocks.
+
+See `src/components/avatar/ANIMATION.md` for mappings, timing, ownership,
+reduced-motion behavior and the opt-in JavaScript ready/not-ready contract.
+`node scripts/test-avatar-controller.cjs` runs deterministic source-level tests;
+`node scripts/verify-avatar-animation.cjs` exercises the real model files and
+writes expression screenshots and lifecycle results to
+`.next/verification/increment-4`. Existing viewer/UI test commands still apply.
+No backend, voice, lip sync, camera or Flutter integration has been added.
