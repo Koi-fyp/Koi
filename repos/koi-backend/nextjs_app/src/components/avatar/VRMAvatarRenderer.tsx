@@ -7,6 +7,8 @@ import { type VRM, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 
 export interface VRMAvatarRendererProps {
   modelUrl?: string;
+  minHeight?: number;
+  maxPixelRatio?: number;
 }
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -28,7 +30,7 @@ function disposeModel(model: THREE.Object3D) {
   bitmaps.forEach((bitmap) => bitmap.close());
 }
 
-export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm' }: VRMAvatarRendererProps) {
+export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2 }: VRMAvatarRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
@@ -70,7 +72,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm' }:
       camera.position.set(target.x, target.y, target.z + distance);
       camera.lookAt(target);
       camera.updateProjectionMatrix();
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Math.max(1, maxPixelRatio)));
       renderer.setSize(width, height, false);
     };
     const tick = () => {
@@ -180,10 +182,10 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm' }:
       }
       scene.clear();
     };
-  }, [modelUrl, attempt]);
+  }, [modelUrl, attempt, maxPixelRatio]);
 
   return (
-    <div data-avatar-state={state} style={{ position: 'relative', width: '100%', height: '100%', minHeight: 240,
+    <div data-avatar-state={state} style={{ position: 'relative', width: '100%', height: '100%', minHeight,
       background: 'radial-gradient(ellipse at 50% 40%, #fff7ed 0%, #ffe5d9 65%, #ffd9bb 100%)' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       {state !== 'ready' && (

@@ -1,0 +1,88 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const { chromium } = require('playwright');
+const attachAudit = require('./avatar-browser-audit.cjs');
+
+(async () => {
+  const origin = 'http://127.0.0.1:3001';
+  const output = path.resolve('dev/avatar-sandbox/.next/verification/increment-3');
+  await fs.mkdir(output, { recursive: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.KOI_AVATAR_BROWSER,
+    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 3 });
+    const audit = await attachAudit(page, origin);
+    const requests = [];
+    page.on('request', (request) => requests.push(request.url()));
+    const ready = () => page.locator('[data-avatar-state="ready"]').waitFor({ timeout: 120000 });
+    const screenshot = (name) => page.screenshot({ path: path.join(output, name + '.png') });
+    const bounds = () => page.locator('canvas').evaluate((canvas) => ({ width: canvas.clientWidth, height: canvas.clientHeight, pixelRatio: canvas.width / canvas.clientWidth }));
+    const noOverflow = async () => assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth && document.documentElement.scrollHeight <= window.innerHeight), 'Viewport overflow');
+    const cleanup = async () => {
+      await page.getByRole('heading', { name: 'KOI development sandbox' }).waitFor();
+      await page.waitForTimeout(300);
+      assert.equal(await page.locator('canvas').count(), 0);
+      const result = await page.evaluate(() => ({ frames: window.__avatarAudit.pending.size, observers: window.__avatarAudit.observers.size, contexts: window.__avatarAudit.contexts.filter((gl) => !gl.isContextLost()).length, mediaCalls: window.__avatarAudit.mediaCalls }));
+      assert.deepEqual(result, { frames: 0, observers: 0, contexts: 0, mediaCalls: 0 });
+      return result;
+    };
+    await page.goto(origin + '/companion-scene'); await ready();
+    assert.equal(await page.getByRole('button', { name: 'Microphone unavailable' }).isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: 'Camera unavailable' }).isDisabled(), true);
+    assert.equal(await page.locator('video').count(), 0);
+    assert.match(await page.locator('main').innerText(), /Development-only mock session/);
+    const desktop = await bounds(); assert(desktop.height > 400); assert(desktop.pixelRatio <= 1.51);
+    const subtitle = page.getByRole('region', { name: 'Companion subtitles' });
+    assert.match(await subtitle.innerText(), /one small step/);
+    const canvasBox = await page.locator('canvas').boundingBox(), subtitleBox = await subtitle.boundingBox();
+    assert(subtitleBox.y >= canvasBox.y + canvasBox.height - 1, 'Subtitles must stay below the avatar canvas');
+    await noOverflow(); await screenshot('desktop');
+    await page.getByRole('button', { name: 'Text conversation', exact: true }).click();
+    const panel = page.getByRole('complementary', { name: 'Text conversation panel' });
+    await panel.waitFor(); assert.equal(await page.getByRole('button', { name: 'Text conversation', exact: true }).getAttribute('aria-expanded'), 'true');
+    assert.equal(await panel.locator('[lang=ur]').count(), 1);
+    assert.equal(await page.getByRole('button', { name: 'Text conversation', exact: true }).evaluate((button) => getComputedStyle(button).color), 'rgb(255, 255, 255)');
+    assert.notEqual(await page.getByRole('button', { name: 'Text conversation', exact: true }).evaluate((button) => getComputedStyle(button).backgroundColor), 'rgb(244, 227, 211)');
+    assert.equal(await page.getByRole('button', { name: 'Close text conversation' }).evaluate((button) => button === document.activeElement), true);
+    const openDesktop = await bounds(), panelBox = await panel.boundingBox();
+    assert(openDesktop.width > panelBox.width); await noOverflow(); await screenshot('desktop-text');
+    await page.keyboard.press('Escape'); assert.equal(await panel.count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Text conversation', exact: true }).evaluate((button) => button === document.activeElement), true);
+    await page.getByRole('button', { name: 'Preview settings' }).click();
+    await page.getByLabel('Preview model', { exact: true }).selectOption('female'); await ready();
+    await page.getByRole('heading', { name: 'Aisha', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Preview settings' }).click(); await screenshot('female-desktop');
+    assert.equal(await page.evaluate(() => window.__avatarAudit.contexts.filter((gl) => !gl.isContextLost()).length), 1);
+    await page.getByRole('button', { name: 'Preview settings' }).click();
+    await page.getByLabel('Preview model', { exact: true }).selectOption('male'); await ready();
+    await page.getByLabel('Subtitle language', { exact: true }).selectOption('ur');
+    const urdu = await subtitle.locator('p').innerText(); assert(/[\u0600-\u06ff]/.test(urdu));
+    assert.equal(await subtitle.locator('p').getAttribute('lang'), 'ur');
+    assert.equal(await subtitle.locator('p').evaluate((p) => getComputedStyle(p).direction), 'rtl');
+    await page.getByRole('button', { name: 'Preview settings' }).click();
+    await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
+    const mobile = await bounds(); assert(mobile.height > 300); assert(mobile.pixelRatio <= 1.51);
+    await noOverflow(); await screenshot('mobile-urdu');
+    await page.getByRole('button', { name: 'Text conversation', exact: true }).click(); await panel.waitFor();
+    const openMobile = await bounds(); assert(openMobile.height > 180);
+    const mobileCanvasBox = await page.locator('canvas').boundingBox(), mobilePanelBox = await panel.boundingBox();
+    assert(mobilePanelBox.y >= mobileCanvasBox.y + mobileCanvasBox.height);
+    await noOverflow(); await screenshot('mobile-text');
+    await page.getByRole('button', { name: 'Close text conversation' }).click(); assert.equal(await panel.count(), 0);
+    await page.setViewportSize({ width: 320, height: 568 }); await page.waitForTimeout(300);
+    await page.getByRole('button', { name: 'Text conversation', exact: true }).click();
+    await noOverflow(); assert((await bounds()).height > 100); await screenshot('small-mobile-text');
+    await page.getByRole('button', { name: 'End conversation' }).click(); const endCleanup = await cleanup();
+    await page.getByRole('link', { name: 'Open mock conversation' }).click(); await ready();
+    assert.equal(await page.getByRole('heading', { name: 'Raza', exact: true }).count(), 1);
+    await page.getByRole('button', { name: 'Back to sandbox' }).click(); const backCleanup = await cleanup();
+    assert.deepEqual(audit.errors, []); assert.deepEqual(audit.consoleErrors, []); assert.deepEqual(audit.external, []);
+    assert(requests.some((url) => url.includes('/models/koi-female.vrm')));
+    assert(!requests.some((url) => /\/api\//.test(url)));
+    const result = { passed: true, desktop, openDesktop, mobile, openMobile, endCleanup, backCleanup,
+      femaleRendered: true, urduRendered: true, ...audit };
+    await fs.writeFile(path.join(output, 'results.json'), JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(result, null, 2));
+  } finally { await browser.close(); }
+})().catch((error) => { console.error(error); process.exitCode = 1; });

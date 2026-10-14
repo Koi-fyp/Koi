@@ -1,4 +1,5 @@
 import Link from 'next/link';
 export default function SandboxHome() {
-  return <main className="sandbox"><h1>KOI development sandbox</h1><Link href="/companion-scene">Open avatar viewer</Link></main>;
+  return <main className="sandbox"><h1>KOI development sandbox</h1><p className="intro">Development-only previews. No Firebase or backend required.</p>
+    <p><Link href="/companion-scene">Open mock conversation</Link></p><p><Link href="/avatar-viewer">Open avatar viewer</Link></p></main>;
 }
