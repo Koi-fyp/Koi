@@ -38,6 +38,10 @@ class AvatarCallScreen extends ConsumerStatefulWidget {
 }
 
 class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
+  // TODO(backend): drive setEmotion from companion_state once the real
+  // backend is connected (Q2/Q3). Blueprint §4.1: companion_state
+  // {emotion, intensity}, already in the 5 AvatarEmotion names; do not map
+  // the chat's user emotions onto it.
   late final AvatarViewController _avatar =
       widget.avatarController ?? AvatarViewController();
   final FocusNode _input = FocusNode();
