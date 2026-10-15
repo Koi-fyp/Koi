@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
+import '../avatar/avatar_call_screen.dart';
+import '../avatar/call_icons.dart';
 import '../onboarding/step_layout.dart';
 import '../theme/koi_colors.dart';
 import 'widgets/chat_widgets.dart';
@@ -74,6 +76,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               onSend: chat.send,
               disabled: chat.isTyping,
               focusNode: _input,
+              leading: const _CallEntryButton(),
             ),
           ),
         ],
@@ -378,6 +381,44 @@ class _CtaButtonState extends State<_CtaButton> {
             style: _CtaButton._style,
           ),
         ],
+      ),
+    ),
+  );
+}
+
+/// Mobile-only (Prompt 10): opens the avatar call screen. Round like the
+/// InputBar send button (48dp so it reads as a separate control), white
+/// like the CTA pill.
+class _CallEntryButton extends StatelessWidget {
+  const _CallEntryButton();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'Start avatar call',
+    excludeSemantics: true,
+    child: GestureDetector(
+      key: const Key('avatar-call-entry'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const AvatarCallScreen())),
+      child: Container(
+        width: 48,
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: KoiColors.neoWhite,
+          shape: BoxShape.circle,
+          border: Border.all(width: 2.5),
+          boxShadow: const [BoxShadow(offset: Offset(3, 3))],
+        ),
+        child: StrokeIcon(
+          paths: videoIconPaths,
+          size: 20,
+          strokeWidth: 2.2,
+          color: KoiColors.neoBlack,
+        ),
       ),
     ),
   );

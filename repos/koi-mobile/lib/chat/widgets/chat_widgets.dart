@@ -531,11 +531,16 @@ class InputBar extends StatefulWidget {
     required this.onSend,
     this.disabled = false,
     this.focusNode,
+    this.leading,
   });
 
   final ValueChanged<String> onSend;
   final bool disabled;
   final FocusNode? focusNode;
+
+  /// Mobile-only: a widget left of the input pill (the Chat screen's avatar
+  /// call button). null = exactly web's InputBar.
+  final Widget? leading;
 
   static const String placeholder = 'Type your message...';
 
@@ -569,95 +574,108 @@ class _InputBarState extends State<InputBar> {
     return Container(
       color: KoiColors.background, // background: #ffe5d9
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 8, 8, 8),
-        decoration: BoxDecoration(
-          color: KoiColors.neoWhite,
-          border: Border.all(width: 2.5),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: const [BoxShadow(offset: Offset(3, 3))],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end, // align-items flex-end
-          children: [
-            Expanded(
-              child: ConstrainedBox(
-                // minHeight 36px, maxHeight 128px (then it scrolls)
-                constraints: const BoxConstraints(
-                  minHeight: 36,
-                  maxHeight: 128,
-                ),
-                child: TextField(
-                  key: const Key('chat-input'),
-                  controller: _text,
-                  focusNode: widget.focusNode,
-                  enabled: !widget.disabled,
-                  minLines: 1,
-                  maxLines: null,
-                  // Web: Enter (without Shift) sends.
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _submit(),
-                  onChanged: (_) => setState(() {}),
-                  style: bodyText(15, height: 1.55),
-                  decoration: InputDecoration(
-                    isCollapsed: true,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                    hintText: InputBar.placeholder,
-                    // Tailwind preflight textarea::placeholder: gray-400
-                    hintStyle: bodyText(
-                      15,
-                      color: const Color(0xFF9CA3AF),
-                      height: 1.55,
-                    ),
+      child: _withLeading(_pill(canSend)),
+    );
+  }
+
+  Widget _withLeading(Widget pill) {
+    final leading = widget.leading;
+    if (leading == null) return pill;
+    return Row(
+      children: [
+        leading,
+        const SizedBox(width: 10),
+        Expanded(child: pill),
+      ],
+    );
+  }
+
+  Widget _pill(bool canSend) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: KoiColors.neoWhite,
+        border: Border.all(width: 2.5),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [BoxShadow(offset: Offset(3, 3))],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end, // align-items flex-end
+        children: [
+          Expanded(
+            child: ConstrainedBox(
+              // minHeight 36px, maxHeight 128px (then it scrolls)
+              constraints: const BoxConstraints(minHeight: 36, maxHeight: 128),
+              child: TextField(
+                key: const Key('chat-input'),
+                controller: _text,
+                focusNode: widget.focusNode,
+                enabled: !widget.disabled,
+                minLines: 1,
+                maxLines: null,
+                // Web: Enter (without Shift) sends.
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _submit(),
+                onChanged: (_) => setState(() {}),
+                style: bodyText(15, height: 1.55),
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                  hintText: InputBar.placeholder,
+                  // Tailwind preflight textarea::placeholder: gray-400
+                  hintStyle: bodyText(
+                    15,
+                    color: const Color(0xFF9CA3AF),
+                    height: 1.55,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            Semantics(
-              button: true,
-              enabled: canSend,
-              label: 'Send message',
-              child: GestureDetector(
-                key: const Key('chat-send'),
-                onTapDown: canSend
-                    ? (_) => setState(() => _pressed = true)
-                    : null,
-                onTapUp: (_) => setState(() => _pressed = false),
-                onTapCancel: () => setState(() => _pressed = false),
-                onTap: canSend ? _submit : null,
-                child: AnimatedScale(
-                  scale: _pressed ? 0.92 : 1,
-                  duration: const Duration(milliseconds: 100),
-                  child: AnimatedContainer(
-                    // transition: background 0.12s ease
-                    duration: const Duration(milliseconds: 120),
-                    curve: Curves.ease,
-                    width: 40,
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: canSend
-                          ? KoiColors.neoBlack
-                          : const Color(0xFFE0E0E0),
-                      shape: BoxShape.circle,
-                      border: Border.all(width: 2),
-                    ),
-                    child: StrokeIcon(
-                      paths: sendIconPaths,
-                      size: 18,
-                      strokeWidth: 2.2,
-                      color: canSend
-                          ? KoiColors.neoWhite
-                          : const Color(0xFFAAAAAA),
-                    ),
+          ),
+          const SizedBox(width: 10),
+          Semantics(
+            button: true,
+            enabled: canSend,
+            label: 'Send message',
+            child: GestureDetector(
+              key: const Key('chat-send'),
+              onTapDown: canSend
+                  ? (_) => setState(() => _pressed = true)
+                  : null,
+              onTapUp: (_) => setState(() => _pressed = false),
+              onTapCancel: () => setState(() => _pressed = false),
+              onTap: canSend ? _submit : null,
+              child: AnimatedScale(
+                scale: _pressed ? 0.92 : 1,
+                duration: const Duration(milliseconds: 100),
+                child: AnimatedContainer(
+                  // transition: background 0.12s ease
+                  duration: const Duration(milliseconds: 120),
+                  curve: Curves.ease,
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: canSend
+                        ? KoiColors.neoBlack
+                        : const Color(0xFFE0E0E0),
+                    shape: BoxShape.circle,
+                    border: Border.all(width: 2),
+                  ),
+                  child: StrokeIcon(
+                    paths: sendIconPaths,
+                    size: 18,
+                    strokeWidth: 2.2,
+                    color: canSend
+                        ? KoiColors.neoWhite
+                        : const Color(0xFFAAAAAA),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
