@@ -51,3 +51,4 @@ RAG On
 2026-10-16T20:40:06Z | P4 | PASS-WITH-NOTES | commits web 81d6de0 flutter 58d6ca1; Flutter frozen and untouched after freeze; map ownership note committed
 2026-10-16T20:41:10Z | P5.1 | STARTED
 2026-10-16T20:41:10Z | P5.1 | PARTIAL | reports/live2/SUMMARY.txt absent; smoke not run
+2026-10-16T20:42:14Z | P5.2 | SKIPPED | no Ahmad 'RAG ON' line and P5.1 did not pass; no deploy
