@@ -41,15 +41,18 @@ tree, not that the backend contract is unavailable.
 
 ## Branch/base discovery for P4.3
 
-The newest history touching each client directory is the shared baseline
-checkpoint `d8c4f9b` (newer than the feature commits listed below it).
-No remote branch-specific client commits were available in the local
-checkout beyond the current branch history, so the wiring bases are recorded
-as `origin/main` if that remote ref is available at P4.2. The actual base
-selected by `git fetch` is recorded below before worktrees are created.
+The P4.2 fetch found these newest remote client branches:
 
-* Web wiring branch: pending P4.2/P4.3; base pending fetch.
-* Flutter wiring branch: pending P4.2/P4.3; base pending fetch.
+* Web wiring branch: `feat/web-vrm-avatar`, base
+  `origin/feat/web-vrm-avatar` at `5ee2385` (2026-10-16 22:12 +0500,
+  microphone capture and Whisper STT).
+* Flutter wiring branch: `fatima-flutter`, base
+  `origin/fatima-flutter` at `63e56df` (2026-10-11 03:36 +0500, Flutter
+  app scaffold and shared library dependency).
+
+The current branch's `origin/feat/exercise-director-modal` is newer overall,
+but it has no newer client-specific commit than the selected bases; it remains
+the integration-map branch.
 
 ## Scope gaps carried into P4.3
 

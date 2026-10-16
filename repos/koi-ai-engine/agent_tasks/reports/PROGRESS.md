@@ -4,3 +4,4 @@ P4 Dart client: PASS — Dart 3.9.2 / Flutter 3.35.7 available; scratch `dart anal
 P2 crisis hardening + ship: PASS-WITH-NOTES â€” encoder manifest mismatch (audio, ResNet, ASR entries absent; report-only), heads check PASS, direct baselines 71/44/34 PASS (breathing 56), crisis core 5/5 PASS, chat contract 8 passed; branch feat/exercise-director-modal; commits 5eb8c2e, 5245d02, 8c14a00. Protected hashes unchanged. No deploy/push. See P2_REPORT.md.
 2026-10-16T19:17:09Z | P4.1 | STARTED
 2026-10-16T19:20:33Z | P4.1 | DONE | commit 0063a5b | verify: git show --stat --oneline 0063a5b
+2026-10-16T19:21:37Z | P4.2 | STARTED
