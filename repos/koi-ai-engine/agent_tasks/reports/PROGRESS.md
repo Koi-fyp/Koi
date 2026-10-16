@@ -94,3 +94,5 @@ NEXT: none - all phases complete
 2026-10-16T23:35:31Z | P3.11 | STARTED
 2026-10-16T23:38:55Z | P3.11 | DONE | commit aca640c | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q -> 41 passed in 11.42s (harness repro: U+FFFD non-prefix cumulative text lost the Urdu reply before fix; delta after)
 2026-10-16T23:38:55Z | P3.2b | STARTED
+2026-10-16T23:41:44Z | P3.2b | DONE | commit 8b4995f | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py deploy\modal\test_crisis_score_surface.py -q -> 54 passed in 11.64s; py_compile crisis_app/crisis_client/chat_app OK; local modal 1.5.5
+2026-10-16T23:41:44Z | P1.c-fix | STARTED

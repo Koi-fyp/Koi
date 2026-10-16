@@ -25,7 +25,7 @@ exit /b 0
 :run
 set "NAME=%~1"
 shift
-%* > "%OUT%\%NAME%.txt" 2>&1
+"%~1" %2 %3 %4 %5 %6 %7 %8 %9 > "%OUT%\%NAME%.txt" 2>&1
 set "RC=!errorlevel!"
 >> "%SUM%" echo %NAME% rc=!RC!
 exit /b 0
