@@ -6,6 +6,9 @@ Exit 0 if both are rejected, 1 otherwise. Also fails if the response body contai
 import json
 import sys
 import urllib.error
+import urllib.request as _ur
+_ur.HTTPRedirectHandler.max_repeats = 200      # Modal answers slow (cold-start) requests with HTTP 303 poll redirects
+_ur.HTTPRedirectHandler.max_redirections = 200  # to the SAME url; urllib's default limit (4 repeats) gives up too early
 import urllib.request
 
 

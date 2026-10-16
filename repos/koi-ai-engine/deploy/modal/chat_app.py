@@ -2,11 +2,13 @@
 import json
 import os
 import sys
+from pathlib import Path
 
 import modal
 
 from chat_core import build_app
 
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 VOLUME_MOUNT = "/vol"
 MODEL_PATH = "/vol/model"
 BASE_MODEL_REPO = "Qwen/Qwen3-4B-Instruct-2507"
@@ -18,8 +20,8 @@ app = modal.App("koi-chat-api")
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(VLLM_VERSION, "transformers", "torch", "fastapi", "firebase-admin")
-    .add_local_dir(os.path.join(os.path.dirname(__file__), "..", "..", "koi_policy"),
-                   remote_path="/root/koi_policy")
+    .add_local_python_source("chat_core", "stream_extract")
+    .add_local_dir(str(REPO_ROOT / "koi_policy"), remote_path="/root/koi_policy")
 )
 volume = modal.Volume.from_name("koi-merged-model")
 firebase_secret = modal.Secret.from_name("firebase-service-account")
