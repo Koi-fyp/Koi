@@ -57,3 +57,4 @@ RAG On
 2026-10-16T20:47:54Z | P5.6 | STARTED
 2026-10-16T20:47:54Z | P5.3 | DONE | commit def63fa | verify: file exists with source citations
 2026-10-16T20:47:54Z | P5.4 | DONE | commit bfdb17a | verify: 14-flow matrix and Flutter ownership note present
+2026-10-16T20:47:54Z | P5.6 | DONE | commit dc56e6d | verify: proposed rules contain users/{uid}/conversations/{cid}/messages/{mid}
