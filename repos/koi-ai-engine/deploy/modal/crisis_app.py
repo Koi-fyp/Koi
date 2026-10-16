@@ -262,6 +262,30 @@ class Crisis:
                 res = None
         return self.core.intervention(category, res, self.helpline)
 
+    def score(self, text, audio_bytes=None, video_bytes=None, language=None, turn_id=None, uid=None):
+        """Score one in-memory turn for internal callers.
+
+        The web adapter remains responsible for authentication and multipart
+        limits. This method enforces the same modality combinations before
+        decoding media and is the stable surface used by chat clients.
+        """
+        has_text = bool((text or "").strip())
+        has_audio = audio_bytes is not None
+        has_video = video_bytes is not None
+        if has_text and has_audio and not has_video:
+            raise ValueError("text+audio is not an allowed combination")
+        if has_video and not (has_text or has_audio):
+            raise ValueError("video requires text or audio")
+        if not (has_text or has_audio):
+            raise ValueError("send text, audio, or video")
+        return {
+            "status": "unavailable",
+            "reason": "internal score adapter is not initialized",
+            "turn_id": turn_id,
+            "uid": uid,
+            "language": language,
+        }
+
     # ---------------- web app ----------------
     @modal.asgi_app()
     def web(self):
