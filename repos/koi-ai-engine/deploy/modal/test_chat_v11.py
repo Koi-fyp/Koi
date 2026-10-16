@@ -74,3 +74,58 @@ async def test_crisis_client_lookup_failure_is_unavailable():
         language=None, turn_id=None, uid="u",
     )
     assert result == {"status": "unavailable"}
+
+
+@pytest.mark.asyncio
+async def test_slow_risk_fails_closed_for_exercise_start(monkeypatch):
+    monkeypatch.setenv("KOI_EXERCISES", "1")
+    monkeypatch.setenv("KOI_DIRECTOR_SECRET", "secret")
+    seen = {}
+
+    def handle_turn(turn, state, **kwargs):
+        seen["tier"] = turn.get("tier")
+        return []
+
+    import sys
+    import types
+    monkeypatch.setitem(sys.modules, "director", types.SimpleNamespace(handle_turn=handle_turn))
+    app = build_app(
+        Engine(), Tokenizer(), lambda token: {"sub": "test"},
+        lambda schema, **kwargs: kwargs,
+        {"crisis_client": FakeCrisisClient(
+            {"status": "ok", "risk_category": "LOW"}, delay=4.2)},
+    )
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
+        response = await http.post(
+            "/api/v1/chat", headers={"Authorization": "Bearer test"},
+            json={"message": "start", "client_event": "start_plan"},
+        )
+    assert response.status_code == 200
+    assert seen["tier"] is None
+
+
+@pytest.mark.asyncio
+async def test_high_risk_stops_active_exercise(monkeypatch):
+    monkeypatch.setenv("KOI_EXERCISES", "1")
+    monkeypatch.setenv("KOI_DIRECTOR_SECRET", "secret")
+    import sys
+    import types
+    monkeypatch.setitem(sys.modules, "director", types.SimpleNamespace(
+        on_risk=lambda token, tier, now, **kwargs: [
+            {"type": "handoff", "to": "crisis", "reason": "urgent"},
+        ],
+        handle_turn=lambda *args, **kwargs: [],
+    ))
+    app = build_app(
+        Engine(), Tokenizer(), lambda token: {"sub": "test"},
+        lambda schema, **kwargs: kwargs,
+        {"crisis_client": FakeCrisisClient(
+            {"status": "ok", "risk_category": "HIGH", "crisis_score": 0.9})},
+    )
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
+        response = await http.post(
+            "/api/v1/chat", headers={"Authorization": "Bearer test"},
+            json={"message": "unsafe", "exercise_state": "signed"},
+        )
+    assert response.status_code == 200
+    assert '"to": "crisis"' in response.text
