@@ -49,8 +49,12 @@ def main() -> int:
         deltas = [data["text"] for event, data in parsed if event == "delta"]
         done = next((data for event, data in parsed if event == "done"), None)
         states = [data for event, data in parsed if event == "companion_state"]
-        if not deltas or done is None:
+        risks = [data for event, data in parsed if event == "risk"]
+        if not deltas or done is None or not risks:
             print("turn has no delta or done event", file=sys.stderr)
+            return 1
+        if done.get("risk") != risks[-1]:
+            print("done.risk differs from streamed risk", file=sys.stderr)
             return 1
         if done.get("full_text") != "".join(deltas):
             print("done.full_text does not equal joined deltas", file=sys.stderr)

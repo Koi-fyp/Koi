@@ -114,6 +114,13 @@ def main(argv):
             problems.append("%s: companion_state NOT before first delta" % text[:30])
         deltas = "".join(p.get("text", "") for e, p, _, _ in events if e == "delta" and p)
         done = next((p for e, p, _, _ in events if e == "done" and p), None)
+        risks = [p for e, p, _, _ in events if e == "risk" and p]
+        if not risks:
+            problems.append("%s: no risk event" % text[:30])
+        elif done and done.get("risk") != risks[-1]:
+            problems.append("%s: done.risk differs from streamed risk" % text[:30])
+        if "transcript" in names and names.index("transcript") > (cs_idx if cs_idx is not None else len(names)):
+            problems.append("%s: transcript follows companion_state" % text[:30])
         if not deltas:
             problems.append("%s: no delta event" % text[:30])
         if done and done.get("full_text") != deltas:
