@@ -1,0 +1,76 @@
+import json
+import os
+
+import httpx
+import pytest
+
+from chat_core import build_app
+from crisis_client import CrisisClient, FakeCrisisClient
+
+
+class Output:
+    def __init__(self, text):
+        self.outputs = [type("Choice", (), {"text": text})()]
+
+
+class Engine:
+    async def generate(self, prompt, params, request_id):
+        yield Output('{"companion_state":{"emotion":"joy","intensity":0.5},"reply":"hello"}')
+
+
+class Tokenizer:
+    def apply_chat_template(self, messages, **kwargs):
+        return str(messages)
+
+    def __call__(self, prompt, **kwargs):
+        return {"input_ids": list(prompt)}
+
+
+def client(result=None):
+    app = build_app(
+        Engine(), Tokenizer(), lambda token: {"sub": "test"},
+        lambda schema, **kwargs: kwargs,
+        {"crisis_client": FakeCrisisClient(result or {"status": "ok", "risk_category": "LOW"})},
+    )
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+
+
+@pytest.mark.asyncio
+async def test_multipart_text_video_is_accepted():
+    async with client() as http:
+        response = await http.post(
+            "/api/v1/chat",
+            headers={"Authorization": "Bearer test"},
+            files={
+                "payload": (None, json.dumps({"message": "hello", "language": "en"})),
+                "video": ("clip.mp4", b"video"),
+            },
+        )
+    assert response.status_code == 200
+    assert "event: risk" in response.text
+
+
+@pytest.mark.asyncio
+async def test_multipart_text_audio_is_rejected():
+    async with client() as http:
+        response = await http.post(
+            "/api/v1/chat",
+            headers={"Authorization": "Bearer test"},
+            files={
+                "payload": (None, json.dumps({"message": "hello"})),
+                "audio": ("voice.wav", b"audio"),
+            },
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_crisis_client_lookup_failure_is_unavailable():
+    def broken(**kwargs):
+        raise RuntimeError("lookup failed")
+
+    result = await CrisisClient(broken).score_async(
+        text="hello", audio_bytes=None, video_bytes=None,
+        language=None, turn_id=None, uid="u",
+    )
+    assert result == {"status": "unavailable"}
