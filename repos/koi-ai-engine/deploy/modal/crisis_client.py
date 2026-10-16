@@ -27,6 +27,23 @@ class CrisisClient:
             return {"status": "unavailable"}
 
 
+class ModalCrisisClient(CrisisClient):
+    """Call the deployed Crisis class without exposing Modal to chat_core."""
+
+    def __init__(self, app_name: str = "koi-crisis", class_name: str = "Crisis"):
+        self.app_name = app_name
+        self.class_name = class_name
+
+    async def score_async(self, **kwargs: Any) -> dict[str, Any]:
+        try:
+            import modal
+            service = modal.Function.from_name(self.app_name, self.class_name).lookup()
+            result = await asyncio.to_thread(service.score.remote, **kwargs)
+            return result if isinstance(result, dict) else {"status": "unavailable"}
+        except Exception:
+            return {"status": "unavailable"}
+
+
 class FakeCrisisClient(CrisisClient):
     def __init__(self, result: dict[str, Any] | None = None, delay: float = 0):
         self.result = result or {"status": "unavailable"}

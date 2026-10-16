@@ -7,6 +7,7 @@ from pathlib import Path
 import modal
 
 from chat_core import build_app
+from crisis_client import ModalCrisisClient
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 VOLUME_MOUNT = "/vol"
@@ -20,7 +21,7 @@ app = modal.App("koi-chat-api")
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(VLLM_VERSION, "transformers", "torch", "fastapi", "firebase-admin")
-    .add_local_python_source("chat_core", "stream_extract")
+    .add_local_python_source("chat_core", "stream_extract", "crisis_client")
     .add_local_dir(str(REPO_ROOT / "koi_policy"), remote_path="/root/koi_policy")
 )
 volume = modal.Volume.from_name("koi-merged-model")
@@ -78,4 +79,5 @@ class ChatServer:
             return self._verify(token)
         return build_app(self.engine, self.tokenizer, verify, self.sampling,
                          {"MAX_MODEL_LEN": MAX_MODEL_LEN, "MAX_REPLY_TOKENS": MAX_REPLY_TOKENS,
-                          "policy_path": "/root/koi_policy"})
+                          "policy_path": "/root/koi_policy",
+                          "crisis_client": ModalCrisisClient()})
