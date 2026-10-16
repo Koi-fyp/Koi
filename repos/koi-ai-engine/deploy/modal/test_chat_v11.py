@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from chat_core import SYSTEM_PROMPT, build_app
-from crisis_client import CrisisClient, FakeCrisisClient
+from crisis_client import CrisisClient, FakeCrisisClient, ModalCrisisClient
 
 
 class Output:
@@ -209,3 +209,44 @@ async def test_deprecated_client_risk_is_ignored():
 def test_system_prompt_preserves_language_and_script():
     assert "same language and script" in SYSTEM_PROMPT
     assert "English, Urdu, or Roman Urdu" in SYSTEM_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_modal_crisis_client_uses_lookup_and_remote(monkeypatch):
+    class Remote:
+        def remote(self, **kwargs):
+            return {"status": "ok", "risk_category": "LOW"}
+
+    class Service:
+        score = Remote()
+
+        def lookup(self):
+            return self
+
+    class Modal:
+        class Function:
+            @staticmethod
+            def from_name(app, name):
+                assert (app, name) == ("koi-crisis", "Crisis")
+                return Service()
+
+    import sys
+    monkeypatch.setitem(sys.modules, "modal", Modal)
+    result = await ModalCrisisClient().score_async(
+        text="hello", audio_bytes=None, video_bytes=None,
+        language=None, turn_id=None, uid="u",
+    )
+    assert result["risk_category"] == "LOW"
+
+
+@pytest.mark.asyncio
+async def test_unavailable_crisis_client_does_not_block_health():
+    app = build_app(
+        Engine(), Tokenizer(), lambda token: {"sub": "test"},
+        lambda schema, **kwargs: kwargs,
+        {"crisis_client": FakeCrisisClient({"status": "unavailable"})},
+    )
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
+        response = await http.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
