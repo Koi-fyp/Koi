@@ -7,7 +7,7 @@ const { chromium } = require('playwright'), attachAudit = require('./avatar-brow
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } }), audit = await attachAudit(page, origin);
     await page.addInitScript(() => { const Original = window.Audio; window.__testAudio = []; window.Audio = class extends Original { constructor(...args) { super(...args); window.__testAudio.push(this); } }; });
     await page.goto(origin + '/speech-lab');
-    const ready = () => page.waitForFunction(() => window.AvatarController?.ready && window.__koiSpeechLab, null, { timeout: 120000 }); await ready();
+    const ready = () => page.waitForFunction(() => window.AvatarController?.ready && window.__koiSpeechLab?.getFrame().cues.length > 0, null, { timeout: 120000 }); await ready();
     const state = () => page.evaluate(() => window.__koiSpeechLab.getSnapshot().state);
     const zero = () => page.waitForFunction(() => Object.values(window.AvatarController.getSnapshot().animation.mouthWeights).every(value => value === 0));
     assert.equal(await state(), 'idle'); assert(await page.evaluate(() => window.__testAudio.every(audio => audio.paused)));

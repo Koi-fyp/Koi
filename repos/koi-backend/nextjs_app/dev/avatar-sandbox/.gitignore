@@ -3,3 +3,6 @@
 
 # Local Piper virtual environment, voice binaries and Rhubarb release.
 .speech-tools/
+
+# ASR evaluation environment, models and ephemeral development capability.
+.voice-tools/

@@ -56,6 +56,8 @@ class FakeAudio extends EventTarget {
   player.seek(2); assert.equal(player.getFrame().time, 2);
   audio.ended = true; audio.dispatchEvent(new Event('ended')); assert.equal(player.getSnapshot().state, 'ended'); assert(!player.getFrame().active);
   audio.ended = false; const rejected = player.play(); audio.pending[3].reject(new Error('autoplay')); await rejected; assert.equal(player.getSnapshot().state, 'error');
+  let created=0,revoked=0;const make=URL.createObjectURL,revoke=URL.revokeObjectURL;URL.createObjectURL=()=>{created++;return 'blob:owned-test';};URL.revokeObjectURL=()=>{revoked++;};
+  player.load({audioBlob:new Blob(['wave'],{type:'audio/wav'}),mouthCues:cues});assert.equal(created,1);player.clear();assert.equal(revoked,1);assert.equal(audio.src,'');URL.createObjectURL=make;URL.revokeObjectURL=revoke;
   const listeners = audio.listeners; assert(listeners > 0); player.dispose(); assert.equal(audio.listeners, 0); assert.equal(audio.src, ''); assert.equal(player.getSnapshot().state, 'disposed'); assert(!player.getFrame().active); player.dispose(); await player.play();
   checks.push('single audio lifecycle, explicit play, pause/resume/seek/end/failure, rapid stale promises, same-origin guard and disposal');
   console.log(JSON.stringify({ passed: true, checks, scope: 'pure/controller and fake-media lifecycle tests; real audio checked separately' }, null, 2));

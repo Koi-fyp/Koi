@@ -128,3 +128,36 @@ male Fasih Urdu voice; the latter two are quality-unverified feasibility probes.
 Run `python scripts/test-piper-pipeline.py` and `node scripts/verify-piper-speech.cjs`.
 See [real speech workflow](../../src/lib/speech/REAL_SPEECH.md) for pinned downloads,
 measured timings, licensing, limits and the proposed (not deployed) backend contract.
+
+
+## Increment 6B.2: local voice-input lab
+
+```powershell
+python scripts/setup-voice-tools.py
+node scripts/voice-dev.cjs
+```
+
+Keep the worker terminal running, start `npm run dev:avatar` separately, and open
+http://127.0.0.1:3001/voice-lab. Microphone capture requires consent + Start, and
+transcripts require review before submission. ASR/Piper/Rhubarb are real local
+processing; chat/emotion are explicitly scripted mocks. Fixture buttons need no
+microphone. No recordings are saved. Physical microphone and authenticated voice
+conversation have not been verified.
+
+The lab has a **Check local ASR worker** button; the page loading is not proof the
+Python worker/model is ready. It also shows permission, device, capture duration,
+MIME/size and decoded signal level. After stopping, optionally play the capture
+in the browser before transcribing. The Play control does not upload the audio.
+Use Refresh microphone list to inspect/select an input for the next capture. The
+automated browser test now feeds a non-sensitive Piper fixture through Chromium's
+file-backed synthetic microphone and checks that real ASR returns text. This is
+not physical microphone verification. On the laptop, grant Chrome microphone
+permission, choose the intended input, record a short phrase, play it locally to
+confirm the recording contains speech, then transcribe and inspect signal RMS and
+the recognized transcript. Report only those diagnostics if asking for help; do
+not send private recordings or transcripts.
+
+Use `node scripts/test-microphone.cjs`, `python scripts/test-local-voice.py`, and
+`node scripts/verify-voice-lab.cjs`. ASR/TTS benchmark scripts run with the ignored
+`.voice-tools/venv/Scripts/python.exe`. See [voice audit/results](../../src/lib/speech/VOICE_INPUT.md)
+for exact contracts, normalization, measured timings, privacy boundaries and blockers.
