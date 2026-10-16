@@ -56,3 +56,22 @@ reused rather than rebuilt. The real Flutter app is `repos/koi-mobile`; any
 Flutter wiring must land there or in an existing library surface, not in a
 new parallel chat service. Rows marked **UNVERIFIED** require a bounded
 base-tree check before implementation.
+
+## P4.3 worktree results
+
+* Web worktree `E:\Koi\wt_web`, branch `feat/web-v11-wiring`, commit
+  `81d6de0`: extended the existing `chatContract.ts`,
+  `jsonChatTransport.ts`, and `ConversationSession.ts` surfaces to consume
+  chunk-safe SSE frames and additive companion/delta payloads; added the
+  already-referenced `jest.setup.ts`. The existing avatar bridge and speech
+  files were not duplicated or rebuilt.
+* Flutter worktree `E:\Koi\wt_flutter`, branch `feat/flutter-v11-wiring`,
+  commit `58d6ca1`: extended the existing `auth_service.dart` user-document
+  creation path to persist `public_crypto_metadata.salt` using the existing
+  `KoiCryptoService.generateSalt()`. No new chat service was created.
+* Not wired: the base Flutter app still has no chat transport/UI, crisis
+  modal, avatar bridge, or TTS/lip-sync consumer; these remain explicit
+  follow-up gaps rather than being rebuilt in the wrong library directory.
+  Web audio/video multipart, Flow 4 rendering, and Firestore path migration
+  also remain unimplemented because their base consumers were not present in
+  the selected app path.
