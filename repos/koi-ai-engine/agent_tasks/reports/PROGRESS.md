@@ -98,3 +98,8 @@ NEXT: none - all phases complete
 2026-10-16T23:41:44Z | P1.c-fix | STARTED
 2026-10-16T23:41:53Z | P1.c-fix | DONE | commit 37e8123 | verify: git show 37e8123 -- agent_tasks/smoke_only.bat shows "%%~1" %%2..%%9 line; run_live.bat (untracked) has no :run/shift/%%* pattern (inline steps); live scripts not run
 2026-10-16T23:41:53Z | DOCS | STARTED
+2026-10-16T23:42:49Z | DOCS | DONE | commit cacc073 | verify: git diff 8c14a00 cacc073 -- docs/contracts/firestore/firestore.rules.proposed shows only added comment lines; DEMO_RUNBOOK/UX_FLOWS cite live/SUMMARY.txt and live2/SUMMARY.txt
+2026-10-16T23:42:49Z | VERIFY | STARTED
+2026-10-16T23:43:29Z | VERIFY | DONE | verify: chat_contract+chat_v11+crisis_core 46 passed in 11.17s; crisis_score_surface 8 passed; koi_policy 71/44/34 ALL PASSED; 7 hashes unchanged
+2026-10-16T23:43:29Z | HANDOFF | DONE | agent_tasks/reports/HANDOFF_FOR_REDEPLOY.md | verify: file lists 31b5b5a aca640c 8b4995f
+NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b); then smoke
