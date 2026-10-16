@@ -86,6 +86,20 @@ def _model_validate(data: dict[str, Any]) -> ChatRequest:
     return validator(data) if validator else ChatRequest.parse_obj(data)
 
 
+def _normalize_risk(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or value.get("status") == "unavailable":
+        return {"status": "unavailable"}
+    result = {"status": value.get("status", "ok")}
+    for key in (
+        "risk_category", "crisis_score", "confidence", "confidence_reasons",
+        "modalities_used", "trigger_flags", "intervention_content", "model",
+        "transcript", "language",
+    ):
+        if key in value:
+            result[key] = value[key]
+    return result
+
+
 async def _parse_chat_request(request: Request) -> ParsedChat:
     content_type = request.headers.get("content-type", "")
     if not content_type.startswith("multipart/form-data"):
@@ -225,6 +239,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             pass
         except Exception:
             risk = {"status": "unavailable"}
+        risk = _normalize_risk(risk) if risk is not None else None
         effective_message = (risk or {}).get("transcript") if isinstance(risk, dict) else None
         effective_message = effective_message or req.message
         if not effective_message:
@@ -333,6 +348,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                     stream_risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=5.0)
                 except (asyncio.TimeoutError, Exception):
                     stream_risk = {"status": "unavailable"}
+                stream_risk = _normalize_risk(stream_risk)
             if stream_risk is None:
                 stream_risk = {"status": "unavailable"}
             if not emitted_risk and streamed_state is not None:

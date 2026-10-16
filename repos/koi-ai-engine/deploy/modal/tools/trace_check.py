@@ -46,6 +46,13 @@ def check_turn(base, token, message):
         raise AssertionError("emotion outside contract enum")
     deltas = "".join(payload.get("text", "") for name, payload in events if name == "delta")
     done = next(payload for name, payload in events if name == "done")
+    risk_events = [payload for name, payload in events if name == "risk"]
+    if not risk_events:
+        raise AssertionError("missing risk event")
+    if done.get("risk") != risk_events[-1]:
+        raise AssertionError("done.risk mismatch")
+    if "transcript" in names and names.index("transcript") > names.index("companion_state"):
+        raise AssertionError("transcript follows companion_state")
     if done.get("full_text") != deltas:
         raise AssertionError("done.full_text mismatch")
     if done.get("companion_state") != state:
