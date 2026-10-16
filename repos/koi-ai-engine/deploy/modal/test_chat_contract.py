@@ -64,7 +64,7 @@ async def test_normal_event_contract():
         response = await client.post("/api/v1/chat", headers={"Authorization": "Bearer t"},
                                      json={"message": "hi"})
     events = [line[7:] for line in response.text.splitlines() if line.startswith("event: ")]
-    assert events == ["latency", "companion_state", "risk", "delta", "done"]
+    assert events == ["latency", "companion_state", "risk", "delta", "state", "done"]
     frames = response.text.strip().split("\n\n")
     delta = json.loads(next(frame.split("data: ", 1)[1] for frame in frames if frame.startswith("event: delta")))
     assert "{" not in delta["text"]
