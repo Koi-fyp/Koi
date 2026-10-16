@@ -129,3 +129,23 @@ async def test_high_risk_stops_active_exercise(monkeypatch):
         )
     assert response.status_code == 200
     assert '"to": "crisis"' in response.text
+
+
+@pytest.mark.asyncio
+async def test_risk_post_reply_cap_emits_unavailable():
+    app = build_app(
+        Engine(), Tokenizer(), lambda token: {"sub": "test"},
+        lambda schema, **kwargs: kwargs,
+        {"crisis_client": FakeCrisisClient(
+            {"status": "ok", "risk_category": "LOW"}, delay=6.0)},
+    )
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
+        response = await http.post(
+            "/api/v1/chat", headers={"Authorization": "Bearer test"},
+            json={"message": "hello"},
+        )
+    frames = [json.loads(part.split("data: ", 1)[1])
+              for part in response.text.strip().split("\n\n")
+              if part.startswith("event: risk") or part.startswith("event: done")]
+    assert frames[0] == {"status": "unavailable"}
+    assert frames[-1]["risk"] == {"status": "unavailable"}
