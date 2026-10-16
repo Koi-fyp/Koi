@@ -66,3 +66,6 @@ RAG On
 2026-10-16T20:54:49Z | P5 | PASS-WITH-NOTES | docs committed; smoke/deploy skipped or partial due missing live2/token; Flutter owned by Fatima
 2026-10-16T20:54:49Z | FINAL | PASS-WITH-NOTES | hashes carried from prior reports; backend gaps documented; Flutter frozen
 NEXT: none - all phases complete
+
+2026-10-16T21:00:00Z | CORRECTION | P1.e | prior "commit pending" wording corrected: hygiene changes were committed as afb440a | verify: git show --stat --oneline afb440a
+NEXT: none - all phases complete
