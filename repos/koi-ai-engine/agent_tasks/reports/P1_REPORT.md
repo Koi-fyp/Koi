@@ -47,3 +47,5 @@ Result: PASS-WITH-NOTES.
 
 --- resumed 2026-10-17 ---
 P1.a: git fetch origin --prune passed. Local HEAD ae5daf9 differs from origin/feat/exercise-director-modal 2923070 because local P4 commits are unpushed; no merge/reset performed.
+
+P1.b commands: test_chat_contract 10 passed; test_crisis_core 5 passed; test_adapter_qwen 4 passed. Combined koi_policy baseline collection errored because four legacy test modules call SystemExit(0) during collection; no changes made. Required 71/44/34 named baseline scripts are absent per prior report.

@@ -12,3 +12,5 @@ P2 crisis hardening + ship: PASS-WITH-NOTES — encoder manifest mismatch (audio
 2026-10-16T19:57:43Z | P4.3 | DONE | commit bd41bde; web 81d6de0; flutter 58d6ca1 | verify: git worktree list
 2026-10-16T20:08:50Z | P1.a | STARTED
 2026-10-16T20:09:57Z | P1.a | PARTIAL | local ae5daf9 differs from remote 2923070; fetch passed
+2026-10-16T20:11:04Z | P1.b | STARTED
+2026-10-16T20:14:58Z | P1.b | PARTIAL | targeted chat/crisis/adapter passed; legacy policy collection SystemExit(0), 71/44/34 scripts absent
