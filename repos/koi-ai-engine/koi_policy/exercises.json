@@ -1,0 +1,692 @@
+{
+  "_status": "DRAFT v3 by Claude, Oct 15 2026. Not reviewed by a clinician. Languages: en (default), ur (Urdu script), ur-roman (Roman Urdu with natural English code-switching) in exercises_i18n.json, all pending native review. Wording is Claude's adaptation; structure follows the cited sources. Every number is listed in NUMBERS with its source or marked as an engineering default.",
+  "_urdu": "Drafted by Claude (exercises_i18n.json), pending native review. Reviewer can align terms with WHO's official Urdu PM+ and the Urdu Thinking Healthy Programme.",
+  "_safety_rules": [
+    "No exercise is ever offered at CRITICAL. PM+ 'was not developed for use with ... a plan to end one's life in the near future', and THP excludes imminent suicide risk: exercises are never a substitute for the crisis path.",
+    "At HIGH, only exercises with crisis_modal_ok=true may appear, below the helplines, never auto-started (Decision 2, pending Ahmad).",
+    "Every free-text answer the user types inside an exercise is still a conversational turn: it passes through the per-turn crisis check, and HIGH/CRITICAL interrupts the exercise (policy.py R1).",
+    "Breathing: no breath holds and no 'deep breaths'. WHO DWM: if breathing makes you dizzy, 'DO NOT take deep breaths'.",
+    "Eyes-open by default; no long eyes-closed or body-scan practices (meditation-related adverse experiences are documented: Lindahl et al. 2017, PLOS ONE).",
+    "Thought and problem exercises stop and offer help if the topic is self-harm, harming others, abuse or danger; they are not for working on trauma memories."
+  ],
+  "review_status": "draft-unreviewed",
+  "offer": {
+    "text": "Would you like to try a short breathing exercise with me? You can choose 1 minute or 5 minutes.",
+    "buttons": [
+      "Yes, let's try",
+      "What is it?",
+      "Not now"
+    ],
+    "what_is_it": "You breathe a little more slowly than usual, about six breaths a minute, following a circle on the screen. Slow breathing is linked with feeling calmer and less anxious. You can stop at any time."
+  },
+  "decline_followup": {
+    "text": "That's okay. Is it the breathing itself, or just not the right moment?",
+    "buttons": [
+      "Breathing isn't for me",
+      "Not the right moment"
+    ],
+    "alternatives": {
+      "Breathing isn't for me": {
+        "text": "Fair enough. Some people find it easier to notice what's around them instead. Would you like to try one of these?",
+        "offer_exercises": [
+          "grounding_54321",
+          "dwm_grounding"
+        ],
+        "later_button": "Just keep talking"
+      },
+      "Not the right moment": {
+        "text": "No problem. If you have about 30 seconds, there's a very short one you can do anywhere. Or we can leave it for later.",
+        "offer_exercises": [
+          "dwm_unhooking"
+        ],
+        "later_button": "Maybe later"
+      }
+    }
+  },
+  "safety_note": "Breathe at a pace that feels okay for you. You can stop at any time. If you feel dizzy or more uneasy, stop and breathe normally.",
+  "post_check": {
+    "text": "How is your mood right now?",
+    "scale": {
+      "min": 1,
+      "max": 5,
+      "min_label": "Very low",
+      "max_label": "Very good"
+    },
+    "maps_to": "mood_rating (client-side encrypted, Blueprint v4.14)",
+    "low_threshold": 2,
+    "on_low": "Thanks for telling me. Do you want to talk about what's going on?",
+    "on_other": "Thanks for checking in.",
+    "save_go_to": "Save this as my go-to exercise",
+    "keep_talking": "Keep talking"
+  },
+  "exercises": [
+    {
+      "id": "slow_breathing",
+      "title": "Slow breathing",
+      "family": "calm_body",
+      "type": "paced_breathing",
+      "ux_flows": [
+        "5"
+      ],
+      "activity_type": "calm",
+      "source": "Pace: resonance breathing at ~6 breaths/min (Lehrer & Gevirtz 2014) and slow breathing <10/min (Zaccaro et al. 2018). Session: 5 min/day (Balban et al. 2023). Structure adapted from WHO PM+ 'Managing stress' and WHO DWM grounding.",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [
+        "LOW",
+        "MODERATE"
+      ],
+      "crisis_modal_ok": true,
+      "duration_min": 1,
+      "what_is_it": "Breathe in gently, then breathe out a little longer, about six breaths a minute, following a circle.",
+      "intro": "Let's slow the breath down together. Follow the circle: breathe in as it grows, and out as it shrinks.",
+      "phases": [
+        {
+          "label": "Breathe in",
+          "seconds": 4,
+          "animate": "expand"
+        },
+        {
+          "label": "Breathe out",
+          "seconds": 6,
+          "animate": "contract"
+        }
+      ],
+      "cycles": 6,
+      "cautions": [
+        "No breath holds.",
+        "Normal-sized breaths, not deep ones.",
+        "Stop and breathe normally if dizzy."
+      ],
+      "outro": "Well done. Take a moment before you carry on.",
+      "duration_options": [
+        {
+          "label": "1 minute",
+          "cycles": 6
+        },
+        {
+          "label": "5 minutes",
+          "cycles": 30
+        }
+      ],
+      "crisis_modal_note": "Allowed below the helplines at HIGH (Ahmad, Oct 15: prefer the wider pool). Never at CRITICAL."
+    },
+    {
+      "id": "cyclic_sighing",
+      "title": "Cyclic sighing",
+      "family": "calm_body",
+      "type": "paced_breathing",
+      "ux_flows": [
+        "5"
+      ],
+      "activity_type": "calm",
+      "source": "Balban et al. 2023, Cell Reports Medicine (RCT, n=108): 5 minutes/day of cyclic sighing gave the largest daily improvement in positive mood of the techniques tested, and reduced anxiety.",
+      "licence": "Published study; wording by Claude",
+      "offer_when": [
+        "LOW",
+        "MODERATE"
+      ],
+      "crisis_modal_ok": false,
+      "crisis_modal_note": "Not in the crisis modal: the double inhale is more effortful than plain slow breathing.",
+      "duration_min": 1,
+      "duration_options": [
+        {
+          "label": "1 minute",
+          "cycles": 6
+        },
+        {
+          "label": "5 minutes",
+          "cycles": 33
+        }
+      ],
+      "what_is_it": "Two breaths in through the nose (a normal one, then a short top-up), then a long, slow breath out through the mouth. A study found five minutes a day of this lifted mood.",
+      "intro": "Breathe in through your nose, add a short second sip of air, then let it all out slowly through your mouth.",
+      "phases": [
+        {
+          "label": "Breathe in through your nose",
+          "seconds": 2,
+          "animate": "expand"
+        },
+        {
+          "label": "Short top-up breath in",
+          "seconds": 1,
+          "animate": "expand_more"
+        },
+        {
+          "label": "Breathe out slowly through your mouth",
+          "seconds": 6,
+          "animate": "contract"
+        }
+      ],
+      "cycles": 6,
+      "cautions": [
+        "No breath holds.",
+        "Keep the top-up small and gentle.",
+        "Stop and breathe normally if dizzy."
+      ],
+      "outro": "Nicely done. Notice how your body feels now."
+    },
+    {
+      "id": "dwm_grounding",
+      "title": "Notice, slow down, refocus",
+      "family": "calm_body",
+      "type": "stepwise",
+      "ux_flows": [
+        "5",
+        "4"
+      ],
+      "activity_type": "calm",
+      "source": "Adapted from WHO 'Doing What Matters in Times of Stress' (2020), skill 1: grounding.",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [
+        "LOW",
+        "MODERATE"
+      ],
+      "crisis_modal_ok": true,
+      "crisis_modal_note": "Allowed below the helplines at HIGH; never auto-started; never at CRITICAL. DWM describes grounding as keeping you safe 'until the storm passes'.",
+      "duration_min": 2,
+      "what_is_it": "A two-minute way to steady yourself when feelings are strong: notice what's happening, slow down, and bring your attention back to where you are.",
+      "intro": "When feelings are strong, it can help to steady yourself first. Take each step at your own pace and tap Next when you're ready.",
+      "steps": [
+        "Notice what you're feeling and thinking right now. You don't have to change it, just notice it.",
+        "Slow down. Breathe out slowly, gently stretch your arms or shoulders, and press your feet into the floor.",
+        "Look around and name a few things you can see.",
+        "Listen for a few things you can hear.",
+        "Notice something you can touch: the chair, your clothes, the phone in your hand.",
+        "Now bring your attention back to what you were doing and who is around you."
+      ],
+      "outro": "This doesn't make the feelings disappear, but it can help you stay steady until they ease."
+    },
+    {
+      "id": "grounding_54321",
+      "title": "5-4-3-2-1 senses",
+      "family": "calm_body",
+      "type": "stepwise",
+      "ux_flows": [
+        "5"
+      ],
+      "activity_type": "calm",
+      "source": "Common counting variant of the 'refocus' step in WHO DWM grounding (which names five things you can see and three or four you can hear). The 5-4-3-2-1 counting itself is not from DWM.",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [
+        "LOW",
+        "MODERATE"
+      ],
+      "crisis_modal_ok": true,
+      "duration_min": 2,
+      "what_is_it": "A short exercise that uses your five senses to bring your attention back to the room you're in.",
+      "intro": "Let's bring your attention to what's around you. Take each step at your own pace and tap Next when you're ready.",
+      "steps": [
+        "Look around and notice 5 things you can see.",
+        "Notice 4 things you can feel, like your feet on the floor or the chair under you.",
+        "Listen for 3 things you can hear.",
+        "Notice 2 things you can smell, or two smells you like.",
+        "Notice 1 thing you can taste, or take a sip of water."
+      ],
+      "outro": "Nice work. Notice how you feel right now."
+    },
+    {
+      "id": "dwm_unhooking",
+      "title": "Unhooking from a thought",
+      "family": "thoughts",
+      "type": "stepwise",
+      "ux_flows": [
+        "5",
+        "10"
+      ],
+      "activity_type": "mind",
+      "source": "Adapted from WHO DWM (2020), skill 2: unhooking (notice, name, refocus).",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [
+        "LOW",
+        "MODERATE"
+      ],
+      "crisis_modal_ok": false,
+      "duration_min": 0.5,
+      "what_is_it": "A 30-second skill for when a worrying thought keeps pulling you away: notice it, give it a name, and come back to what you're doing.",
+      "intro": "Sometimes a thought grabs hold and drags our attention away. Here's a quick way to unhook.",
+      "steps": [
+        "Notice: is a thought or feeling pulling your attention away right now?",
+        "Name it quietly to yourself, for example: 'I'm noticing the thought that I'm not good enough' or 'I'm noticing a knot in my stomach.'",
+        "Refocus: bring your attention back to what you're doing, or to this conversation, and give it your full attention."
+      ],
+      "outro": "Thoughts may come back, and that's normal. Each time, you can notice, name and refocus again."
+    },
+    {
+      "id": "dwm_being_kind",
+      "title": "Being kind to yourself",
+      "family": "thoughts",
+      "type": "stepwise",
+      "ux_flows": [
+        "5",
+        "10"
+      ],
+      "activity_type": "mind",
+      "source": "Adapted from WHO DWM (2020), skill 4: being kind.",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [
+        "LOW",
+        "MODERATE"
+      ],
+      "crisis_modal_ok": false,
+      "duration_min": 2,
+      "what_is_it": "A short exercise for when you're being hard on yourself: notice the unkind thoughts and try talking to yourself the way you'd talk to a friend.",
+      "intro": "We're often much harsher with ourselves than with anyone else. Let's try something different for a minute.",
+      "steps": [
+        "Notice any unkind thoughts you've been having about yourself. Unkind thoughts are very common, and that's okay.",
+        "Name them: 'I'm noticing I'm being hard on myself.'",
+        "Ask: what would I say to a close friend who felt this way?",
+        "Try saying something like that to yourself, quietly or in your head.",
+        "If it feels okay, place a hand where you feel the hurt, maybe your chest, and breathe slowly and warmly towards it."
+      ],
+      "outro": "Being kind to yourself is a skill. It can feel strange at first, and it gets easier with practice."
+    },
+    {
+      "id": "dwm_making_room",
+      "title": "Making room for a feeling",
+      "family": "thoughts",
+      "type": "stepwise",
+      "ux_flows": [
+        "10"
+      ],
+      "activity_type": "mind",
+      "source": "Adapted from WHO DWM (2020), skill 5: making room.",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [],
+      "user_initiated_only": true,
+      "crisis_modal_ok": false,
+      "why_not_offered": "It asks the user to stay with a painful feeling, which can intensify it; Claude's judgement is that it should only be chosen by the user or used inside the CBT module, never auto-offered.",
+      "duration_min": 3,
+      "what_is_it": "An exercise for a painful feeling that won't go away: instead of fighting it, you look at it with curiosity and let it be there for a moment.",
+      "intro": "Feelings are a bit like the weather: they come and they go. Let's try making a little room for one, eyes open, at your own pace. You can stop at any point.",
+      "steps": [
+        "Notice a feeling that's here right now, and name it: 'Here is sadness' or 'Here is worry.'",
+        "Get curious: where do you feel it in your body? If it had a size, shape or colour, what would it be?",
+        "Breathe slowly in and around it. You don't have to like it, just let it be there for a moment.",
+        "Now widen your attention back out: notice the room around you and what you were doing."
+      ],
+      "stop_if": "If the feeling gets much stronger or overwhelming, stop and switch to 'Notice, slow down, refocus'.",
+      "outro": "You let the feeling be there without being pushed around by it. That's a real skill."
+    },
+    {
+      "id": "thought_check",
+      "title": "Checking an unhelpful thought",
+      "family": "thoughts",
+      "type": "conversation",
+      "ux_flows": [
+        "10"
+      ],
+      "activity_type": "mind",
+      "source": "Core CBT skill (identifying and challenging unhelpful thoughts), as used in the WHO Thinking Healthy Programme (CBT-based, trialled in rural Pakistan, Urdu translation available). Loneliness focus: Masi et al. (2011) found interventions targeting maladaptive social cognition were the most effective loneliness interventions. The Socratic prompts are Claude's wording.",
+      "licence": "Claude's wording; THP licence not confirmed",
+      "offer_when": [],
+      "cbt_module": true,
+      "crisis_modal_ok": false,
+      "duration_min": 5,
+      "what_is_it": "A step-by-step way to look at a thought that's bringing you down, check how true it really is, and find a fairer way to see things. It's one of the main tools in CBT.",
+      "intro": "Let's look at one thought together. I'll ask a few questions; answer in your own words, and you can stop at any time.",
+      "examples_for_loneliness": [
+        "Nobody wants to talk to me.",
+        "If I message them, I'll just be bothering them.",
+        "Everyone else has friends except me."
+      ],
+      "prompts": [
+        {
+          "ask": "What's the thought that's bothering you? Try to write it as a sentence.",
+          "answer": "text",
+          "key": "thought"
+        },
+        {
+          "ask": "How strongly do you believe it right now, from 0 to 100?",
+          "answer": "number_0_100",
+          "key": "belief_before"
+        },
+        {
+          "ask": "What makes you think this thought is true?",
+          "answer": "text",
+          "key": "evidence_for"
+        },
+        {
+          "ask": "Is there anything that doesn't quite fit with it, even something small?",
+          "answer": "text",
+          "key": "evidence_against"
+        },
+        {
+          "ask": "If a close friend had this thought about themselves, what would you say to them?",
+          "answer": "text",
+          "key": "friend_view"
+        },
+        {
+          "ask": "Putting that together, is there a fairer or kinder way to say the thought?",
+          "answer": "text",
+          "key": "balanced_thought"
+        },
+        {
+          "ask": "How strongly do you believe the original thought now, from 0 to 100?",
+          "answer": "number_0_100",
+          "key": "belief_after"
+        }
+      ],
+      "reflection": "Thoughts aren't facts. Even a small shift in how strongly you believe a thought can make a difference.",
+      "stop_if": "If the thought is about hurting yourself or someone else, the exercise stops and the crisis path takes over. Not for working through traumatic memories.",
+      "save": "Save this so you can look back at it later"
+    },
+    {
+      "id": "pmplus_get_going",
+      "title": "One small thing today",
+      "family": "doing",
+      "type": "conversation",
+      "ux_flows": [
+        "12",
+        "2",
+        "6"
+      ],
+      "activity_type": "activity",
+      "source": "Adapted from WHO PM+ (2018) strategy 'Get going, keep doing' (behavioural activation: increasing activity to improve mood); THP also uses behavioural activation. Step wording and the activity examples are Claude's.",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [
+        "LOW"
+      ],
+      "crisis_modal_ok": false,
+      "duration_min": 3,
+      "what_is_it": "When we feel low, we tend to do less, and doing less makes us feel lower. This breaks the cycle with one small, doable activity.",
+      "intro": "Let's pick one small thing you could do today or tomorrow, something pleasant or something useful.",
+      "activity_examples": [
+        "Have chai with someone at home",
+        "A 10-minute walk outside",
+        "Listen to a song you like",
+        "Cook or help cook something",
+        "Sit in the sun for a few minutes",
+        "Tidy one small corner",
+        "Play a sport or a game for a bit",
+        "Something that feels meaningful to you"
+      ],
+      "prompts": [
+        {
+          "ask": "What's one small thing you could do? Pick from the list or write your own.",
+          "answer": "choice_or_text",
+          "key": "activity"
+        },
+        {
+          "ask": "When could you do it? Be as specific as you can.",
+          "answer": "text",
+          "key": "when"
+        },
+        {
+          "ask": "How confident are you that you'll do it, from 0 (not at all) to 10 (completely)?",
+          "answer": "number_0_10",
+          "key": "commitment"
+        }
+      ],
+      "if_commitment_below": {
+        "value": 7,
+        "say": "Let's make it a bit smaller so it feels doable. What's a shorter or simpler version?",
+        "source": "Brief Action Planning: below 7, problem-solve the plan."
+      },
+      "follow_up": "Asked at the next check-in (UX Flow 2). If it didn't happen, gently explore what got in the way and make the task smaller. Never penalised (UX Flows 2 and 12).",
+      "save": "Add to my tasks"
+    },
+    {
+      "id": "pmplus_managing_problems",
+      "title": "Working through a problem",
+      "family": "doing",
+      "type": "conversation",
+      "ux_flows": [
+        "10",
+        "12"
+      ],
+      "activity_type": "activity",
+      "source": "Adapted from WHO PM+ (2018) strategy 'Managing problems' (listing possible solutions and choosing the most helpful); structured problem-solving is also part of THP. Step wording is Claude's.",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [
+        "LOW"
+      ],
+      "crisis_modal_ok": false,
+      "duration_min": 6,
+      "what_is_it": "A step-by-step way to break a practical problem into pieces, think of options, and choose a first step.",
+      "intro": "Let's take one problem and break it down. We'll go step by step.",
+      "prompts": [
+        {
+          "ask": "What's one problem that's on your mind? A practical one works best.",
+          "answer": "text",
+          "key": "problem"
+        },
+        {
+          "ask": "Is any part of this something you can change, even a little?",
+          "answer": "yes_no",
+          "key": "changeable",
+          "if_no": "Some problems can't be changed right now. In that case, looking after how you cope matters more. Would you like to try 'Making room for a feeling' or 'Being kind to yourself'?"
+        },
+        {
+          "ask": "Let's list ideas, without judging them yet. What are some things you could do? Write as many as you like.",
+          "answer": "text_list",
+          "key": "options"
+        },
+        {
+          "ask": "Which idea looks most helpful and doable?",
+          "answer": "choice_from_options",
+          "key": "chosen"
+        },
+        {
+          "ask": "What's the very first step, and when will you do it?",
+          "answer": "text",
+          "key": "first_step"
+        },
+        {
+          "ask": "Is there anyone who could help with this?",
+          "answer": "text",
+          "key": "helper"
+        }
+      ],
+      "stop_if": "If the problem involves danger, abuse, or harming yourself or others, stop and show the help options instead of problem-solving.",
+      "follow_up": "Review at the next check-in: what happened, and what's the next step?",
+      "save": "Add the first step to my tasks"
+    },
+    {
+      "id": "dwm_values_step",
+      "title": "A step towards what matters",
+      "family": "doing",
+      "type": "conversation",
+      "ux_flows": [
+        "10",
+        "11",
+        "12"
+      ],
+      "activity_type": "connection",
+      "source": "Adapted from WHO DWM (2020), skill 3: acting on values (choose values, pick one relationship, one small action this week).",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [
+        "LOW"
+      ],
+      "crisis_modal_ok": false,
+      "duration_min": 4,
+      "what_is_it": "Values are about the kind of person you want to be, like caring, honest or brave. This helps you choose one small action that fits them.",
+      "intro": "Goals are what we want to get; values are the kind of person we want to be. Let's find one small step that fits yours.",
+      "value_examples": [
+        "Caring",
+        "Honest",
+        "Brave",
+        "Patient",
+        "Fun",
+        "Respectful",
+        "Helpful",
+        "Hard-working"
+      ],
+      "prompts": [
+        {
+          "ask": "Which one or two of these matter most to you? Or write your own.",
+          "answer": "choice_or_text",
+          "key": "values"
+        },
+        {
+          "ask": "Think of one relationship that matters to you. Who is it?",
+          "answer": "text",
+          "key": "relationship"
+        },
+        {
+          "ask": "What's one small thing you could do this week, in that relationship, that fits your values?",
+          "answer": "text",
+          "key": "action"
+        }
+      ],
+      "save": "Add to my tasks"
+    },
+    {
+      "id": "pmplus_social_support",
+      "title": "Who's in my corner?",
+      "family": "connection",
+      "type": "conversation",
+      "ux_flows": [
+        "11",
+        "12"
+      ],
+      "activity_type": "connection",
+      "source": "Adapted from WHO PM+ (2018) strategy 'Strengthening social support' (support from trusted friends, family, co-workers or community organisations). Pairs with thought_check for loneliness thoughts (Masi et al. 2011). Prompts are Claude's wording.",
+      "licence": "CC BY-NC-SA 3.0 IGO (adaptation)",
+      "offer_when": [
+        "LOW"
+      ],
+      "crisis_modal_ok": false,
+      "duration_min": 4,
+      "what_is_it": "A short exercise to notice who you could lean on, even a little, and pick one easy way to connect.",
+      "intro": "When we feel alone, it's easy to forget the people who might be there for us. Let's take a gentle look.",
+      "prompts": [
+        {
+          "ask": "Who is someone you feel safe with, even if you haven't talked in a while? A friend, cousin, sibling, classmate, neighbour or teacher all count.",
+          "answer": "text",
+          "key": "person"
+        },
+        {
+          "ask": "What's one easy way to connect with them? For example: send a short message, share something funny, or ask how they are.",
+          "answer": "text",
+          "key": "contact_step"
+        },
+        {
+          "ask": "Is there a group or place where you could be around people, like a class, a community or religious group, or a sports ground?",
+          "answer": "text_optional",
+          "key": "community"
+        },
+        {
+          "ask": "How uneasy would that step feel, from 0 (completely calm) to 100 (the most uneasy you can imagine)?",
+          "answer": "number_0_100",
+          "key": "suds"
+        },
+        {
+          "ask": "How confident are you that you'll take that step, from 0 (not at all) to 10 (completely)?",
+          "answer": "number_0_10",
+          "key": "commitment"
+        }
+      ],
+      "safety": "Only people the user feels safe with. Never suggest contacting a specific person, and never push contact with anyone the user describes as hurtful or unsafe.",
+      "next": "Can become the first step on the Social Ladder (UX Flow 11).",
+      "save": "Add to my tasks",
+      "if_commitment_below": {
+        "value": 7,
+        "say": "That's okay. What would make it easier, or is there a smaller first step, like just reading their last message?",
+        "source": "Brief Action Planning: below 7, problem-solve the plan."
+      },
+      "ladder_rules": {
+        "scale": "SUDS 0-100 (Wolpe)",
+        "max_gap_between_steps": 10,
+        "if_gap_larger": "split the step into smaller steps (UX Flow 11 'step-splitting')",
+        "rate_before_and_after": true
+      }
+    }
+  ],
+  "considered_and_not_added": [
+    {
+      "what": "Breathing with holds (box breathing, 4-7-8)",
+      "why": "Breath holds can feel uncomfortable for anxious users, and WHO DWM warns against deep breaths when dizzy. Kept out of the default."
+    },
+    {
+      "what": "Long eyes-closed meditation or body scans",
+      "why": "Meditation-related challenging experiences are documented (Lindahl et al. 2017). Not suitable unsupervised for a distressed audience."
+    },
+    {
+      "what": "Imagery or working through traumatic memories",
+      "why": "Needs a clinician."
+    },
+    {
+      "what": "Progressive muscle relaxation, gratitude journaling",
+      "why": "Common, but not sourced in this session. Can be added after sourcing."
+    },
+    {
+      "what": "Any exercise at CRITICAL, or as a replacement for helplines",
+      "why": "PM+ and THP both exclude people with a plan to end their life or at imminent suicide risk."
+    }
+  ],
+  "_licence_note": "Licensing of adapted WHO material is being handled by the university (Ahmad, Oct 15 2026). Source attributions are kept for traceability.",
+  "NUMBERS": [
+    {
+      "what": "Slow breathing pace",
+      "value": "6 breaths/min (4 s in, 6 s out)",
+      "status": "sourced",
+      "source": "Resonance breathing ~0.1 Hz = six breaths per minute (Lehrer & Gevirtz 2014, Frontiers in Psychology); slow breathing defined as <10 breaths/min with reduced anxiety and arousal (Zaccaro et al. 2018 systematic review)."
+    },
+    {
+      "what": "Exhale longer than inhale",
+      "value": "6 s out vs 4 s in",
+      "status": "sourced, weak",
+      "source": "An RCT comparing longer-exhale vs equal ratios found a small, non-significant extra benefit (d=0.2); 'breath ratios do not have a significant differential effect'. Kept because WHO DWM also says 'breathe out slowly'."
+    },
+    {
+      "what": "Breathing session length",
+      "value": "1 min quick, or 5 min",
+      "status": "sourced (5 min)",
+      "source": "5 minutes daily of cyclic sighing improved mood and reduced anxiety over a month (Balban et al. 2023, Cell Reports Medicine RCT, n=108). The 1-minute option is a convenience choice with no specific source."
+    },
+    {
+      "what": "Cyclic sighing pattern",
+      "value": "2 s in + 1 s top-up in, 6 s slow out (about 6-7 breaths/min)",
+      "status": "pattern sourced, seconds estimated",
+      "source": "Pattern from Balban et al. 2023 (two inhales, long exhale). Second counts are Claude's estimate kept under 10 breaths/min (Zaccaro 2018)."
+    },
+    {
+      "what": "Action-plan confidence check",
+      "value": "0-10; below 7 -> make the plan smaller",
+      "status": "sourced",
+      "source": "Brief Action Planning (clinician technique): when confidence is below 7, use collaborative problem solving; people are more likely to succeed at 7 or more."
+    },
+    {
+      "what": "Distress rating for Social Ladder steps",
+      "value": "SUDS 0-100; adjacent steps no more than 10 apart, else split",
+      "status": "sourced",
+      "source": "Wolpe's Subjective Units of Disturbance scale (0-100); hierarchy items spaced 'no more than 5 to 10 SUDs' apart."
+    },
+    {
+      "what": "Belief rating in thought check",
+      "value": "0-100",
+      "status": "convention",
+      "source": "Standard CBT thought-record convention (Beck); not re-verified in this session."
+    },
+    {
+      "what": "Mood check",
+      "value": "1-5",
+      "status": "engineering default",
+      "source": "No clinical source; simple scale chosen for a phone. Maps to the existing mood_rating field."
+    },
+    {
+      "what": "Offers per day",
+      "value": "max 3",
+      "status": "sourced",
+      "source": "Morrison et al. 2017 (PLOS ONE): up to 3 notifications/day did not lower response rates; authors caution several per day may be unacceptable and exact thresholds are unknown."
+    },
+    {
+      "what": "CBT offer cooldown",
+      "value": "24 h (72 h after 2 declines)",
+      "status": "24 h loosely sourced; 72 h engineering default",
+      "source": "A daily schedule had no response-rate penalty (Morrison et al. 2017)."
+    },
+    {
+      "what": "Crisis threshold for offers",
+      "value": "MODERATE starts at 0.40",
+      "status": "sourced (project canon)",
+      "source": "Blueprint §4.1 risk bands."
+    },
+    {
+      "what": "Smoothing and hysteresis (EWMA 0.3, disarm 0.30, min 3 turns), grounding cooldown 2 h",
+      "value": "as stated",
+      "status": "engineering default",
+      "source": "No clinical source exists for these; they control how often the app interrupts, and are disclosed as tunable."
+    }
+  ]
+}

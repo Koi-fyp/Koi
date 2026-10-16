@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KOI Exercises Reference</title>
+<style>
+  :root { --bg:#f7f6f2; --card:#ffffff; --ink:#1f2328; --muted:#5b6370; --accent:#2f7d6d; --accent-soft:#cfe7e1; --line:#dedbd2; --warn:#8a4b00; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#15181c; --card:#1d2126; --ink:#e7e9ec; --muted:#a3abb6; --accent:#5fb8a4; --accent-soft:#23413b; --line:#2c3138; --warn:#f0b35a; } }
+  :root[data-theme="dark"] { --bg:#15181c; --card:#1d2126; --ink:#e7e9ec; --muted:#a3abb6; --accent:#5fb8a4; --accent-soft:#23413b; --line:#2c3138; --warn:#f0b35a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Nastaliq Urdu", "Noto Naskh Arabic", sans-serif; }
+  main { max-width:520px; margin:0 auto; padding:24px 16px 48px; }
+  .badge { display:inline-block; font-size:12px; color:var(--warn); border:1px solid var(--warn); border-radius:999px; padding:2px 10px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; margin-top:16px; }
+  h1 { font-size:20px; margin:12px 0 4px; }
+  h2 { font-size:17px; margin:0 0 6px; }
+  p { margin:8px 0; }
+  .muted { color:var(--muted); font-size:14px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  button { font:inherit; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); padding:10px 14px; cursor:pointer; min-height:44px; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button[aria-pressed="true"] { border-color:var(--accent); box-shadow:inset 0 0 0 2px var(--accent); }
+  button:focus-visible, textarea:focus-visible, input:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+  textarea, input[type=number] { width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px; }
+  textarea { min-height:80px; }
+  .stage { display:grid; place-items:center; height:240px; }
+  .orb { width:120px; height:120px; border-radius:50%; background:var(--accent-soft); border:3px solid var(--accent); transform:scale(0.7); transition-property:transform; transition-timing-function:ease-in-out; }
+  .phase { font-size:20px; font-weight:600; min-height:30px; }
+  .center { text-align:center; }
+  .count { color:var(--muted); }
+  .lib button { width:100%; text-align:start; }
+  .chip { font-size:12px; color:var(--muted); }
+  [dir="rtl"] .phase, [dir="rtl"] p { line-height:1.9; }
+  @media (prefers-reduced-motion: reduce) { .orb { transition:none !important; } }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <span class="badge">Draft, unreviewed reference: not for real users</span>
+  <h1>KOI exercises (UX Flows 5, 10, 11, 12)</h1>
+  <p class="muted">Reference for the client teams. Content and rules come from <code>exercises.json</code> + <code>exercises_i18n.json</code>. Urdu and Roman Urdu are pending native review.</p>
+  <div class="row" id="langs" role="group" aria-label="Language"></div>
+  <div id="app">
+    <section class="card" id="offer"></section>
+    <section class="card hidden" id="player" aria-live="polite"></section>
+    <section class="card hidden" id="post"></section>
+    <section class="card" id="library"></section>
+  </div>
+</main>
+
+<script id="data" type="application/json">/*EXERCISES_JSON*/</script>
+<script>
+(function () {
+  const CATS = JSON.parse(document.getElementById("data").textContent);   // {en, ur, ur-roman}: localized catalogues
+  const LANG_NAMES = { "en": "English", "ur": "اردو", "ur-roman": "Roman Urdu" };
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = id => document.getElementById(id);
+  let D, U, byId, lang = "en", goTo = null, timer = null;
+
+  function el(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) { if (k === "onclick") n.onclick = v; else n.setAttribute(k, v); }
+    for (const k of kids) if (k != null) n.append(k);
+    return n;
+  }
+  const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (_, k) => o[k]);
+  function show(id) { ["offer", "player", "post"].forEach(s => $(s).classList.toggle("hidden", s !== id)); }
+
+  function setLang(l) {
+    lang = l; D = CATS[l]; U = D.ui; byId = Object.fromEntries(D.exercises.map(e => [e.id, e]));
+    const app = $("app");
+    app.setAttribute("dir", l === "ur" ? "rtl" : "ltr"); app.setAttribute("lang", l === "ur-roman" ? "ur-Latn" : l);
+    $("langs").replaceChildren(...Object.keys(CATS).map(k =>
+      el("button", { "aria-pressed": String(k === l), lang: k === "ur-roman" ? "ur-Latn" : k, onclick: () => setLang(k) }, LANG_NAMES[k])));
+    renderLibrary(); renderOffer();
+  }
+
+  // ---- offer (UX Flow 5) with "what is it" (UX Flow 10)
+  function renderOffer() {
+    clearInterval(timer);
+    const o = $("offer"), b = D.offer.buttons;
+    o.replaceChildren(el("p", {}, D.offer.text), el("div", { class: "row" },
+      el("button", { class: "primary", onclick: () => play(goTo || "slow_breathing") }, b[0]),
+      el("button", { onclick: () => o.replaceChildren(el("p", {}, D.offer.what_is_it), el("div", { class: "row" },
+        el("button", { class: "primary", onclick: () => play("slow_breathing") }, b[0]),
+        el("button", { onclick: renderDecline }, b[2]))) }, b[1]),
+      el("button", { onclick: renderDecline }, b[2])));
+    show("offer");
+  }
+  function renderDecline() {      // every branch offers something and an open "keep talking/later" choice
+    const f = D.decline_followup, o = $("offer");
+    o.replaceChildren(el("p", {}, f.text), el("div", { class: "row" }, ...f.buttons.map(btn =>
+      el("button", { onclick: () => {
+        const alt = f.alternatives[btn];
+        o.replaceChildren(el("p", {}, alt.text), el("div", { class: "row" },
+          ...alt.offer_exercises.map(x => el("button", { class: "primary", onclick: () => play(x) }, byId[x].title)),
+          el("button", { onclick: renderOffer }, alt.later_button)));
+      } }, btn))));
+  }
+
+  function renderLibrary() {
+    const lib = $("library");
+    lib.replaceChildren(el("h2", {}, U.all_exercises), el("p", { class: "muted" }, U.menu_note));
+    for (const [k, label] of Object.entries(U.families)) {
+      lib.append(el("p", { class: "chip" }, label));
+      D.exercises.filter(e => e.family === k).forEach(e => {
+        const dur = e.duration_min < 1 ? `${Math.round(e.duration_min * 60)} ${U.seconds}` : `${e.duration_min} ${U.minutes}`;
+        lib.append(el("div", { class: "row lib" }, el("button", { "data-id": e.id, onclick: () => { window.scrollTo(0, 0); play(e.id); } }, `${e.title} · ${dur}`)));
+      });
+    }
+  }
+
+  // ---- player
+  function play(id) {
+    clearInterval(timer);
+    const ex = byId[id];
+    const p = $("player"); show("player");
+    const stopBtn = el("button", { onclick: () => { clearInterval(timer); renderPost(ex, true); } }, U.stop);
+    p.replaceChildren(el("h1", {}, ex.title), el("p", {}, ex.intro));
+    if (ex.type === "paced_breathing") {
+      p.append(el("p", { class: "muted" }, D.safety_note),
+        el("div", { class: "row" }, ...ex.duration_options.map(o =>
+          el("button", { class: "primary", onclick: () => startPaced(ex, o.cycles, p, stopBtn) }, o.label)), stopBtn));
+    } else if (ex.type === "stepwise") {
+      let i = 0; const step = el("p", { class: "phase" }), prog = el("div", { class: "count" });
+      const draw = () => { step.textContent = ex.steps[i]; prog.textContent = fmt(U.step_of, { i: i + 1, n: ex.steps.length }); };
+      const next = el("button", { class: "primary", onclick: () => { i++; i < ex.steps.length ? draw() : renderPost(ex, false); } }, U.next);
+      p.append(step, prog, ex.stop_if ? el("p", { class: "muted" }, ex.stop_if) : null, el("div", { class: "row" }, next, stopBtn)); draw();
+    } else {
+      runConversation(ex, p, stopBtn);
+    }
+  }
+
+  function startPaced(ex, cycles, p, stopBtn) {
+    let paused = false;
+    const pauseBtn = el("button", { onclick: () => { paused = !paused; pauseBtn.textContent = paused ? U.resume : U.pause; } }, U.pause);
+    const orb = el("div", { class: "orb", "aria-hidden": "true" });
+    const phase = el("div", { class: "phase center" }), count = el("div", { class: "count center" });
+    p.replaceChildren(el("h1", {}, ex.title), el("p", { class: "muted" }, D.safety_note),
+      el("div", { class: "stage" }, orb), phase, count, el("div", { class: "row" }, pauseBtn, stopBtn));
+    const scale = { expand: "scale(1.15)", expand_more: "scale(1.35)", contract: "scale(0.7)" };
+    const sched = [];
+    for (let c = 0; c < cycles; c++) ex.phases.forEach(ph => sched.push({ ...ph, cycle: c + 1 }));
+    let idx = -1, left = 0;
+    function enter(i) {
+      const ph = sched[i]; left = ph.seconds * 10; phase.textContent = ph.label;
+      orb.style.transitionDuration = ph.seconds + "s";
+      orb.style.transform = reduced ? "scale(0.85)" : scale[ph.animate];
+    }
+    timer = setInterval(() => {
+      if (paused) return;
+      if (left <= 0) { idx++; if (idx >= sched.length) { clearInterval(timer); renderPost(ex, false); return; } enter(idx); }
+      left--;
+      count.textContent = fmt(U.breath_of, { s: Math.ceil(left / 10), c: sched[idx].cycle, n: cycles });
+    }, 100);
+  }
+
+  // conversation: one prompt at a time, free text (UX Flow 10: conversational, not a form).
+  // In the app every answer is also a chat turn and passes the per-turn crisis check (policy R1).
+  function runConversation(ex, p, stopBtn) {
+    const answers = {}; let i = 0;
+    const box = el("div", {});
+    p.append(ex.stop_if ? el("p", { class: "muted" }, ex.stop_if) : null, box);
+    const ranges = { number_0_100: [0, 100], number_0_10: [0, 10] };
+    function input(pr) {
+      if (ranges[pr.answer]) return el("input", { type: "number", min: ranges[pr.answer][0], max: ranges[pr.answer][1], "aria-label": pr.ask });
+      return pr.answer === "yes_no" ? null : el("textarea", { "aria-label": pr.ask });
+    }
+    function step() {
+      if (i >= ex.prompts.length) return finish();
+      const pr = ex.prompts[i], field = input(pr);
+      const examples = pr.answer === "choice_or_text" ? (ex.activity_examples || ex.value_examples) : null;
+      const go = v => { answers[pr.key] = v; i++; step(); };
+      const kids = [el("p", { class: "phase" }, pr.ask), el("div", { class: "count" }, fmt(U.question_of, { i: i + 1, n: ex.prompts.length }))];
+      if (examples) kids.push(el("div", { class: "row" }, ...examples.map(x => el("button", { onclick: () => { field.value = x; } }, x))));
+      if (pr.answer === "choice_from_options" && answers.options)
+        kids.push(el("div", { class: "row" }, ...answers.options.split(/\n|,|،/).map(s => s.trim()).filter(Boolean)
+          .map(x => el("button", { onclick: () => { field.value = x; } }, x))));
+      if (pr.answer === "yes_no") {
+        kids.push(el("div", { class: "row" },
+          el("button", { class: "primary", onclick: () => go("yes") }, U.yes),
+          el("button", { onclick: () => {
+            if (!pr.if_no) return go("no");
+            box.replaceChildren(el("p", {}, pr.if_no), el("div", { class: "row" },
+              el("button", { class: "primary", onclick: () => play("dwm_making_room") }, byId.dwm_making_room.title),
+              el("button", { onclick: () => play("dwm_being_kind") }, byId.dwm_being_kind.title), stopBtn));
+          } }, U.no), stopBtn));
+      } else {
+        kids.push(field, el("div", { class: "row" }, el("button", { class: "primary", onclick: () => {
+          const v = field.value.trim();
+          if (!v && pr.answer !== "text_optional") { field.focus(); return; }
+          if (pr.key === "commitment" && ex.if_commitment_below && Number(v) < ex.if_commitment_below.value) {
+            box.replaceChildren(el("p", {}, ex.if_commitment_below.say), el("div", { class: "row" },
+              el("button", { class: "primary", onclick: () => { i = 0; step(); } }, U.smaller),
+              el("button", { onclick: () => go(v) }, U.keep), stopBtn));
+            return;
+          }
+          go(v);
+        } }, U.next), stopBtn));
+      }
+      box.replaceChildren(...kids);
+    }
+    function finish() {
+      const kids = [];
+      if (ex.reflection) kids.push(el("p", {}, ex.reflection));
+      if (answers.belief_before && answers.belief_after)
+        kids.push(el("p", { class: "muted" }, fmt(U.belief, { a: answers.belief_before, b: answers.belief_after })));
+      kids.push(el("div", { class: "row" }, el("button", { class: "primary", onclick: () => renderPost(ex, false) }, ex.save || U.done)));
+      box.replaceChildren(...kids);
+    }
+    step();
+  }
+
+  // ---- post check: optional 1-5 mood; always a "keep talking" way out (no dead end)
+  function renderPost(ex, stoppedEarly) {
+    clearInterval(timer);
+    const q = D.post_check, p = $("post"); show("post");
+    const nums = [];
+    for (let n = q.scale.min; n <= q.scale.max; n++) nums.push(n);
+    p.replaceChildren(el("p", {}, stoppedEarly ? U.stopped : (ex.outro || U.done)), el("p", {}, q.text),
+      el("div", { class: "row" }, ...nums.map(n => el("button", { "aria-label": fmt(U.mood_n, { n }), onclick: () => {
+        p.replaceChildren(el("p", {}, n <= q.low_threshold ? q.on_low : q.on_other), el("div", { class: "row" },
+          el("button", { class: "primary", onclick: renderOffer }, q.keep_talking),
+          el("button", { onclick: () => { goTo = ex.id; renderOffer(); } }, q.save_go_to),
+          el("button", { onclick: renderOffer }, U.done)));
+      } }, String(n))), el("button", { onclick: renderOffer }, U.skip)),
+      el("p", { class: "muted" }, `${q.scale.min} = ${q.scale.min_label}, ${q.scale.max} = ${q.scale.max_label}. ${U.optional}`),
+      el("div", { class: "row" }, el("button", { onclick: renderOffer }, q.keep_talking)));
+  }
+
+  setLang("en");
+})();
+</script>
+</body>
+</html>

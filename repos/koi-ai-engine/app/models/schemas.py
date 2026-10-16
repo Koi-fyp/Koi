@@ -55,6 +55,17 @@ class SessionTurn(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
     session_history: List[SessionTurn] = Field(default_factory=list)
+    exercise_state: Optional[str] = None
+    client_event: Optional[
+        Literal[
+            'none',
+            'playback_done',
+            'playback_stopped',
+            'start_breathing',
+            'start_grounding',
+            'start_plan',
+        ]
+    ] = None
 
 
 class CompanionState(BaseModel):
@@ -63,9 +74,12 @@ class CompanionState(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    reply: str
     companion_state: CompanionState
+    reply: str
     latency_ms: int
+    exercise_state: Optional[str] = None
+    ui_action: Optional[dict] = None
+    handoff: Optional[str] = None
 
 
 # ---- system endpoints (unchanged in shape from before) ----

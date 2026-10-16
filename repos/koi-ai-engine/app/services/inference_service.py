@@ -169,8 +169,13 @@ class InferenceService:
 
     # ---- generation ----
 
-    def _build_prompt(self, message: str, session_history: List[SessionTurn]) -> str:
-        messages: List[Dict[str, str]] = [{"role": "system", "content": _SYSTEM_INSTRUCTION}]
+    def _build_prompt(
+        self,
+        message: str,
+        session_history: List[SessionTurn],
+        system_instruction: str = _SYSTEM_INSTRUCTION,
+    ) -> str:
+        messages: List[Dict[str, str]] = [{"role": "system", "content": system_instruction}]
         for turn in session_history:
             messages.append({"role": turn.role, "content": turn.content})
         messages.append({"role": "user", "content": message})
@@ -196,7 +201,7 @@ class InferenceService:
             add_generation_prompt=True,
     )
 
-    def _generate_raw(self, prompt: str) -> str:
+    def _generate_raw(self, prompt: str, max_new_tokens: Optional[int] = None) -> str:
         import torch
 
         inputs = self._tokenizer(prompt, return_tensors="pt").to(self._model.device)
@@ -204,7 +209,11 @@ class InferenceService:
         with torch.no_grad():
             output_ids = self._model.generate(
                 **inputs,
-                max_new_tokens=settings.max_new_tokens,
+                max_new_tokens=(
+                    settings.max_new_tokens
+                    if max_new_tokens is None
+                    else max_new_tokens
+                ),
                 do_sample=True,
                 temperature=0.7,
                 pad_token_id=self._tokenizer.eos_token_id,
@@ -297,6 +306,19 @@ class InferenceService:
             ),
             latency_ms=elapsed_ms,
         )
+
+    def generate_text(
+        self,
+        message: str,
+        *,
+        system_instruction: str,
+        session_history: Optional[List[SessionTurn]] = None,
+        max_new_tokens: int = 96,
+    ) -> str:
+        """Generate plain text with a per-call system instruction."""
+        self._ensure_loaded()
+        prompt = self._build_prompt(message, session_history or [], system_instruction)
+        return self._generate_raw(prompt, max_new_tokens=max_new_tokens).strip()
 
 
 # Module-level singleton — imported once by routes.py. Loading is still

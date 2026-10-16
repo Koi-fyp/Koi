@@ -1,0 +1,784 @@
+{
+ "_status": "DRAFT by Claude, Oct 15 2026. Fixed (reviewed-to-be) lines the backend inserts; the LLM only adds a short acknowledgement. NOT clinically reviewed; Urdu and Roman Urdu pending native review. Companion speaks masculine first person (male default avatar, UX Flow 1).",
+ "_sources": "Breathing pace: Lehrer & Gevirtz 2014, Zaccaro et al. 2018; grounding: WHO Doing What Matters (2020); small-activity planning: WHO PM+ (2018) behavioural activation, 0-10 confidence < 7 -> smaller (Brief Action Planning); 'at your own pace' wording per the other-LLM review (NHS, not re-verified).",
+ "common": {
+  "keep_talking": {
+   "en": "I'm here if you want to keep talking.",
+   "ur": "اگر آپ بات جاری رکھنا چاہیں تو میں یہیں ہوں۔",
+   "ur-roman": "Agar aap baat jaari rakhna chahein to main yahin hoon."
+  },
+  "clarify_yesno": {
+   "en": "Just to check, would you like to try it, or not right now?",
+   "ur": "بس تسلی کے لیے، کیا آپ کوشش کرنا چاہیں گے، یا ابھی نہیں؟",
+   "ur-roman": "Bas confirm kar raha hoon, try karna chahenge ya abhi nahi?"
+  },
+  "clarify_answer": {
+   "en": "Take your time. A few words are enough, and you can say stop whenever you like.",
+   "ur": "آرام سے۔ چند الفاظ کافی ہیں، اور آپ جب چاہیں رکنے کا کہہ سکتے ہیں۔",
+   "ur-roman": "Aaram se. Kuch alfaaz kaafi hain, aur aap jab chahein stop keh sakte hain."
+  },
+  "clarify_number": {
+   "en": "Just a number from 0 to 10 is fine.",
+   "ur": "بس 0 سے 10 تک کوئی ایک نمبر بتا دیں۔",
+   "ur-roman": "Bas 0 se 10 tak koi ek number bata dein."
+  },
+  "clarify_why": {
+   "en": "No need to explain much. Is it more that it's not your thing, or just not the right time?",
+   "ur": "زیادہ وضاحت کی ضرورت نہیں۔ کیا یہ آپ کو پسند نہیں، یا بس ابھی وقت مناسب نہیں؟",
+   "ur-roman": "Zyada explain karne ki zaroorat nahi. Kya yeh aap ko pasand nahi, ya bas abhi time theek nahi?"
+  },
+  "clarify_carry_on": {
+   "en": "Shall we carry on, or stop here?",
+   "ur": "جاری رکھیں یا یہیں رک جائیں؟",
+   "ur-roman": "Continue karein ya yahin ruk jayein?"
+  },
+  "repair_exhausted": {
+   "en": "No pressure at all. Let's leave it here.",
+   "ur": "کوئی دباؤ نہیں۔ اسے یہیں چھوڑ دیتے ہیں۔",
+   "ur-roman": "Koi pressure nahi. Isay yahin chhor dete hain."
+  },
+  "ok_no_pressure": {
+   "en": "That's okay.",
+   "ur": "کوئی بات نہیں۔",
+   "ur-roman": "Koi baat nahi."
+  },
+  "ack_fallback": {
+   "en": [
+    "Thanks for telling me.",
+    "Okay.",
+    "Got it.",
+    "I hear you.",
+    "Alright."
+   ],
+   "ur": [
+    "بتانے کا شکریہ۔",
+    "ٹھیک ہے۔",
+    "سمجھ گیا۔",
+    "اچھا۔"
+   ],
+   "ur-roman": [
+    "Batane ka shukriya.",
+    "Theek hai.",
+    "Samajh gaya.",
+    "Acha."
+   ]
+  }
+ },
+ "journeys": {
+  "breathing": {
+   "exercise_id": "slow_breathing",
+   "mode": "grounding",
+   "steps": {
+    "offer": {
+     "say": {
+      "en": "Would you like to slow your breathing down with me for a minute?",
+      "ur": "کیا آپ میرے ساتھ ایک منٹ کے لیے سانس آہستہ کرنا چاہیں گے؟",
+      "ur-roman": "Kya aap mere saath ek minute ke liye saans thori aahista karna chahenge?"
+     },
+     "ack": "Acknowledge what the user just said in one short, warm sentence.",
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "policy": {
+      "accept": "accept_offer",
+      "decline": "decline_offer",
+      "stop": "decline_offer",
+      "what_is_it": "ask_what_is_it"
+     },
+     "on": {
+      "accept": "start",
+      "decline": "why_not",
+      "stop": "@end",
+      "what_is_it": "explain"
+     }
+    },
+    "explain": {
+     "say": {
+      "en": "It's simple: we breathe in gently, then let the breath out a little more slowly, about six breaths a minute. Breathe at your own pace, you don't need to match me. Shall we try?",
+      "ur": "یہ آسان ہے: ہم آرام سے سانس اندر لیتے ہیں، پھر تھوڑا آہستہ باہر نکالتے ہیں، تقریباً ایک منٹ میں چھ سانسیں۔ اپنی رفتار سے سانس لیں، میرے ساتھ ملانا ضروری نہیں۔ کوشش کریں؟",
+      "ur-roman": "Bohat simple hai: hum aaram se saans andar lete hain, phir thora aahista bahar nikalte hain, takreeban ek minute mein chhe saansein. Apni pace pe saans lein, mere saath match karna zaroori nahi. Try karein?"
+     },
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "policy": {
+      "accept": "accept_offer",
+      "decline": "decline_offer",
+      "stop": "decline_offer",
+      "what_is_it": "ask_what_is_it"
+     },
+     "on": {
+      "accept": "start",
+      "decline": "why_not",
+      "stop": "@end",
+      "what_is_it": "@repair"
+     }
+    },
+    "start": {
+     "say": {
+      "en": "Okay. Breathe in gently as I do, and let it out slowly. Normal-sized breaths are fine, and if you feel dizzy, just breathe normally.",
+      "ur": "ٹھیک ہے۔ میرے ساتھ آرام سے سانس اندر لیں، اور آہستہ سے باہر نکالیں۔ عام سانس کافی ہے، اور اگر چکر آئے تو بس عام طرح سانس لیں۔",
+      "ur-roman": "Theek hai. Mere saath aaram se saans andar lein, aur aahista se bahar nikalein. Normal saans kaafi hai, aur agar chakkar aaye to bas normal tarah saans lein."
+     },
+     "ui": {
+      "name": "start_breathing",
+      "args": {
+       "pattern": "slow_6_per_min",
+       "inhale_s": 4,
+       "exhale_s": 6,
+       "cycles": 6,
+       "cue_audio": {
+        "en": [
+         "Breathe in",
+         "Breathe out"
+        ],
+        "ur": [
+         "سانس اندر",
+         "سانس باہر"
+        ],
+        "ur-roman": [
+         "Saans andar",
+         "Saans bahar"
+        ]
+       }
+      }
+     },
+     "then": "playing"
+    },
+    "playing": {
+     "wait": "playback",
+     "on": {
+      "playback_done": "post_check"
+     }
+    },
+    "paused": {
+     "say": null,
+     "expect": [
+      "accept",
+      "next",
+      "decline",
+      "stop"
+     ],
+     "clarify": "clarify_carry_on",
+     "on": {
+      "accept": "resume",
+      "next": "resume",
+      "decline": "stopped",
+      "stop": "stopped"
+     }
+    },
+    "resume": {
+     "say": {
+      "en": "Okay, let's carry on.",
+      "ur": "ٹھیک ہے، جاری رکھتے ہیں۔",
+      "ur-roman": "Theek hai, continue karte hain."
+     },
+     "ui": {
+      "name": "resume_breathing"
+     },
+     "then": "playing"
+    },
+    "why_not": {
+     "say": {
+      "en": "That's okay. Is it more that this kind of exercise isn't your thing, or that now isn't a good time?",
+      "ur": "کوئی بات نہیں۔ کیا اس طرح کی مشق آپ کو پسند نہیں، یا ابھی وقت مناسب نہیں؟",
+      "ur-roman": "Koi baat nahi. Kya is tarah ki exercise aap ko pasand nahi, ya abhi time theek nahi?"
+     },
+     "expect": [
+      "not_for_me",
+      "not_now",
+      "decline",
+      "stop",
+      "answer"
+     ],
+     "clarify": "clarify_why",
+     "on": {
+      "not_for_me": "alt_offer",
+      "decline": "alt_offer",
+      "answer": "alt_offer",
+      "not_now": "not_now",
+      "stop": "@end"
+     }
+    },
+    "alt_offer": {
+     "say": {
+      "en": "Fair enough. Another option is a short grounding exercise, just noticing a few things around you. Want to try that, or shall we just keep talking?",
+      "ur": "ٹھیک ہے۔ ایک اور طریقہ ایک مختصر گراؤنڈنگ مشق ہے، بس اپنے آس پاس کی چند چیزوں پر دھیان دینا۔ وہ آزمائیں، یا بس باتیں کرتے رہیں؟",
+      "ur-roman": "Theek hai. Ek aur option chhoti si grounding exercise hai, bas apne aas paas ki kuch cheezon pe dhyan dena. Woh try karein, ya bas baatein karte rahein?"
+     },
+     "ack": null,
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "on": {
+      "accept": "@journey:grounding:start",
+      "decline": "@end",
+      "stop": "@end",
+      "what_is_it": "@journey:grounding:explain"
+     }
+    },
+    "not_now": {
+     "say": {
+      "en": "Sure, we can do it another time.",
+      "ur": "ضرور، کسی اور وقت کر لیں گے۔",
+      "ur-roman": "Zaroor, kisi aur waqt kar lenge."
+     },
+     "then": "@end"
+    },
+    "post_check": {
+     "say": {
+      "en": "How are you feeling now?",
+      "ur": "اب کیسا محسوس ہو رہا ہے؟",
+      "ur-roman": "Ab kaisa feel ho raha hai?"
+     },
+     "expect": [
+      "answer",
+      "stop"
+     ],
+     "store": "mood_text",
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "go_to",
+      "stop": "@end"
+     },
+     "branch": "mood"
+    },
+    "go_to": {
+     "say": {
+      "en": "Would you like me to remember this as your go-to for when things feel heavy?",
+      "ur": "کیا میں اسے آپ کی پسندیدہ مشق کے طور پر یاد رکھوں، جب دل بھاری ہو؟",
+      "ur-roman": "Kya main isay aap ki go-to exercise ke taur pe yaad rakhoon, jab dil bhaari ho?"
+     },
+     "ack": "Reflect the user's answer back in a few warm words.",
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "on": {
+      "accept": "saved_end",
+      "decline": "plain_end",
+      "stop": "plain_end",
+      "what_is_it": "plain_end"
+     }
+    },
+    "saved_end": {
+     "say": {
+      "en": "Done, I'll remember it.",
+      "ur": "ٹھیک ہے، میں یاد رکھوں گا۔",
+      "ur-roman": "Done, main yaad rakhunga."
+     },
+     "ui": {
+      "name": "save_go_to"
+     },
+     "then": "@end"
+    },
+    "plain_end": {
+     "say": {
+      "en": "No problem.",
+      "ur": "کوئی بات نہیں۔",
+      "ur-roman": "Koi baat nahi."
+     },
+     "then": "@end"
+    },
+    "worse_end": {
+     "say": {
+      "en": "Thank you for telling me. Do you want to talk about what's going on?",
+      "ur": "بتانے کا شکریہ۔ کیا آپ اس بارے میں بات کرنا چاہیں گے کہ کیا چل رہا ہے؟",
+      "ur-roman": "Batane ka shukriya. Kya aap baat karna chahenge ke kya chal raha hai?"
+     },
+     "ack": null,
+     "then": "@end_quiet"
+    },
+    "stopped": {
+     "say": {
+      "en": "Of course, let's stop here.",
+      "ur": "ضرور، یہیں رک جاتے ہیں۔",
+      "ur-roman": "Zaroor, yahin ruk jaate hain."
+     },
+     "then": "@end"
+    }
+   }
+  },
+  "grounding": {
+   "exercise_id": "dwm_grounding",
+   "mode": "grounding",
+   "steps": {
+    "offer": {
+     "say": {
+      "en": "Would you like to try a short grounding exercise with me? It just means noticing a few things around you.",
+      "ur": "کیا آپ میرے ساتھ ایک مختصر گراؤنڈنگ مشق کرنا چاہیں گے؟ اس میں بس اپنے آس پاس کی چند چیزوں پر دھیان دینا ہوتا ہے۔",
+      "ur-roman": "Kya aap mere saath ek chhoti si grounding exercise karna chahenge? Is mein bas apne aas paas ki kuch cheezon pe dhyan dena hota hai."
+     },
+     "ack": "Acknowledge what the user just said in one short, warm sentence.",
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "policy": {
+      "accept": "accept_offer",
+      "decline": "decline_offer",
+      "stop": "decline_offer",
+      "what_is_it": "ask_what_is_it"
+     },
+     "on": {
+      "accept": "start",
+      "decline": "why_not",
+      "stop": "@end",
+      "what_is_it": "explain"
+     }
+    },
+    "explain": {
+     "say": {
+      "en": "It takes about two minutes. We notice what you're feeling, slow down a little, then bring your attention to what you can see, hear and touch. You can stop any time. Shall we?",
+      "ur": "یہ تقریباً دو منٹ لیتی ہے۔ ہم دیکھتے ہیں کہ آپ کیا محسوس کر رہے ہیں، تھوڑا آہستہ ہوتے ہیں، پھر دھیان اس پر لاتے ہیں جو آپ دیکھ، سن اور چھو سکتے ہیں۔ آپ جب چاہیں رک سکتے ہیں۔ شروع کریں؟",
+      "ur-roman": "Takreeban do minute lagte hain. Hum dekhte hain ke aap kya feel kar rahe hain, thora slow hote hain, phir dhyan us pe laate hain jo aap dekh, sun aur chhoo sakte hain. Aap jab chahein ruk sakte hain. Shuru karein?"
+     },
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "policy": {
+      "accept": "accept_offer",
+      "decline": "decline_offer",
+      "stop": "decline_offer",
+      "what_is_it": "ask_what_is_it"
+     },
+     "on": {
+      "accept": "start",
+      "decline": "why_not",
+      "stop": "@end",
+      "what_is_it": "@repair"
+     }
+    },
+    "start": {
+     "say": {
+      "en": "Okay, let's go slowly. You can stop any time.",
+      "ur": "ٹھیک ہے، آہستہ آہستہ چلتے ہیں۔ آپ جب چاہیں رک سکتے ہیں۔",
+      "ur-roman": "Theek hai, aahista aahista chalte hain. Aap jab chahein ruk sakte hain."
+     },
+     "then": "g1"
+    },
+    "g1": {
+     "say": {
+      "en": "First, just notice what you're feeling right now. You don't have to change it. What's there?",
+      "ur": "پہلے، بس یہ دیکھیں کہ ابھی آپ کیا محسوس کر رہے ہیں۔ اسے بدلنا ضروری نہیں۔ کیا محسوس ہو رہا ہے؟",
+      "ur-roman": "Pehle, bas notice karein ke abhi aap kya feel kar rahe hain. Isay badalna zaroori nahi. Kya feel ho raha hai?"
+     },
+     "expect": [
+      "answer",
+      "next",
+      "stop"
+     ],
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "g2",
+      "next": "g2",
+      "stop": "stopped"
+     }
+    },
+    "g2": {
+     "say": {
+      "en": "Now let's slow down a little. Breathe out slowly and press your feet into the floor. Tell me when you've done that.",
+      "ur": "اب تھوڑا آہستہ ہوتے ہیں۔ آہستہ سے سانس باہر نکالیں اور پاؤں زمین پر دبائیں۔ ہو جائے تو مجھے بتائیں۔",
+      "ur-roman": "Ab thora slow hote hain. Aahista se saans bahar nikalein aur pair zameen pe dabaayein. Ho jaye to mujhe batayein."
+     },
+     "ack": "Reflect the user's answer back in a few warm words.",
+     "expect": [
+      "answer",
+      "next",
+      "stop"
+     ],
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "g3",
+      "next": "g3",
+      "stop": "stopped"
+     }
+    },
+    "g3": {
+     "say": {
+      "en": "Look around you. What are a few things you can see?",
+      "ur": "اپنے ارد گرد دیکھیں۔ آپ کو کون سی چند چیزیں نظر آ رہی ہیں؟",
+      "ur-roman": "Apne aas paas dekhein. Aap ko kaun si kuch cheezein nazar aa rahi hain?"
+     },
+     "expect": [
+      "answer",
+      "next",
+      "stop"
+     ],
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "g4",
+      "next": "g4",
+      "stop": "stopped"
+     }
+    },
+    "g4": {
+     "say": {
+      "en": "And what can you hear right now?",
+      "ur": "اور ابھی آپ کو کیا سنائی دے رہا ہے؟",
+      "ur-roman": "Aur abhi aap ko kya sunai de raha hai?"
+     },
+     "ack": "Reflect the user's answer back in a few warm words.",
+     "expect": [
+      "answer",
+      "next",
+      "stop"
+     ],
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "g5",
+      "next": "g5",
+      "stop": "stopped"
+     }
+    },
+    "g5": {
+     "say": {
+      "en": "What's something you can touch, like your chair or your sleeve?",
+      "ur": "کوئی ایسی چیز جسے آپ چھو سکیں، جیسے کرسی یا آستین؟",
+      "ur-roman": "Koi aisi cheez jisay aap chhoo sakein, jaise chair ya aasteen?"
+     },
+     "ack": "Reflect the user's answer back in a few warm words.",
+     "expect": [
+      "answer",
+      "next",
+      "stop"
+     ],
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "g6",
+      "next": "g6",
+      "stop": "stopped"
+     }
+    },
+    "g6": {
+     "say": {
+      "en": "Now bring your attention back to where you are and who's around you. This doesn't make feelings disappear, but it can help you stay steady.",
+      "ur": "اب اپنا دھیان واپس وہاں لائیں جہاں آپ ہیں اور جو آپ کے آس پاس ہیں۔ اس سے احساسات ختم نہیں ہوتے، لیکن یہ آپ کو سنبھلے رہنے میں مدد دے سکتا ہے۔",
+      "ur-roman": "Ab apna dhyan wapas wahan laayein jahan aap hain aur jo aap ke aas paas hain. Is se feelings khatam nahi hotin, lekin yeh aap ko sambhle rehne mein madad de sakta hai."
+     },
+     "ack": "Reflect the user's answer back in a few warm words.",
+     "then": "post_check"
+    },
+    "why_not": {
+     "say": {
+      "en": "That's okay. Is it more that this kind of exercise isn't your thing, or that now isn't a good time?",
+      "ur": "کوئی بات نہیں۔ کیا اس طرح کی مشق آپ کو پسند نہیں، یا ابھی وقت مناسب نہیں؟",
+      "ur-roman": "Koi baat nahi. Kya is tarah ki exercise aap ko pasand nahi, ya abhi time theek nahi?"
+     },
+     "expect": [
+      "not_for_me",
+      "not_now",
+      "decline",
+      "stop",
+      "answer"
+     ],
+     "clarify": "clarify_why",
+     "on": {
+      "not_for_me": "alt_offer",
+      "decline": "alt_offer",
+      "answer": "alt_offer",
+      "not_now": "not_now",
+      "stop": "@end"
+     }
+    },
+    "alt_offer": {
+     "say": {
+      "en": "Fair enough. Another option is slow breathing with me for a minute. Want to try that, or shall we just keep talking?",
+      "ur": "ٹھیک ہے۔ ایک اور طریقہ میرے ساتھ ایک منٹ آہستہ سانس لینا ہے۔ وہ آزمائیں، یا بس باتیں کرتے رہیں؟",
+      "ur-roman": "Theek hai. Ek aur option mere saath ek minute aahista saans lena hai. Woh try karein, ya bas baatein karte rahein?"
+     },
+     "ack": null,
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "on": {
+      "accept": "@journey:breathing:start",
+      "decline": "@end",
+      "stop": "@end",
+      "what_is_it": "@journey:breathing:explain"
+     }
+    },
+    "not_now": {
+     "say": {
+      "en": "Sure, we can do it another time.",
+      "ur": "ضرور، کسی اور وقت کر لیں گے۔",
+      "ur-roman": "Zaroor, kisi aur waqt kar lenge."
+     },
+     "then": "@end"
+    },
+    "post_check": {
+     "say": {
+      "en": "How are you feeling now?",
+      "ur": "اب کیسا محسوس ہو رہا ہے؟",
+      "ur-roman": "Ab kaisa feel ho raha hai?"
+     },
+     "expect": [
+      "answer",
+      "stop"
+     ],
+     "store": "mood_text",
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "go_to",
+      "stop": "@end"
+     },
+     "branch": "mood"
+    },
+    "go_to": {
+     "say": {
+      "en": "Would you like me to remember this as your go-to for when things feel heavy?",
+      "ur": "کیا میں اسے آپ کی پسندیدہ مشق کے طور پر یاد رکھوں، جب دل بھاری ہو؟",
+      "ur-roman": "Kya main isay aap ki go-to exercise ke taur pe yaad rakhoon, jab dil bhaari ho?"
+     },
+     "ack": "Reflect the user's answer back in a few warm words.",
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "on": {
+      "accept": "saved_end",
+      "decline": "plain_end",
+      "stop": "plain_end",
+      "what_is_it": "plain_end"
+     }
+    },
+    "saved_end": {
+     "say": {
+      "en": "Done, I'll remember it.",
+      "ur": "ٹھیک ہے، میں یاد رکھوں گا۔",
+      "ur-roman": "Done, main yaad rakhunga."
+     },
+     "ui": {
+      "name": "save_go_to"
+     },
+     "then": "@end"
+    },
+    "plain_end": {
+     "say": {
+      "en": "No problem.",
+      "ur": "کوئی بات نہیں۔",
+      "ur-roman": "Koi baat nahi."
+     },
+     "then": "@end"
+    },
+    "worse_end": {
+     "say": {
+      "en": "Thank you for telling me. Do you want to talk about what's going on?",
+      "ur": "بتانے کا شکریہ۔ کیا آپ اس بارے میں بات کرنا چاہیں گے کہ کیا چل رہا ہے؟",
+      "ur-roman": "Batane ka shukriya. Kya aap baat karna chahenge ke kya chal raha hai?"
+     },
+     "ack": null,
+     "then": "@end_quiet"
+    },
+    "stopped": {
+     "say": {
+      "en": "Of course, let's stop here.",
+      "ur": "ضرور، یہیں رک جاتے ہیں۔",
+      "ur-roman": "Zaroor, yahin ruk jaate hain."
+     },
+     "then": "@end"
+    }
+   }
+  },
+  "plan": {
+   "exercise_id": "pmplus_get_going",
+   "mode": "plan",
+   "steps": {
+    "start": {
+     "say": {
+      "en": "Let's pick one small thing.",
+      "ur": "چلیں ایک چھوٹا سا کام چنتے ہیں۔",
+      "ur-roman": "Chalein ek chhota sa kaam chunte hain."
+     },
+     "then": "t1"
+    },
+    "t1": {
+     "say": {
+      "en": "What's one small thing you could do today or tomorrow, something pleasant or useful? Even a short walk or chai with someone counts.",
+      "ur": "آج یا کل آپ کون سا ایک چھوٹا سا کام کر سکتے ہیں، کچھ اچھا لگنے والا یا کام کا؟ تھوڑی سی سیر یا کسی کے ساتھ چائے بھی شمار ہوتی ہے۔",
+      "ur-roman": "Aaj ya kal aap kaunsa ek chhota sa kaam kar sakte hain, kuch acha lagne wala ya kaam ka? Thori si walk ya kisi ke saath chai bhi count hoti hai."
+     },
+     "expect": [
+      "answer",
+      "stop"
+     ],
+     "store": "activity",
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "t2",
+      "stop": "stopped"
+     }
+    },
+    "t2": {
+     "say": {
+      "en": "When could you do it? The more specific, the easier.",
+      "ur": "یہ آپ کب کر سکتے ہیں؟ جتنا واضح وقت، اتنا آسان۔",
+      "ur-roman": "Yeh aap kab kar sakte hain? Jitna specific time, utna asaan."
+     },
+     "ack": "Reflect the user's answer back in a few warm words.",
+     "expect": [
+      "answer",
+      "stop"
+     ],
+     "store": "when",
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "t3",
+      "stop": "stopped"
+     }
+    },
+    "t3": {
+     "say": {
+      "en": "How sure do you feel that you'll do it, from 0 to 10?",
+      "ur": "آپ کو کتنا یقین ہے کہ آپ یہ کر لیں گے، 0 سے 10 تک؟",
+      "ur-roman": "Aap ko kitna yaqeen hai ke aap yeh kar lenge, 0 se 10 tak?"
+     },
+     "ack": "Reflect the user's answer back in a few warm words.",
+     "expect": [
+      "number",
+      "stop"
+     ],
+     "store": "commitment",
+     "clarify": "clarify_number",
+     "on": {
+      "number": "t4",
+      "stop": "stopped"
+     },
+     "branch": "commitment"
+    },
+    "t3b": {
+     "say": {
+      "en": "Let's make it a bit smaller so it feels easier. What's a smaller version of it?",
+      "ur": "اسے تھوڑا چھوٹا کر لیتے ہیں تاکہ آسان لگے۔ اس کا چھوٹا سا روپ کیا ہو سکتا ہے؟",
+      "ur-roman": "Isay thora chhota kar lete hain taake asaan lage. Iska chhota version kya ho sakta hai?"
+     },
+     "expect": [
+      "answer",
+      "stop"
+     ],
+     "store": "activity",
+     "clarify": "clarify_answer",
+     "on": {
+      "answer": "t3",
+      "stop": "stopped"
+     }
+    },
+    "t4": {
+     "say": {
+      "en": "That's your plan: {activity}, {when}. I'll ask how it went next time.",
+      "ur": "تو آپ کا پلان یہ ہے: {activity}، {when}۔ اگلی بار میں پوچھوں گا کہ کیسا رہا۔",
+      "ur-roman": "To aap ka plan yeh hai: {activity}, {when}. Agli baar main poochunga ke kaisa raha."
+     },
+     "ui": {
+      "name": "save_task"
+     },
+     "then": "@end"
+    },
+    "stopped": {
+     "say": {
+      "en": "Of course, let's stop here.",
+      "ur": "ضرور، یہیں رک جاتے ہیں۔",
+      "ur-roman": "Zaroor, yahin ruk jaate hain."
+     },
+     "then": "@end"
+    }
+   }
+  },
+  "cbt": {
+   "exercise_id": "thought_check",
+   "mode": "cbt",
+   "steps": {
+    "offer": {
+     "say": {
+      "en": "Would you like to look at that thought together, one small question at a time?",
+      "ur": "کیا آپ اس سوچ کو میرے ساتھ مل کر دیکھنا چاہیں گے، ایک ایک چھوٹے سوال کے ساتھ؟",
+      "ur-roman": "Kya aap is soch ko mere saath mil kar dekhna chahenge, ek ek chhote sawal ke saath?"
+     },
+     "ack": "Acknowledge what the user just said in one short, warm sentence.",
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "policy": {
+      "accept": "accept_offer",
+      "decline": "decline_offer",
+      "stop": "decline_offer",
+      "what_is_it": "ask_what_is_it"
+     },
+     "on": {
+      "accept": "start",
+      "decline": "@r7",
+      "stop": "@end",
+      "what_is_it": "explain"
+     }
+    },
+    "explain": {
+     "say": {
+      "en": "It's a way of checking a thought that's weighing on you: what makes it feel true, what doesn't quite fit, and whether there's a kinder way to see it. You can stop any time. Want to try?",
+      "ur": "یہ ایک طریقہ ہے کسی بوجھل سوچ کو جانچنے کا: کیا چیز اسے سچ محسوس کراتی ہے، کیا چیز پوری طرح میل نہیں کھاتی، اور کیا اسے دیکھنے کا کوئی نرم طریقہ ہے۔ آپ جب چاہیں رک سکتے ہیں۔ کوشش کریں؟",
+      "ur-roman": "Yeh ek tareeqa hai kisi bhaari soch ko check karne ka: kya cheez isay sach feel karwati hai, kya cheez poori tarah fit nahi hoti, aur kya isay dekhne ka koi narm tareeqa hai. Aap jab chahein ruk sakte hain. Try karein?"
+     },
+     "expect": [
+      "accept",
+      "decline",
+      "what_is_it",
+      "stop"
+     ],
+     "clarify": "clarify_yesno",
+     "policy": {
+      "accept": "accept_offer",
+      "decline": "decline_offer",
+      "stop": "decline_offer",
+      "what_is_it": "ask_what_is_it"
+     },
+     "on": {
+      "accept": "start",
+      "decline": "@r7",
+      "stop": "@end",
+      "what_is_it": "@repair"
+     }
+    },
+    "start": {
+     "say": {
+      "en": "Okay, let's take it slowly, one question at a time.",
+      "ur": "ٹھیک ہے، آہستہ آہستہ، ایک ایک سوال کر کے چلتے ہیں۔",
+      "ur-roman": "Theek hai, aahista aahista, ek ek sawal kar ke chalte hain."
+     },
+     "then": "@handoff_cbt"
+    }
+   }
+  }
+ }
+}
