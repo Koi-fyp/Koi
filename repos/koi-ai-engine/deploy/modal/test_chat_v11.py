@@ -149,3 +149,27 @@ async def test_risk_post_reply_cap_emits_unavailable():
               if part.startswith("event: risk") or part.startswith("event: done")]
     assert frames[0] == {"status": "unavailable"}
     assert frames[-1]["risk"] == {"status": "unavailable"}
+
+
+@pytest.mark.asyncio
+async def test_audio_emits_transcript_before_companion_state():
+    result = {
+        "status": "ok", "risk_category": "LOW", "transcript": "hello from audio",
+        "language": "en", "crisis_score": 0.1,
+    }
+    app = build_app(
+        Engine(), Tokenizer(), lambda token: {"sub": "test"},
+        lambda schema, **kwargs: kwargs,
+        {"crisis_client": FakeCrisisClient(result)},
+    )
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
+        response = await http.post(
+            "/api/v1/chat", headers={"Authorization": "Bearer test"},
+            files={
+                "payload": (None, json.dumps({"language": "en"})),
+                "audio": ("voice.wav", b"audio"),
+            },
+        )
+    assert response.status_code == 200
+    names = [part.splitlines()[0][7:] for part in response.text.strip().split("\n\n")]
+    assert names.index("transcript") < names.index("companion_state")

@@ -62,7 +62,7 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=4000)
+    message: str | None = Field(default=None, max_length=4000)
     session_history: list[ChatMessage] = Field(default_factory=list)
     exercise_state: str | None = None
     client_event: str | None = None
@@ -113,7 +113,7 @@ async def _parse_chat_request(request: Request) -> ParsedChat:
         if len(data) > limits[name]:
             raise HTTPException(413, f"{name} file too large")
         media[name] = data or None
-    has_text = bool(parsed.message.strip())
+    has_text = bool(parsed.message and parsed.message.strip())
     has_audio = media["audio"] is not None
     has_video = media["video"] is not None
     allowed = (
@@ -266,10 +266,17 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                     out = item.outputs[0].text
                 return None, iter((out,))
             # Director is synchronous and intentionally isolated from the event loop.
-            director_events = await asyncio.to_thread(
-                director.handle_turn, turn, req.exercise_state, secret=secret,
-                phrase_fn=lambda d: asyncio.run_coroutine_threadsafe(phrase_async(d), loop).result(timeout=20)
-            )
+            handler = director.handle_turn
+            if tier in {"HIGH", "CRITICAL"} and req.exercise_state:
+                handler = director.on_risk
+                director_events = await asyncio.to_thread(
+                    handler, req.exercise_state, tier, time.time(), secret=secret
+                )
+            else:
+                director_events = await asyncio.to_thread(
+                    handler, turn, req.exercise_state, secret=secret,
+                    phrase_fn=lambda d: asyncio.run_coroutine_threadsafe(phrase_async(d), loop).result(timeout=20)
+                )
 
         async def stream():
             stream_risk = risk
