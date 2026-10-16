@@ -468,3 +468,5 @@ P3.7: done contract has handoff/exercise fields but transcript/risk additive sch
 P3.8: language/script instruction absent.
 
 P3.9: trace checker added, smoke scripts not fully risk-aware.
+
+P3.10: not deployed; P3 contract prerequisites incomplete.
