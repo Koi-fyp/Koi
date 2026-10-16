@@ -8,3 +8,4 @@ P2 crisis hardening + ship: PASS-WITH-NOTES — encoder manifest mismatch (audio
 2026-10-16T19:24:52Z | P4.2 | DONE | commit 4c2fb2c | verify: git branch -a -vv
 2026-10-16T19:25:56Z | P4.3 | STARTED
 2026-10-16T19:47:09Z | P4.1b | STARTED
+2026-10-16T19:55:22Z | P4.1b | DONE | commit f4bcbcf | verify: git show --stat --oneline f4bcbcf
