@@ -18,6 +18,9 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.request as _ur
+_ur.HTTPRedirectHandler.max_repeats = 200      # Modal answers slow (cold-start) requests with HTTP 303 poll redirects
+_ur.HTTPRedirectHandler.max_redirections = 200  # to the SAME url; urllib's default limit (4 repeats) gives up too early
 import urllib.request
 
 try:
@@ -42,19 +45,20 @@ PROMPTS = [
 
 
 def sse_frames(resp):
-    ev, data = None, []
+    ev, data, event_count = None, [], 0
     for raw in resp:
         line = raw.decode("utf-8", "replace").rstrip("\r\n")
         if line == "":
             if ev is not None or data:
-                yield ev, "\n".join(data)
-            ev, data = None, []
+                yield ev, "\n".join(data), event_count, len(data)
+            ev, data, event_count = None, [], 0
         elif line.startswith("event:"):
             ev = line[6:].strip()
+            event_count += 1
         elif line.startswith("data:"):
             data.append(line[5:].lstrip(" "))
     if ev is not None or data:
-        yield ev, "\n".join(data)
+        yield ev, "\n".join(data), event_count, len(data)
 
 
 def ask(base, token, message, attempt=1):
@@ -68,12 +72,12 @@ def ask(base, token, message, attempt=1):
     try:
         with urllib.request.urlopen(req, timeout=170) as resp:
             events = []
-            for ev, data in sse_frames(resp):
+            for ev, data, event_count, data_count in sse_frames(resp):
                 try:
                     payload = json.loads(data) if data else None
                 except ValueError:
                     payload = {"_unparseable": data[:80]}
-                events.append((ev, payload))
+                events.append((ev, payload, event_count, data_count))
         return events, time.time() - t0, None
     except urllib.error.HTTPError as e:
         return [], time.time() - t0, "HTTP %d %s" % (e.code, e.read().decode("utf-8", "replace")[:200])
@@ -95,18 +99,27 @@ def main(argv):
         events, secs, err = ask(base, token, text)
         if err:
             problems.append("%s: %s" % (text[:30], err))
-            rows.append((lang, None, None, expected, secs, err))
+            rows.append((lang, None, None, expected, secs, err, ""))
             continue
-        names = [e for e, _ in events]
-        cs = next((p for e, p in events if e == "companion_state"), None)
+        names = [e for e, _, _, _ in events]
+        if any(ec != 1 or dc != 1 for _, _, ec, dc in events):
+            problems.append("%s: event has multiple event/data lines" % text[:30])
+        cs = next((p for e, p, _, _ in events if e == "companion_state"), None)
         if cs is None:
-            cs = next((p.get("companion_state") for e, p in events if e == "done" and p), None)
+            cs = next((p.get("companion_state") for e, p, _, _ in events if e == "done" and p), None)
             problems.append("%s: no companion_state event" % text[:30])
         first_delta = names.index("delta") if "delta" in names else None
         cs_idx = names.index("companion_state") if "companion_state" in names else None
         if first_delta is not None and (cs_idx is None or cs_idx > first_delta):
             problems.append("%s: companion_state NOT before first delta" % text[:30])
-        deltas = "".join(p.get("text", "") for e, p in events if e == "delta" and p)
+        deltas = "".join(p.get("text", "") for e, p, _, _ in events if e == "delta" and p)
+        done = next((p for e, p, _, _ in events if e == "done" and p), None)
+        if not deltas:
+            problems.append("%s: no delta event" % text[:30])
+        if done and done.get("full_text") != deltas:
+            problems.append("%s: done.full_text differs from joined deltas" % text[:30])
+        if done and done.get("companion_state") != cs:
+            problems.append("%s: done.companion_state differs from streamed state" % text[:30])
         if "{" in deltas or '"reply"' in deltas:
             problems.append("%s: JSON syntax leaked into delta text" % text[:30])
         emo = (cs or {}).get("emotion")
@@ -115,14 +128,17 @@ def main(argv):
             problems.append("%s: emotion %r not in enum" % (text[:30], emo))
         if not isinstance(inten, (int, float)) or not (0 <= inten <= 1):
             problems.append("%s: intensity %r not in 0..1" % (text[:30], inten))
-        rows.append((lang, emo, inten, expected, secs, deltas.replace("\n", " ")[:70]))
+        done_intensity = (done or {}).get("companion_state", {}).get("intensity")
+        if not isinstance(done_intensity, (int, float)) or not (0 <= done_intensity <= 1):
+            problems.append("%s: done intensity %r not in 0..1" % (text[:30], done_intensity))
+        rows.append((lang, emo, inten, expected, secs, deltas.replace("\n", " ")[:70], done.get("full_text", "") if done else ""))
 
-    print("%-9s %-8s %-9s %-6s %-14s %s" % ("lang", "emotion", "intensity", "match", "expected", "reply start"))
-    for lang, emo, inten, expected, secs, tail in rows:
+    print("%-9s %-8s %-9s %-6s %-14s %s" % ("lang", "emotion", "intensity", "match", "expected", "reply"))
+    for lang, emo, inten, expected, secs, tail, full_text in rows:
         if emo is None and inten is None:
             print("%-9s ERROR %s" % (lang, tail))
             continue
-        print("%-9s %-8s %-9s %-6s %-14s %s" % (lang, emo, inten, "yes" if emo in expected else "no", "/".join(sorted(expected)), tail))
+        print("%-9s %-8s %-9s %-6s %-14s %s" % (lang, emo, inten, "yes" if emo in expected else "no", "/".join(sorted(expected)), full_text))
 
     seen = [r[1] for r in rows if r[1]]
     ints = [r[2] for r in rows if isinstance(r[2], (int, float))]

@@ -39,6 +39,17 @@ CHAT_JSON_SCHEMA = {
 }
 
 
+def _clamp_state(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"emotion": "neutral", "intensity": 0.4}
+    intensity = value.get("intensity", 0.4)
+    try:
+        intensity = max(0.0, min(1.0, float(intensity)))
+    except (TypeError, ValueError):
+        intensity = 0.4
+    return {"emotion": value.get("emotion", "neutral"), "intensity": intensity}
+
+
 class ChatMessage(BaseModel):
     role: str
     content: str
@@ -119,13 +130,15 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             previous = text
             for kind, value in extractor.feed(chunk):
                 if kind == "companion_state":
-                    state = value
-                    yield "companion_state", value
+                    state = _clamp_state(value)
+                    yield "companion_state", state
                 else:
                     reply = value
                     yield "delta", {"text": value}
+            if os.environ.get("KOI_DEBUG_TRACE") == "1":
+                yield "_trace", "raw model text len=%d first80=%r" % (len(text), text[:80])
         if state is None:
-            state = {"emotion": "neutral", "intensity": 0.4}
+            state = _clamp_state(None)
         yield "_complete", {"reply": reply, "state": state, "trimmed": trimmed}
 
     @app.post("/api/v1/chat")
@@ -175,6 +188,10 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
 
         async def stream():
             first = True
+            streamed_reply: list[str] = []
+            streamed_state = None
+            trace: list[str] = []
+            emitted_state_tokens: set[str] = set()
             def frame(name, value):
                 return f"event: {name}\ndata: {json.dumps(value, ensure_ascii=False)}\n\n"
             for event in director_events:
@@ -184,35 +201,53 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 if event.get("type") in ("ui_action", "companion_state") and event.get("type") == "ui_action":
                     yield frame("ui_action", {k: event[k] for k in ("name", "args")})
                 elif event.get("type") == "companion_state":
-                    yield frame("companion_state", {k: event[k] for k in ("emotion", "intensity")})
+                    state = _clamp_state(event)
+                    streamed_state = state
+                    yield frame("companion_state", state)
                 elif event.get("type") == "sentence":
                     if first:
                         yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
-                    yield frame("delta", {"text": event["text"]})
+                    text = event["text"]
+                    streamed_reply.append(text)
+                    yield frame("delta", {"text": text})
             crisis = next((e for e in director_events if e.get("type") == "handoff" and e.get("to") == "crisis"), None)
             has_director_state = any(e.get("type") == "companion_state" for e in director_events)
-            complete = {"reply": "", "state": {"emotion": "neutral", "intensity": 0.4}, "trimmed": 0}
-            if not crisis or True:
-                async for name, value in normal_events(req, uid, t0):
-                    if name == "_complete": complete = value
-                    elif name == "companion_state" and (not director_events or not has_director_state):
-                        if first: yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
-                        yield frame(name, value)
-                    elif name == "delta" and (not director_events or crisis):
-                        if first: yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
-                        yield frame(name, value)
+            has_director_reply = any(e.get("type") == "sentence" for e in director_events)
+            complete = {"reply": "", "state": _clamp_state(None), "trimmed": 0}
+            async for name, value in normal_events(req, uid, t0):
+                if name == "_trace":
+                    trace.append(value)
+                elif name == "_complete":
+                    complete = value
+                elif name == "companion_state" and not has_director_state:
+                    streamed_state = value
+                    if first:
+                        yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
+                    yield frame(name, value)
+                elif name == "delta" and (not has_director_reply or crisis):
+                    streamed_reply.append(value["text"])
+                    if first: yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
+                    yield frame(name, value)
             handoff = crisis
             for event in director_events:
                 if event.get("type") == "handoff" and event.get("to") == "crisis":
                     yield frame("handoff", {"to": "crisis", "reason": event.get("reason", "")})
                 elif event.get("type") == "state":
-                    yield frame("state", {"exercise_state": event["token"], **({"trace": event["trace"]} if os.environ.get("KOI_DEBUG_TRACE") == "1" else {})})
-            yield frame("done", {"full_text": complete["reply"], "companion_state": complete["state"],
+                    token = event["token"]
+                    if token in emitted_state_tokens:
+                        continue
+                    emitted_state_tokens.add(token)
+                    yield frame("state", {"exercise_state": token, **({"trace": event.get("trace", [])} if os.environ.get("KOI_DEBUG_TRACE") == "1" else {})})
+            done_state = streamed_state or complete["state"]
+            payload = {"full_text": "".join(streamed_reply), "companion_state": _clamp_state(done_state),
                                  "exercise_state": next((e["token"] for e in director_events if e.get("type") == "state"), None),
                                  "ui_actions": [e for e in director_events if e.get("type") == "ui_action"],
                                  "handoff": {"to": "crisis", "reason": handoff.get("reason", "")} if handoff else None,
                                  "total_generation_s": round(time.monotonic()-t0, 3),
-                                 "history_trimmed": complete["trimmed"]})
+                                 "history_trimmed": complete["trimmed"]}
+            if os.environ.get("KOI_DEBUG_TRACE") == "1":
+                payload["trace"] = trace
+            yield frame("done", payload)
         return StreamingResponse(stream(), media_type="text/event-stream")
 
     @app.get("/health")

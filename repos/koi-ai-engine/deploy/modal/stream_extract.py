@@ -15,6 +15,12 @@ class StreamExtractor:
         self._buffer += chunk
         events: list[tuple[str, Any]] = []
         source = self._buffer.lstrip()
+        if source.startswith("```"):
+            newline = source.find("\n")
+            if newline >= 0:
+                source = source[newline + 1:].lstrip()
+                if source.endswith("```"):
+                    source = source[:-3].rstrip()
         if not self._state_emitted:
             marker = '"companion_state"'
             start = source.find(marker)
@@ -32,6 +38,11 @@ class StreamExtractor:
             value, end = json.JSONDecoder().raw_decode(source)
         except json.JSONDecodeError:
             return events
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                raise ValueError("structured response string is not JSON")
         if not isinstance(value, dict) or not isinstance(value.get("reply"), str):
             raise ValueError("structured response must contain a string reply")
         self._done = True
