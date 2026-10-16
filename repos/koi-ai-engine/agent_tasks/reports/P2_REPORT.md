@@ -989,3 +989,5 @@ Full log also written to results_urdu_ruab.txt
 ````
 
 P2.1 resumed: prior report contains run_crisis inputs/outputs/assets inventory; no RAG holdout run.
+
+P2.2 resumed: prior implementation/report covers KOI_RAG_ENABLED flag behavior and fallback cases.
