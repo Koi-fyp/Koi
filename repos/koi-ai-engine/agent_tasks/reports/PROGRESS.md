@@ -23,3 +23,4 @@ RAG On
 2026-10-16T20:30:17Z | P2.1 | STARTED
 2026-10-16T20:30:17Z | P2.1 | DONE | commit 5b3cd89 | verify: report P2_REPORT.md inventory
 2026-10-16T20:30:17Z | P2.2 | STARTED
+2026-10-16T20:30:17Z | P2.2 | DONE | commit af2384c | verify: prior P2 report flag/fallback evidence
