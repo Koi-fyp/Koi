@@ -1,9 +1,15 @@
 import type { KoiEmotion } from '../../components/avatar/VRMAvatarController';
 export interface ChatTurn { role: 'user' | 'assistant'; content: string; }
-export interface ChatRequest { message: string; session_history: ChatTurn[]; }
+export interface ChatRequest { message: string; session_history: ChatTurn[]; audio?: Blob; video?: Blob; }
 export interface CompanionState { emotion: KoiEmotion; intensity: number; }
-export interface ChatResponse { reply: string; companion_state: CompanionState; latency_ms: number; }
-export interface ChatSendOptions { signal: AbortSignal; userMessageId: string; assistantMessageId: string; }
+export interface ChatRisk { status: string; risk_category?: string; confidence?: string; intervention_content?: string[]; }
+export interface ChatResponse { reply: string; companion_state: CompanionState; latency_ms: number; risk?: ChatRisk; }
+export interface ChatSendOptions {
+  signal: AbortSignal;
+  userMessageId: string;
+  assistantMessageId: string;
+  onEvent?: (event: string, payload: Record<string, unknown>) => void;
+}
 export interface ChatAdapter { send(request: ChatRequest, options: ChatSendOptions): Promise<ChatResponse>; }
 export class ChatError extends Error {
   constructor(public readonly code: 'configuration' | 'authentication' | 'http' | 'invalid-response' | 'timeout' | 'network' | 'storage', message: string, public readonly status?: number) { super(message); this.name = 'ChatError'; }
@@ -25,7 +31,7 @@ export function parseChatResponse(raw: unknown): ChatResponse {
   const state = value.companion_state && typeof value.companion_state === 'object' ? value.companion_state as Record<string, unknown> : {};
   const known = typeof state.emotion === 'string' && ['neutral', 'joy', 'angry', 'sorrow', 'fun'].includes(state.emotion);
   const emotion = known ? state.emotion as KoiEmotion : 'neutral';
-  return { reply: value.reply, latency_ms: value.latency_ms, companion_state: {
+  return { reply: value.reply, latency_ms: value.latency_ms, risk: value.risk as ChatRisk | undefined, companion_state: {
     emotion, intensity: known && typeof state.intensity === 'number' && Number.isFinite(state.intensity) ? Math.min(1, Math.max(0, state.intensity)) : 0,
   } };
 }

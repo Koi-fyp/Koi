@@ -34,7 +34,13 @@ export class ConversationSession {
     const user: SessionMessage = { id: userMessageId, conversationId: this.conversationId, sender: 'user', content: request.message, timestamp: new Date(), status: 'pending' };
     this.patch({ messages: [...this.snapshot.messages, user], pending: true, error: null, conversationState: 'thinking' });
     try {
-      const result = parseChatResponse(await this.adapter.send(request, { signal: abort.signal, userMessageId, assistantMessageId }));
+      const result = parseChatResponse(await this.adapter.send(request, {
+        signal: abort.signal, userMessageId, assistantMessageId,
+        onEvent: (event, payload) => {
+          if (event === 'companion_state') this.patch({ companion: parseChatResponse({ reply: 'event', latency_ms: 0, companion_state: payload }).companion_state });
+          if (event === 'delta' && typeof payload.text === 'string') this.patch({ subtitle: payload.text, conversationState: 'speaking' });
+        },
+      }));
       if (abort.signal.aborted || version !== this.version || !this.active || this.disposed) return;
       this.patch({ messages: [...this.snapshot.messages.map((message) => message.id === userMessageId ? { ...message, status: 'completed' as const } : message),
         { id: assistantMessageId, conversationId: this.conversationId, sender: 'ai', content: result.reply, timestamp: new Date(), status: 'completed', companion_state: result.companion_state }],
