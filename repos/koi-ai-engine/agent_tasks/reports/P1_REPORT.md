@@ -52,3 +52,5 @@ P1.b commands: test_chat_contract 10 passed; test_crisis_core 5 passed; test_ada
 
 P1.c: created smoke_only.bat with no deploy commands, URL extraction from live SUMMARY or args, live2 outputs. Not run: KOI_TOKEN unavailable in this session.
 P1.d: created stdlib trace_check.py; checks 3 turns, SSE ordering, enum, debug/system prompt leakage, full_text and state parity. Live run not possible without token/URL.
+
+P1.e: hygiene scan found only HEAD:.env.template and tracked .env.example/.env.template names; no private key, PEM, serviceAccount, or long API-key matches.
