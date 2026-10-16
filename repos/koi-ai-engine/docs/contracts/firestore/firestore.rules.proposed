@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function userShape(data) {
+      return data.keys().hasOnly([
+        'koiUuid', 'createdAt', 'lastActive', 'profile', 'classification',
+        'settings', 'stats', 'email', 'emailVerified', 'onboarding_complete',
+        'public_crypto_metadata'
+      ])
+      && (!data.keys().hasAny(['profile']) ||
+          data.profile.keys().hasOnly(['avatar', 'companion', 'language', 'notificationTime']))
+      && (!data.keys().hasAny(['classification']) ||
+          data.classification.keys().hasOnly([
+            'primary_profile', 'secondary_profile', 'severity_tier', 'ucla_score'
+          ]))
+      && (!data.keys().hasAny(['settings']) ||
+          data.settings.keys().hasOnly([
+            'notifications_enabled', 'sound_enabled', 'haptic_enabled'
+          ]))
+      && (!data.keys().hasAny(['stats']) ||
+          data.stats.keys().hasOnly([
+            'total_conversations', 'total_check_ins', 'current_streak',
+            'longest_streak', 'jigsaw_pieces'
+          ]))
+      && (!data.keys().hasAny(['public_crypto_metadata']) ||
+          data.public_crypto_metadata.keys().hasOnly(['salt']));
+    }
+
+    // Inventory: FIRESTORE_ACCESS_INVENTORY.md rows for users/{uid}.
+    match /users/{uid} {
+      // Separate create rule: all observed client/Admin-created keys are allowed,
+      // while unknown top-level and nested keys are rejected.
+      allow create: if isOwner(uid) && userShape(request.resource.data);
+
+      // Inventory rows for onboarding, crypto salt, email linking, and
+      // AuthService's merge writes.
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'koiUuid', 'createdAt', 'lastActive', 'profile', 'classification',
+          'settings', 'stats', 'email', 'emailVerified', 'onboarding_complete',
+          'public_crypto_metadata'
+        ])
+        && userShape(request.resource.data);
+
+      // No client row reads a user document except the owner.
+      allow read: if isOwner(uid);
+    }
+
+    // Inventory row: conversationService.ts:85-90.
+    // The message document has no owner field, and the code does not establish
+    // that conversationId equals request.auth.uid. Safely owner-checkable
+    // access is therefore intentionally denied pending the decision in
+    // RULES_NOTES.md.
+    match /conversations/{conversationId}/messages/{messageId} {
+      allow read, write: if false;
+    }
+
+    // Default deny is last.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
