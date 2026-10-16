@@ -50,19 +50,21 @@ class _Tokenizer:
         return {"input_ids": list(prompt)}
 
 
-async def _client():
+async def _client(risk=None):
     app = build_app(_Engine(), _Tokenizer(), lambda token: {"sub": "test"},
-                    lambda schema, **kwargs: kwargs)
+                    lambda schema, **kwargs: kwargs,
+                    {"crisis_client": __import__("crisis_client").FakeCrisisClient(
+                        risk or {"status": "unavailable"})})
     return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
 @pytest.mark.asyncio
 async def test_normal_event_contract():
-    async with await _client() as client:
+    async with await _client({"status": "ok", "risk_category": "LOW", "is_new": True}) as client:
         response = await client.post("/api/v1/chat", headers={"Authorization": "Bearer t"},
                                      json={"message": "hi"})
     events = [line[7:] for line in response.text.splitlines() if line.startswith("event: ")]
-    assert events == ["latency", "companion_state", "delta", "done"]
+    assert events == ["latency", "companion_state", "risk", "delta", "done"]
     frames = response.text.strip().split("\n\n")
     delta = json.loads(next(frame.split("data: ", 1)[1] for frame in frames if frame.startswith("event: delta")))
     assert "{" not in delta["text"]
@@ -103,7 +105,7 @@ async def test_real_shaped_stream_and_director_fallback_contract(monkeypatch):
     monkeypatch.setenv("KOI_DIRECTOR_SECRET", "test-secret")
     monkeypatch.setenv("KOI_DEBUG_TRACE", "1")
 
-    async with await _client() as client:
+    async with await _client({"status": "ok", "risk_category": "LOW", "is_new": True}) as client:
         response = await client.post(
             "/api/v1/chat",
             headers={"Authorization": "Bearer " + "test"},

@@ -15,11 +15,17 @@ try:
     from .stream_extract import StreamExtractor
 except ImportError:
     from stream_extract import StreamExtractor
+try:
+    from .crisis_client import CrisisClient
+except ImportError:
+    from crisis_client import CrisisClient
 
 MAX_MODEL_LEN = 8192
 MAX_REPLY_TOKENS = 512
 SYSTEM_PROMPT = (
     "You are KOI, a warm and emotionally supportive AI companion. "
+    "Reply in the same language and script as the user's latest message "
+    "(English, Urdu, or Roman Urdu). "
     # TODO: replace with KOI's approved production prompt.
 )
 CHAT_JSON_SCHEMA = {
@@ -63,6 +69,62 @@ class ChatRequest(BaseModel):
     risk: dict[str, Any] | None = None
     policy_event: str | None = None
     crisis_path: str | None = None
+    language: str | None = None
+    turn_id: str | None = None
+
+
+class ParsedChat:
+    def __init__(self, request: ChatRequest, audio: bytes | None = None,
+                 video: bytes | None = None):
+        self.request = request
+        self.audio = audio
+        self.video = video
+
+
+def _model_validate(data: dict[str, Any]) -> ChatRequest:
+    validator = getattr(ChatRequest, "model_validate", None)
+    return validator(data) if validator else ChatRequest.parse_obj(data)
+
+
+async def _parse_chat_request(request: Request) -> ParsedChat:
+    content_type = request.headers.get("content-type", "")
+    if not content_type.startswith("multipart/form-data"):
+        try:
+            return ParsedChat(_model_validate(await request.json()))
+        except ValueError as exc:
+            raise HTTPException(422, "invalid JSON payload") from exc
+    form = await request.form()
+    raw_payload = form.get("payload")
+    if not isinstance(raw_payload, str):
+        raise HTTPException(422, "multipart payload must include a JSON payload field")
+    try:
+        payload = json.loads(raw_payload)
+        parsed = _model_validate(payload)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(422, "payload must be valid JSON") from exc
+    limits = {"audio": 25 * 1024 * 1024, "video": 80 * 1024 * 1024}
+    media: dict[str, bytes | None] = {}
+    for name in ("audio", "video"):
+        upload = form.get(name)
+        if upload is None:
+            media[name] = None
+            continue
+        data = await upload.read()
+        if len(data) > limits[name]:
+            raise HTTPException(413, f"{name} file too large")
+        media[name] = data or None
+    has_text = bool(parsed.message.strip())
+    has_audio = media["audio"] is not None
+    has_video = media["video"] is not None
+    allowed = (
+        (has_text and not has_audio and not has_video)
+        or (not has_text and has_audio and not has_video)
+        or (has_text and not has_audio and has_video)
+        or (not has_text and has_audio and has_video)
+    )
+    if not allowed:
+        raise HTTPException(422, "allowed modalities are text, audio, text+video, or audio+video")
+    return ParsedChat(parsed, media["audio"], media["video"])
 
 
 def _setting(settings: Any, name: str, default: Any = None) -> Any:
@@ -73,6 +135,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
     settings = settings or {}
     max_len = _setting(settings, "MAX_MODEL_LEN", MAX_MODEL_LEN)
     max_reply = _setting(settings, "MAX_REPLY_TOKENS", MAX_REPLY_TOKENS)
+    crisis_client = _setting(settings, "crisis_client", None) or CrisisClient()
     app = FastAPI()
     origins = os.environ.get("KOI_CORS_ORIGINS", "*").split(",")
     app.add_middleware(CORSMiddleware, allow_origins=[x.strip() for x in origins],
@@ -90,7 +153,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             raise HTTPException(401, f"Invalid token: {exc}") from exc
         return result.get("sub", result) if isinstance(result, dict) else str(result)
 
-    def messages(req: ChatRequest) -> tuple[list[dict[str, str]], int]:
+    def messages(req: ChatRequest, message: str | None = None) -> tuple[list[dict[str, str]], int]:
         history = []
         for item in req.session_history:
             role = "assistant" if item.role == "model" else item.role
@@ -100,7 +163,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
         def render(h: list[dict[str, str]]) -> str:
             return tokenizer.apply_chat_template(
                 [{"role": "system", "content": SYSTEM_PROMPT}, *h,
-                 {"role": "user", "content": req.message}],
+                 {"role": "user", "content": message if message is not None else req.message}],
                 tokenize=False, add_generation_prompt=True)
         trimmed = 0
         while history:
@@ -114,10 +177,10 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             history.pop(0)
             trimmed += 1
         return [{"role": "system", "content": SYSTEM_PROMPT}, *history,
-                {"role": "user", "content": req.message}], trimmed
+                {"role": "user", "content": message if message is not None else req.message}], trimmed
 
-    async def normal_events(req: ChatRequest, uid: str, t0: float):
-        msg, trimmed = messages(req)
+    async def normal_events(req: ChatRequest, uid: str, t0: float, message: str | None = None):
+        msg, trimmed = messages(req, message)
         prompt = tokenizer.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
         params = sampling_factory(CHAT_JSON_SCHEMA, max_tokens=max_reply)
         extractor = StreamExtractor()
@@ -142,11 +205,33 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
         yield "_complete", {"reply": reply, "state": state, "trimmed": trimmed}
 
     @app.post("/api/v1/chat")
-    async def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
+    async def chat(request: Request, authorization: str | None = Header(default=None)):
         uid = auth(authorization)
+        parsed = await _parse_chat_request(request)
+        req = parsed.request
+        score_task = asyncio.create_task(crisis_client.score_async(
+            text=req.message or None, audio_bytes=parsed.audio, video_bytes=parsed.video,
+            language=req.language, turn_id=req.turn_id, uid=uid,
+        ))
+        wait_seconds = 3.0 if (
+            parsed.audio is not None
+            or req.exercise_state
+            or (req.client_event or "").startswith("start_")
+        ) else 1.0
+        risk = None
+        try:
+            risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=wait_seconds)
+        except asyncio.TimeoutError:
+            pass
+        except Exception:
+            risk = {"status": "unavailable"}
+        effective_message = (risk or {}).get("transcript") if isinstance(risk, dict) else None
+        effective_message = effective_message or req.message
+        if not effective_message:
+            raise HTTPException(422, "audio scoring did not return a transcript")
         # Validate roles before constructing a streaming response so malformed
         # requests retain the normal JSON 422 contract.
-        messages(req)
+        messages(req, effective_message)
         t0 = time.monotonic()
         director_events = []
         exercises = os.environ.get("KOI_EXERCISES") == "1"
@@ -158,15 +243,15 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             if policy_path not in sys.path:
                 sys.path.insert(0, policy_path)
             import director
-            risk = req.risk or {}
-            tier = risk.get("risk_category") if risk.get("risk_category") in {"LOW", "MODERATE", "HIGH", "CRITICAL"} else None
+            effective_risk = risk or {}
+            tier = effective_risk.get("risk_category") if effective_risk.get("risk_category") in {"LOW", "MODERATE", "HIGH", "CRITICAL"} else None
             if tier is None and req.policy_event == "crisis_resolved" and req.crisis_path:
                 tier = "LOW"
-            turn = {"text": req.message, "client_event": req.client_event or "none",
+            turn = {"text": effective_message, "client_event": req.client_event or "none",
                     "tier": tier, "now": time.time(), "token": req.exercise_state,
                     "policy_event": req.policy_event, "crisis_path": req.crisis_path}
-            if risk.get("is_new"):
-                turn.update(score=risk.get("crisis_score"), flags=risk.get("trigger_flags") or [])
+            if effective_risk.get("is_new"):
+                turn.update(score=effective_risk.get("crisis_score"), flags=effective_risk.get("trigger_flags") or [])
 
             loop = asyncio.get_running_loop()
 
@@ -187,10 +272,12 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             )
 
         async def stream():
+            stream_risk = risk
             first = True
             streamed_reply: list[str] = []
             streamed_state = None
             trace: list[str] = []
+            emitted_risk = False
             emitted_state_tokens: set[str] = set()
             def frame(name, value):
                 return f"event: {name}\ndata: {json.dumps(value, ensure_ascii=False)}\n\n"
@@ -214,7 +301,10 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             has_director_state = any(e.get("type") == "companion_state" for e in director_events)
             has_director_reply = any(e.get("type") == "sentence" for e in director_events)
             complete = {"reply": "", "state": _clamp_state(None), "trimmed": 0}
-            async for name, value in normal_events(req, uid, t0):
+            transcript = stream_risk.get("transcript") if isinstance(stream_risk, dict) else None
+            if transcript:
+                yield frame("transcript", {"text": transcript, "language": stream_risk.get("language") or req.language})
+            async for name, value in normal_events(req, uid, t0, transcript):
                 if name == "_trace":
                     trace.append(value)
                 elif name == "_complete":
@@ -224,10 +314,23 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                     if first:
                         yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
                     yield frame(name, value)
+                    if stream_risk is not None and not emitted_risk:
+                        yield frame("risk", stream_risk)
+                        emitted_risk = True
                 elif name == "delta" and (not has_director_reply or crisis):
                     streamed_reply.append(value["text"])
                     if first: yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
                     yield frame(name, value)
+            if stream_risk is None:
+                try:
+                    stream_risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=5.0)
+                except (asyncio.TimeoutError, Exception):
+                    stream_risk = {"status": "unavailable"}
+            if stream_risk is None:
+                stream_risk = {"status": "unavailable"}
+            if not emitted_risk and streamed_state is not None:
+                yield frame("risk", stream_risk)
+                emitted_risk = True
             handoff = crisis
             for event in director_events:
                 if event.get("type") == "handoff" and event.get("to") == "crisis":
@@ -245,6 +348,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                                  "handoff": {"to": "crisis", "reason": handoff.get("reason", "")} if handoff else None,
                                  "total_generation_s": round(time.monotonic()-t0, 3),
                                  "history_trimmed": complete["trimmed"]}
+            payload["risk"] = stream_risk
             if os.environ.get("KOI_DEBUG_TRACE") == "1":
                 payload["trace"] = trace
             yield frame("done", payload)
