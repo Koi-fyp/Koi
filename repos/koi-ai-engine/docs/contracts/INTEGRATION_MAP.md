@@ -1,64 +1,58 @@
-# KOI v1.1 client integration map
+# KOI v1.1 integration map from P4 base branches
 
-Updated 2026-10-17 during P4.1. This is an inventory of the checked-in
-client surfaces; "missing" means there is no implementation in the client
-tree, not that the backend contract is unavailable.
+This inventory was rebuilt without checkout from the exact P4 bases:
 
-## Web client
+* Web: `origin/feat/web-vrm-avatar` (`E:\Koi\wt_web`)
+* Flutter: `origin/fatima-flutter` (`E:\Koi\wt_flutter`)
 
-| Surface | Location | Status / evidence | Last author |
+Every path and line below comes from a base-tree read. Last author is the
+output of `git log -1 --format=%an <path>` on that base.
+
+## Web base
+
+| Surface | Base path and line evidence | Base finding | Last author |
 | --- | --- | --- | --- |
-| Chat page/component | `repos/koi-backend/nextjs_app/src/app/(authenticated)/chat/page.tsx` | Exists. Renders the message list, input and static image avatar. It currently consumes only `messages`, `isTyping`, and `send`. | `feat(avatar)` history |
-| Message list/bubbles | `src/components/chat/MessageList.tsx`, `MessageBubble.tsx` | Exists. Renders `ChatMessage` records; no streamed delta or transcript event surface. | `feat(avatar)` history |
-| Input and modality toggles | `src/components/chat/InputBar.tsx` | Text input exists. Audio/video capture and the four modality combinations are missing. | `feat(avatar)` history |
-| Conversation service | `src/lib/conversation/conversationService.ts` | Exists. POSTs JSON to `/api/v1/chat`, parses latency/delta/done, and saves encrypted messages. It has no multipart, transcript, risk, ui_action, handoff, redirect, or health handling. | `feat(avatar)` history |
-| Chat hook | `src/hooks/useChat.ts` | Exists. Calls the service and appends one final assistant message; no per-event state, session-history transcript append, or crisis flow. | `feat(avatar)` history |
-| Avatar emotion | `src/components/avatar/AvatarAnimator.ts` | `AvatarAnimator.setEmotion()` exists (lines 105-114), but the current chat page uses `/Male.png`; no `setEmotion` bridge is connected to the chat stream. The deployed web union is `happy|sad|anxious|calm|neutral`, while v1.1 wire values are `neutral|joy|angry|sorrow|fun`; a read-side legacy map is required. | `feat(avatar)` history |
-| KoiBridge | `src/` | Missing. No KoiBridge symbol is present in the checked-in web client. | N/A |
-| Piper TTS / Rhubarb lip-sync | `src/` | Missing from the checked-in `src`; no existing sentence playback adapter was found. | N/A |
-| Breathing animation | `src/` | Missing as a chat exercise UI. `AvatarAnimator` has only idle breathing (`applyBreathe`, lines 148-155), not a `ui_action` exercise controller. | `feat(avatar)` history |
-| Crisis/safety modal | `src/` | Missing. No crisis modal or Flow 4 component is present. | N/A |
-| Firestore message writes | `src/lib/conversation/conversationService.ts`, `src/lib/firestore/sync.ts` | Exists through `syncQueue`, but writes `conversations/{cid}/messages/{mid}` (service line 73), not the required `users/{uid}/conversations/{cid}/messages/{mid}`. No read-only legacy fallback exists. | `feat(avatar)` history |
-| Salt write | `src/lib/crypto.ts` | Exists for salt generation and lookup through Firestore; the account/key-creation wiring is not present in the inspected client flow. | `feat(avatar)` history |
-| API base | `src/lib/conversation/conversationService.ts` | `NEXT_PUBLIC_KOI_API_BASE` is read at module load (line 44). | `feat(avatar)` history |
-| Tests/config | `src/__tests__/setup.env.ts` | Test environment file exists, but the expected `jest.setup.ts` referenced by the project configuration is missing (recorded in P3 report). | P3 audit |
+| Real app/chat page | `repos/koi-backend/nextjs_app/src/app/(authenticated)/chat/page.tsx:5,46-69` | The production page uses `useChat`, `InputBar`, and the message list. | fatimaha5an / Ahmad Suleman |
+| Chat hook | `repos/koi-backend/nextjs_app/src/hooks/useChat.ts:6,19-23` | `useChat` delegates to `conversationService.sendMessage`; no media or event callbacks are exposed at these lines. | fatimaha5an |
+| Request/transport | `repos/koi-backend/nextjs_app/src/lib/conversation/chatContract.ts:1-7`; `repos/koi-backend/nextjs_app/src/lib/conversation/jsonChatTransport.ts:2,10-13` | The base contract is JSON request/response and the transport targets the configured chat endpoint. | fatimaha5an |
+| Text input | `repos/koi-backend/nextjs_app/src/components/chat/InputBar.tsx:3-8` | Text-only `textarea` input; no audio/video toggle in this component. | Ahmad Suleman |
+| Alternate composer | `repos/koi-backend/nextjs_app/src/components/companion/ChatComposer.tsx:3-14` | Text-only composer with focus/cancel hooks; it is a separate companion surface. | fatimaha5an |
+| Avatar controller | `repos/koi-backend/nextjs_app/src/components/avatar/VRMAvatarController.ts:32-33,96-111` | `setEmotion`, `setConversationState`, `setSpeechSource`, blink, posture, and mouth timeline support exist. | fatimaha5an |
+| Avatar command bridge | `repos/koi-backend/nextjs_app/src/components/avatar/avatarCommandBridge.ts:8-14,16-21,24-73,75-96` | **Present.** `AvatarCommandBridge` exposes `setEmotion`, `setConversationState`, `reset`, `getSnapshot`, readiness/lifecycle, `bind`, `markReady`, `detach`, and `dispose`. `registerAvatarCommands` publishes a restricted `window.AvatarController` facade. `window.KoiBridge` is only a reserved `{ postMessage(message: string): void }` declaration at lines 18-20; no implementation is provided. | fatimaha5an |
+| Avatar animation/breathing | `repos/koi-backend/nextjs_app/src/components/avatar/ANIMATION.md:3-7,28-39` | Base documents emotional animation, blink, chest breathing, reduced motion, and head posture. | fatimaha5an |
+| TTS/lip-sync | `repos/koi-backend/nextjs_app/src/lib/speech/mouthCues.ts:3-31`; `repos/koi-backend/nextjs_app/src/lib/speech/VOICE_INPUT.md:229-241` | Rhubarb cue parsing and VRM mouth mapping exist; Piper/Rhubarb integration is documented and benchmarked, but the chat page wiring is not evidenced by the base chat files. | fatimaha5an |
+| Crisis UI/modal | `repos/koi-backend/nextjs_app/src/app/(authenticated)/chat/page.tsx:46-69`; base search over `src` for crisis/modal/Flow 4 | No production Flow 4 modal callback or risk-event consumer was found in the checked base chat path. This is a verified base-tree search result, not an unverified assumption. | Ahmad Suleman / fatimaha5an |
+| Firestore message path | `repos/koi-backend/nextjs_app/src/hooks/useChat.ts:29-38`; `repos/koi-backend/nextjs_app/src/lib/conversation/conversationService.ts` is not present in the base file-name inventory | Local message loading is present. The service implementation path was not present in the selected base tree inventory: **UNVERIFIED** for exact write path and legacy fallback. | fatimaha5an |
+| Salt write | `repos/koi-backend/nextjs_app/src/lib/crypto.ts` is not present in the selected base file-name inventory | **UNVERIFIED** in this base-tree inventory. | UNVERIFIED |
+| API base | `repos/koi-backend/nextjs_app/src/lib/conversation/jsonChatTransport.ts:2-13` | Base uses `chatEndpoint(apiBase)` and therefore the injected API base; exact environment-name declaration is **UNVERIFIED** outside this transport. | fatimaha5an |
+| Package/test manifest | `repos/koi-backend/nextjs_app/package.json`; `repos/koi-backend/nextjs_app/jest.config.cjs` | Next.js package and Jest config are present. `jest.setup.ts` is referenced by config but was not in the base file inventory. | fatimaha5an |
 
-## Flutter client
+## Flutter base
 
-| Surface | Location | Status / evidence | Last author |
+The real Flutter application root is `repos/koi-mobile`, not
+`repos/koi-backend/flutter_lib`. The base has both
+`repos/koi-mobile/pubspec.yaml` and the reusable library manifest
+`repos/koi-backend/flutter_lib/pubspec.yaml`.
+
+| Surface | Base path and line evidence | Base finding | Last author |
 | --- | --- | --- | --- |
-| Chat page/component | `repos/koi-backend/flutter_lib/lib/` | Missing in this checkout. The Flutter library contains models, storage, auth and crypto, but no chat screen or widget tree. | N/A |
-| Message list/input/toggles | `flutter_lib/lib/` | Missing. `HiveMessage` and `MessageRepository` provide storage only; there is no input or modality UI. | N/A |
-| Conversation service reference | `docs/contracts/clients/dart/koi_chat_client.dart` | Exists as the checked-in transport/state reference. It already posts only `/api/v1/chat`, parses chunk-safe UTF-8 SSE, ignores unknown events, handles transcript/risk/ui_action/exercise state/handoff, and keeps the 401 fallback. It is not wired to a Flutter widget. | P4 Dart client |
-| AvatarController / KoiBridge | `flutter_lib/lib/` | Missing. No avatar bridge or emotion controller is checked in. The Dart reference documents the required callback in `README_DART.md`. | N/A |
-| Piper TTS / Rhubarb lip-sync | `flutter_lib/lib/` | Missing. No audio playback or lip-sync adapter is checked in. | N/A |
-| Breathing animation | `flutter_lib/lib/` | Missing. The Dart transport exposes `UiAction` and exercise events, but no animation widget consumes them. | N/A |
-| Crisis/safety modal | `flutter_lib/lib/` | Missing. The Dart reference has state (`crisisFlowOpen`, `resolveCrisis`) but no modal implementation. | P4 Dart client |
-| Firestore message writes | `flutter_lib/lib/storage/repositories/message_repository.dart` | Local Hive persistence exists. A Firestore sync path for `users/{uid}/conversations/{cid}/messages/{mid}` is missing. | Existing storage history |
-| Salt write | `flutter_lib/lib/services/crypto_service.dart` | `generateSalt()` exists and explicitly documents `users/{uid}.public_crypto_metadata.salt` (lines 32-40), but no Firebase write is wired at key creation. | P4 Dart client |
-| API base | `docs/contracts/clients/dart/koi_chat_client.dart` | Constructor-injected `chatBaseUrl` and `crisisBaseUrl` exist in the reference; Flutter app wiring is missing. | P4 Dart client |
-| Emotion union | `docs/contracts/clients/dart/koi_chat_client.dart` | Wire enum is `neutral|joy|angry|sorrow|fun`; `EmotionWire.parse()` safely maps unknown values to neutral. | P4 Dart client |
+| Real app root/widget | `repos/koi-mobile/pubspec.yaml:1-3,30-46`; `repos/koi-mobile/lib/main.dart:7-33,38-56` | The runnable app is the default Flutter counter app under `repos/koi-mobile`; it does not import the KOI chat library. | fatimaha5an |
+| Chat page/input/toggles | Base search over `repos/koi-mobile/lib` and `repos/koi-backend/flutter_lib/lib` for chat/input/modality | No chat widget or modality toggle was found in the checked base tree. This is a verified search result, not an unverified assumption. | UNVERIFIED |
+| Chat transport | Base search over both Flutter roots for `/api/v1/chat`, SSE, and conversation service | No Flutter chat transport was found in the selected base tree. **UNVERIFIED** for any generated/untracked runtime code. | UNVERIFIED |
+| Avatar/KoiBridge | Base search over both Flutter roots for avatar, bridge, and KoiBridge | No Flutter avatar bridge was found. The web-only `window.AvatarController` bridge above is not a Flutter implementation. | UNVERIFIED |
+| TTS/lip-sync | Base search over both Flutter roots for Piper, Rhubarb, TTS, and lip-sync | No Flutter TTS or lip-sync adapter was found. | UNVERIFIED |
+| Breathing animation | Base search over both Flutter roots for breathing and exercise animation | No Flutter breathing widget was found. | UNVERIFIED |
+| Crisis/safety modal | Base search over both Flutter roots for crisis, safety, Flow 4, and modal | No Flutter crisis modal was found. | UNVERIFIED |
+| Local message storage | `repos/koi-backend/flutter_lib/lib/storage/repositories/message_repository.dart:5-35` | Hive message persistence exists (`saveMessage`, conversation reads, sync flags); no Firestore message sync is exposed here. | Ahmad |
+| Firestore/auth | `repos/koi-backend/flutter_lib/lib/services/auth_service.dart:19,27,89-104,131-143` | Firebase Auth and Firestore user-document setup exist. The base user write does not include the required public crypto salt. | Ahmad |
+| Crypto salt | `repos/koi-backend/flutter_lib/lib/services/crypto_service.dart:21,35-43` | `generateSalt()` exists and documents the intended `users/{uid}.public_crypto_metadata.salt` location, but the base auth write does not call it. | Ahmad |
+| Package manifests | `repos/koi-mobile/pubspec.yaml:30-46`; `repos/koi-backend/flutter_lib/pubspec.yaml:1-18` | The app root depends only on Flutter/Cupertino plus the library; the library owns Firebase, Hive, crypto, and auth dependencies. | fatimaha5an / Ahmad |
 
-## Branch/base discovery for P4.3
+## P4.3 wiring boundary
 
-The P4.2 fetch found these newest remote client branches:
-
-* Web wiring branch: `feat/web-vrm-avatar`, base
-  `origin/feat/web-vrm-avatar` at `5ee2385` (2026-10-16 22:12 +0500,
-  microphone capture and Whisper STT).
-* Flutter wiring branch: `fatima-flutter`, base
-  `origin/fatima-flutter` at `63e56df` (2026-10-11 03:36 +0500, Flutter
-  app scaffold and shared library dependency).
-
-The current branch's `origin/feat/exercise-director-modal` is newer overall,
-but it has no newer client-specific commit than the selected bases; it remains
-the integration-map branch.
-
-## Scope gaps carried into P4.3
-
-The existing web client can be extended in place in
-`conversationService.ts`, `useChat.ts`, and existing chat components. No
-parallel service file should be created. The Flutter repository has no chat
-UI to wire; P4.3 may only extend existing library surfaces and the checked-in
-Dart reference, and must report any UI that remains unbuilt. Protected
-`koi_policy` files and the canonical docs directory remain untouched.
+Only the base gaps are eligible for wiring. The web avatar bridge,
+VRM emotion controller, breathing posture, and Rhubarb cue parser must be
+reused rather than rebuilt. The real Flutter app is `repos/koi-mobile`; any
+Flutter wiring must land there or in an existing library surface, not in a
+new parallel chat service. Rows marked **UNVERIFIED** require a bounded
+base-tree check before implementation.
