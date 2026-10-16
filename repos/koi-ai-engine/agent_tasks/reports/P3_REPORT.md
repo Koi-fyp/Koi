@@ -460,3 +460,5 @@ P3.3: risk wait/fail-closed not implemented.
 P3.4: risk event and post-reply cap not implemented.
 
 P3.5: audio transcript path not implemented.
+
+P3.6: existing ChatRequest accepts deprecated risk field.
