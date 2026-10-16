@@ -452,3 +452,5 @@ No guesses were made about undecided ownership or future mobile fields.
 
 
 P3.1: chat_core currently accepts JSON only; multipart not implemented.
+
+P3.2: crisis_client.py absent; no internal async lookup wired.

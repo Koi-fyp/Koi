@@ -30,3 +30,4 @@ RAG On
 2026-10-16T20:30:17Z | P2.4 | DONE | commit bf3baa4 | verify: pytest deploy/modal/test_crisis_core.py -q: 5 passed
 2026-10-16T20:36:51Z | P3.1 | STARTED
 2026-10-16T20:36:51Z | P3.1 | PARTIAL | commit a922b26 | verify: P3_REPORT.md records current contract evidence
+2026-10-16T20:36:51Z | P3.2 | STARTED
