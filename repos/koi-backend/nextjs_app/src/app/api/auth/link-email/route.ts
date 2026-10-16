@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminFirestore } from '@/lib/firebase-admin';
+import { getAdminServices } from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +14,8 @@ export async function POST(req: NextRequest) {
     const match = authHeader.match(/^Bearer (.*)$/);
     if (!match) return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
     const idToken = match[1];
+
+    const { adminAuth, adminFirestore } = getAdminServices();
 
     const decoded = await adminAuth.verifyIdToken(idToken);
     const uid = decoded.uid;

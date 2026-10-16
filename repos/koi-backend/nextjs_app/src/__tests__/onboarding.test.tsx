@@ -17,7 +17,7 @@ describe('Onboarding Flow', () => {
     it('should disable I Agree button until both checkboxes checked', () => {
       render(<OnboardingPage initialStep={3} />);
 
-      const agreeButton = screen.getByText('I Agree');
+      const agreeButton = screen.getByRole('button', { name: /I Agree/ });
       expect(agreeButton).toBeDisabled();
 
       fireEvent.click(screen.getByText('I understand KOI is an AI, not a therapist'));
@@ -38,12 +38,12 @@ describe('Onboarding Flow', () => {
     it('should select avatar and highlight it', () => {
       render(<OnboardingPage initialStep={4} />);
       fireEvent.click(screen.getByTestId('avatar-fox'));
-      expect(screen.getByTestId('avatar-fox')).toHaveClass('ring-2');
+      expect(screen.getByTestId('avatar-fox')).toHaveStyle({ border: '2.5px solid #000' });
     });
 
     it('should not allow Continue without avatar selection', () => {
       render(<OnboardingPage initialStep={4} />);
-      expect(screen.getByText('Continue')).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Continue/ })).toBeDisabled();
     });
   });
 

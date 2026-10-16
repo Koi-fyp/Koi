@@ -38,8 +38,7 @@ jest.mock('@/lib/firebase-admin', () => {
 
   return {
     admin: mockAdmin,
-    adminAuth: mockAuth,
-    adminFirestore: mockFirestore,
+    getAdminServices: () => ({ adminAuth: mockAuth, adminFirestore: mockFirestore }),
   };
 });
 

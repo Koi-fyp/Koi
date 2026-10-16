@@ -13,6 +13,10 @@ export interface AvatarCommandContract {
   reset(): void;
   getSnapshot(): AvatarCommandSnapshot;
 }
+export interface AvatarCommandRegistrationOptions {
+  /** Forward only the approved readiness token to a native WebView channel. */
+  notifyKoiBridgeOnReady?: boolean;
+}
 declare global {
   interface Window {
     AvatarController?: AvatarCommandContract;
@@ -72,7 +76,11 @@ export class AvatarCommandBridge implements AvatarCommandContract {
   }
 }
 
-export function registerAvatarCommands(bridge: AvatarCommandBridge, target: Window = window) {
+export function registerAvatarCommands(
+  bridge: AvatarCommandBridge,
+  target: Window = window,
+  options: AvatarCommandRegistrationOptions = {},
+) {
   if (bridge.lifecycle === 'disposed') throw new Error('Cannot register a disposed avatar interface.');
   if (target.AvatarController) throw new Error('An avatar command interface is already registered.');
   // Publish only commands/diagnostics, never model references or bind/update/dispose internals.
@@ -85,9 +93,18 @@ export function registerAvatarCommands(bridge: AvatarCommandBridge, target: Wind
     getSnapshot: () => bridge.getSnapshot(),
   });
   target.AvatarController = facade;
+  let signalledGeneration: number | null = null;
   const unsubscribe = bridge.subscribe((snapshot) => {
     target.dispatchEvent(new CustomEvent(snapshot.ready ? 'AVATAR_READY' : 'AVATAR_NOT_READY',
       { detail: { type: snapshot.ready ? 'AVATAR_READY' : 'AVATAR_NOT_READY', modelUrl: snapshot.modelUrl, generation: snapshot.generation, lifecycle: snapshot.lifecycle } }));
+    if (options.notifyKoiBridgeOnReady && snapshot.ready && signalledGeneration !== snapshot.generation) {
+      signalledGeneration = snapshot.generation;
+      try {
+        target.KoiBridge?.postMessage('AVATAR_READY');
+      } catch {
+        // A missing or failing native channel must never break avatar rendering.
+      }
+    }
   });
   return () => {
     bridge.dispose(); unsubscribe();

@@ -58,6 +58,13 @@ function base64ToBuf(b64: string): Uint8Array {
   return bytes;
 }
 
+/** Copy bytes into a definite ArrayBuffer for Web Crypto's BufferSource overloads. */
+function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 function randomBase64(byteLength: number): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength));
   return bufToBase64(bytes);
@@ -162,7 +169,7 @@ export async function decrypt(payload: string, secret: string): Promise<string> 
   const plaintextBuf = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: nonce as BufferSource },
     key,
-    ciphertextWithMac
+    copyToArrayBuffer(ciphertextWithMac)
   );
 
   return new TextDecoder().decode(plaintextBuf);

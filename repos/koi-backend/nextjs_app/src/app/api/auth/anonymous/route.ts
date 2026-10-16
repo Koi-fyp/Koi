@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { adminAuth, adminFirestore, admin } from '@/lib/firebase-admin';
+import { getAdminServices, admin } from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
   try {
+    const { adminAuth, adminFirestore } = getAdminServices();
     const uid = uuidv4();
 
     // Create a custom token so client can signInWithCustomToken

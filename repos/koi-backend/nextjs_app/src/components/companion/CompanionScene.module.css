@@ -1,4 +1,4 @@
-.scene { --ink: #25231f; --blue: var(--neo-blue, #2d63eb); --warm: #ffe5d9; box-sizing: border-box; height: 100dvh; min-height: 480px; display: flex; flex-direction: column; padding: max(16px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); color: var(--ink); background: #fff4ec; font-family: var(--font-body, system-ui, sans-serif); position: relative; }
+ .scene { --ink: #25231f; --blue: var(--neo-blue, #2d63eb); --warm: #ffe5d9; box-sizing: border-box; height: 100dvh; min-height: 0; display: flex; flex-direction: column; padding: max(16px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); color: var(--ink); background: #fff4ec; font-family: var(--font-body, system-ui, sans-serif); position: relative; }
 .scene * { box-sizing: border-box; }
 .header { flex: 0 0 62px; display: flex; align-items: center; gap: 18px; }
 .identity { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0; }
@@ -59,3 +59,34 @@
 @media (max-height: 600px) { .header { flex-basis: 48px; }.footer { padding-top: 8px; }.subtitles p { max-height: 60px; }.control { gap: 4px; } }
 
 @media (max-width: 700px) and (max-height: 600px) { .withText { grid-template-rows: minmax(0, 1fr) 140px; }.panelNotice { display: none; }.panelHeader { padding: 4px 12px; }.subtitles p { max-height: 60px; } }
+
+.exerciseDirector { width: min(100%, 760px); margin: 0 auto; padding: 4px 12px; color: #352d29; font-size: .85rem; }
+.exerciseDirector details > summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+.exerciseDirector details > p, .exerciseNotice { margin: 5px 0; color: #625952; font-size: .78rem; }
+.exerciseCard { width: min(100%, 420px); margin: 8px auto; padding: 12px 14px; border: 1px solid #43332c33; border-radius: 16px; background: #fffcf7f0; text-align: center; }
+.exerciseCard h3 { margin: 0; font-size: 1rem; }
+.exerciseCue { min-height: 1.3em; margin: 5px 0 2px; font-weight: 700; }
+.exerciseProgressText { margin: 2px 0; font-size: .76rem; }
+.breathOrbWrap { display: grid; place-items: center; height: 54px; overflow: hidden; }
+.breathOrb { width: 42px; height: 42px; border-radius: 50%; background: #9ccfc5; transition: transform 100ms linear; }
+.breathOrb[data-phase='exhale'] { background: #b6c8df; }
+.exerciseProgress { height: 6px; border-radius: 8px; overflow: hidden; background: #e7e1da; }
+.exerciseProgress span { display: block; height: 100%; background: #668f83; transition: width 100ms linear; }
+.exerciseNotice { margin: 6px 0; }
+.exerciseButtons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 7px 0; }
+.exerciseButtons button { min-height: 36px; padding: 6px 12px; border: 1px solid #8c786b; border-radius: 999px; background: #fff; color: inherit; font: inherit; cursor: pointer; }
+.exerciseButtons button:disabled { opacity: .55; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .breathOrb, .exerciseProgress span { transition: none; } }
+
+.crisisBackdrop { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: #221c1bd9; }
+.crisisDialog { width: min(100%, 520px); max-height: 100%; overflow-y: auto; padding: clamp(20px, 5vw, 32px); border-radius: 20px; background: #fffaf6; color: #2b2421; box-shadow: 0 18px 60px #0005; }
+.crisisDialog h2 { margin: 0 0 12px; font-size: clamp(21px, 5vw, 28px); line-height: 1.25; }
+.crisisDialog > p { line-height: 1.55; }
+.crisisUnavailable { padding: 12px; border-radius: 10px; background: #f2e7dc; }
+.crisisContent { padding: 12px; border-radius: 10px; background: #f2e7dc; }
+.crisisContent h3 { margin: 8px 0 2px; font-size: 1rem; }
+.crisisContent p { line-height: 1.5; }
+.crisisSource { font-size: .8rem; color: #61564e; }
+.crisisChoices { display: grid; gap: 10px; margin-top: 20px; }
+.crisisChoices button { min-height: 48px; padding: 10px 14px; border: 1px solid #816e61; border-radius: 12px; background: white; color: #2b2421; font: inherit; text-align: left; cursor: pointer; }
+.crisisChoices button:focus-visible { outline: 3px solid var(--neo-blue, #2d63eb); outline-offset: 2px; }

@@ -9,5 +9,9 @@ function getAdminApp(): admin.app.App {
 }
 
 export { admin };
-export const adminAuth = getAdminApp().auth();
-export const adminFirestore = getAdminApp().firestore();
+
+/** Initialize Admin SDK only while handling a server request, never at module import/build time. */
+export function getAdminServices() {
+  const app = getAdminApp();
+  return { adminAuth: app.auth(), adminFirestore: app.firestore() };
+}

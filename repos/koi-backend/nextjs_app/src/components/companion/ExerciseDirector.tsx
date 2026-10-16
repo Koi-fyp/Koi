@@ -1,0 +1,182 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import type { ChatServerEvent, ExerciseClientEvent } from '@/lib/conversation/chatContract';
+import { BreathingClock, getBreathingFrame, parseBreathingPattern, type BreathingPattern } from '@/lib/conversation/exerciseContract';
+import styles from './CompanionScene.module.css';
+
+type SessionEvent = { id: number; event: ChatServerEvent };
+type BreathingCommand = { id: number; action: 'pause' };
+
+function PacedBreathingPanel({ runId, pattern, command, onComplete, onStop }: {
+  runId: number;
+  pattern: BreathingPattern;
+  command: BreathingCommand | null;
+  onComplete: () => void;
+  onStop: () => void;
+}) {
+  const clock = useRef(new BreathingClock());
+  const lastCommand = useRef(0);
+  const completionSent = useRef(false);
+  const callbacks = useRef({ onComplete, onStop });
+  callbacks.current = { onComplete, onStop };
+  const [elapsed, setElapsed] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [complete, setComplete] = useState(false);
+
+  useEffect(() => {
+    clock.current.start(performance.now());
+    setElapsed(0);
+    setPaused(false);
+    setComplete(false);
+    completionSent.current = false;
+    return () => clock.current.pause(performance.now());
+  }, [runId]);
+
+  useEffect(() => {
+    if (!command || command.id <= lastCommand.current) return;
+    lastCommand.current = command.id;
+    const now = performance.now();
+    setElapsed(clock.current.elapsedAt(now));
+    clock.current.pause(now);
+    setPaused(true);
+  }, [command]);
+
+  useEffect(() => {
+    if (paused || complete) return;
+    const tick = () => {
+      const now = performance.now();
+      const seconds = clock.current.elapsedAt(now);
+      const frame = getBreathingFrame(pattern, seconds);
+      if (frame.complete) {
+        clock.current.pause(now);
+        setElapsed((pattern.inhale_s + pattern.exhale_s) * pattern.cycles);
+        setComplete(true);
+        if (!completionSent.current) {
+          completionSent.current = true;
+          callbacks.current.onComplete();
+        }
+      } else setElapsed(seconds);
+    };
+    const timer = window.setInterval(tick, 100);
+    tick();
+    return () => window.clearInterval(timer);
+  }, [runId, pattern, paused, complete]);
+
+  const frame = getBreathingFrame(pattern, elapsed);
+  const phaseLabel = frame.phase === 'inhale' ? pattern.cue_audio[0] : pattern.cue_audio[1];
+  const scale = frame.phase === 'inhale' ? 0.82 + frame.phaseProgress * 0.18 : 1 - frame.phaseProgress * 0.18;
+  const pauseNow = () => {
+    const now = performance.now();
+    setElapsed(clock.current.elapsedAt(now));
+    clock.current.pause(now);
+    setPaused(true);
+  };
+  const resume = () => { clock.current.resume(performance.now()); setPaused(false); };
+
+  return <section className={styles.exerciseCard} aria-label="Paced breathing activity">
+    <h3>Paced breathing</h3>
+    <p className={styles.exerciseCue} aria-live="polite">{complete ? 'Activity complete' : paused ? 'Paused' : phaseLabel}</p>
+    <p className={styles.exerciseProgressText}>Cycle {Math.min(frame.cycle, pattern.cycles)} of {pattern.cycles}</p>
+    <div className={styles.breathOrbWrap} aria-hidden="true">
+      <div className={styles.breathOrb} data-phase={frame.phase} style={{ transform: `scale(${scale})` }} />
+    </div>
+    <div className={styles.exerciseProgress} role="progressbar" aria-label="Activity progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(frame.overallProgress * 100)}>
+      <span style={{ width: `${frame.overallProgress * 100}%` }} />
+    </div>
+    <p className={styles.exerciseNotice}>On-screen cues only. No audio is played.</p>
+    <div className={styles.exerciseButtons}>
+      {!complete && (paused
+        ? <button type="button" onClick={resume}>Resume</button>
+        : <button type="button" onClick={pauseNow}>Pause</button>)}
+      {!complete && <button type="button" onClick={callbacks.current.onStop}>Stop</button>}
+    </div>
+  </section>;
+}
+
+export default function ExerciseDirector({ events, disabled = false, interruptKey = 0, onRequest, onQueueClientEvent }: {
+  events: SessionEvent[];
+  disabled?: boolean;
+  interruptKey?: number;
+  onRequest: (event: ExerciseClientEvent) => void;
+  onQueueClientEvent: (event: ExerciseClientEvent) => void;
+}) {
+  const lastEventId = useRef(0);
+  const [breathing, setBreathing] = useState<{ runId: number; pattern: BreathingPattern } | null>(null);
+  const activeBreathing = useRef(false);
+  const [command, setCommand] = useState<BreathingCommand | null>(null);
+  const [notice, setNotice] = useState('');
+  const queueRef = useRef(onQueueClientEvent);
+  queueRef.current = onQueueClientEvent;
+
+  useEffect(() => {
+    if (!interruptKey) return;
+    const wasActive = activeBreathing.current;
+    activeBreathing.current = false;
+    setBreathing(null);
+    setCommand(null);
+    if (wasActive) {
+      setNotice('The activity paused for a safety check.');
+      queueRef.current('playback_stopped');
+    }
+  }, [interruptKey]);
+
+  useEffect(() => {
+    for (const item of events) {
+      if (item.id <= lastEventId.current) continue;
+      lastEventId.current = item.id;
+      if (item.event.event !== 'ui_action') continue;
+      const { name, args } = item.event.data;
+      if (name === 'start_breathing') {
+        const pattern = parseBreathingPattern(args);
+        if (!pattern) {
+          activeBreathing.current = false;
+          setBreathing(null);
+          setNotice('Breathing guidance is unavailable because its timing or cues were incomplete.');
+        } else {
+          activeBreathing.current = true;
+          setNotice('');
+          setCommand(null);
+          setBreathing({ runId: item.id, pattern });
+        }
+      } else if (name === 'pause_breathing') {
+        setCommand({ id: item.id, action: 'pause' });
+      } else if (name === 'stop_breathing') {
+        const wasActive = activeBreathing.current;
+        activeBreathing.current = false;
+        setBreathing(null);
+        setCommand(null);
+        setNotice('The activity was stopped by KOI.');
+        if (wasActive) queueRef.current('playback_stopped');
+      } else if (name === 'start_grounding' || name === 'start_plan') {
+        activeBreathing.current = false;
+        setBreathing(null);
+        setNotice('This activity is not available in the current Web view yet.');
+      } else if (name === 'save_task' || name === 'save_go_to') {
+        setNotice('This action is not available in the current Web view yet.');
+      }
+    }
+  }, [events]);
+
+  const stopBreathing = () => {
+    activeBreathing.current = false;
+    setBreathing(null);
+    setNotice('Activity stopped.');
+    onQueueClientEvent('playback_stopped');
+  };
+  const requestButtonsDisabled = disabled || breathing !== null;
+  return <section className={styles.exerciseDirector} aria-label="KOI activity controls">
+    <details>
+      <summary>Request an activity</summary>
+      <div className={styles.exerciseButtons}>
+        <button type="button" disabled={requestButtonsDisabled} onClick={() => onRequest('start_breathing')}>Breathing</button>
+        <button type="button" disabled={requestButtonsDisabled} onClick={() => onRequest('start_grounding')}>Grounding</button>
+        <button type="button" disabled={requestButtonsDisabled} onClick={() => onRequest('start_plan')}>Make a plan</button>
+      </div>
+      <p>KOI decides whether an activity can start. Text-only chat remains available.</p>
+    </details>
+    {notice && <p className={styles.exerciseNotice} role="status">{notice}</p>}
+    {breathing && <PacedBreathingPanel key={breathing.runId} runId={breathing.runId} pattern={breathing.pattern} command={command}
+      onComplete={() => { activeBreathing.current = false; onQueueClientEvent('playback_done'); }} onStop={stopBreathing} />}
+  </section>;
+}

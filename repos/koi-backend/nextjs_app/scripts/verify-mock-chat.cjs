@@ -4,7 +4,8 @@ const path = require('node:path');
 const { chromium } = require('playwright');
 const attachAudit = require('./avatar-browser-audit.cjs');
 (async () => {
-  const origin = 'http://127.0.0.1:3001', output = path.resolve('dev/avatar-sandbox/.next/verification/increment-5');
+  const origin = process.env.KOI_MOCK_CHAT_URL || 'http://127.0.0.1:3001';
+  const output = path.resolve(process.env.KOI_BROWSER_TEST_OUTPUT_DIR || 'dev/avatar-sandbox/.next/verification/increment-5');
   await fs.mkdir(output, { recursive: true });
   const browser = await chromium.launch({ headless: true, executablePath: process.env.KOI_AVATAR_BROWSER, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   try {

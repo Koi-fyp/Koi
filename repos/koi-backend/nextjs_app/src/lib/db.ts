@@ -18,7 +18,8 @@ export interface ConversationMessageRecord {
 export interface UserRecord {
   id?: number;
   uid: string;
-  avatar?: 'female_human' | 'male_human';
+  /** `fox` is a persisted onboarding choice from the legacy model picker; retain it until an explicit migration. */
+  avatar?: 'female_human' | 'male_human' | 'fox';
   companion?: 'aisha' | 'raza' | 'koi';
   language?: 'en' | 'ur';
   notificationTime?: string;

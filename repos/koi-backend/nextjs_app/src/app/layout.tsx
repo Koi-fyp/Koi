@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { AuthProvider } from '@/contexts/AuthContext';
+import AppAuthBoundary from '@/components/providers/AppAuthBoundary';
 
 export const metadata: Metadata = {
   title: 'KOI — Your AI Companion',
@@ -11,9 +11,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="font-inter">
       <body className="min-h-screen">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AppAuthBoundary>{children}</AppAuthBoundary>
       </body>
     </html>
   );

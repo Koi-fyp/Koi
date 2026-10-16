@@ -20,7 +20,12 @@ export function useChat({ linkedSecret }: { linkedSecret?: string } = {}) {
     const account = current.current;
     if (!account.user || account.user.uid !== owner.current) throw new ChatError('authentication', 'An authenticated, unchanged KOI session is required.');
     const authState: AuthState = { isLinked: account.isLinked, linkedSecret: account.linkedSecret };
-    return sendMessage(account.user.uid, sessionId.current!, request.message, request.session_history, authState, options);
+    return sendMessage(account.user.uid, sessionId.current!, request.message, request.session_history, authState, options, {
+      exercise_state: request.exercise_state,
+      client_event: request.client_event,
+      policy_event: request.policy_event,
+      crisis_path: request.crisis_path,
+    });
   } }));
   const chat = useConversationSession(adapter); sessionId.current = chat.session.conversationId;
   useEffect(() => {
@@ -41,7 +46,9 @@ export function useChat({ linkedSecret }: { linkedSecret?: string } = {}) {
     return () => { cancelled = true; chat.cancel(); };
   }, [user?.uid, isLinked, linkedSecret, chat.session]);
   const accountChanged = owner.current !== null && user?.uid !== owner.current;
-  const messages: ChatMessage[] = (accountChanged ? [] : chat.messages).map((message) => ({ ...message, emotion: message.companion_state?.emotion ?? 'neutral' }));
+  const messages: ChatMessage[] = (accountChanged ? [] : chat.messages)
+    .filter((message) => !(message.sender === 'ai' && message.status === 'pending' && !message.content))
+    .map((message) => ({ ...message, emotion: message.companion_state?.emotion ?? 'neutral' }));
   return { ...chat, messages, subtitle: accountChanged ? '' : chat.subtitle, isTyping: chat.pending, currentEmotion: accountChanged ? 'neutral' as const : chat.companion.emotion,
     currentIntensity: accountChanged ? 0 : chat.companion.intensity, conversationId: chat.session.conversationId,
     blocked: accountChanged || !user || (isLinked && !linkedSecret), error: accountChanged ? 'Your account changed. Start a new chat session.' : chat.error ?? (isLinked && !linkedSecret ? 'Unlock your linked account before chatting.' : readError) };

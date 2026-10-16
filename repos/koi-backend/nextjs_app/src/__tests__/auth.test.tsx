@@ -3,6 +3,12 @@ import React from 'react';
 import { render, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
+jest.mock('firebase/auth', () => ({
+  onAuthStateChanged: (_auth: unknown, callback: (user: null) => void) => { callback(null); return jest.fn(); },
+  signInWithCustomToken: jest.fn(),
+  signOut: jest.fn(),
+}));
+
 function Tester() {
   const auth = useAuth();
   return (

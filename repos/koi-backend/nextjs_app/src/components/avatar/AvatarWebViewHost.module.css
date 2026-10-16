@@ -1,0 +1,62 @@
+.host {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: #fff4ec;
+  color: #25231f;
+  font-family: var(--font-body, system-ui, sans-serif);
+}
+
+.stage {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.toolbar {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 12px;
+  background: rgb(255 250 246 / 94%);
+  border-top: 1px solid #e8d8ca;
+}
+
+.modelPicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.modelPicker select {
+  max-width: 180px;
+  padding: 7px 10px;
+  border: 1px solid #c9b6a5;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+.status {
+  overflow: hidden;
+  color: #75685e;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-height: 380px) {
+  .toolbar { min-height: 38px; padding-block: 3px; }
+  .modelPicker select { padding-block: 4px; }
+}

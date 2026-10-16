@@ -16,6 +16,7 @@ export interface VRMAvatarRendererProps {
   emotionIntensity?: number;
   conversationState?: ConversationState;
   exposeController?: boolean;
+  notifyKoiBridgeOnReady?: boolean;
   animationSeed?: number;
   onLoadError?: () => void;
   speechSource?: SpeechTimeline;
@@ -41,7 +42,7 @@ function disposeModel(model: THREE.Object3D) {
   bitmaps.forEach((bitmap) => bitmap.close());
 }
 
-export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2, emotion = 'neutral', emotionIntensity = 0, conversationState = 'idle', exposeController = false, animationSeed = 0x4b4f49, onLoadError, speechSource, onReady }: VRMAvatarRendererProps) {
+export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2, emotion = 'neutral', emotionIntensity = 0, conversationState = 'idle', exposeController = false, notifyKoiBridgeOnReady = false, animationSeed = 0x4b4f49, onLoadError, speechSource, onReady }: VRMAvatarRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
@@ -59,9 +60,9 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
     commandsRef.current = bridge;
     bridge.setEmotion(initialCommands.current.emotion, initialCommands.current.emotionIntensity);
     bridge.setConversationState(initialCommands.current.conversationState);
-    const unregister = exposeController ? registerAvatarCommands(bridge) : undefined;
+    const unregister = exposeController ? registerAvatarCommands(bridge, window, { notifyKoiBridgeOnReady }) : undefined;
     return () => { unregister?.(); bridge.dispose(); if (commandsRef.current === bridge) commandsRef.current = null; };
-  }, [exposeController]);
+  }, [exposeController, notifyKoiBridgeOnReady]);
   useEffect(() => { commandsRef.current?.setEmotion(emotion, emotionIntensity); }, [emotion, emotionIntensity]);
   useEffect(() => { commandsRef.current?.setConversationState(conversationState); }, [conversationState]);
 

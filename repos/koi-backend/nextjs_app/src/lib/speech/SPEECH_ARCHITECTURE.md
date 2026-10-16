@@ -16,7 +16,9 @@ Neither app/services nor requirements.txt defines an operational speech service,
 Piper/Rhubarb wiring, ASR engine or authenticated speech endpoint. No suitable
 local audio/model fixture was found in the checkout. Frontend audio modes are
 disabled presentation (ModeSelector and ChangeModeDropdown), not speech systems.
-UserRecord has en/ur language and male_human/female_human avatar preferences;
+UserRecord has en/ur language and female_human/male_human preferences, plus the
+legacy persisted `fox` onboarding choice; the VRM viewer only supports the two
+human VRM models and preserves `fox` as stored data rather than remapping it;
 there is no implemented voice preference or persisted speech lifecycle.
 
 Current PATH has no piper, rhubarb or espeak executable. Current Python lacks
