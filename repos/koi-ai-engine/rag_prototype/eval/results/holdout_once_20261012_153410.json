@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "rule": "E",
+    "started_at": "2026-10-12T15:34:09",
+    "status": "started",
+    "model": "intfloat/multilingual-e5-small",
+    "k": 7,
+    "gate": 0.5709,
+    "max_items": 3,
+    "max_seq_length": null,
+    "preflight": {
+      "n_pos": 133,
+      "n_neg": 83,
+      "hit1": 0.5488721804511278,
+      "hit3": 0.8646616541353384,
+      "thr": 0.5709147249659877,
+      "cov_actual": 0.39849624060150374,
+      "acc_hit1": 0.6415094339622641,
+      "acc_hit3": 0.9056603773584906,
+      "far": 0.060240963855421686,
+      "far_k": 5
+    },
+    "input_sha256": {
+      "scripts/retrieval_pipeline.py": "c9fc3524f4f22ed9f947bc194b1116d8ca33421228b9c05370e0c5b79fb2780c",
+      "scripts/language_detector.py": "3a9635e4cfdd717e45e345c9be05441c371b428a7a7cd746300df2ef4e336726",
+      "eval/holdout_once.py": "7cffde6cae2923a90af61e433f49bbf16473dd9ecba12c3c802d1db3a670e675",
+      "eval/multilingual_queries.py": "21c8c10cec900ec1051a4b74f4194375c993ca5a483295edfb58154f5a619878",
+      "eval/labels/koi_queries_master_draft.csv": "ef4009bd0080414c99534222bb678dd3e065376a521553de4759c37900537831",
+      "data/processed/authoritative_chunks.jsonl": "5f523ba7c23a2f98c79419f8b38925baa9b428720ebce7f2dbf2b17d62ddbf9f",
+      "data/processed/mhgap_pk_chunks.jsonl": "c2aa0f02a6f6422b29ad8538d6af3efc2cb03a77d2b1a2588c64d2b8bacac6d5",
+      "data/processed/annomi_chunks.jsonl": "88b438a30a6d78967c7e0886a92f0efdc0c35b57fa236c2f4c3ac429f0901b9a"
+    }
+  },
+  "holdout": {
+    "n_pos": 57,
+    "n_neg": 32,
+    "gate": 0.5709,
+    "coverage": 0.47368421052631576,
+    "acc_hit1": 0.7777777777777778,
+    "acc_hit3": 0.8888888888888888,
+    "far": 0.09375,
+    "far_k": 3,
+    "far_ci": [
+      0.01976718017330235,
+      0.25022695068385326
+    ],
+    "hit1": 0.6666666666666666,
+    "hit3": 0.8596491228070176,
+    "auc": 0.7637061403508771,
+    "bundle": [
+      "mhgappk_480c27df26",
+      "samhsa_983fdc952b",
+      "mhgappk_bfba6f6671"
+    ],
+    "bundle_hit1": 0.38596491228070173,
+    "bundle_hit3": 0.7894736842105263,
+    "d_hit1_vs_bundle": [
+      0.2807017543859649,
+      0.0851063829787234,
+      0.49311594202898357
+    ],
+    "d_hit3_vs_bundle": [
+      0.07017543859649122,
+      -0.07547169811320754,
+      0.22391738490645346
+    ],
+    "per_lang_hit3": {
+      "code_switched": {
+        "n": 20,
+        "hit3": 0.9
+      },
+      "roman_urdu": {
+        "n": 15,
+        "hit3": 0.8
+      },
+      "urdu_native": {
+        "n": 22,
+        "hit3": 0.8636363636363636
+      }
+    },
+    "excluded": {
+      "none_flip": 7
+    },
+    "label_sources": {
+      "chatgpt-draft-2run-agree": 59,
+      "by-design": 30
+    }
+  }
+}

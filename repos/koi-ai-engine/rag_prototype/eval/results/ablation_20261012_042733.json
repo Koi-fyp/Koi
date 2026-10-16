@@ -1,0 +1,671 @@
+{
+  "run_at": "2026-10-12T04:25:57",
+  "models": {
+    "minilm": {
+      "arms": {
+        "dense_only": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8333333333333334,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.6,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.14285714285714285,
+            "r@3": 0.7142857142857143,
+            "r@5": 0.7142857142857143,
+            "r@10": 0.7142857142857143
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_ascii (current)": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.9444444444444444,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.6,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.0,
+            "r@3": 0.0,
+            "r@5": 0.07142857142857142,
+            "r@10": 0.35714285714285715
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_ascii_skip_empty": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.9444444444444444,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.6,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.14285714285714285,
+            "r@3": 0.7142857142857143,
+            "r@5": 0.7142857142857143,
+            "r@10": 0.7142857142857143
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_unicode_words": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.9444444444444444,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.6,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.5714285714285714,
+            "r@3": 0.7142857142857143,
+            "r@5": 0.9285714285714286,
+            "r@10": 1.0
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_char3": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8333333333333334,
+            "r@3": 0.9444444444444444,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.7142857142857143,
+            "r@3": 0.7142857142857143,
+            "r@5": 0.9285714285714286,
+            "r@10": 1.0
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        }
+      },
+      "cosine_separation": {
+        "pos": [
+          0.8727147579193115,
+          0.8693337440490723,
+          0.8486232757568359,
+          0.7107739448547363,
+          0.7237328290939331,
+          0.7218520641326904,
+          0.6489259004592896,
+          0.5874814391136169,
+          0.6418161988258362,
+          0.5919739603996277,
+          0.6023973226547241,
+          0.5462602376937866,
+          0.7382076978683472,
+          0.7161030769348145,
+          0.6063055992126465,
+          0.617375373840332,
+          0.5878472328186035,
+          0.6335426568984985
+        ],
+        "neg": [
+          0.46747344732284546,
+          0.5281251072883606,
+          0.277556836605072,
+          0.4525739550590515,
+          0.47683098912239075,
+          0.5486482381820679
+        ],
+        "auc": 0.9907407407407407
+      },
+      "seconds": 18.6
+    },
+    "me5-small": {
+      "arms": {
+        "dense_only": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8333333333333334,
+            "r@3": 0.9444444444444444,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.4,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.6428571428571429,
+            "r@3": 0.7857142857142857,
+            "r@5": 0.7857142857142857,
+            "r@10": 0.8571428571428571
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_ascii (current)": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.0,
+            "r@3": 0.5,
+            "r@5": 0.6428571428571429,
+            "r@10": 0.7857142857142857
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_ascii_skip_empty": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.6428571428571429,
+            "r@3": 0.7857142857142857,
+            "r@5": 0.7857142857142857,
+            "r@10": 0.8571428571428571
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_unicode_words": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 1.0,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_char3": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.9444444444444444,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 1.0,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 1.0,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        }
+      },
+      "cosine_separation": {
+        "pos": [
+          0.9487279653549194,
+          0.9218371510505676,
+          0.9293679594993591,
+          0.9118484258651733,
+          0.9104369878768921,
+          0.8914651274681091,
+          0.8687694072723389,
+          0.9011337757110596,
+          0.8714958429336548,
+          0.8851287961006165,
+          0.8864048719406128,
+          0.9138870239257812,
+          0.8594530820846558,
+          0.9039984941482544,
+          0.8551796674728394,
+          0.8996788263320923,
+          0.9010589122772217
+        ],
+        "neg": [
+          0.8685752153396606,
+          0.8438635468482971,
+          0.7999113202095032,
+          0.8678324222564697,
+          0.8533270955085754,
+          0.853080153465271
+        ],
+        "auc": 0.9607843137254902
+      },
+      "seconds": 22.7
+    },
+    "me5-base": {
+      "arms": {
+        "dense_only": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.5714285714285714,
+            "r@3": 0.6428571428571429,
+            "r@5": 0.6428571428571429,
+            "r@10": 0.6428571428571429
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_ascii (current)": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.0,
+            "r@3": 0.5,
+            "r@5": 0.5714285714285714,
+            "r@10": 0.6428571428571429
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_ascii_skip_empty": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.5714285714285714,
+            "r@3": 0.6428571428571429,
+            "r@5": 0.6428571428571429,
+            "r@10": 0.6428571428571429
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_unicode_words": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.8571428571428571,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_char3": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 1.0,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.8571428571428571,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        }
+      },
+      "cosine_separation": {
+        "pos": [
+          0.9256235361099243,
+          0.9074861407279968,
+          0.9248299598693848,
+          0.9174243211746216,
+          0.8898415565490723,
+          0.8902653455734253,
+          0.8853323459625244,
+          0.8784726858139038,
+          0.8681625127792358,
+          0.8502726554870605,
+          0.8492692708969116,
+          0.8732634782791138,
+          0.8966200351715088,
+          0.8691985607147217,
+          0.8686803579330444,
+          0.8260496258735657,
+          0.8636369705200195,
+          0.8746232986450195,
+          0.8734369277954102,
+          0.8474785089492798
+        ],
+        "neg": [
+          0.8552929162979126,
+          0.8443124294281006,
+          0.8091843128204346,
+          0.8549480438232422,
+          0.8228007555007935,
+          0.8645440936088562
+        ],
+        "auc": 0.8833333333333333
+      },
+      "seconds": 27.3
+    },
+    "bge-m3": {
+      "arms": {
+        "dense_only": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.9444444444444444,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.4,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.35714285714285715,
+            "r@3": 0.42857142857142855,
+            "r@5": 0.42857142857142855,
+            "r@10": 0.5714285714285714
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_ascii (current)": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.0,
+            "r@3": 0.14285714285714285,
+            "r@5": 0.21428571428571427,
+            "r@10": 0.42857142857142855
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_ascii_skip_empty": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 0.35714285714285715,
+            "r@3": 0.42857142857142855,
+            "r@5": 0.42857142857142855,
+            "r@10": 0.5714285714285714
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_unicode_words": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 1.0,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        },
+        "hybrid_char3": {
+          "ENGLISH tier A (gold)": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "ENGLISH tier B (silver)": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "URDU PROBE (label-free, smoke test only)": {
+            "n": 14,
+            "r@1": 1.0,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "HAND-LABELLED urdu_native": null,
+          "HAND-LABELLED roman_urdu": null,
+          "HAND-LABELLED code_switched": null
+        }
+      },
+      "cosine_separation": {
+        "pos": [
+          0.7150866985321045,
+          0.6529674530029297,
+          0.7746086120605469,
+          0.783416748046875,
+          0.7175706624984741,
+          0.6755454540252686,
+          0.647095799446106,
+          0.6901021003723145,
+          0.6565152406692505,
+          0.6805603504180908,
+          0.6358596086502075,
+          0.6099034547805786,
+          0.6523892879486084,
+          0.72356778383255,
+          0.5946993827819824,
+          0.7299504280090332,
+          0.5982893705368042,
+          0.7666678428649902,
+          0.7094770669937134
+        ],
+        "neg": [
+          0.567287802696228,
+          0.6426956653594971,
+          0.48683929443359375,
+          0.6343024969100952,
+          0.4914107918739319,
+          0.665147066116333
+        ],
+        "auc": 0.868421052631579
+      },
+      "seconds": 27.0
+    }
+  }
+}

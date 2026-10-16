@@ -1,0 +1,99 @@
+SOURCE: mhGAP-HIG-PK — The mhGAP Humanitarian Intervention Guide (Adapted for Pakistan).
+First edition, 2023. Mental Health Coordination Unit, Ministry of Planning, Development
+and Special Initiatives, Government of Pakistan. Editor: Dr Asma Humayun.
+Adapted from WHO/UNHCR mhGAP-HIG (2015); clinical tools adapted from EMRO WHO (2021).
+Launched World Mental Health Day, 10 October 2022. Printing supported by International
+Medical Corps, Pakistan. Funded (2021 final draft) by UNICEF Pakistan.
+NOTE (from source front matter): "The World Health Organisation is not responsible for
+the content or accuracy of this adaptation."
+
+PROVENANCE OF THIS TRANSCRIPTION:
+Urdu transcribed by reading rasterized page images (pdftoppm @200dpi) directly, NOT via
+PDF text extraction. Text-layer extraction of this document corrupts right-to-left Urdu
+script (verified: produced garbage such as "ULLS pset"). Image-based reading produced
+clean, correctly-rendered Urdu. Page numbers below are the document's own printed page
+numbers.
+
+REVIEW STATUS: NOT yet reviewed by a native Urdu speaker or clinician. Transcribed
+faithfully from source images, but per the KOI disclosed-limitations standard, this
+content must NOT ship into a live CRITICAL-tier path until native-speaker verification
+confirms each line matches the printed source.
+
+NOT TRANSCRIBED (present in source, deferred): doc pp.14-15 (two-page Urdu problem-
+solving worksheet table) and p.18 (full-page Urdu slow-breathing script). Both are dense
+small-print tabular/長-form Urdu; deferred because hand-transcription confidence is lower
+there and neither is crisis-critical. Locations recorded so they can be picked up later.
+
+===CHUNK===
+ID: gpc_sui_assessment
+Module: GPC — Principles of Assessment, item 6
+Source page: 8
+Title: Explore possible suicidal thoughts and suicide attempts
+EN_CONTEXT: Questions regarding suicide may also be perceived as offensive, but they are also essential questions in an MNS assessment. Try to ask questions in a culturally sensitive and non-judgmental way. If the person expresses hopelessness, ask further questions.
+EN: What are your hopes for the future?
+UR: آپ کو اپنا مستقبل کیسا لگتا ہے؟
+EN: Do you feel that life is worth living?
+UR: کیا آپ کو کبھی ایسا لگا ہے کہ زندگی جینے کے قابل نہیں رہی؟
+EN: Do you think about hurting yourself?
+UR: کیا آپ نے کبھی اپنے آپ کو نقصان پہنچانے کے بارے میں سوچا ہے؟
+EN: Have you made any plans to end your life?
+UR: کیا آپ نے کبھی زندگی کو ختم کرنے کے طریقے کے بارے میں سوچا ہے؟
+
+===CHUNK===
+ID: gpc_stressors_social_support
+Module: GPC — Principles of Reducing Stress and Strengthening Social Support, item 1
+Source page: 11
+Title: Explore possible stressors and the availability of social support
+EN: What is your biggest worry these days?
+UR: آجکل آپ کی سب سے بڑی پریشانی کیا ہے؟
+EN: How do you deal with this worry?
+UR: آپ اس پریشانی سے کیسے نمٹ رہے ہیں؟
+EN: What are some of the things that give you comfort, strength and energy?
+UR: کونسے ایسے کام ہیں جو آپ کو ذہنی سکون اور حوصلہ دیتے ہیں؟
+EN: Who do you feel most comfortable sharing your problems with? When you are not feeling well, who do you turn to for help or advice?
+UR: آپ کس شخص کو اپنے مسئلے بتانے میں آسانی محسوس کرتے ہیں؟ جب آپ پریشان ہوتے ہیں تو آپ کس سے مشورے کرتے ہیں؟
+EN: How is your relationship with your family? In what way do your family and friends support you and in what way do you feel stressed by them?
+UR: آپ کے اپنے گھر والوں سے تعلقات کیسے ہیں؟ ان کی وجہ سے آپ کو کب حوصلہ ملتا ہے اور کب پریشانی ہوتی ہے؟
+
+===CHUNK===
+ID: gpc_strengthen_social_support
+Module: GPC — Principles of Reducing Stress and Strengthening Social Support, item 4
+Source page: 16
+Title: Strengthen social support
+EN: What comforts you when you are upset?
+UR: پریشانی میں آپ کو سکون کیسے ملتا ہے؟
+EN: Do you talk to anyone about your problems and what you are going through?
+UR: کس شخص سے بات کرنے سے آپ کی پریشانی کم ہوتی ہے؟
+EN: Is there any person who you feel can give you support?
+UR: مشکل وقت میں کون آپ کو سب سے زیادہ سہارا دیتا ہے؟
+
+===CHUNK===
+ID: gpc_stress_management
+Module: GPC — Principles of Reducing Stress and Strengthening Social Support, item 5
+Source page: 16
+Title: Stress management
+EN: What are your sources of stress?
+UR: آپ کو کن معاملات سے ذہنی دباؤ محسوس ہوتا ہے؟
+EN: What can you do about these?
+UR: آپ کے خیال میں ان کا حل کیا ہے؟
+
+===CHUNK===
+ID: gpc_management_principles
+Module: GPC — Principles of Management
+Source page: 9
+Title: Principles of Management (English only in source)
+EN_ONLY: Many MNS conditions are chronic, requiring long-term monitoring and follow-up. In humanitarian settings, continuity of care may be difficult. It is important to recognize the carers of people with MNS conditions as a valuable resource. Carers include anyone who shares responsibility for the well-being of the person, including family, friends or other trusted people. Always provide information about the condition and discuss achievable goals to agree on a management plan with the person. Confirm that the person and the carer understand and agree on the management plan. Encourage self-monitoring of symptoms and educate the person and carer on when to seek urgent care.
+
+===CHUNK===
+ID: gpc_abuse_neglect
+Module: GPC — Principles of Reducing Stress and Strengthening Social Support, item 2
+Source page: 11
+Title: Be aware of signs of abuse or neglect (English only in source)
+EN_ONLY: Be attentive to potential signs of sexual or physical abuse (including domestic violence) in women, children and older people (e.g., unexplained bruises or injuries, excessive fear, reluctance to discuss matters when a family member is present). Be attentive to potential signs of neglect, particularly in children, people living with disability and older people. When signs of abuse or neglect are present, interview the person in a private space to ask if anything hurtful is going on. If you suspect abuse or neglect: talk immediately with your supervisor to discuss the plan of action; with the person's consent, identify community resources for protection.
+
+===CHUNK===
+ID: gpc_carer_stress
+Module: GPC — Principles of Reducing Stress and Strengthening Social Support, item 6
+Source page: 19
+Title: Address stress of the carers (English only in source)
+EN_ONLY: Acknowledge that it is stressful to care for people with MNS conditions, but tell the carer that it is important that they continue to do so. Even when this is difficult, carers need to respect the dignity of the people they care for and involve them in making decisions about their own lives as much as possible. Ask the carers about worries and anxiety, practical challenges, ability to carry out other daily activities, physical fatigue, social support available, and psychological well-being. Address the carers' needs by giving information, linking them with community services, discussing respite care, performing problem-solving counselling and teaching stress management.

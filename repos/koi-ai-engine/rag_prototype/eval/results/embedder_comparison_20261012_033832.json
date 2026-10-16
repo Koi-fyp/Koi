@@ -1,0 +1,1271 @@
+{
+  "run_at": "2026-10-12T03:03:33",
+  "n_chunks": 6852,
+  "models": {
+    "minilm": {
+      "config": {
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
+        "doc": "",
+        "query": "",
+        "max_len": null
+      },
+      "strata": {
+        "ENGLISH tier A (gold)": {
+          "dense": {
+            "n": 18,
+            "r@1": 0.8333333333333334,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "hybrid": {
+            "n": 18,
+            "r@1": 0.9444444444444444,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "per_query": [
+            {
+              "id": "a01",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 4
+            },
+            {
+              "id": "a02",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 4
+            },
+            {
+              "id": "a03",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            },
+            {
+              "id": "a04",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            },
+            {
+              "id": "a05",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 6
+            },
+            {
+              "id": "a06",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "a07",
+              "dense_hit": 2,
+              "hybrid_hit": 1,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a08",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 12
+            },
+            {
+              "id": "a09",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a10",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 10
+            },
+            {
+              "id": "a11",
+              "dense_hit": 1,
+              "hybrid_hit": 8,
+              "bm25_tokens": 14
+            },
+            {
+              "id": "a12",
+              "dense_hit": 3,
+              "hybrid_hit": 1,
+              "bm25_tokens": 18
+            },
+            {
+              "id": "a13",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a14",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 14
+            },
+            {
+              "id": "a15",
+              "dense_hit": 2,
+              "hybrid_hit": 1,
+              "bm25_tokens": 12
+            },
+            {
+              "id": "a16",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 6
+            },
+            {
+              "id": "a17",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "a18",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            }
+          ]
+        },
+        "ENGLISH tier B (silver)": {
+          "dense": {
+            "n": 5,
+            "r@1": 0.6,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "hybrid": {
+            "n": 5,
+            "r@1": 0.6,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "per_query": [
+            {
+              "id": "b01",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 9
+            },
+            {
+              "id": "b02",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 5
+            },
+            {
+              "id": "b03",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "b04",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 9
+            },
+            {
+              "id": "b05",
+              "dense_hit": 2,
+              "hybrid_hit": 2,
+              "bm25_tokens": 7
+            }
+          ]
+        },
+        "URDU PROBE (label-free, smoke test only)": {
+          "dense": {
+            "n": 14,
+            "r@1": 0.14285714285714285,
+            "r@3": 0.7142857142857143,
+            "r@5": 0.7142857142857143,
+            "r@10": 0.7142857142857143
+          },
+          "hybrid": {
+            "n": 14,
+            "r@1": 0.0,
+            "r@3": 0.0,
+            "r@5": 0.07142857142857142,
+            "r@10": 0.35714285714285715
+          },
+          "per_query": [
+            {
+              "id": "mhgappk_bf203e39f6#1",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#2",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#3",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#4",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#1",
+              "dense_hit": 3,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#2",
+              "dense_hit": 3,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#3",
+              "dense_hit": 3,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#4",
+              "dense_hit": 3,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#5",
+              "dense_hit": 3,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#1",
+              "dense_hit": 2,
+              "hybrid_hit": 10,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#2",
+              "dense_hit": 2,
+              "hybrid_hit": 7,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#3",
+              "dense_hit": 2,
+              "hybrid_hit": 7,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bfba6f6671#1",
+              "dense_hit": 1,
+              "hybrid_hit": 4,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bfba6f6671#2",
+              "dense_hit": 1,
+              "hybrid_hit": 8,
+              "bm25_tokens": 0
+            }
+          ]
+        },
+        "HAND-LABELLED urdu_native": null,
+        "HAND-LABELLED roman_urdu": null,
+        "HAND-LABELLED code_switched": null
+      },
+      "ooc_top1_cosine": [
+        {
+          "id": "c01",
+          "top1_cos": 0.46747344732284546
+        },
+        {
+          "id": "c02",
+          "top1_cos": 0.5281251072883606
+        },
+        {
+          "id": "c03",
+          "top1_cos": 0.277556836605072
+        },
+        {
+          "id": "c04",
+          "top1_cos": 0.4525739550590515
+        },
+        {
+          "id": "c05",
+          "top1_cos": 0.47683098912239075
+        },
+        {
+          "id": "c06",
+          "top1_cos": 0.5486482381820679
+        }
+      ],
+      "seconds": 16.8
+    },
+    "me5-small": {
+      "config": {
+        "name": "intfloat/multilingual-e5-small",
+        "doc": "passage: ",
+        "query": "query: ",
+        "max_len": 512
+      },
+      "strata": {
+        "ENGLISH tier A (gold)": {
+          "dense": {
+            "n": 18,
+            "r@1": 0.8333333333333334,
+            "r@3": 0.9444444444444444,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "hybrid": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "per_query": [
+            {
+              "id": "a01",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 4
+            },
+            {
+              "id": "a02",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 4
+            },
+            {
+              "id": "a03",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            },
+            {
+              "id": "a04",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            },
+            {
+              "id": "a05",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 6
+            },
+            {
+              "id": "a06",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "a07",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a08",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 12
+            },
+            {
+              "id": "a09",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a10",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 10
+            },
+            {
+              "id": "a11",
+              "dense_hit": 2,
+              "hybrid_hit": 10,
+              "bm25_tokens": 14
+            },
+            {
+              "id": "a12",
+              "dense_hit": 5,
+              "hybrid_hit": 1,
+              "bm25_tokens": 18
+            },
+            {
+              "id": "a13",
+              "dense_hit": 2,
+              "hybrid_hit": 2,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a14",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 14
+            },
+            {
+              "id": "a15",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 12
+            },
+            {
+              "id": "a16",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 6
+            },
+            {
+              "id": "a17",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "a18",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            }
+          ]
+        },
+        "ENGLISH tier B (silver)": {
+          "dense": {
+            "n": 5,
+            "r@1": 0.4,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "hybrid": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "per_query": [
+            {
+              "id": "b01",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 9
+            },
+            {
+              "id": "b02",
+              "dense_hit": 2,
+              "hybrid_hit": 1,
+              "bm25_tokens": 5
+            },
+            {
+              "id": "b03",
+              "dense_hit": 2,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "b04",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 9
+            },
+            {
+              "id": "b05",
+              "dense_hit": 3,
+              "hybrid_hit": 2,
+              "bm25_tokens": 7
+            }
+          ]
+        },
+        "URDU PROBE (label-free, smoke test only)": {
+          "dense": {
+            "n": 14,
+            "r@1": 0.6428571428571429,
+            "r@3": 0.7857142857142857,
+            "r@5": 0.7857142857142857,
+            "r@10": 0.8571428571428571
+          },
+          "hybrid": {
+            "n": 14,
+            "r@1": 0.0,
+            "r@3": 0.5,
+            "r@5": 0.6428571428571429,
+            "r@10": 0.7857142857142857
+          },
+          "per_query": [
+            {
+              "id": "mhgappk_bf203e39f6#1",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#2",
+              "dense_hit": 1,
+              "hybrid_hit": 10,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#3",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#4",
+              "dense_hit": 1,
+              "hybrid_hit": 9,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#1",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#2",
+              "dense_hit": 1,
+              "hybrid_hit": 2,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#3",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#4",
+              "dense_hit": 2,
+              "hybrid_hit": 4,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#5",
+              "dense_hit": 1,
+              "hybrid_hit": 2,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#1",
+              "dense_hit": 2,
+              "hybrid_hit": 5,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#2",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#3",
+              "dense_hit": 1,
+              "hybrid_hit": 2,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bfba6f6671#1",
+              "dense_hit": 1,
+              "hybrid_hit": 2,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bfba6f6671#2",
+              "dense_hit": 10,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            }
+          ]
+        },
+        "HAND-LABELLED urdu_native": null,
+        "HAND-LABELLED roman_urdu": null,
+        "HAND-LABELLED code_switched": null
+      },
+      "ooc_top1_cosine": [
+        {
+          "id": "c01",
+          "top1_cos": 0.8685752153396606
+        },
+        {
+          "id": "c02",
+          "top1_cos": 0.8438635468482971
+        },
+        {
+          "id": "c03",
+          "top1_cos": 0.7999113202095032
+        },
+        {
+          "id": "c04",
+          "top1_cos": 0.8678324222564697
+        },
+        {
+          "id": "c05",
+          "top1_cos": 0.8533270955085754
+        },
+        {
+          "id": "c06",
+          "top1_cos": 0.853080153465271
+        }
+      ],
+      "seconds": 192.3
+    },
+    "me5-base": {
+      "config": {
+        "name": "intfloat/multilingual-e5-base",
+        "doc": "passage: ",
+        "query": "query: ",
+        "max_len": 512
+      },
+      "strata": {
+        "ENGLISH tier A (gold)": {
+          "dense": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "hybrid": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "per_query": [
+            {
+              "id": "a01",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 4
+            },
+            {
+              "id": "a02",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 4
+            },
+            {
+              "id": "a03",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            },
+            {
+              "id": "a04",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            },
+            {
+              "id": "a05",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 6
+            },
+            {
+              "id": "a06",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "a07",
+              "dense_hit": 2,
+              "hybrid_hit": 1,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a08",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 12
+            },
+            {
+              "id": "a09",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a10",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 10
+            },
+            {
+              "id": "a11",
+              "dense_hit": 1,
+              "hybrid_hit": 4,
+              "bm25_tokens": 14
+            },
+            {
+              "id": "a12",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 18
+            },
+            {
+              "id": "a13",
+              "dense_hit": 3,
+              "hybrid_hit": 3,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a14",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 14
+            },
+            {
+              "id": "a15",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 12
+            },
+            {
+              "id": "a16",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 6
+            },
+            {
+              "id": "a17",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "a18",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            }
+          ]
+        },
+        "ENGLISH tier B (silver)": {
+          "dense": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "hybrid": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "per_query": [
+            {
+              "id": "b01",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 9
+            },
+            {
+              "id": "b02",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 5
+            },
+            {
+              "id": "b03",
+              "dense_hit": null,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "b04",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 9
+            },
+            {
+              "id": "b05",
+              "dense_hit": 1,
+              "hybrid_hit": 2,
+              "bm25_tokens": 7
+            }
+          ]
+        },
+        "URDU PROBE (label-free, smoke test only)": {
+          "dense": {
+            "n": 14,
+            "r@1": 0.5714285714285714,
+            "r@3": 0.6428571428571429,
+            "r@5": 0.6428571428571429,
+            "r@10": 0.6428571428571429
+          },
+          "hybrid": {
+            "n": 14,
+            "r@1": 0.0,
+            "r@3": 0.5,
+            "r@5": 0.5714285714285714,
+            "r@10": 0.6428571428571429
+          },
+          "per_query": [
+            {
+              "id": "mhgappk_bf203e39f6#1",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#2",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#3",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#4",
+              "dense_hit": 1,
+              "hybrid_hit": 2,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#1",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#2",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#3",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#4",
+              "dense_hit": 2,
+              "hybrid_hit": 5,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#5",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#1",
+              "dense_hit": 1,
+              "hybrid_hit": 8,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#2",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#3",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bfba6f6671#1",
+              "dense_hit": 1,
+              "hybrid_hit": 2,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bfba6f6671#2",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            }
+          ]
+        },
+        "HAND-LABELLED urdu_native": null,
+        "HAND-LABELLED roman_urdu": null,
+        "HAND-LABELLED code_switched": null
+      },
+      "ooc_top1_cosine": [
+        {
+          "id": "c01",
+          "top1_cos": 0.8552929162979126
+        },
+        {
+          "id": "c02",
+          "top1_cos": 0.8443124294281006
+        },
+        {
+          "id": "c03",
+          "top1_cos": 0.8091843128204346
+        },
+        {
+          "id": "c04",
+          "top1_cos": 0.8549480438232422
+        },
+        {
+          "id": "c05",
+          "top1_cos": 0.8228007555007935
+        },
+        {
+          "id": "c06",
+          "top1_cos": 0.8645440936088562
+        }
+      ],
+      "seconds": 1278.9
+    },
+    "bge-m3": {
+      "config": {
+        "name": "BAAI/bge-m3",
+        "doc": "",
+        "query": "",
+        "max_len": 512
+      },
+      "strata": {
+        "ENGLISH tier A (gold)": {
+          "dense": {
+            "n": 18,
+            "r@1": 0.9444444444444444,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "hybrid": {
+            "n": 18,
+            "r@1": 0.8888888888888888,
+            "r@3": 0.9444444444444444,
+            "r@5": 0.9444444444444444,
+            "r@10": 1.0
+          },
+          "per_query": [
+            {
+              "id": "a01",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 4
+            },
+            {
+              "id": "a02",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 4
+            },
+            {
+              "id": "a03",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            },
+            {
+              "id": "a04",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            },
+            {
+              "id": "a05",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 6
+            },
+            {
+              "id": "a06",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "a07",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a08",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 12
+            },
+            {
+              "id": "a09",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a10",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 10
+            },
+            {
+              "id": "a11",
+              "dense_hit": 1,
+              "hybrid_hit": 9,
+              "bm25_tokens": 14
+            },
+            {
+              "id": "a12",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 18
+            },
+            {
+              "id": "a13",
+              "dense_hit": 2,
+              "hybrid_hit": 2,
+              "bm25_tokens": 11
+            },
+            {
+              "id": "a14",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 14
+            },
+            {
+              "id": "a15",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 12
+            },
+            {
+              "id": "a16",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 6
+            },
+            {
+              "id": "a17",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "a18",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 8
+            }
+          ]
+        },
+        "ENGLISH tier B (silver)": {
+          "dense": {
+            "n": 5,
+            "r@1": 0.4,
+            "r@3": 0.8,
+            "r@5": 0.8,
+            "r@10": 0.8
+          },
+          "hybrid": {
+            "n": 5,
+            "r@1": 0.8,
+            "r@3": 1.0,
+            "r@5": 1.0,
+            "r@10": 1.0
+          },
+          "per_query": [
+            {
+              "id": "b01",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 9
+            },
+            {
+              "id": "b02",
+              "dense_hit": 2,
+              "hybrid_hit": 1,
+              "bm25_tokens": 5
+            },
+            {
+              "id": "b03",
+              "dense_hit": null,
+              "hybrid_hit": 1,
+              "bm25_tokens": 7
+            },
+            {
+              "id": "b04",
+              "dense_hit": 1,
+              "hybrid_hit": 1,
+              "bm25_tokens": 9
+            },
+            {
+              "id": "b05",
+              "dense_hit": 2,
+              "hybrid_hit": 3,
+              "bm25_tokens": 7
+            }
+          ]
+        },
+        "URDU PROBE (label-free, smoke test only)": {
+          "dense": {
+            "n": 14,
+            "r@1": 0.35714285714285715,
+            "r@3": 0.42857142857142855,
+            "r@5": 0.42857142857142855,
+            "r@10": 0.5714285714285714
+          },
+          "hybrid": {
+            "n": 14,
+            "r@1": 0.0,
+            "r@3": 0.14285714285714285,
+            "r@5": 0.21428571428571427,
+            "r@10": 0.42857142857142855
+          },
+          "per_query": [
+            {
+              "id": "mhgappk_bf203e39f6#1",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#2",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#3",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bf203e39f6#4",
+              "dense_hit": 7,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#1",
+              "dense_hit": 10,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#2",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#3",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#4",
+              "dense_hit": 2,
+              "hybrid_hit": 8,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_11f0557fbc#5",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#1",
+              "dense_hit": 1,
+              "hybrid_hit": 10,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#2",
+              "dense_hit": 1,
+              "hybrid_hit": 6,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_480c27df26#3",
+              "dense_hit": 1,
+              "hybrid_hit": 5,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bfba6f6671#1",
+              "dense_hit": 1,
+              "hybrid_hit": 3,
+              "bm25_tokens": 0
+            },
+            {
+              "id": "mhgappk_bfba6f6671#2",
+              "dense_hit": null,
+              "hybrid_hit": null,
+              "bm25_tokens": 0
+            }
+          ]
+        },
+        "HAND-LABELLED urdu_native": null,
+        "HAND-LABELLED roman_urdu": null,
+        "HAND-LABELLED code_switched": null
+      },
+      "ooc_top1_cosine": [
+        {
+          "id": "c01",
+          "top1_cos": 0.567287802696228
+        },
+        {
+          "id": "c02",
+          "top1_cos": 0.6426956653594971
+        },
+        {
+          "id": "c03",
+          "top1_cos": 0.48683929443359375
+        },
+        {
+          "id": "c04",
+          "top1_cos": 0.6343024969100952
+        },
+        {
+          "id": "c05",
+          "top1_cos": 0.4914107918739319
+        },
+        {
+          "id": "c06",
+          "top1_cos": 0.665147066116333
+        }
+      ],
+      "seconds": 610.8
+    }
+  },
+  "rejected_multilingual_entries": []
+}

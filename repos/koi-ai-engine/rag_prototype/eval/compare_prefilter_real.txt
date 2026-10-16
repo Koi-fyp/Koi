@@ -1,0 +1,54 @@
+corpus: 6852 chunks
+
+====================================================================================================
+SMOKE queries (phase2b_smoke_test.py) -- the queries that exposed the bug
+====================================================================================================
+id   tier      elig/10 old  new      top1      top3   gold old  new
+q1   HIGH               10   10      same      same          -    -
+q2   CRITICAL            6   10      same      same          -    -
+q3   CRITICAL            2   10      same   CHANGED          -    -
+q4   HIGH               10   10      same      same          -    -
+q5   HIGH                9   10      same      same          -    -
+q6   CRITICAL            9   10      same      same          -    -
+q7   HIGH               10   10      same      same          -    -
+q8   CRITICAL           10   10      same      same          -    -
+q9   HIGH                9   10      same      same          -    -
+q10  CRITICAL            7   10      same   CHANGED          -    -
+-> old pipeline kept fewer eligible results on 6/10 queries; top-1 changed 0, top-3 changed 2, gold rank changed 0
+
+====================================================================================================
+DEV set (dev_set.py) -- gold queries written from the chunks themselves
+====================================================================================================
+id   tier      elig/10 old  new      top1      top3   gold old  new
+a01  CRITICAL            2   10      same   CHANGED          1    1
+a02  CRITICAL            7   10      same      same          1    1
+a03  CRITICAL           10   10      same      same          1    1
+a04  CRITICAL            6   10      same   CHANGED          1    1
+a05  HIGH               10   10      same      same          1    1
+a06  HIGH               10   10      same      same          1    1
+a07  CRITICAL            2   10      same   CHANGED          1    1
+a08  CRITICAL            1   10      same   CHANGED          1    1
+a09  CRITICAL            4   10      same   CHANGED          1    1
+a10  HIGH               10   10      same      same          1    1
+a11  HIGH               10   10      same      same          8    8
+a12  CRITICAL            5   10      same      same          1    1
+a13  CRITICAL           10   10      same      same          1    1
+a14  CRITICAL            7   10      same      same          1    1
+a15  CRITICAL           10   10      same      same          1    1
+a16  CRITICAL            7   10      same      same          1    1
+a17  HIGH               10   10      same      same          1    1
+a18  CRITICAL           10   10      same      same          1    1
+b01  HIGH                6   10      same   CHANGED          1    1
+b02  HIGH               10   10      same      same          1    1
+b03  HIGH                9   10      same      same          -    -
+b04  HIGH                6   10      same      same          1    1
+b05  HIGH               10   10      same   CHANGED          2    2
+c01  HIGH               10   10      same   CHANGED          -    -
+c02  HIGH                9   10      same      same          -    -
+c03  CRITICAL            0   10   CHANGED   CHANGED          -    -
+c04  HIGH               10   10      same      same          -    -
+c05  CRITICAL            3   10      same   CHANGED          -    -
+c06  HIGH               10   10      same      same          -    -
+-> old pipeline kept fewer eligible results on 15/29 queries; top-1 changed 1, top-3 changed 10, gold rank changed 0
+
+Note: elig/10 = eligible chunks left in top-10 after the old post-filter; the new pipeline fills top-10 from the eligible pool only. 'gold' = rank of the gold chunk among eligible results ('-' = none/not applicable).

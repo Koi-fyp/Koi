@@ -1,0 +1,52 @@
+==========================================================================================
+DAY 2 DEV-SET EVALUATION
+==========================================================================================
+
+TIER A (gold, chunk-exact — authoritative corpus) (n=18):
+  Recall@1: 94.44%   Recall@3: 94.44%   Recall@5: 94.44%
+  id   hit@  top1_chunk_id    top1_text
+  a01  1     who_bea4d647aa   Self-harm: Intentional self-inflicted poisoning or injury, which may or may not 
+  a02  1     who_250f535470   Suicidal thoughts/ideation: Thoughts, ideas or ruminations about the possibility
+  a03  1     samhsa_068757d34a [988 Suicide & Crisis Lifeline — Service Description] "988" is the three-digit, 
+  a04  1     who_466ea20335   Stand-alone digital interventions based on evidence-based interventions such as 
+  a05  1     samhsa_21fe845e34 [Crisis Services Should Be Trauma-Informed] The impact of traumatic events on be
+  a06  1     samhsa_ba841557a7 [Crisis Services Should Be Developmentally Appropriate] CHILDREN AND YOUTH: Cris
+  a07  1     samhsa_c744348b34 [Other Behavioral Health Crisis Hotlines — Suicide Risk Assessment] Structured a
+  a08  1     who_250f535470   Suicidal thoughts/ideation: Thoughts, ideas or ruminations about the possibility
+  a09  1     samhsa_068757d34a [988 Suicide & Crisis Lifeline — Service Description] "988" is the three-digit, 
+  a10  1     samhsa_21fe845e34 [Crisis Services Should Be Trauma-Informed] The impact of traumatic events on be
+  a12  1     who_466ea20335   Stand-alone digital interventions based on evidence-based interventions such as 
+  a13  1     samhsa_983fdc952b [Crisis Services Should Prioritize Safety] Although many crisis events do not in
+  a14  1     samhsa_8ebc7bced3 [Crisis Services Should Provide Continuity of Care from Onset of Crisis Until St
+  a15  1     samhsa_0a88eb2fc9 [988 Suicide & Crisis Lifeline — State of Service-Related Evidence] Existing evi
+  a16  1     who_262440fba5   The evidence regarding effectiveness of stand-alone media campaigns (to raise aw
+  a17  1     who_a53d6078d3   Safety planning type-interventions, i.e. interventions based on principles of sa
+  a18  1     samhsa_ba841557a7 [Crisis Services Should Be Developmentally Appropriate] CHILDREN AND YOUTH: Cris
+  a11  8     who_bea4d647aa   Self-harm: Intentional self-inflicted poisoning or injury, which may or may not   <-- not rank 1
+
+TIER B (silver, topic-level — AnnoMI) (n=5):
+  Recall@1: 60.00%   Recall@3: 80.00%   Recall@5: 80.00%
+  id   hit@  top1_chunk_id    top1_text
+  b01  1     annomi_3571858e79 [Client]: Yeah.
+[Therapist]: -of how much you can drink to have some of the posi
+  b02  1     annomi_4bf1640b27 [Therapist]: Well, let's talk about then how you ended up cutting yourself.
+  b04  1     annomi_4150e71f67 [Client]: So I feel that there-there's a future in that.
+[Therapist]: How confid
+  b05  2     who_bea4d647aa   Self-harm: Intentional self-inflicted poisoning or injury, which may or may not   <-- not rank 1
+  b03  MISS  annomi_caa0ef3bc9 [Client]: Yeah.
+[Therapist]: Yeah. And so you felt you came about this change, a  <-- FULL MISS
+
+OUT-OF-CORPUS (n=6) — what got retrieved, for manual review (no calibrated abstention gate exists yet — that's Day 3):
+  [c01] "what to do if someone is showing signs of anorexia or b" -> cosine=0.4675  mhgappk_8ae903049e (mhGAP_HIG_PK_2023) | [Be aware of signs of abuse or neglect (English only in source)] Be attentive to potential signs of 
+  [c02] "supporting someone experiencing domestic violence from " -> cosine=0.4862  annomi_9ba411abb6 (AnnoMI) | [Client]: Well, I'm not sure if I want to live with my auntie and uncle. [chuckles] Um, I think, yea
+  [c03] "someone is having a psychotic episode with hallucinatio" -> cosine=0.2334  samhsa_c744348b34 (SAMHSA_2025) | [Other Behavioral Health Crisis Hotlines — Suicide Risk Assessment] Structured and consistent suicid
+  [c04] "LGBTQ-specific crisis resources and considerations" -> cosine=0.4526  samhsa_21fe845e34 (SAMHSA_2025) | [Crisis Services Should Be Trauma-Informed] The impact of traumatic events on behavioral health cris
+  [c05] "mandatory reporting requirements for suspected child ab" -> cosine=0.4768  mhgappk_8ae903049e (mhGAP_HIG_PK_2023) | [Be aware of signs of abuse or neglect (English only in source)] Be attentive to potential signs of 
+  [c06] "helping someone through a panic attack in the moment" -> cosine=0.5486  samhsa_8ebc7bced3 (SAMHSA_2025) | [Crisis Services Should Provide Continuity of Care from Onset of Crisis Until Stability and Include 
+
+  ** FLAG: the same chunk_id was top-1 for multiple UNRELATED out-of-corpus queries: {'mhgappk_8ae903049e'} **
+  ** This needs a decision: is this a genuine embedding-space 'hub' effect (a passage that sits generically near many distress-adjacent queries), or a code bug (e.g. an indexing error reusing the same row)? Check the cosine scores above -- if they're meaningfully different per query, it's likely a real effect, not a bug. If they're identical or near-identical, investigate the indexing code. **
+
+==========================================================================================
+Reminder: Tier A and Tier B are NOT averaged together. See dev_set.py docstring for why.
+==========================================================================================

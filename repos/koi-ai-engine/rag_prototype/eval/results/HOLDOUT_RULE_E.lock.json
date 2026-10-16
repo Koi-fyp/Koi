@@ -1,0 +1,34 @@
+{
+  "rule": "E",
+  "started_at": "2026-10-12T15:34:09",
+  "status": "completed",
+  "model": "intfloat/multilingual-e5-small",
+  "k": 7,
+  "gate": 0.5709,
+  "max_items": 3,
+  "max_seq_length": null,
+  "preflight": {
+    "n_pos": 133,
+    "n_neg": 83,
+    "hit1": 0.5488721804511278,
+    "hit3": 0.8646616541353384,
+    "thr": 0.5709147249659877,
+    "cov_actual": 0.39849624060150374,
+    "acc_hit1": 0.6415094339622641,
+    "acc_hit3": 0.9056603773584906,
+    "far": 0.060240963855421686,
+    "far_k": 5
+  },
+  "input_sha256": {
+    "scripts/retrieval_pipeline.py": "c9fc3524f4f22ed9f947bc194b1116d8ca33421228b9c05370e0c5b79fb2780c",
+    "scripts/language_detector.py": "3a9635e4cfdd717e45e345c9be05441c371b428a7a7cd746300df2ef4e336726",
+    "eval/holdout_once.py": "7cffde6cae2923a90af61e433f49bbf16473dd9ecba12c3c802d1db3a670e675",
+    "eval/multilingual_queries.py": "21c8c10cec900ec1051a4b74f4194375c993ca5a483295edfb58154f5a619878",
+    "eval/labels/koi_queries_master_draft.csv": "ef4009bd0080414c99534222bb678dd3e065376a521553de4759c37900537831",
+    "data/processed/authoritative_chunks.jsonl": "5f523ba7c23a2f98c79419f8b38925baa9b428720ebce7f2dbf2b17d62ddbf9f",
+    "data/processed/mhgap_pk_chunks.jsonl": "c2aa0f02a6f6422b29ad8538d6af3efc2cb03a77d2b1a2588c64d2b8bacac6d5",
+    "data/processed/annomi_chunks.jsonl": "88b438a30a6d78967c7e0886a92f0efdc0c35b57fa236c2f4c3ac429f0901b9a"
+  },
+  "results": "holdout_once_20261012_153410.json",
+  "results_sha256": "0da3a991a3152c9b280501fd2275c7a95344ecdd08dd93ef4aeaf1ab56af9c33"
+}
