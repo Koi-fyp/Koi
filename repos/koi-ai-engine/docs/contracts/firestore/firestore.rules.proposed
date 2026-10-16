@@ -49,10 +49,16 @@ service cloud.firestore {
       // No client row reads a user document except the owner.
       allow read: if isOwner(uid);
 
-      match /conversations/{conversationId}/messages/{messageId} {
-        allow read, write: if isOwner(uid);
-      }
     }
+
+    // ADDITION (P5.6, commented out on purpose; NOT active): owner-only nested
+    // message path users/{uid}/conversations/{cid}/messages/{mid}. Everything
+    // above and below is the original, stricter proposal and is unchanged.
+    // Enable only after Ahmad reviews it and the emulator owner/non-owner
+    // tests pass; it adds no field validation for message documents.
+    // match /users/{uid}/conversations/{conversationId}/messages/{messageId} {
+    //   allow read, write: if isOwner(uid);
+    // }
 
     // Inventory row: conversationService.ts:85-90.
     // The message document has no owner field, and the code does not establish
