@@ -456,3 +456,5 @@ P3.1: chat_core currently accepts JSON only; multipart not implemented.
 P3.2: crisis_client.py absent; no internal async lookup wired.
 
 P3.3: risk wait/fail-closed not implemented.
+
+P3.4: risk event and post-reply cap not implemented.
