@@ -69,3 +69,22 @@ NEXT: none - all phases complete
 
 2026-10-16T21:00:00Z | CORRECTION | P1.e | prior "commit pending" wording corrected: hygiene changes were committed as afb440a | verify: git show --stat --oneline afb440a
 NEXT: none - all phases complete
+2026-10-16T21:08:13Z | REOPEN | P3 | ledger FINAL was premature
+2026-10-16T21:11:29Z | P1.b | STARTED
+2026-10-16T21:17:46Z | P2.4 | DONE | commit fa316d4 | verify: pytest deploy\modal\test_crisis_score_surface.py deploy\modal\test_chat_contract.py deploy\modal\test_crisis_core.py -q passed
+2026-10-16T21:33:54Z | P3.1 | DONE | commit 5fa3c52 | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q passed
+2026-10-16T21:37:32Z | P3.2 | DONE | commit 60530f9 | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q passed
+2026-10-16T21:43:19Z | P3.3 | DONE | commit ef41693 | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q passed
+2026-10-16T21:45:42Z | P3.4 | DONE | commit d2d7db2 | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q passed
+2026-10-16T21:48:09Z | P3.5 | DONE | commit 3699997 | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q passed
+2026-10-16T21:50:38Z | P3.6 | DONE | commit 5e75533 | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q passed
+2026-10-16T21:53:08Z | P3.7 | DONE | commit bc8743d | verify: pytest chat/crisis suites and py_compile trace_check.py passed
+2026-10-16T21:55:33Z | P3.8 | DONE | commit 56c9d90 | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q passed
+2026-10-16T21:59:08Z | P3.9 | DONE | commit 2db4ac9 | verify: chat/crisis tests and probe py_compile passed
+2026-10-16T22:01:23Z | P3.10 | STARTED | currently deployed/recorded candidate head 2db4ac99139c64f015089c96a6b6473e12f818e1
+2026-10-16T22:34:30Z | P3.10 | HALT | run_live.bat stalled during chat readiness after chat deploy/token; runner stopped; deployment not accepted
+2026-10-16T22:55:01Z | P3.10a | DONE | commit 57eddb1 | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q passed
+2026-10-16T23:30:39Z | RESUME | handoff agent | hashes ok before work (fc2d52a9e1d7 1a318edfb932 39be0f36a002 ca135c692c52 9c56b1366f88 ebeee43db081 2cb6bd501eb4)
+2026-10-16T23:30:39Z | P3.10b | DONE | commit b5fa682 | verify: test_normal_event_contract expects latency, companion_state, risk, delta, state, done (see step-6 run)
+2026-10-16T23:30:39Z | P3.10 | DONE | MANUAL deploy by Ahmad, image fix 3aa1231 | verify: reports/live/SUMMARY.txt chat deploy/token/ready/auth_check/smoke_chat/crisis deploy/ready/auth_check/smoke_crisis/chat redeploy rc=0, emotion_probe rc=1; reports/live2/SUMMARY.txt chat_auth_check/smoke_chat/trace_check/crisis_ready/crisis_auth_check/smoke_crisis rc=0, emotion_probe rc=1, chat_ready rc=-1073741510 (Ctrl-C/close); trace_check passed on trace-OFF deploy
+2026-10-16T23:30:39Z | NOTE | strays listed, not deleted: E:/Koi/Koi-App/koi-ai-enginekoi_policyadapter_qwen.py (2057 B, Oct 15, path-mangled copy); untracked E:/Koi/Koi-App/docs/ (canon folder, off-limits); rag_prototype CRLF-only mods never committed

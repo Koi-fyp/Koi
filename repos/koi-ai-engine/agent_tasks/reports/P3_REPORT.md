@@ -470,3 +470,8 @@ P3.8: language/script instruction absent.
 P3.9: trace checker added, smoke scripts not fully risk-aware.
 
 P3.10: not deployed; P3 contract prerequisites incomplete.
+
+--- resumed 2026-10-16T22:01:23Z ---
+P3.10 pre-deploy HEAD recorded: 2db4ac99139c64f015089c96a6b6473e12f818e1
+
+P3.10 HALT at 2026-10-16T22:34:30Z: run_live.bat stalled during chat readiness after chat deploy/token; runner was stopped. Deployment not accepted; no DEPLOYED line.
