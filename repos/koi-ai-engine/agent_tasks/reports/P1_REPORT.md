@@ -49,3 +49,6 @@ Result: PASS-WITH-NOTES.
 P1.a: git fetch origin --prune passed. Local HEAD ae5daf9 differs from origin/feat/exercise-director-modal 2923070 because local P4 commits are unpushed; no merge/reset performed.
 
 P1.b commands: test_chat_contract 10 passed; test_crisis_core 5 passed; test_adapter_qwen 4 passed. Combined koi_policy baseline collection errored because four legacy test modules call SystemExit(0) during collection; no changes made. Required 71/44/34 named baseline scripts are absent per prior report.
+
+P1.c: created smoke_only.bat with no deploy commands, URL extraction from live SUMMARY or args, live2 outputs. Not run: KOI_TOKEN unavailable in this session.
+P1.d: created stdlib trace_check.py; checks 3 turns, SSE ordering, enum, debug/system prompt leakage, full_text and state parity. Live run not possible without token/URL.
