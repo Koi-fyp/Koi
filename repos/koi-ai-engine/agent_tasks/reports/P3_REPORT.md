@@ -462,3 +462,5 @@ P3.4: risk event and post-reply cap not implemented.
 P3.5: audio transcript path not implemented.
 
 P3.6: existing ChatRequest accepts deprecated risk field.
+
+P3.7: done contract has handoff/exercise fields but transcript/risk additive schema absent.
