@@ -31,3 +31,4 @@ RAG On
 2026-10-16T20:36:51Z | P3.1 | STARTED
 2026-10-16T20:36:51Z | P3.1 | PARTIAL | commit a922b26 | verify: P3_REPORT.md records current contract evidence
 2026-10-16T20:36:51Z | P3.2 | STARTED
+2026-10-16T20:36:51Z | P3.2 | PARTIAL | commit 8a61bc2 | verify: P3_REPORT.md records current contract evidence
