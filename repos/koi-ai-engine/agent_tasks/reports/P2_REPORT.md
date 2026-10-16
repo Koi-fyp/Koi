@@ -993,3 +993,5 @@ P2.1 resumed: prior report contains run_crisis inputs/outputs/assets inventory; 
 P2.2 resumed: prior implementation/report covers KOI_RAG_ENABLED flag behavior and fallback cases.
 
 P2.3 resumed: prior report records 22-chunk pool, threshold, offline flags, health fields, and asset manifest mismatch note.
+
+P2.4 resumed: deploy/modal/test_crisis_core.py passed 5 tests; prior report records score/web parity and media handling.

@@ -26,3 +26,4 @@ RAG On
 2026-10-16T20:30:17Z | P2.2 | DONE | commit af2384c | verify: prior P2 report flag/fallback evidence
 2026-10-16T20:30:17Z | P2.3 | STARTED
 2026-10-16T20:30:17Z | P2.3 | DONE | commit 5f941b6 | verify: prior P2 report asset/health evidence
+2026-10-16T20:30:17Z | P2.4 | STARTED
