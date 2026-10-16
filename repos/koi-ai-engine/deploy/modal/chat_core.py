@@ -22,6 +22,9 @@ except ImportError:
 
 MAX_MODEL_LEN = 8192
 MAX_REPLY_TOKENS = 512
+# Crisis score budget: 5 s from request start, never waiting more than 5 s
+# after the reply ends; a miss is reported as risk {"status": "unavailable"}.
+POST_REPLY_RISK_CAP_S = 5.0
 SYSTEM_PROMPT = (
     "You are KOI, a warm and emotionally supportive AI companion. "
     "Reply in the same language and script as the user's latest message "
@@ -149,6 +152,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
     settings = settings or {}
     max_len = _setting(settings, "MAX_MODEL_LEN", MAX_MODEL_LEN)
     max_reply = _setting(settings, "MAX_REPLY_TOKENS", MAX_REPLY_TOKENS)
+    risk_cap = float(_setting(settings, "POST_REPLY_RISK_CAP_S", POST_REPLY_RISK_CAP_S))
     crisis_client = _setting(settings, "crisis_client", None) or CrisisClient()
     app = FastAPI()
     origins = os.environ.get("KOI_CORS_ORIGINS", "*").split(",")
@@ -223,6 +227,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
         uid = auth(authorization)
         parsed = await _parse_chat_request(request)
         req = parsed.request
+        score_started = time.monotonic()
         score_task = asyncio.create_task(crisis_client.score_async(
             text=req.message or None, audio_bytes=parsed.audio, video_bytes=parsed.video,
             language=req.language, turn_id=req.turn_id, uid=uid,
@@ -344,8 +349,12 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                     if first: yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
                     yield frame(name, value)
             if stream_risk is None:
+                remaining = min(risk_cap, max(0.0, score_started + risk_cap - time.monotonic()))
                 try:
-                    stream_risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=5.0)
+                    if score_task.done() or remaining > 0:
+                        stream_risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=remaining or None)
+                    else:
+                        stream_risk = {"status": "unavailable"}
                 except (asyncio.TimeoutError, Exception):
                     stream_risk = {"status": "unavailable"}
                 stream_risk = _normalize_risk(stream_risk)
@@ -364,6 +373,9 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                         continue
                     emitted_state_tokens.add(token)
                     yield frame("state", {"exercise_state": token, **({"trace": event.get("trace", [])} if os.environ.get("KOI_DEBUG_TRACE") == "1" else {})})
+            if not emitted_state_tokens:
+                # Every stream ends with state, done; null means no exercise is active.
+                yield frame("state", {"exercise_state": None})
             done_state = streamed_state or complete["state"]
             payload = {"full_text": "".join(streamed_reply), "companion_state": _clamp_state(done_state),
                                  "exercise_state": next((e["token"] for e in director_events if e.get("type") == "state"), None),

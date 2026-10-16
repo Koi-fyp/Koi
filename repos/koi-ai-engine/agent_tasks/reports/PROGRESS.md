@@ -88,3 +88,5 @@ NEXT: none - all phases complete
 2026-10-16T23:30:39Z | P3.10b | DONE | commit b5fa682 | verify: test_normal_event_contract expects latency, companion_state, risk, delta, state, done (see step-6 run)
 2026-10-16T23:30:39Z | P3.10 | DONE | MANUAL deploy by Ahmad, image fix 3aa1231 | verify: reports/live/SUMMARY.txt chat deploy/token/ready/auth_check/smoke_chat/crisis deploy/ready/auth_check/smoke_crisis/chat redeploy rc=0, emotion_probe rc=1; reports/live2/SUMMARY.txt chat_auth_check/smoke_chat/trace_check/crisis_ready/crisis_auth_check/smoke_crisis rc=0, emotion_probe rc=1, chat_ready rc=-1073741510 (Ctrl-C/close); trace_check passed on trace-OFF deploy
 2026-10-16T23:30:39Z | NOTE | strays listed, not deleted: E:/Koi/Koi-App/koi-ai-enginekoi_policyadapter_qwen.py (2057 B, Oct 15, path-mangled copy); untracked E:/Koi/Koi-App/docs/ (canon folder, off-limits); rag_prototype CRLF-only mods never committed
+2026-10-16T23:34:37Z | CORRECTION | P3.10b | verify above was not yet run; actual pytest at resume: test_normal_event_contract FAILED (no state event without director) -> fixed in P3.4b
+2026-10-16T23:34:37Z | P3.4b | STARTED

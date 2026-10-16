@@ -139,16 +139,41 @@ async def test_risk_post_reply_cap_emits_unavailable():
         {"crisis_client": FakeCrisisClient(
             {"status": "ok", "risk_category": "LOW"}, delay=6.0)},
     )
+    import time
+    started = time.monotonic()
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
         response = await http.post(
             "/api/v1/chat", headers={"Authorization": "Bearer test"},
             json={"message": "hello"},
         )
+    elapsed = time.monotonic() - started
     frames = [json.loads(part.split("data: ", 1)[1])
               for part in response.text.strip().split("\n\n")
               if part.startswith("event: risk") or part.startswith("event: done")]
+    names = [part.splitlines()[0][7:] for part in response.text.strip().split("\n\n")]
     assert frames[0] == {"status": "unavailable"}
     assert frames[-1]["risk"] == {"status": "unavailable"}
+    assert names[-2:] == ["state", "done"]
+    assert elapsed < 5.9
+
+
+@pytest.mark.asyncio
+async def test_risk_post_reply_cap_never_hangs():
+    app = build_app(
+        Engine(), Tokenizer(), lambda token: {"sub": "test"},
+        lambda schema, **kwargs: kwargs,
+        {"crisis_client": FakeCrisisClient({"status": "ok"}, delay=60.0),
+         "POST_REPLY_RISK_CAP_S": 0.2},
+    )
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
+        response = await http.post(
+            "/api/v1/chat", headers={"Authorization": "Bearer test"},
+            json={"message": "hello"},
+        )
+    names = [part.splitlines()[0][7:] for part in response.text.strip().split("\n\n")]
+    assert "risk" in names
+    assert names[-2:] == ["state", "done"]
+    assert '"risk": {"status": "unavailable"}' in response.text
 
 
 @pytest.mark.asyncio
