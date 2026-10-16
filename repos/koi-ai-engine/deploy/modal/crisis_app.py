@@ -25,6 +25,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 RAG_EXTRA_PIP = [p for p in os.environ.get("KOI_RAG_PIP", "").split(",") if p.strip()]   # e.g. "haystack-ai==2.x,sentence-transformers==3.x"
 RAG_DIR = os.environ.get("KOI_RAG_DIR", "")                                               # local folder with your RAG code/data
 
+class ScoreError(Exception):
+    """A scoring failure the web endpoint reports as HTTP status + detail."""
+
+    def __init__(self, status, detail):
+        super().__init__(detail)
+        self.status, self.detail = status, detail
+
+
+def _write_media(data, tmpdir, kind):
+    """ffmpeg needs a seekable file (mp4); the caller's TemporaryDirectory deletes it."""
+    if not data:
+        return None
+    path = os.path.join(tmpdir, kind)
+    with open(path, "wb") as fh:
+        fh.write(data)
+    return path
+
+
 TEXT_ID = "michellejieli/emotion_text_classifier"
 AUDIO_ID = "speechbrain/emotion-recognition-wav2vec2-IEMOCAP"
 ASR_MODEL = "small"
@@ -262,55 +280,132 @@ class Crisis:
                 res = None
         return self.core.intervention(category, res, self.helpline)
 
-    def score(self, text, audio_bytes=None, video_bytes=None, language=None, turn_id=None, uid=None):
-        """Score one in-memory turn for internal callers.
+    def _score_bytes(self, text, audio_bytes, video_bytes, language, turn_id, t_start=None):
+        """Shared scoring path for /api/v1/crisis and score(); returns the web JSON dict.
 
-        The web adapter remains responsible for authentication and multipart
-        limits. This method enforces the same modality combinations before
-        decoding media and is the stable surface used by chat clients.
+        Raises ScoreError(status, detail) where the web endpoint answers 4xx/5xx.
+        """
+        import time, tempfile
+        core = self.core
+        t_start = t_start or time.time(); timing = {}
+        text = (text or "").strip()
+        wav = frames = None
+        with tempfile.TemporaryDirectory() as td:          # raw media deleted when this block exits (Blueprint 3.1a)
+            ap, vp = _write_media(audio_bytes, td, "audio"), _write_media(video_bytes, td, "video")
+            t0 = time.time()
+            if ap:
+                wav = self._decode_audio(ap)
+            if vp:
+                frames = self._decode_video(vp)
+                if wav is None and not ap and not text:      # video only, no typed text: its sound track feeds ASR (audio+video combo)
+                    wav = self._decode_audio(vp)             # typed text + video stays text+video (soundtrack ignored)
+            timing["decode"] = round((time.time() - t0) * 1000)
+        if (ap or vp) and wav is None and frames is None:
+            raise ScoreError(422, "could not decode the uploaded media")
+        text_source = "typed" if text else None
+        transcript = None
+        if not text and wav is not None:
+            if self.asr is None:
+                raise ScoreError(503, "speech recognition unavailable; send typed text")
+            t0 = time.time()
+            segs, info = self.asr.transcribe(wav, beam_size=1, vad_filter=True)
+            transcript = " ".join(s.text.strip() for s in segs).strip()
+            timing["asr"] = round((time.time() - t0) * 1000)
+            if not transcript:
+                raise ScoreError(422, "no speech detected in audio")
+            text, text_source = transcript, "asr"
+            language = language or getattr(info, "language", None)
+        if not text:
+            raise ScoreError(422, "send text, audio, or video with an audio track")
+        original_combo = core.combo_of(wav is not None, frames is not None)
+        heads_unavailable = not self.heads and original_combo != "T"
+        combo = "T" if heads_unavailable else original_combo
+        t0 = time.time()
+        with self.lock:
+            cls, logits7 = self._text(text)
+            a = self._audio(wav) if wav is not None and not heads_unavailable else None
+            v = self._video(frames) if frames is not None and not heads_unavailable else None
+            seed_logits = self._heads(cls, a, v, combo) if combo != "T" else None
+        timing["models"] = round((time.time() - t0) * 1000)
+        out = core.score_turn(logits7, combo, seed_logits, self.cal, self.calibrated)
+        if heads_unavailable:
+            out["confidence_reasons"].append("heads_unavailable")
+            out["confidence"] = "reduced"
+        resp = {"crisis_score": out["crisis_score"], "risk_category": out["risk_category"],
+                "modalities_used": core.modalities_used(combo, text_source),
+                "trigger_flags": out["trigger_flags"], "confidence": out["confidence"],
+                "confidence_reasons": out["confidence_reasons"], "components": out["components"],
+                "text_source": text_source}
+        if transcript is not None:
+            resp["transcript"] = transcript
+            if language:
+                resp["language"] = language
+        t0 = time.time()
+        ic = self._intervention(out["risk_category"], text, language)
+        if ic is not None:
+            resp["intervention_content"] = ic
+            timing["intervention"] = round((time.time() - t0) * 1000)
+        if turn_id:
+            resp["turn_id"] = turn_id
+        timing["total"] = round((time.time() - t_start) * 1000)
+        resp["timing_ms"] = timing
+        resp["model"] = {"version": "pilot-0.1", "calibrated": self.calibrated,
+                         "notice": "Emotion-proxy score from a pilot model; not a validated crisis detector."}
+        # privacy: log numbers only, never text or transcript
+        print(f"crisis combo={combo} score={out['crisis_score']} cat={out['risk_category']} conf={out['confidence']} ms={timing}")
+        return resp
+
+    def score_turn(self, text, audio_bytes=None, video_bytes=None, language=None, turn_id=None, uid=None):
+        """Score one in-memory turn for internal callers (plain method; testable locally).
+
+        Same result dict as /api/v1/crisis. Disallowed modality combinations raise
+        ValueError; every other failure returns {"status": "unavailable"} (fail-closed).
         """
         has_text = bool((text or "").strip())
-        has_audio = audio_bytes is not None
-        has_video = video_bytes is not None
+        has_audio = bool(audio_bytes)
+        has_video = bool(video_bytes)
         if has_text and has_audio and not has_video:
             raise ValueError("text+audio is not an allowed combination")
         if has_video and not (has_text or has_audio):
             raise ValueError("video requires text or audio")
         if not (has_text or has_audio):
             raise ValueError("send text, audio, or video")
-        return {
-            "status": "unavailable",
-            "reason": "internal score adapter is not initialized",
-            "turn_id": turn_id,
-            "uid": uid,
-            "language": language,
-        }
+        if getattr(self, "core", None) is None:
+            return {"status": "unavailable", "reason": "internal score adapter is not initialized",
+                    "turn_id": turn_id}
+        try:
+            return self._score_bytes(text, audio_bytes or None, video_bytes or None, language, turn_id)
+        except ScoreError as exc:
+            return {"status": "unavailable", "reason": exc.detail, "turn_id": turn_id}
+        except Exception as exc:
+            print("crisis score failed:", type(exc).__name__)
+            return {"status": "unavailable", "reason": "internal error", "turn_id": turn_id}
+
+    @modal.method()
+    def score(self, text=None, audio_bytes=None, video_bytes=None, language=None, turn_id=None, uid=None):
+        """Remote surface for koi-chat-api: modal.Cls.from_name("koi-crisis", "Crisis")().score.remote(...)."""
+        return self.score_turn(text, audio_bytes, video_bytes, language, turn_id, uid)
 
     # ---------------- web app ----------------
     @modal.asgi_app()
     def web(self):
-        import time, tempfile
+        import time
         from typing import Optional
         from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
         from fastapi.middleware.cors import CORSMiddleware
-        core = self.core
         api = FastAPI(title="KOI crisis", version="pilot-0.1")
         origins = [o.strip() for o in os.environ.get("KOI_CORS_ORIGINS", "*").split(",") if o.strip()]
         api.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["POST", "GET", "OPTIONS"],
                            allow_headers=["Authorization", "Content-Type"])
         MAX_BYTES = {"audio": 25 * 1024 * 1024, "video": 80 * 1024 * 1024}
 
-        def save(upload, tmpdir, kind):
+        def read(upload, kind):
             if upload is None:
                 return None
             data = upload.file.read(MAX_BYTES[kind] + 1)
             if len(data) > MAX_BYTES[kind]:
                 raise HTTPException(413, f"{kind} file too large")
-            if not data:
-                return None
-            p = os.path.join(tmpdir, kind)
-            open(p, "wb").write(data)
-            return p
+            return data or None
 
         @api.get("/health")
         def health():
@@ -324,71 +419,12 @@ class Crisis:
         def crisis(text: Optional[str] = Form(None), audio: Optional[UploadFile] = File(None),
                    video: Optional[UploadFile] = File(None), language: Optional[str] = Form(None),
                    turn_id: Optional[str] = Form(None), authorization: Optional[str] = Header(None)):
-            t_start = time.time(); timing = {}
+            t_start = time.time()
             self._verify(authorization)
-            text = (text or "").strip()
-            wav = frames = None
-            with tempfile.TemporaryDirectory() as td:          # raw media deleted when this block exits (Blueprint 3.1a)
-                ap, vp = save(audio, td, "audio"), save(video, td, "video")
-                t0 = time.time()
-                if ap:
-                    wav = self._decode_audio(ap)
-                if vp:
-                    frames = self._decode_video(vp)
-                    if wav is None and not ap and not text:      # video only, no typed text: its sound track feeds ASR (audio+video combo)
-                        wav = self._decode_audio(vp)             # typed text + video stays text+video (soundtrack ignored)
-                timing["decode"] = round((time.time() - t0) * 1000)
-            if (ap or vp) and wav is None and frames is None:
-                raise HTTPException(422, "could not decode the uploaded media")
-            text_source = "typed" if text else None
-            transcript = None
-            if not text and wav is not None:
-                if self.asr is None:
-                    raise HTTPException(503, "speech recognition unavailable; send typed text")
-                t0 = time.time()
-                segs, info = self.asr.transcribe(wav, beam_size=1, vad_filter=True)
-                transcript = " ".join(s.text.strip() for s in segs).strip()
-                timing["asr"] = round((time.time() - t0) * 1000)
-                if not transcript:
-                    raise HTTPException(422, "no speech detected in audio")
-                text, text_source = transcript, "asr"
-                language = language or getattr(info, "language", None)
-            if not text:
-                raise HTTPException(422, "send text, audio, or video with an audio track")
-            original_combo = core.combo_of(wav is not None, frames is not None)
-            heads_unavailable = not self.heads and original_combo != "T"
-            combo = "T" if heads_unavailable else original_combo
-            t0 = time.time()
-            with self.lock:
-                cls, logits7 = self._text(text)
-                a = self._audio(wav) if wav is not None and not heads_unavailable else None
-                v = self._video(frames) if frames is not None and not heads_unavailable else None
-                seed_logits = self._heads(cls, a, v, combo) if combo != "T" else None
-            timing["models"] = round((time.time() - t0) * 1000)
-            out = core.score_turn(logits7, combo, seed_logits, self.cal, self.calibrated)
-            if heads_unavailable:
-                out["confidence_reasons"].append("heads_unavailable")
-                out["confidence"] = "reduced"
-            resp = {"crisis_score": out["crisis_score"], "risk_category": out["risk_category"],
-                    "modalities_used": core.modalities_used(combo, text_source),
-                    "trigger_flags": out["trigger_flags"], "confidence": out["confidence"],
-                    "confidence_reasons": out["confidence_reasons"], "components": out["components"],
-                    "text_source": text_source}
-            if transcript is not None:
-                resp["transcript"] = transcript
-            t0 = time.time()
-            ic = self._intervention(out["risk_category"], text, language)
-            if ic is not None:
-                resp["intervention_content"] = ic
-                timing["intervention"] = round((time.time() - t0) * 1000)
-            if turn_id:
-                resp["turn_id"] = turn_id
-            timing["total"] = round((time.time() - t_start) * 1000)
-            resp["timing_ms"] = timing
-            resp["model"] = {"version": "pilot-0.1", "calibrated": self.calibrated,
-                             "notice": "Emotion-proxy score from a pilot model; not a validated crisis detector."}
-            # privacy: log numbers only, never text or transcript
-            print(f"crisis combo={combo} score={out['crisis_score']} cat={out['risk_category']} conf={out['confidence']} ms={timing}")
-            return resp
+            audio_bytes, video_bytes = read(audio, "audio"), read(video, "video")
+            try:
+                return self._score_bytes(text, audio_bytes, video_bytes, language, turn_id, t_start)
+            except ScoreError as exc:
+                raise HTTPException(exc.status, exc.detail)
 
         return api

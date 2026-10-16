@@ -90,3 +90,7 @@ NEXT: none - all phases complete
 2026-10-16T23:30:39Z | NOTE | strays listed, not deleted: E:/Koi/Koi-App/koi-ai-enginekoi_policyadapter_qwen.py (2057 B, Oct 15, path-mangled copy); untracked E:/Koi/Koi-App/docs/ (canon folder, off-limits); rag_prototype CRLF-only mods never committed
 2026-10-16T23:34:37Z | CORRECTION | P3.10b | verify above was not yet run; actual pytest at resume: test_normal_event_contract FAILED (no state event without director) -> fixed in P3.4b
 2026-10-16T23:34:37Z | P3.4b | STARTED
+2026-10-16T23:35:31Z | P3.4b | DONE | commit 31b5b5a | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q -> 27 passed in 11.15s
+2026-10-16T23:35:31Z | P3.11 | STARTED
+2026-10-16T23:38:55Z | P3.11 | DONE | commit aca640c | verify: pytest deploy\modal\test_chat_contract.py deploy\modal\test_chat_v11.py deploy\modal\test_crisis_core.py -q -> 41 passed in 11.42s (harness repro: U+FFFD non-prefix cumulative text lost the Urdu reply before fix; delta after)
+2026-10-16T23:38:55Z | P3.2b | STARTED

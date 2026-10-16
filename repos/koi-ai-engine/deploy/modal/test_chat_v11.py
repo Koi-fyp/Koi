@@ -236,32 +236,60 @@ def test_system_prompt_preserves_language_and_script():
     assert "English, Urdu, or Roman Urdu" in SYSTEM_PROMPT
 
 
-@pytest.mark.asyncio
-async def test_modal_crisis_client_uses_lookup_and_remote(monkeypatch):
-    class Remote:
+def _fake_modal(remote, calls):
+    class Method:
         def remote(self, **kwargs):
-            return {"status": "ok", "risk_category": "LOW"}
+            calls.append(kwargs)
+            return remote(**kwargs)
 
-    class Service:
-        score = Remote()
+    class Instance:
+        score = Method()
 
-        def lookup(self):
-            return self
+    class Cls:
+        @staticmethod
+        def from_name(app, name):
+            assert (app, name) == ("koi-crisis", "Crisis")
+            calls.append("from_name")
+            return lambda: Instance()
 
-    class Modal:
-        class Function:
-            @staticmethod
-            def from_name(app, name):
-                assert (app, name) == ("koi-crisis", "Crisis")
-                return Service()
+    return type("Modal", (), {"Cls": Cls})
 
+
+SCORE_KWARGS = dict(text="hello", audio_bytes=None, video_bytes=None, language="en", turn_id="t1", uid="u")
+
+
+@pytest.mark.asyncio
+async def test_modal_crisis_client_uses_cls_from_name_and_remote(monkeypatch):
     import sys
-    monkeypatch.setitem(sys.modules, "modal", Modal)
-    result = await ModalCrisisClient().score_async(
-        text="hello", audio_bytes=None, video_bytes=None,
-        language=None, turn_id=None, uid="u",
-    )
-    assert result["risk_category"] == "LOW"
+    calls = []
+    monkeypatch.setitem(sys.modules, "modal", _fake_modal(
+        lambda **kw: {"crisis_score": 0.1, "risk_category": "LOW"}, calls))
+    client = ModalCrisisClient()
+    assert (await client.score_async(**SCORE_KWARGS))["risk_category"] == "LOW"
+    assert (await client.score_async(**SCORE_KWARGS))["risk_category"] == "LOW"
+    assert calls.count("from_name") == 1
+    assert calls[1] == SCORE_KWARGS
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("remote", [
+    lambda **kw: (_ for _ in ()).throw(RuntimeError("app not deployed")),
+    lambda **kw: (_ for _ in ()).throw(ValueError("text+audio is not an allowed combination")),
+    lambda **kw: "not a dict",
+    lambda **kw: {"status": "unavailable", "reason": "no speech detected in audio"},
+])
+async def test_modal_crisis_client_failures_are_unavailable(monkeypatch, remote):
+    import sys
+    monkeypatch.setitem(sys.modules, "modal", _fake_modal(remote, []))
+    result = await ModalCrisisClient().score_async(**SCORE_KWARGS)
+    assert result["status"] == "unavailable"
+
+
+@pytest.mark.asyncio
+async def test_modal_crisis_client_without_modal_is_unavailable(monkeypatch):
+    import sys
+    monkeypatch.setitem(sys.modules, "modal", None)  # import modal -> ImportError
+    assert await ModalCrisisClient().score_async(**SCORE_KWARGS) == {"status": "unavailable"}
 
 
 URDU_FULL = json.dumps({"companion_state": {"emotion": "angry", "intensity": 0.7},

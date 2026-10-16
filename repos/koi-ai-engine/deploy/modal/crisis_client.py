@@ -33,14 +33,23 @@ class ModalCrisisClient(CrisisClient):
     def __init__(self, app_name: str = "koi-crisis", class_name: str = "Crisis"):
         self.app_name = app_name
         self.class_name = class_name
+        self._service = None
+
+    def _instance(self) -> Any:
+        # Crisis is a Modal class (modal>=1.0): Cls.from_name is lazy; hydration
+        # happens on the first .remote call. Lazy import keeps chat_core Modal-free.
+        if self._service is None:
+            import modal
+            self._service = modal.Cls.from_name(self.app_name, self.class_name)()
+        return self._service
 
     async def score_async(self, **kwargs: Any) -> dict[str, Any]:
         try:
-            import modal
-            service = modal.Function.from_name(self.app_name, self.class_name).lookup()
+            service = self._instance()
             result = await asyncio.to_thread(service.score.remote, **kwargs)
             return result if isinstance(result, dict) else {"status": "unavailable"}
         except Exception:
+            self._service = None
             return {"status": "unavailable"}
 
 
