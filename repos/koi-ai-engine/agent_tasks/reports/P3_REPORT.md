@@ -466,3 +466,5 @@ P3.6: existing ChatRequest accepts deprecated risk field.
 P3.7: done contract has handoff/exercise fields but transcript/risk additive schema absent.
 
 P3.8: language/script instruction absent.
+
+P3.9: trace checker added, smoke scripts not fully risk-aware.
