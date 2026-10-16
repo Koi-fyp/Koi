@@ -48,6 +48,10 @@ service cloud.firestore {
 
       // No client row reads a user document except the owner.
       allow read: if isOwner(uid);
+
+      match /conversations/{conversationId}/messages/{messageId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     // Inventory row: conversationService.ts:85-90.
@@ -65,4 +69,3 @@ service cloud.firestore {
     }
   }
 }
-
