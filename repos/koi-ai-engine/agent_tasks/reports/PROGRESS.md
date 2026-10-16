@@ -27,3 +27,4 @@ RAG On
 2026-10-16T20:30:17Z | P2.3 | STARTED
 2026-10-16T20:30:17Z | P2.3 | DONE | commit 5f941b6 | verify: prior P2 report asset/health evidence
 2026-10-16T20:30:17Z | P2.4 | STARTED
+2026-10-16T20:30:17Z | P2.4 | DONE | commit bf3baa4 | verify: pytest deploy/modal/test_crisis_core.py -q: 5 passed
