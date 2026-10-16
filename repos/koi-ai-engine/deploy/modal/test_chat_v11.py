@@ -173,3 +173,34 @@ async def test_audio_emits_transcript_before_companion_state():
     assert response.status_code == 200
     names = [part.splitlines()[0][7:] for part in response.text.strip().split("\n\n")]
     assert names.index("transcript") < names.index("companion_state")
+
+
+@pytest.mark.asyncio
+async def test_deprecated_client_risk_is_ignored():
+    import sys
+    import types
+    seen = {}
+
+    def handle_turn(turn, state, **kwargs):
+        seen["tier"] = turn.get("tier")
+        return []
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setenv("KOI_EXERCISES", "1")
+    monkeypatch.setenv("KOI_DIRECTOR_SECRET", "secret")
+    monkeypatch.setitem(sys.modules, "director", types.SimpleNamespace(handle_turn=handle_turn))
+    try:
+        app = build_app(
+            Engine(), Tokenizer(), lambda token: {"sub": "test"},
+            lambda schema, **kwargs: kwargs,
+            {"crisis_client": FakeCrisisClient({"status": "ok", "risk_category": "HIGH"})},
+        )
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
+            response = await http.post(
+                "/api/v1/chat", headers={"Authorization": "Bearer test"},
+                json={"message": "hello", "risk": {"risk_category": "LOW"}},
+            )
+        assert response.status_code == 200
+        assert seen["tier"] == "HIGH"
+    finally:
+        monkeypatch.undo()
