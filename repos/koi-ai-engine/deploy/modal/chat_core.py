@@ -12,9 +12,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 try:
-    from .stream_extract import StreamExtractor
+    from .stream_extract import StreamExtractor, looks_like_json
 except ImportError:
-    from stream_extract import StreamExtractor
+    from stream_extract import StreamExtractor, looks_like_json
 try:
     from .crisis_client import CrisisClient
 except ImportError:
@@ -202,22 +202,47 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
         prompt = tokenizer.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
         params = sampling_factory(CHAT_JSON_SCHEMA, max_tokens=max_reply)
         extractor = StreamExtractor()
-        previous = ""
         state = None
         reply = ""
-        async for output in engine.generate(prompt, params, f"{uid}-{t0}"):
-            text = output.outputs[0].text
-            chunk = text[len(previous):] if text.startswith(previous) else text
-            previous = text
-            for kind, value in extractor.feed(chunk):
+        error = None
+
+        def handle(items):
+            nonlocal state, reply
+            for kind, value in items:
                 if kind == "companion_state":
-                    state = _clamp_state(value)
+                    if state is None:
+                        state = _clamp_state(value)
+                        yield "companion_state", state
+                    continue
+                if looks_like_json(value):
+                    continue
+                if state is None:
+                    # No valid companion_state parsed: neutral before any text.
+                    state = _clamp_state(None)
                     yield "companion_state", state
-                else:
-                    reply = value
-                    yield "delta", {"text": value}
-            if os.environ.get("KOI_DEBUG_TRACE") == "1":
-                yield "_trace", "raw model text len=%d first80=%r" % (len(text), text[:80])
+                reply = value
+                yield "delta", {"text": value}
+
+        try:
+            # vLLM returns cumulative text that is not always prefix-stable for
+            # multibyte scripts (Urdu), so the extractor re-parses the full text.
+            async for output in engine.generate(prompt, params, f"{uid}-{t0}"):
+                text = output.outputs[0].text
+                try:
+                    items = extractor.update(text)
+                except Exception:
+                    items = []
+                for event in handle(items):
+                    yield event
+                if os.environ.get("KOI_DEBUG_TRACE") == "1":
+                    yield "_trace", "raw model text len=%d first80=%r" % (len(text), text[:80])
+        except Exception as exc:
+            error = {"code": "generation_failed", "detail": type(exc).__name__}
+        if not reply:
+            for event in handle(extractor.salvage()):
+                yield event
+        if not reply:
+            yield "_error", error or {"code": "no_reply", "detail": "model returned no usable reply"}
         if state is None:
             state = _clamp_state(None)
         yield "_complete", {"reply": reply, "state": state, "trimmed": trimmed}
@@ -305,6 +330,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             streamed_state = None
             trace: list[str] = []
             emitted_risk = False
+            pending_error = None
             emitted_state_tokens: set[str] = set()
             def frame(name, value):
                 return f"event: {name}\ndata: {json.dumps(value, ensure_ascii=False)}\n\n"
@@ -348,6 +374,15 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                     streamed_reply.append(value["text"])
                     if first: yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
                     yield frame(name, value)
+                elif name == "_error" and not streamed_reply:
+                    pending_error = value
+            if streamed_state is None:
+                # Guarantee companion_state before risk/error even when the model
+                # produced nothing parsable.
+                streamed_state = _clamp_state(None)
+                if first:
+                    yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
+                yield frame("companion_state", streamed_state)
             if stream_risk is None:
                 remaining = min(risk_cap, max(0.0, score_started + risk_cap - time.monotonic()))
                 try:
@@ -363,6 +398,8 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             if not emitted_risk and streamed_state is not None:
                 yield frame("risk", stream_risk)
                 emitted_risk = True
+            if pending_error is not None and not streamed_reply:
+                yield frame("error", pending_error)
             handoff = crisis
             for event in director_events:
                 if event.get("type") == "handoff" and event.get("to") == "crisis":

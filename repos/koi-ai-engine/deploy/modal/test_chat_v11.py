@@ -264,6 +264,128 @@ async def test_modal_crisis_client_uses_lookup_and_remote(monkeypatch):
     assert result["risk_category"] == "LOW"
 
 
+URDU_FULL = json.dumps({"companion_state": {"emotion": "angry", "intensity": 0.7},
+                        "reply": "مجھے افسوس ہے کہ آپ کو غصہ آ رہا ہے۔"}, ensure_ascii=False)
+
+
+class ScriptedEngine:
+    """Yields cumulative texts like vLLM; may raise after them."""
+
+    def __init__(self, texts, error=None):
+        self.texts = texts
+        self.error = error
+
+    async def generate(self, prompt, params, request_id):
+        for text in self.texts:
+            yield Output(text)
+        if self.error:
+            raise self.error
+
+
+async def _stream(engine, message="hello"):
+    app = build_app(
+        engine, Tokenizer(), lambda token: {"sub": "test"},
+        lambda schema, **kwargs: kwargs,
+        {"crisis_client": FakeCrisisClient({"status": "ok", "risk_category": "LOW"})},
+    )
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
+        response = await http.post("/api/v1/chat", headers={"Authorization": "Bearer test"},
+                                   json={"message": message})
+    assert response.status_code == 200
+    frames = []
+    for part in response.text.strip().split("\n\n"):
+        lines = part.splitlines()
+        frames.append((lines[0][7:], json.loads(lines[1][6:])))
+    return frames
+
+
+def _check_invariants(frames):
+    names = [name for name, _ in frames]
+    deltas = [payload["text"] for name, payload in frames if name == "delta"]
+    done = frames[-1][1]
+    assert names[-2:] == ["state", "done"]
+    assert "companion_state" in names and "risk" in names
+    first_text = min([names.index(n) for n in ("delta", "error") if n in names])
+    assert names.index("companion_state") < first_text
+    assert deltas or "error" in names
+    for text in deltas:
+        assert "{" not in text and '"reply"' not in text and "companion" not in text
+    assert done["full_text"] == "".join(deltas)
+    assert done["companion_state"] == next(p for n, p in frames if n == "companion_state")
+    return names, deltas
+
+
+@pytest.mark.asyncio
+async def test_roman_urdu_misspelled_state_key_is_tolerated():
+    raw = '{"cocompaniion_state": {"emotion": "sorrow", "intensity": 0.6}, "reply": "Mujhe afsos hai."}'
+    frames = await _stream(ScriptedEngine([raw[:30], raw]), "Mujhe bohat akela mehsoos ho raha hai")
+    names, deltas = _check_invariants(frames)
+    assert deltas == ["Mujhe afsos hai."]
+    assert dict(frames)["companion_state"] == {"emotion": "sorrow", "intensity": 0.6}
+
+
+@pytest.mark.asyncio
+async def test_roman_urdu_json_as_reply_never_reaches_delta():
+    # Live probe: the reply string itself was a JSON block with a misspelled key.
+    inner = '{  "cocompaniion_state": {    "emotion": "angry",    "intensity": 0.75    }  }'
+    raw = json.dumps({"reply": inner})
+    frames = await _stream(ScriptedEngine([raw]), "Mujhe bohat akela mehsoos ho raha hai")
+    names, deltas = _check_invariants(frames)
+    assert deltas == []
+    assert "error" in names
+    assert dict(frames)["companion_state"] == {"emotion": "angry", "intensity": 0.75}
+
+
+@pytest.mark.asyncio
+async def test_nested_reply_inside_json_reply_is_unwrapped():
+    raw = json.dumps({"companion_state": {"emotion": "joy", "intensity": 0.5},
+                      "reply": json.dumps({"reply": "Bohat acha!"})})
+    names, deltas = _check_invariants(await _stream(ScriptedEngine([raw])))
+    assert deltas == ["Bohat acha!"]
+
+
+@pytest.mark.asyncio
+async def test_missing_state_emits_neutral_before_text():
+    frames = await _stream(ScriptedEngine(['{"reply": "hi there"}']))
+    names, deltas = _check_invariants(frames)
+    assert dict(frames)["companion_state"] == {"emotion": "neutral", "intensity": 0.4}
+    assert deltas == ["hi there"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("texts", [
+    # cumulative text not prefix-stable: partial multibyte char shown as U+FFFD, then replaced
+    [URDU_FULL[:URDU_FULL.index("افسوس") + 2] + "�", URDU_FULL],
+    # truncated at max_tokens inside the Urdu reply
+    [URDU_FULL[:URDU_FULL.index("افسوس") + 3]],
+    # reply before companion_state
+    [json.dumps({"reply": "مجھے افسوس ہے", "companion_state": {"emotion": "sorrow", "intensity": 0.5}},
+                ensure_ascii=False)],
+    # plain Urdu text, no JSON at all
+    ["مجھے افسوس ہے کہ آپ کو غصہ آ رہا ہے۔"],
+    # ASCII-escaped JSON
+    [json.dumps(json.loads(URDU_FULL))],
+])
+async def test_urdu_script_always_streams_a_delta(texts):
+    names, deltas = _check_invariants(await _stream(ScriptedEngine(texts), "مجھے بہت غصہ آ رہا ہے"))
+    assert deltas and deltas[0].startswith("مجھے")
+    assert "error" not in names
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("engine", [
+    ScriptedEngine([]),
+    ScriptedEngine(["   \n\n  "]),
+    ScriptedEngine(['{"companion_state": {"emotion": "joy", "intensity": 0.5}, "rep'], RuntimeError("engine died")),
+    ScriptedEngine(['{"companion_state": {"emotion": "joy", "intensity": 0.5}, "other": 1}']),
+    ScriptedEngine(['["not", "an", "object"]']),
+])
+async def test_unusable_model_output_ends_with_error_state_done(engine):
+    names, deltas = _check_invariants(await _stream(engine, "مجھے بہت غصہ آ رہا ہے"))
+    assert deltas == []
+    assert names[-3:] == ["error", "state", "done"]
+
+
 @pytest.mark.asyncio
 async def test_unavailable_crisis_client_does_not_block_health():
     app = build_app(

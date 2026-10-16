@@ -140,3 +140,29 @@ Client rules:
 Firebase secret fix before any deploy · `KOI_MAX_CATEGORY` (recommend `HIGH`) · RAG hook (stub → builtin fallback
 until wired) · CBT module (not built: CBT offers fall back to normal chat) · emotion union change in Web/Flutter ·
 `session_history` window size (server only trims to fit).
+
+## v1.1 ADDITIONS (additive; nothing above is changed)
+Source of truth: `deploy/modal/chat_core.py`, `deploy/modal/stream_extract.py`, tests in `deploy/modal/test_chat_v11.py`.
+
+- Clients call ONLY `POST /api/v1/chat` and `GET /health`. The server scores crisis risk itself every turn;
+  clients never call `/api/v1/crisis` (it stays for tools/explicit checks).
+- Request may be JSON (as v1) or `multipart/form-data` with `payload` (JSON string: v1 fields + optional
+  `language`, `turn_id`; `message` optional with audio), `audio`, `video`. Allowed: text | audio | text+video |
+  audio+video; anything else → 422. Limits: audio 25 MB, video 80 MB. Request `risk` is deprecated and ignored
+  when the server has its own result.
+- New events:
+  - `transcript` `{"text", "language"}` (audio turns): before `companion_state`. Append it to `session_history`
+    as the user turn.
+  - `risk` `{"status": "ok"|"unavailable", "risk_category", "crisis_score", "confidence", "confidence_reasons",
+    "modalities_used", "trigger_flags", "intervention_content"?, "model": {"version", "calibrated"}}`: exactly once,
+    after `companion_state`, before `done` (may interleave with `delta`). Server waits at most 5 s after the reply
+    (budget 5 s from request start), then sends `{"status": "unavailable"}`. Unavailable never means "safe".
+  - `error` `{"code": "no_reply"|"generation_failed", "detail": string}`: sent instead of any `delta` when the
+    model produced no usable reply text. The stream still ends with `state`, `done` (`full_text` = "").
+- `companion_state` is always sent before any text. If the model output had no valid state, it is
+  `{"emotion": "neutral", "intensity": 0.4}`.
+- `state` is always sent, immediately before `done`. `exercise_state` is `null` when no exercise is active;
+  store only string values (the reference TS/Dart clients already ignore non-strings).
+- `done` gains `risk` (same object as the streamed `risk`).
+- `delta` never carries JSON-looking text: replies that are themselves JSON are unwrapped (`reply`, tolerant of
+  misspelled keys) or dropped.
