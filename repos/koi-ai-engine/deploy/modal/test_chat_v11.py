@@ -4,7 +4,7 @@ import os
 import httpx
 import pytest
 
-from chat_core import build_app
+from chat_core import SYSTEM_PROMPT, build_app
 from crisis_client import CrisisClient, FakeCrisisClient
 
 
@@ -204,3 +204,8 @@ async def test_deprecated_client_risk_is_ignored():
         assert seen["tier"] == "HIGH"
     finally:
         monkeypatch.undo()
+
+
+def test_system_prompt_preserves_language_and_script():
+    assert "same language and script" in SYSTEM_PROMPT
+    assert "English, Urdu, or Roman Urdu" in SYSTEM_PROMPT
