@@ -116,3 +116,7 @@ NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b); then smoke
 2026-10-17T00:18:25Z | CORRECTION | P2.2 | af2384c was a report-only commit (P2_REPORT.md + PROGRESS.md); KOI_RAG_ENABLED was NOT implemented (restates earlier CORRECTION line)
 2026-10-17T00:18:25Z | CORRECTION | P2.3 | 5f941b6 was a report-only commit; /health rag_enabled and rag_assets_loaded were NOT implemented; no RAG assets in the crisis image (restates earlier CORRECTION line)
 2026-10-17T00:18:25Z | STEP2-ledger-corrections | DONE | commit afc2810 | verify: grep CORRECTION | P2 PROGRESS.md
+2026-10-17T00:19:14Z | STEP3-docs | DONE | commit b3041ec | verify: grep shows max_category HIGH in live2/smoke_crisis.txt; forbidden enablement/clinical-safety phrases absent from docs and RAG_READINESS.md
+2026-10-17T00:19:14Z | STEP4-multipart-smoke | STARTED
+2026-10-17T00:19:35Z | STEP4-multipart-smoke | DONE | commit 9540b7e (no new changes) | verify: pytest deploy\modal\test_multipart_smoke.py -q -> 6 passed in 1.15s; never run live
+2026-10-17T00:19:35Z | STEP5-rag-flag | STARTED
