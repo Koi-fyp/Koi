@@ -30,6 +30,12 @@ No failures. At resume, before P3.4b, `test_normal_event_contract` FAILED (strea
 - Crisis web JSON gains `language` when ASR ran (additive).
 - Strays (not deleted): `E:\Koi\Koi-App\koi-ai-enginekoi_policyadapter_qwen.py`, untracked `E:\Koi\Koi-App\docs\` (canon). `agent_tasks\run_live.bat` is untracked. rag_prototype CRLF-only modifications left uncommitted.
 
+## Chat fixes added after the handoff (also need the redeploy)
+- `KOI_DEBUG_TRACE`: one helper; ON only for 1/true/yes/on. "0"/"false"/empty/unset = OFF, no `trace` in `done` or `state` (tests: 5 off values + on).
+- Empty reply: generation retried once; if still empty, one fixed DRAFT English line ("I'm sorry, I couldn't put my reply into words just now. Could you say that again?") is sent as a `delta`. The `error` event from `aca640c` is no longer sent. Unreviewed; no Urdu/Roman Urdu version (would need native review).
+- Exercise turns: sentence deltas after the first carry a leading space, so `done.full_text` = sentences joined with a space and still equals the joined deltas (trace_check/smoke_chat parity kept).
+- Commit: see the STEP1 ledger line in PROGRESS.md.
+
 ## Prep steps added after the handoff (no deploy, no flag change, nothing run live)
 ### RAG readiness — `bd8e819`, report `agent_tasks/reports/RAG_READINESS.md`
 - **RAG is not wired.** `deploy/modal/koi_rag_hook.py` is a stub (returns None); `KOI_RAG_ENABLED`, `/health` `rag_enabled` and `rag_assets_loaded` do not exist in code. HIGH/CRITICAL content = static built-in fallback only. `rag_hook: true` on `/health` only means the stub imported.

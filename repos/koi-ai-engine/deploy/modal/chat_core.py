@@ -25,6 +25,22 @@ MAX_REPLY_TOKENS = 512
 # Crisis score budget: 5 s from request start, never waiting more than 5 s
 # after the reply ends; a miss is reported as risk {"status": "unavailable"}.
 POST_REPLY_RISK_CAP_S = 5.0
+# DRAFT, English only (no native-speaker or clinician review): sent when the model
+# gives no usable reply twice.
+FALLBACK_REPLY = "I'm sorry, I couldn't put my reply into words just now. Could you say that again?"
+
+
+def _trace_enabled() -> bool:
+    """KOI_DEBUG_TRACE is ON only for 1/true/yes/on; "0", "false", empty or unset = OFF."""
+    return os.environ.get("KOI_DEBUG_TRACE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _join_text(previous: list[str], text: str) -> str:
+    """Separate consecutive deltas (e.g. exercise sentences) with one space, so
+    "".join(deltas) == done.full_text reads as normal prose."""
+    if previous and text and not previous[-1][-1:].isspace() and not text[:1].isspace():
+        return " " + text
+    return text
 SYSTEM_PROMPT = (
     "You are KOI, a warm and emotionally supportive AI companion. "
     "Reply in the same language and script as the user's latest message "
@@ -223,26 +239,33 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 reply = value
                 yield "delta", {"text": value}
 
-        try:
-            # vLLM returns cumulative text that is not always prefix-stable for
-            # multibyte scripts (Urdu), so the extractor re-parses the full text.
-            async for output in engine.generate(prompt, params, f"{uid}-{t0}"):
-                text = output.outputs[0].text
-                try:
-                    items = extractor.update(text)
-                except Exception:
-                    items = []
-                for event in handle(items):
+        for attempt in range(2):  # empty reply -> retry once, then the fixed fallback line
+            extractor = StreamExtractor()
+            try:
+                # vLLM returns cumulative text that is not always prefix-stable for
+                # multibyte scripts (Urdu), so the extractor re-parses the full text.
+                async for output in engine.generate(prompt, params, f"{uid}-{t0}-{attempt}"):
+                    text = output.outputs[0].text
+                    try:
+                        items = extractor.update(text)
+                    except Exception:
+                        items = []
+                    for event in handle(items):
+                        yield event
+                    if _trace_enabled():
+                        yield "_trace", "raw model text len=%d first80=%r" % (len(text), text[:80])
+            except Exception as exc:
+                error = {"code": "generation_failed", "detail": type(exc).__name__}
+            if not reply:
+                for event in handle(extractor.salvage()):
                     yield event
-                if os.environ.get("KOI_DEBUG_TRACE") == "1":
-                    yield "_trace", "raw model text len=%d first80=%r" % (len(text), text[:80])
-        except Exception as exc:
-            error = {"code": "generation_failed", "detail": type(exc).__name__}
+            if reply:
+                break
+            if _trace_enabled():
+                yield "_trace", "attempt %d: no usable reply (%s)" % (attempt + 1, (error or {}).get("code", "no_reply"))
         if not reply:
-            for event in handle(extractor.salvage()):
+            for event in handle([("reply", FALLBACK_REPLY)]):
                 yield event
-        if not reply:
-            yield "_error", error or {"code": "no_reply", "detail": "model returned no usable reply"}
         if state is None:
             state = _clamp_state(None)
         yield "_complete", {"reply": reply, "state": state, "trimmed": trimmed}
@@ -330,7 +353,6 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             streamed_state = None
             trace: list[str] = []
             emitted_risk = False
-            pending_error = None
             emitted_state_tokens: set[str] = set()
             def frame(name, value):
                 return f"event: {name}\ndata: {json.dumps(value, ensure_ascii=False)}\n\n"
@@ -347,7 +369,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 elif event.get("type") == "sentence":
                     if first:
                         yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
-                    text = event["text"]
+                    text = _join_text(streamed_reply, event["text"])
                     streamed_reply.append(text)
                     yield frame("delta", {"text": text})
             crisis = next((e for e in director_events if e.get("type") == "handoff" and e.get("to") == "crisis"), None)
@@ -371,14 +393,12 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                         yield frame("risk", stream_risk)
                         emitted_risk = True
                 elif name == "delta" and (not has_director_reply or crisis):
-                    streamed_reply.append(value["text"])
+                    text = _join_text(streamed_reply, value["text"])
+                    streamed_reply.append(text)
                     if first: yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
-                    yield frame(name, value)
-                elif name == "_error" and not streamed_reply:
-                    pending_error = value
+                    yield frame(name, {"text": text})
             if streamed_state is None:
-                # Guarantee companion_state before risk/error even when the model
-                # produced nothing parsable.
+                # Guarantee companion_state before risk even when nothing was streamed.
                 streamed_state = _clamp_state(None)
                 if first:
                     yield frame("latency", {"latency_ms": round((time.monotonic()-t0)*1000, 1)}); first = False
@@ -398,8 +418,6 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             if not emitted_risk and streamed_state is not None:
                 yield frame("risk", stream_risk)
                 emitted_risk = True
-            if pending_error is not None and not streamed_reply:
-                yield frame("error", pending_error)
             handoff = crisis
             for event in director_events:
                 if event.get("type") == "handoff" and event.get("to") == "crisis":
@@ -409,7 +427,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                     if token in emitted_state_tokens:
                         continue
                     emitted_state_tokens.add(token)
-                    yield frame("state", {"exercise_state": token, **({"trace": event.get("trace", [])} if os.environ.get("KOI_DEBUG_TRACE") == "1" else {})})
+                    yield frame("state", {"exercise_state": token, **({"trace": event.get("trace", [])} if _trace_enabled() else {})})
             if not emitted_state_tokens:
                 # Every stream ends with state, done; null means no exercise is active.
                 yield frame("state", {"exercise_state": None})
@@ -421,7 +439,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                                  "total_generation_s": round(time.monotonic()-t0, 3),
                                  "history_trimmed": complete["trimmed"]}
             payload["risk"] = stream_risk
-            if os.environ.get("KOI_DEBUG_TRACE") == "1":
+            if _trace_enabled():
                 payload["trace"] = trace
             yield frame("done", payload)
         return StreamingResponse(stream(), media_type="text/event-stream")

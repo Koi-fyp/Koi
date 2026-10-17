@@ -4,7 +4,7 @@ import os
 import httpx
 import pytest
 
-from chat_core import SYSTEM_PROMPT, build_app
+from chat_core import FALLBACK_REPLY, SYSTEM_PROMPT, build_app
 from crisis_client import CrisisClient, FakeCrisisClient, ModalCrisisClient
 
 
@@ -299,12 +299,16 @@ URDU_FULL = json.dumps({"companion_state": {"emotion": "angry", "intensity": 0.7
 class ScriptedEngine:
     """Yields cumulative texts like vLLM; may raise after them."""
 
-    def __init__(self, texts, error=None):
+    def __init__(self, texts, error=None, retry_texts=None):
         self.texts = texts
         self.error = error
+        self.retry_texts = retry_texts
+        self.calls = 0
 
     async def generate(self, prompt, params, request_id):
-        for text in self.texts:
+        self.calls += 1
+        texts = self.retry_texts if self.calls > 1 and self.retry_texts is not None else self.texts
+        for text in texts:
             yield Output(text)
         if self.error:
             raise self.error
@@ -357,10 +361,12 @@ async def test_roman_urdu_json_as_reply_never_reaches_delta():
     # Live probe: the reply string itself was a JSON block with a misspelled key.
     inner = '{  "cocompaniion_state": {    "emotion": "angry",    "intensity": 0.75    }  }'
     raw = json.dumps({"reply": inner})
-    frames = await _stream(ScriptedEngine([raw]), "Mujhe bohat akela mehsoos ho raha hai")
+    engine = ScriptedEngine([raw])
+    frames = await _stream(engine, "Mujhe bohat akela mehsoos ho raha hai")
     names, deltas = _check_invariants(frames)
-    assert deltas == []
-    assert "error" in names
+    assert engine.calls == 2
+    assert deltas == [FALLBACK_REPLY]
+    assert "error" not in names
     assert dict(frames)["companion_state"] == {"emotion": "angry", "intensity": 0.75}
 
 
@@ -408,10 +414,56 @@ async def test_urdu_script_always_streams_a_delta(texts):
     ScriptedEngine(['{"companion_state": {"emotion": "joy", "intensity": 0.5}, "other": 1}']),
     ScriptedEngine(['["not", "an", "object"]']),
 ])
-async def test_unusable_model_output_ends_with_error_state_done(engine):
+async def test_unusable_model_output_retries_once_then_fallback_line(engine):
     names, deltas = _check_invariants(await _stream(engine, "مجھے بہت غصہ آ رہا ہے"))
-    assert deltas == []
-    assert names[-3:] == ["error", "state", "done"]
+    assert engine.calls == 2
+    assert deltas == [FALLBACK_REPLY]
+    assert names[-3:] == ["delta", "state", "done"]
+    assert "error" not in names
+
+
+@pytest.mark.asyncio
+async def test_empty_reply_retry_succeeds_on_second_attempt():
+    good = '{"companion_state": {"emotion": "joy", "intensity": 0.5}, "reply": "Second try."}'
+    engine = ScriptedEngine(["   "], retry_texts=[good])
+    names, deltas = _check_invariants(await _stream(engine))
+    assert engine.calls == 2
+    assert deltas == ["Second try."]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("value", ["0", "false", "False", "", " 0 "])
+async def test_debug_trace_off_values_never_emit_trace(monkeypatch, value):
+    monkeypatch.setenv("KOI_DEBUG_TRACE", value)
+    frames = await _stream(ScriptedEngine(["   "]))
+    assert "trace" not in frames[-1][1]
+    assert all("trace" not in payload for name, payload in frames if name == "state")
+
+
+@pytest.mark.asyncio
+async def test_debug_trace_on_emits_trace(monkeypatch):
+    monkeypatch.setenv("KOI_DEBUG_TRACE", "1")
+    frames = await _stream(ScriptedEngine(["   "]))
+    assert any("no usable reply" in line for line in frames[-1][1]["trace"])
+
+
+@pytest.mark.asyncio
+async def test_exercise_sentences_joined_with_space(monkeypatch):
+    import sys
+    import types
+    monkeypatch.setenv("KOI_EXERCISES", "1")
+    monkeypatch.setenv("KOI_DIRECTOR_SECRET", "secret")
+    monkeypatch.setitem(sys.modules, "director", types.SimpleNamespace(handle_turn=lambda *a, **k: [
+        {"type": "companion_state", "emotion": "neutral", "intensity": 0.3},
+        {"type": "sentence", "text": "Let's breathe together."},
+        {"type": "sentence", "text": "In for four, out for six."},
+        {"type": "state", "token": "signed"},
+    ]))
+    frames = await _stream(ScriptedEngine(['{"reply": "x"}']))
+    deltas = [p["text"] for n, p in frames if n == "delta"]
+    done = frames[-1][1]
+    assert done["full_text"] == "Let's breathe together. In for four, out for six."
+    assert "".join(deltas) == done["full_text"]
 
 
 @pytest.mark.asyncio

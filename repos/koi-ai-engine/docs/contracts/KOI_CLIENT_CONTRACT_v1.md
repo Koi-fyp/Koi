@@ -157,8 +157,13 @@ Source of truth: `deploy/modal/chat_core.py`, `deploy/modal/stream_extract.py`, 
     "modalities_used", "trigger_flags", "intervention_content"?, "model": {"version", "calibrated"}}`: exactly once,
     after `companion_state`, before `done` (may interleave with `delta`). Server waits at most 5 s after the reply
     (budget 5 s from request start), then sends `{"status": "unavailable"}`. Unavailable never means "safe".
-  - `error` `{"code": "no_reply"|"generation_failed", "detail": string}`: sent instead of any `delta` when the
-    model produced no usable reply text. The stream still ends with `state`, `done` (`full_text` = "").
+  - No usable reply text from the model: the server retries generation once, then sends one fixed fallback
+    line as a normal `delta` (DRAFT, English only). There is always at least one `delta`. (An `error` event
+    briefly existed in commit `aca640c`; it is no longer sent. Clients still ignore unknown events.)
+- Consecutive `delta`s that form separate sentences (exercise turns) carry a leading space, so
+  `"".join(deltas) == done.full_text` and reads as normal prose.
+- Debug trace (`done.trace`, `state.trace`) appears only when the server sets `KOI_DEBUG_TRACE` to
+  1/true/yes/on; "0", "false", empty or unset = off.
 - `companion_state` is always sent before any text. If the model output had no valid state, it is
   `{"emotion": "neutral", "intensity": 0.4}`.
 - `state` is always sent, immediately before `done`. `exercise_state` is `null` when no exercise is active;
