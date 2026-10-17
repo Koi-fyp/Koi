@@ -70,7 +70,8 @@ class Fetch:
 
 @pytest.fixture
 def env(monkeypatch):
-    for name in ("KOI_EXERCISES", "KOI_DEBUG_TRACE", "KOI_LLM_BASE_URL", "KOI_LLM_TIMEOUT_S", "KOI_LLM_REASONING_EFFORT"):
+    for name in ("KOI_EXERCISES", "KOI_DEBUG_TRACE", "KOI_LLM_BASE_URL", "KOI_LLM_TIMEOUT_S", "KOI_LLM_REASONING_EFFORT",
+                 "KOI_API_ON_HANDOFF"):
         monkeypatch.delenv(name, raising=False)
 
     def set_provider(provider, backend="api", **extra):
@@ -231,12 +232,61 @@ def test_exercise_turn_never_calls_api(env, exercises, provider):
     assert done_of(events)["reply_backend"] == "local" and done_of(events)["reply_fallback_reason"] is None
 
 
-def test_crisis_turn_stays_local(env, exercises):
+HIGH = {"status": "ok", "risk_category": "HIGH"}
+
+
+def _handoff_turn(fetch):
+    _, events, _ = run_turn(fetch, body={"message": "hello"}, risk=HIGH)
+    return events, [n for n, _ in events]
+
+
+@pytest.mark.parametrize("flag", [None, "0", "true", "yes"])
+def test_crisis_turn_stays_local_unless_flag_is_1(env, exercises, monkeypatch, flag):
     env("gemini")
+    if flag is None:
+        monkeypatch.delenv("KOI_API_ON_HANDOFF", raising=False)
+    else:
+        monkeypatch.setenv("KOI_API_ON_HANDOFF", flag)
     fetch = Fetch(body=provider_body("gemini"))
-    _, events, _ = run_turn(fetch, body={"message": "hello"}, risk={"status": "ok", "risk_category": "HIGH"})
+    events, names = _handoff_turn(fetch)
     assert fetch.calls == []
-    assert any(n == "handoff" for n, _ in events) and done_of(events)["reply_backend"] == "local"
+    assert "handoff" in names and done_of(events)["reply_backend"] == "local"
+    assert done_of(events)["reply_fallback_reason"] is None
+
+
+@pytest.mark.parametrize("provider", list(PROVIDERS))
+def test_crisis_turn_uses_api_with_flag_and_keeps_handoff_frame(env, exercises, monkeypatch, provider):
+    env(provider)
+    monkeypatch.delenv("KOI_API_ON_HANDOFF", raising=False)
+    _, local_names = _handoff_turn(Fetch(body=provider_body(provider)))
+    monkeypatch.setenv("KOI_API_ON_HANDOFF", "1")
+    fetch = Fetch(body=provider_body(provider))
+    events, names = _handoff_turn(fetch)
+    assert len(fetch.calls) == 1
+    done = done_of(events)
+    assert done["reply_backend"] == "api" and done["full_text"] == API_REPLY
+    assert names == local_names                                   # same frames, same order
+    assert names.index("handoff") == local_names.index("handoff")
+    handoff = next(d for n, d in events if n == "handoff")
+    assert handoff["to"] == "crisis" and done["handoff"]["to"] == "crisis"
+
+
+def test_crisis_turn_with_flag_falls_back_on_failure(env, exercises, monkeypatch):
+    env("gemini")
+    monkeypatch.setenv("KOI_API_ON_HANDOFF", "1")
+    fetch = Fetch(status=500)
+    events, names = _handoff_turn(fetch)
+    assert len(fetch.calls) == 1 and "handoff" in names
+    assert (done_of(events)["reply_backend"], done_of(events)["reply_fallback_reason"]) == ("local", "http_5xx")
+    assert done_of(events)["full_text"] == LOCAL_REPLY
+
+
+def test_exercise_turn_never_calls_api_even_with_handoff_flag(env, exercises, monkeypatch):
+    env("gemini")
+    monkeypatch.setenv("KOI_API_ON_HANDOFF", "1")
+    fetch = Fetch(body=provider_body("gemini"))
+    run_turn(fetch, body={"message": "can we do a breathing exercise", "client_event": "start_breathing"})
+    assert fetch.calls == []
 
 
 def test_ordinary_turn_with_exercises_on_uses_api(env, exercises):

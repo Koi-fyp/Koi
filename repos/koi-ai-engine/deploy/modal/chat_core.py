@@ -421,8 +421,10 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             transcript = stream_risk.get("transcript") if isinstance(stream_risk, dict) else None
             if transcript:
                 yield frame("transcript", {"text": transcript, "language": stream_risk.get("language") or req.language})
-            # Hosted reply only on ordinary chat turns: no director text/actions/state and no crisis handoff.
-            use_api = (os.environ.get("KOI_REPLY_BACKEND") == "api" and not crisis
+            # Hosted reply only on ordinary chat turns: no director text/actions/state. Crisis-handoff turns too only
+            # when KOI_API_ON_HANDOFF=1 (the handoff frame itself is unchanged either way).
+            use_api = (os.environ.get("KOI_REPLY_BACKEND") == "api"
+                       and (not crisis or os.environ.get("KOI_API_ON_HANDOFF") == "1")
                        and not any(e.get("type") in ("sentence", "ui_action", "companion_state") for e in director_events))
             async for name, value in normal_events(req, uid, t0, transcript, use_api):
                 if name == "_trace":
