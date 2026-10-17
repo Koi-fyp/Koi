@@ -112,3 +112,4 @@ NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b); then smoke
 2026-10-17T00:14:49Z | MULTIPART-SMOKE | DONE | commit 9540b7e | verify: pytest deploy\modal\test_multipart_smoke.py -q -> 6 passed in 1.13s (local uvicorn app, fake engine/scorer); no-token rc=2; never run against live
 2026-10-17T00:15:02Z | HANDOFF | UPDATED | RAG readiness + multipart smoke prep added; hashes ok fc2d52a9e1d7 1a318edfb932 39be0f36a002 ca135c692c52 9c56b1366f88 ebeee43db081 2cb6bd501eb4
 NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b); then smoke
+2026-10-17T00:18:19Z | STEP1-chat-fixes | DONE | commit f3516ee | verify: pytest test_chat_contract test_chat_v11 test_crisis_core test_crisis_score_surface test_multipart_smoke -q -> 68 passed in 12.60s
