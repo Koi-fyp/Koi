@@ -99,6 +99,8 @@ export default function RootPage() {
     try {
       await signInAnonymously();
     } catch {
+      // The auth provider owns error presentation; allow retry in either failure mode.
+    } finally {
       setStarting(false);
     }
   }, [signInAnonymously]);

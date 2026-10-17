@@ -17,6 +17,13 @@ export default function WelcomeStep({ onNext }: Props) {
     <div
       onClick={onNext}
       role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onNext();
+        }
+      }}
       aria-label="Continue"
       style={{
         display: 'flex',

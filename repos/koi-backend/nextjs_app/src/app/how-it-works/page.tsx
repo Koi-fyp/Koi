@@ -239,25 +239,34 @@ export default function HowItWorksPage() {
       </div>
     </>
   );
-  function StartButton() {
+}
+
+function StartButton() {
   const router = useRouter();
-  const { signInAnonymously } = useAuth();
+  const { user, loading: authLoading, error, signInAnonymously } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [requested, setRequested] = useState(false);
+
+  useEffect(() => { if (requested && user) router.replace('/onboarding'); }, [requested, user, router]);
 
   const handle = async () => {
+    setRequested(true);
     setLoading(true);
     try {
       await signInAnonymously();
-      router.replace('/onboarding');
     } catch {
+      // The auth provider owns the failure; never imply successful navigation.
+    } finally {
       setLoading(false);
     }
   };
 
   return (
+    <>
+    {error && <p role="alert">Sign-in could not connect. Check your network and try again.</p>}
     <button
       onClick={handle}
-      disabled={loading}
+      disabled={loading || authLoading}
       className="neo-btn-primary"
       style={{ fontSize: '1rem', padding: '1rem 2.5rem' }}
     >
@@ -268,6 +277,6 @@ export default function HowItWorksPage() {
         </span>
       ) : "Start Talking ✦"}
     </button>
+    </>
   );
-}
 }

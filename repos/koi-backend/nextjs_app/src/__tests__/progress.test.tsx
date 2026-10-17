@@ -121,3 +121,13 @@ it('does not imply preview download or sharing works', async () => {
   expect(view.getByRole('button', { name: /Download/ })).toBeDisabled();
   expect(view.getByRole('button', { name: /Share/ })).toBeDisabled();
 });
+
+it('opens and closes the labelled puzzle preview from the keyboard', async () => {
+  const view = render(<ProgressPage />);
+  const puzzle = await view.findByRole('button', { name: 'Puzzle preview' });
+  expect(puzzle).toHaveAttribute('tabindex', '0');
+  fireEvent.keyDown(puzzle, { key: 'Enter' });
+  expect(puzzle).toHaveAttribute('aria-expanded', 'true');
+  fireEvent.keyDown(view.getByRole('button', { name: 'Close puzzle preview' }), { key: ' ' });
+  expect(puzzle).toHaveAttribute('aria-expanded', 'false');
+});

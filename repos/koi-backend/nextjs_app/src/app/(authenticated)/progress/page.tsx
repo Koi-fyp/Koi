@@ -1,9 +1,16 @@
 'use client';
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProgress } from '@/hooks/useProgress';
 import NeoCard from '@/components/ui/NeoCard';
 import NeoButton from '@/components/ui/NeoButton';
+
+function activateWithKeyboard(event: KeyboardEvent<HTMLElement>) {
+  if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+    event.preventDefault();
+    event.currentTarget.click();
+  }
+}
 
 const MILESTONES = [
   { id: 1, title: 'First Conversation', desc: 'You opened up for the first time.', done: true, color: '#2DD36F', reward: '+5 pieces' },
@@ -268,7 +275,7 @@ export default function ProgressPage() {
       </NeoCard>
 
       {/* Recorded total; expanded puzzle illustration remains an explicitly labelled preview. */}
-      <div
+      <div role="button" tabIndex={0} aria-label="Puzzle preview" aria-expanded={jigsawExpanded} onKeyDown={activateWithKeyboard}
         style={{
           background: jigsawExpanded ? '#1a54b8' : '#2D63EB',
           border: '2.5px solid #000',
@@ -409,6 +416,7 @@ export default function ProgressPage() {
                   transform: 'rotate(180deg)',
                   cursor: 'pointer',
                 }}
+                role="button" tabIndex={0} aria-label="Close puzzle preview" onKeyDown={activateWithKeyboard}
                 onClick={(e) => {
                   e.stopPropagation();
                   setJigsawExpanded(false);
@@ -855,6 +863,7 @@ export default function ProgressPage() {
           {MILESTONES.map((m, i) => (
             <div
               key={m.id}
+              role="button" tabIndex={0} aria-pressed={selectedMilestone === m.id} onKeyDown={activateWithKeyboard}
               style={{
                 display: 'flex',
                 gap: '0.875rem',
