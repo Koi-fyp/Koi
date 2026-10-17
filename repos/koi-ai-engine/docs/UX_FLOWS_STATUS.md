@@ -7,8 +7,10 @@ was not touched by this run.
 Live backend evidence (17 Oct 2026, `agent_tasks/reports/live/SUMMARY.txt`,
 `agent_tasks/reports/live2/SUMMARY.txt`): both apps deployed; English text
 chat, auth rejection, trace-OFF stream and the crisis service (text scoring,
-HIGH → static fallback) are live-smoked. RAG is not wired: HIGH content is the
-static built-in fallback only (`agent_tasks/reports/RAG_READINESS.md`). Server-side risk inside chat returned
+HIGH → static fallback) are live-smoked. HIGH-risk content is a static DRAFT
+fallback with no clinician review; retrieval is not used in the deployed service
+(`agent_tasks/reports/RAG_READINESS.md`). Helpline 1166 is `verified: false`.
+CRITICAL is never emitted (`KOI_MAX_CATEGORY=HIGH` default; live `max_category: HIGH`). Server-side risk inside chat returned
 `unavailable` on every turn in that build (fixed in P3.2b, not yet deployed).
 Urdu and Roman Urdu are **unreliable** live (`live2/emotion_probe.txt`); P3.11
 fixes pass local tests only. Multipart audio/video, `transcript` and server
@@ -19,7 +21,7 @@ risk → exercise/handoff are **not live-smoked**.
 | 1 onboarding | Existing auth/onboarding routes | Existing onboarding pages | partial | Integration verification / web |
 | 2 anonymous session | Firebase auth path; chat/crisis reject bad tokens live | Existing auth context | partial | End-to-end smoke / web |
 | 3 text chat | `/api/v1/chat` SSE: English live-smoked; Urdu/Roman Urdu unreliable | Existing hook/transport | partial | Redeploy + smoke for Urdu / web |
-| 4 crisis handoff | Crisis service live; HIGH content is the static fallback only, RAG not wired (stub hook, no `KOI_RAG_ENABLED`); chat-side risk not live (P3.2b pending deploy) | No production Flow 4 modal consumer | partial | Redeploy + smoke; web |
+| 4 crisis handoff | Crisis service live; HIGH content = static DRAFT fallback (no clinician review), 1166 unverified, CRITICAL never emitted; no retrieval in the deployed service; chat-side risk not live (P3.2b pending deploy) | No production Flow 4 modal consumer | partial | Redeploy + smoke; web |
 | 5 emotion/avatar | `companion_state` live (English) and director | Avatar controller and command bridge exist | partial | Connect chat stream to bridge / web |
 | 6 audio input | Multipart + ASR: local tests only, not live-smoked | No production chat client | not live-smoked | Web |
 | 7 video input | Multipart: local tests only, not live-smoked | No production toggle/path | not live-smoked | Web |

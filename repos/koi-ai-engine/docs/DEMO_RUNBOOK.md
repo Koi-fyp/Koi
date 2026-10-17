@@ -16,7 +16,7 @@ P3.10 build (image fix `3aa1231`); the P3.4b, P3.11 and P3.2b commits are
 | English emotions (7 prompts) in the 5-value enum, `companion_state` before text | proven | `live2/emotion_probe.txt` (en rows) |
 | Crisis app deployed, `/health` ok (ASR on, heads loaded, uncalibrated) | proven | `live2/crisis_ready.txt`, `smoke_crisis.txt` |
 | Crisis rejects missing/invalid auth | proven | `live2/crisis_auth_check` rc=0 |
-| Crisis text scoring: LOW / HIGH, HIGH → static fallback content (RAG not wired), 1166 `verified: false`, empty request → 422 | proven | `live2/smoke_crisis.txt` |
+| Crisis text scoring: LOW / HIGH, HIGH → static DRAFT fallback (no clinician review, no retrieval), 1166 `verified: false`, `max_category: HIGH` (CRITICAL never emitted), empty request → 422 | proven | `live2/smoke_crisis.txt` |
 | Server-side risk inside chat | **not working in the deployed build**: every chat turn shows `risk {"status": "unavailable"}` | `live2/smoke_chat.txt`; cause fixed in P3.2b (wrong Modal lookup, stub `score`), not deployed |
 | Urdu / Roman Urdu chat | **unreliable**: Roman Urdu leaked JSON into the reply; Urdu script produced no `companion_state`/`delta`; Roman Urdu prompts were answered in English | `live2/emotion_probe.txt` rc=1 |
 | Multipart (audio, video), `transcript` event, server risk → exercise/handoff | **not live-smoked** | local tests only (`deploy/modal/test_chat_v11.py`) |
@@ -59,13 +59,17 @@ Event names and ordering: `docs/contracts/KOI_CLIENT_CONTRACT_v1.md` (incl.
 * Say that emotion is a proxy signal, uncalibrated, and not a probability.
   The pilot AUROC is approximately 0.62; Roman Urdu is blind. Source:
   `agent_tasks/reports/P2_REPORT.md`.
-* Say that HIGH (and CRITICAL) content is the **static built-in fallback only**
-  (`koi_crisis_core.builtin_fallback`, a placeholder message + helpline). **RAG is
-  not wired**: `deploy/modal/koi_rag_hook.py` is a stub and there is no
-  `KOI_RAG_ENABLED` flag (`agent_tasks/reports/RAG_READINESS.md`). `/health`
-  `rag_hook: true` only means the stub imported. Do not claim retrieved or
-  grounded content. The 1166 number is unverified (`verified: false` in the
-  live smoke output).
+* Say that HIGH-risk content is a **static DRAFT fallback** with no clinician
+  review (`koi_crisis_core.builtin_fallback`, marked PLACEHOLDER: one message +
+  helpline). Retrieval is not used in the deployed service
+  (`agent_tasks/reports/RAG_READINESS.md`); `/health` `rag_hook: true` in the
+  live smoke only means the hook module imported. Do not claim retrieved or
+  grounded content.
+* Helpline 1166 is `verified: false` (live `smoke_crisis.txt`); say it is unverified.
+* CRITICAL is never emitted: `KOI_MAX_CATEGORY` defaults to `HIGH`
+  (`deploy/modal/crisis_app.py:81,151`; live `/health` `max_category: 'HIGH'`), so
+  the highest category a user can see is HIGH.
+* Never describe the crisis path as clinically validated or safe.
 * Say that fixed exercise lines have not received clinical review; LLM
   acknowledgements fall back when rejected. Source:
   `agent_tasks/reports/live/05_smoke_chat.txt`.

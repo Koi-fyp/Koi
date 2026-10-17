@@ -115,3 +115,4 @@ NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b); then smoke
 2026-10-17T00:18:19Z | STEP1-chat-fixes | DONE | commit f3516ee | verify: pytest test_chat_contract test_chat_v11 test_crisis_core test_crisis_score_surface test_multipart_smoke -q -> 68 passed in 12.60s
 2026-10-17T00:18:25Z | CORRECTION | P2.2 | af2384c was a report-only commit (P2_REPORT.md + PROGRESS.md); KOI_RAG_ENABLED was NOT implemented (restates earlier CORRECTION line)
 2026-10-17T00:18:25Z | CORRECTION | P2.3 | 5f941b6 was a report-only commit; /health rag_enabled and rag_assets_loaded were NOT implemented; no RAG assets in the crisis image (restates earlier CORRECTION line)
+2026-10-17T00:18:25Z | STEP2-ledger-corrections | DONE | commit afc2810 | verify: grep CORRECTION | P2 PROGRESS.md
