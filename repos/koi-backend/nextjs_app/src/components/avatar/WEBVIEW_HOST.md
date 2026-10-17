@@ -9,11 +9,10 @@ selector, loading/status text, retry UI, chat, or user data. Flutter owns model
 selection and its loading/error fallback. If the renderer fails, no ready
 message is emitted; Flutter should use its own bounded fallback timeout.
 
-Static fallback images are `public/Male.png` and `public/Female.png`. The female
-image was captured from `/avatar-host?model=female` after the real
-`/models/koi-female.vrm` reported ready. It is 491x525 like the existing male
-reference and uses the same sampled solid background (`#FFC224`); it is a real
-renderer screenshot, not an illustration or generated substitute.
+Static fallback images are `public/Male.png` and `public/Female.png`. Each was
+captured from `/avatar-host?model=male|female` after the corresponding real VRM
+reported ready. Both are 491x525 and use the same solid background (`#FFC224`);
+they are renderer screenshots, not illustrations or generated substitutes.
 
 The renderer-only host uses system fonts. The rest of the application retains
 its existing Google typography, loaded only on non-host routes. The host does
