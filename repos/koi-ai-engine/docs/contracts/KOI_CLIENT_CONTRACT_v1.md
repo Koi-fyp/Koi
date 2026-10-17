@@ -240,3 +240,18 @@ headers `Authorization, Content-Type`; credentials (cookies) are not allowed.
 
 **C10. RAG.** `KOI_RAG_ENABLED` is forwarded to the crisis service with default "0" and is not enabled. HIGH
 `intervention_content` is the static fallback; crisis `/health` reports `rag_enabled: false`.
+
+**C11. Reply backend (server option, default OFF).** The chat server can produce the ordinary companion reply with a
+hosted LLM instead of the local model. It is enabled only when the chat app is deployed with `KOI_REPLY_BACKEND=api`
+and the hosted provider is configured; otherwise every reply is local. Wire format is unchanged: the hosted reply
+arrives as one `companion_state` followed by one `delta`, then the usual `risk`, `state`, `done`. Exercise turns,
+director acknowledgements and crisis-handoff turns always use the local model. Any hosted failure (timeout, HTTP
+error, invalid or blocked output, emotion outside the 5 strings) silently falls back to the local reply.
+Only the system prompt, the last 16 `session_history` turns and the current message (typed text or the ASR
+transcript) are sent to the provider; never the user id, token, risk result, `exercise_state`, audio or video.
+`done` gains two fields:
+| field | value |
+|---|---|
+| `reply_backend` | `"local"` or `"api"` |
+| `reply_fallback_reason` | `null`, or one of `not_configured, timeout, http_4xx, http_5xx, network, invalid_json, empty, blocked, bad_emotion, bad_shape, internal_error` |
+Clients need no change; both fields are diagnostic. Not yet verified against a live provider.
