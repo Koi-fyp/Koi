@@ -244,14 +244,16 @@ headers `Authorization, Content-Type`; credentials (cookies) are not allowed.
 **C11. Reply backend (server option, default OFF).** The chat server can produce the ordinary companion reply with a
 hosted LLM instead of the local model. It is enabled only when the chat app is deployed with `KOI_REPLY_BACKEND=api`
 and the hosted provider is configured; otherwise every reply is local. Wire format is unchanged: the hosted reply
-arrives as one `companion_state` followed by one `delta`, then the usual `risk`, `state`, `done`. Exercise turns,
-director acknowledgements and crisis-handoff turns always use the local model. Any hosted failure (timeout, HTTP
-error, invalid or blocked output, emotion outside the 5 strings) silently falls back to the local reply.
+arrives as one `companion_state` followed by one `delta`, then the usual `risk`, `state`, `done`. Exercise turns and
+director acknowledgements always use the local model; crisis-handoff turns do too unless the server sets
+`KOI_API_ON_HANDOFF=1` (the `handoff` frame is unchanged either way). An optional secondary hosted provider is tried
+when the primary fails (primary -> secondary -> local, within one total time budget). Any hosted failure (timeout, HTTP
+error, invalid or blocked output, emotion outside the 5 strings) silently falls back to the next step.
 Only the system prompt, the last 16 `session_history` turns and the current message (typed text or the ASR
 transcript) are sent to the provider; never the user id, token, risk result, `exercise_state`, audio or video.
 `done` gains two fields:
 | field | value |
 |---|---|
-| `reply_backend` | `"local"` or `"api"` |
-| `reply_fallback_reason` | `null`, or one of `not_configured, timeout, http_4xx, http_5xx, network, invalid_json, empty, blocked, bad_emotion, bad_shape, internal_error` |
+| `reply_backend` | `"local"`, `"api"` (primary provider) or `"api2"` (secondary provider) |
+| `reply_fallback_reason` | `null`, or the reasons of the failed attempts joined with `\|` (e.g. `"timeout\|blocked"`), each one of `not_configured, timeout, http_4xx, http_5xx, network, invalid_json, empty, blocked, bad_emotion, bad_shape, internal_error, budget_exhausted` |
 Clients need no change; both fields are diagnostic. Not yet verified against a live provider.
