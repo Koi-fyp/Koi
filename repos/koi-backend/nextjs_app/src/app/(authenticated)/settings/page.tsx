@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useStorageEstimate } from '@/hooks/useStorageEstimate';
 import { useAvatarPreference } from '@/hooks/useAvatarPreference';
 import { saveAvatarPreference, type CompanionId } from '@/lib/avatar/avatarPreference';
 import { saveUserPreferences, validTime, reminderStatus } from '@/lib/preferences/userPreferences';
@@ -14,6 +15,7 @@ const DIVIDER = <div style={{ height: '1px', background: '#f0f0f0' }} />;
 
 export default function SettingsPage() {
   const router = useRouter();
+  const storage = useStorageEstimate();
   const { user, loading } = useAuth();
   const currentUid = useRef(user?.uid); currentUid.current = user?.uid;
   const avatarPreference = useAvatarPreference(user?.uid, loading);
@@ -138,7 +140,8 @@ export default function SettingsPage() {
           <SettingsRow
             icon="🗑"
             label="Clear History"
-            desc="Delete all conversations"
+            desc="Unavailable until deletion scope is approved"
+            disabled
             danger
             onClick={handleClearHistory}
           />
@@ -244,14 +247,14 @@ export default function SettingsPage() {
           <SettingsRow
             icon="📤"
             label="Export My Data"
-            desc="Download a copy"
+            desc="Wellness export currently unavailable"
             onClick={() => router.push('/settings/export')}
           />
           {DIVIDER}
           <SettingsRow
             icon="📥"
             label="Import Data"
-            desc="Restore from backup"
+            desc="Coming soon; import unavailable"
             onClick={() => router.push('/settings/import')}
           />
         </div>
@@ -307,7 +310,7 @@ export default function SettingsPage() {
                   fill="none"
                   stroke="#2D63EB"
                   strokeWidth="8"
-                  strokeDasharray={`${2.01 * Math.PI * 32} ${200.96 * Math.PI * 32}`}
+                  strokeDasharray={`${(storage.percent ?? 0) / 100 * 2 * Math.PI * 32} ${2 * Math.PI * 32}`}
                   strokeLinecap="round"
                   style={{ transition: 'stroke-dasharray 0.3s ease' }}
                 />
@@ -324,16 +327,16 @@ export default function SettingsPage() {
                   color: '#000'
                 }}
               >
-                1%
+                {storage.percent === null ? "—" : `${storage.percent}%`}
               </div>
             </div>
 
             <div style={{ flex: 1 }}>
               <p style={{ fontWeight: 700, fontSize: '0.95rem', color: '#000', marginBottom: '0.25rem' }}>
-                Local Storage
+                Browser Storage Estimate
               </p>
               <p style={{ fontSize: '0.8rem', color: '#666' }}>
-                42 KB of 5 MB used
+                {storage.label}
               </p>
               <div
                 style={{
@@ -348,7 +351,7 @@ export default function SettingsPage() {
                 <div
                   style={{
                     height: '100%',
-                    width: '1%',
+                    width: `${storage.percent ?? 0}%`,
                     background: 'linear-gradient(90deg, #2D63EB 0%, #06b6d4 100%)',
                     transition: 'width 0.3s ease'
                   }}
@@ -423,7 +426,7 @@ export default function SettingsPage() {
                 Version Info
               </p>
               <p style={{ fontSize: '0.78rem', color: '#999', marginTop: '1px' }}>
-                KOI v1.0.0
+                KOI Web preview
               </p>
             </div>
             <svg
@@ -454,10 +457,10 @@ export default function SettingsPage() {
               lineHeight: '1.6'
             }}>
               <p style={{ marginBottom: '0.5rem' }}>
-                <strong>Release Date:</strong> January 2025
+                <strong>Release Date:</strong> Not published
               </p>
               <p style={{ marginBottom: '0.5rem' }}>
-                <strong>Build:</strong> Production
+                <strong>Runtime:</strong> {process.env.NODE_ENV === 'production' ? 'Production mode' : 'Development mode'}
               </p>
               <p>
                 <strong>Platform:</strong> Web App
@@ -533,13 +536,13 @@ export default function SettingsPage() {
               lineHeight: '1.6'
             }}>
               <p style={{ marginBottom: '0.75rem', fontWeight: 600, color: '#000' }}>
-                🎉 v1.0.0 Release
+                Current implemented features
               </p>
               <ul style={{ paddingLeft: '1.25rem', margin: 0 }}>
                 <li style={{ marginBottom: '0.5rem' }}>Enhanced avatar animations</li>
-                <li style={{ marginBottom: '0.5rem' }}>Improved offline support</li>
-                <li style={{ marginBottom: '0.5rem' }}>New privacy controls</li>
-                <li>Performance optimizations</li>
+                <li style={{ marginBottom: '0.5rem' }}>Encrypted local history recovery</li>
+                <li style={{ marginBottom: '0.5rem' }}>Local companion and reminder preferences</li>
+                <li>Audio and camera remain unavailable</li>
               </ul>
             </div>
           </div>
@@ -582,7 +585,7 @@ export default function SettingsPage() {
                 Crisis Resources
               </p>
               <p style={{ fontSize: '0.78rem', color: '#999', marginTop: '1px' }}>
-                24/7 helplines (Pakistan)
+                Support contacts (hours not verified)
               </p>
             </div>
             <svg
@@ -668,7 +671,7 @@ export default function SettingsPage() {
               <span style={{ fontWeight: 800, fontSize: '0.75rem', color: '#fff' }}>K</span>
             </div>
             <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#000' }}>KOI</span>
-            <span style={{ fontSize: '0.78rem', color: '#bbb' }}>v1.0.0</span>
+            <span style={{ fontSize: '0.78rem', color: '#bbb' }}>Web preview</span>
           </div>
           <p style={{ fontSize: '0.75rem', color: '#ccc' }}>
             Made with care · Private by design

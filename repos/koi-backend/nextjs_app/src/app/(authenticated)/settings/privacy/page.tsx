@@ -154,12 +154,12 @@ export default function PrivacyPage() {
                     border: '1.5px solid #000',
                   }}
                 >
-                  Encrypted
+                  Content encrypted
                 </span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.8rem', color: '#333', lineHeight: 1.6 }}>
-                <li>All conversation messages</li>
-                <li>Your preferences & settings</li>
+                <li>Conversation content encrypted at rest</li>
+                <li>Preferences and settings stored separately in plaintext</li>
                 <li>Avatar choice</li>
               </ul>
             </div>
@@ -189,7 +189,7 @@ export default function PrivacyPage() {
                     border: '1.5px solid #000',
                   }}
                 >
-                  Anonymous
+                  Status unverified
                 </span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.8rem', color: '#333', lineHeight: 1.6 }}>

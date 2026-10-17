@@ -114,3 +114,10 @@ it('shows a recoverable read error instead of inventing a zero reward balance', 
   failure.mockRestore(); fireEvent.click(view.getByRole('button',{name:'Try again'}));
   await waitFor(()=>expect(view.getByText('Recorded Puzzle Pieces')).toBeInTheDocument());
 });
+
+it('does not imply preview download or sharing works', async () => {
+  const view = render(<ProgressPage />);
+  await waitFor(() => expect(view.getByText('Recorded Puzzle Pieces')).toBeInTheDocument());
+  expect(view.getByRole('button', { name: /Download/ })).toBeDisabled();
+  expect(view.getByRole('button', { name: /Share/ })).toBeDisabled();
+});

@@ -26,3 +26,11 @@ it('does not permit a synthetic wellness PDF', () => {
   expect(screen.getByRole('button', { name: /Generate Wellness Report/ })).toBeDisabled();
   expect(screen.queryByText(/mood has improved|487|2025-04-15/)).not.toBeInTheDocument();
 });
+
+import PrivacyStep from '@/components/onboarding/PrivacyStep';
+import AIDisclosureStep from '@/components/onboarding/AIDisclosureStep';
+it('onboarding discloses plaintext inference without nonexistent policy agreement', () => {
+  const view = render(<><PrivacyStep onNext={() => {}} /><AIDisclosureStep onNext={() => {}} /></>);
+  expect(view.container.textContent).not.toMatch(/What we never store|Conversations shared with third parties|agree to Privacy Policy/);
+  expect(view.getByText('Inference receives readable messages and recent context')).toBeInTheDocument();
+});

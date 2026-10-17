@@ -27,7 +27,7 @@ export default function AIDisclosureStep({ onNext }: Props) {
     },
     {
       id: 'privacy',
-      label: 'I agree to Privacy Policy and Terms of Service',
+      label: 'I understand saved history is encrypted, while inference receives readable text',
       checked: checkedPrivacy,
       onChange: () => setCheckedPrivacy((v) => !v),
     },

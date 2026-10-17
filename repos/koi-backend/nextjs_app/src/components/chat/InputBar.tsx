@@ -57,6 +57,7 @@ export default function InputBar({ onSend, disabled = false, inputRef }: InputBa
         }}
       >
         <textarea
+          aria-label="Message KOI"
           ref={textareaRef}
           value={value}
           onKeyDown={handleKeyDown}

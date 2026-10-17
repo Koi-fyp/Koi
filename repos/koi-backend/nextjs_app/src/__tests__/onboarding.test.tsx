@@ -30,7 +30,7 @@ describe('onboarding companion selection application path', () => {
     expect(screen.getByRole('img', { name: 'Aisha avatar preview' })).toHaveAttribute('src', '/Female.png');
     fireEvent.click(screen.getByRole('button', { name: 'Continue with Aisha' }));
     fireEvent.click(screen.getByRole('checkbox', { name: /I understand KOI is an AI/i }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /I agree to Privacy Policy/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /I understand saved history is encrypted/i }));
     fireEvent.click(screen.getByRole('button', { name: /I Agree/i }));
     fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
     fireEvent.click(screen.getByRole('button', { name: /Let's Go/i }));
@@ -51,7 +51,7 @@ describe('onboarding companion selection application path', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Koi.*Fox choice/i }));
     fireEvent.click(screen.getByRole('button', { name: /Continue with Koi/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /I understand KOI is an AI/i }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /I agree to Privacy Policy/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /I understand saved history is encrypted/i }));
     fireEvent.click(screen.getByRole('button', { name: /I Agree/i }));
     fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
     fireEvent.click(screen.getByRole('button', { name: /Let's Go/i }));

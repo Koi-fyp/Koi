@@ -16,6 +16,9 @@ export default function ModeSelector() {
   return (
     <div className="relative group flex-shrink-0">
       <motion.button
+        type="button" aria-expanded={open} aria-controls="koi-mode-options"
+        onClick={() => setOpen(value => !value)}
+        onKeyDown={event => { if (event.key === "Escape") setOpen(false); }}
         aria-label={`Mode: ${selected}`}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
@@ -40,6 +43,8 @@ export default function ModeSelector() {
       <AnimatePresence>
         {open && (
           <motion.div
+            id="koi-mode-options"
+            onKeyDown={event => { if (event.key === "Escape") setOpen(false); }}
             initial={{ y: -10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -8, opacity: 0 }}
@@ -51,7 +56,7 @@ export default function ModeSelector() {
             <div className="flex flex-col p-2">
               {modes.map((mode, idx) => (
                 <div key={mode.name}>
-                  <motion.div
+                  <motion.button type="button" disabled={!mode.enabled}
                     onClick={() => {
                       if (mode.enabled) {
                         setSelected(mode.name);
@@ -59,7 +64,7 @@ export default function ModeSelector() {
                       }
                     }}
                     whileHover={mode.enabled ? { backgroundColor: '#06b6d4' } : {}}
-                    className={`p-3 rounded-lg flex items-center justify-between font-bold text-sm transition-all ${
+                    className={`w-full p-3 rounded-lg flex items-center justify-between font-bold text-sm transition-all ${
                       mode.enabled
                         ? 'cursor-pointer hover:text-black text-black'
                         : 'opacity-50 cursor-not-allowed locked-stripes'
@@ -71,7 +76,7 @@ export default function ModeSelector() {
                     {!mode.enabled && (
                       <span className="beta-badge">LOCKED</span>
                     )}
-                  </motion.div>
+                  </motion.button>
                   {idx < modes.length - 1 && (
                     <div className="h-px bg-gray-300 my-1" />
                   )}

@@ -14,8 +14,8 @@ const PILLARS = [
     desc: 'KOI is an AI companion — not a therapist, not a chatbot, not a search engine. It is a presence. Designed to listen deeply, remember what matters to you, and respond with warmth and without judgment. Think of KOI as an AI interface for reflection when the service is available.',
     points: [
       'Remembers context across your conversation',
-      'Detects emotional tone and adapts its response',
-      'Available in English and Urdu',
+      'Displays companion expressions supplied by the service',
+      'English and Urdu preference; translation is not guaranteed',
       'Designed specifically for Pakistani users',
     ],
   },
@@ -25,7 +25,7 @@ const PILLARS = [
     subtitle: 'How it thinks',
     color: '#2D63EB',
     textColor: '#fff',
-    desc: "KOI is powered by a large language model fine-tuned for empathetic conversation. Every response is shaped by emotional context — not just the literal words you type, but the sentiment underneath them. The service also supplies companion expression metadata; these animations do not measure your mental-health condition.",
+    desc: "KOI uses a language-model service for text responses. Responses can be incomplete or incorrect. The service also supplies companion expression metadata; these animations do not measure your mental-health condition.",
     points: [
       'Companion expressions: neutral, joy, angry, sorrow, fun',
       'Context window of recent messages for continuity',

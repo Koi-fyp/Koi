@@ -1157,7 +1157,7 @@ export default function ProgressPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
+            <button disabled title="Progress card export is not available"
               style={{
                 flex: 1,
                 background: '#FFD100',
@@ -1186,9 +1186,9 @@ export default function ProgressPage() {
               }}
             >
               <Icon type="download" color="#000" size={18} />
-              Download
+              Download (Unavailable)
             </button>
-            <button
+            <button disabled title="Progress card export is not available"
               style={{
                 flex: 1,
                 background: 'transparent',
@@ -1214,7 +1214,7 @@ export default function ProgressPage() {
               }}
             >
               <Icon type="share" color="#fff" size={18} />
-              Share
+              Share (Unavailable)
             </button>
           </div>
 
@@ -1227,7 +1227,7 @@ export default function ProgressPage() {
               marginTop: '0.75rem',
             }}
           >
-            Privacy-first · No personal details shared
+            Preview only · Download and sharing are unavailable
           </p>
         </div>
       </div>

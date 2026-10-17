@@ -8,15 +8,15 @@ interface Props {
 const STORED = [
   'Anonymous session ID (no name required)',
   'Your conversations (encrypted, on your device)',
-  'Check-in mood responses',
+  'Local reminder preferences (not completed mood check-ins)',
   'Your avatar and language preference',
 ];
 
 const NOT_STORED = [
-  'Your real name or contact details',
-  'Location data',
-  'Conversations shared with third parties',
-  'Any data sold to advertisers',
+  'Anonymous sign-in needs no email; linking an account adds email',
+  'Avoid including identifying details in messages',
+  'Inference receives readable messages and recent context',
+  'Encrypted sync may be pending or unavailable',
 ];
 
 export default function PrivacyStep({ onNext }: Props) {
@@ -126,7 +126,7 @@ export default function PrivacyStep({ onNext }: Props) {
                 display: 'inline-block',
               }}
             />
-            What we never store
+            Before you share
           </h3>
           <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', listStyle: 'none', padding: 0, margin: 0 }}>
             {NOT_STORED.map((item) => (

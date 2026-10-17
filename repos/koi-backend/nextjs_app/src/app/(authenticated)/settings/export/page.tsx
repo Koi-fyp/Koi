@@ -320,7 +320,7 @@ export default function ExportPage() {
               Wellness Report
             </h3>
             <p style={{ fontSize: '0.85rem', color: '#666' }}>
-              Your complete mental health journey
+              Export is unavailable; no personal report has been prepared
             </p>
           </div>
         </div>
@@ -333,17 +333,17 @@ export default function ExportPage() {
           marginBottom: '1.5rem'
         }}>
           <h4 style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.75rem', color: '#000' }}>
-            Report Includes
+            Record availability
           </h4>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {[
-              { label: 'Mood Trends', desc: 'Visual charts & progression' },
-              { label: 'Loneliness Tracking', desc: 'Connection scores over time' },
-              { label: 'Conversation Themes', desc: 'What you talked about most' },
-              { label: 'Activity Progress', desc: 'Check-ins, streaks, messages' },
-              { label: 'Crisis Support Log', desc: 'Times KOI helped in crisis' },
-              { label: 'Key Insights', desc: 'Personalized observations' },
+              { label: 'Mood Trends', desc: 'No recorded check-in source connected' },
+              { label: 'Loneliness Tracking', desc: 'Unavailable; no scores inferred' },
+              { label: 'Conversation Themes', desc: 'Unavailable; no analysis performed' },
+              { label: 'Activity Progress', desc: 'Local counts are shown on Progress; export unavailable' },
+              { label: 'Crisis Support Log', desc: 'No consented export source connected' },
+              { label: 'Key Insights', desc: 'Unavailable; no conclusions generated' },
             ].map((item, i) => (
               <div key={i} style={{ fontSize: '0.85rem' }}>
                 <span style={{ fontWeight: 600, color: '#000' }}>• {item.label}</span>

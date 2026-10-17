@@ -4,7 +4,7 @@ import AppAuthBoundary from '@/components/providers/AppAuthBoundary';
 
 export const metadata: Metadata = {
   title: 'KOI — Your AI Companion',
-  description: 'A thoughtful AI friend that listens, remembers, and grows with you. Start a conversation in seconds — no account needed.',
+  description: 'An AI companion for text conversation with Firebase anonymous sign-in and encrypted local history. Not a substitute for professional care.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

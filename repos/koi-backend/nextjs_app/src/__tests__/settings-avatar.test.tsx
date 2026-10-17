@@ -38,3 +38,11 @@ it('does not report success or change a saved selection when storage rejects the
   await waitFor(() => expect(screen.getByText(/Companion could not be saved/)).toBeInTheDocument());
   expect(await db.users.where('uid').equals('owner').first()).toMatchObject({ companion: 'aisha', avatar: 'female_human' });
 });
+
+it('disables unapproved deletion and replaces invented storage and release claims', async () => {
+  const { container } = render(<SettingsPage />);
+  await screen.findByText('Browser Storage Estimate');
+  expect(screen.getByRole('button', { name: /Clear History/ })).toBeDisabled();
+  expect(container.textContent).not.toMatch(/42 KB|5 MB used|January 2025|24\/7 helplines|v1\.0\.0/);
+  expect(screen.getByText(/Browser storage estimate unavailable/)).toBeInTheDocument();
+});

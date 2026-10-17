@@ -42,7 +42,7 @@ const FAQS = [
   },
   {
     q: 'What languages does KOI support?',
-    a: 'KOI currently supports English and Urdu, with more languages planned. You can choose your preferred language during onboarding.',
+    a: 'You can save an English or Urdu preference during onboarding. Interface translation and reply language are not guaranteed.',
   },
   {
     q: 'How does KOI detect how I am feeling?',
