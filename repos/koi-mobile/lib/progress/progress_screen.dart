@@ -135,6 +135,8 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             ),
           ),
         ),
+        // Debug builds only: opens the simulated safety events menu.
+        const Positioned(top: 8, right: 8, child: SafetyDebugButton()),
         SettingsToastLayer(
           toast: _toast,
           onClose: () => setState(() => _toast = null),

@@ -78,6 +78,33 @@ void main() {
     });
   }
 
+  testWidgets('Progress DEBUG button opens the menu and simulates events', (
+    tester,
+  ) async {
+    await pumpShell(tester, tab: KoiTab.progress);
+    final button = find.byKey(const Key('safety-debug-button'));
+    expect(button, findsOneWidget);
+    expect(find.text(SafetyDebugButton.label), findsOneWidget);
+    // Top-right of the Progress page.
+    final rect = tester.getRect(button);
+    expect(rect.right, greaterThan(300));
+    expect(rect.top, lessThan(tester.getRect(find.text('Your Progress')).top));
+
+    await tester.tap(button);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byKey(const Key('safety-debug-high')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(CrisisScreen), findsOneWidget);
+  });
+
+  testWidgets('release mode: no DEBUG button on Progress', (tester) async {
+    await pumpShell(tester, tab: KoiTab.progress, debugMenu: false);
+    expect(find.byKey(const Key('safety-debug-button')), findsNothing);
+    expect(find.text(SafetyDebugButton.label), findsNothing);
+  });
+
   testWidgets('crisis opens above the call screen and resets the avatar', (
     tester,
   ) async {

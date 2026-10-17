@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../theme/koi_colors.dart';
 import '../theme/koi_text.dart';
 import '../widgets/neo_button.dart';
 import 'safety_contract.dart';
@@ -80,6 +82,45 @@ abstract final class SimulatedSafetyEvents {
 /// Debug builds only: long-press [child] to open the simulated-events menu.
 /// In release builds (or when [safetyDebugMenuEnabledProvider] is false)
 /// this is just [child].
+/// Debug builds only: a small visible "DEBUG" button that opens the same
+/// simulated-events menu as [SafetyDebugTrigger]. Nothing (an empty box) in
+/// release builds: `kDebugMode` is a compile-time false there.
+class SafetyDebugButton extends ConsumerWidget {
+  const SafetyDebugButton({super.key});
+
+  static const String label = 'DEBUG';
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!kDebugMode || !ref.watch(safetyDebugMenuEnabledProvider)) {
+      return const SizedBox.shrink();
+    }
+    return Material(
+      color: KoiColors.neoWhite,
+      shape: const StadiumBorder(
+        side: BorderSide(color: KoiColors.danger, width: 2),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: const Key('safety-debug-button'),
+        onTap: () =>
+            showSafetyDebugMenu(context, ref.read(safetyControllerProvider)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Text(
+            label,
+            style: KoiText.body(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: KoiColors.danger,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class SafetyDebugTrigger extends ConsumerWidget {
   const SafetyDebugTrigger({super.key, required this.child});
   final Widget child;
