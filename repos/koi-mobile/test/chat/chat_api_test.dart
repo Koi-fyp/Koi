@@ -1,194 +1,340 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 
-import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:koi_mobile/avatar/avatar_state.dart';
 import 'package:koi_mobile/chat/chat_api.dart';
-import 'package:koi_mobile/core/emotion.dart';
+import 'package:koi_mobile/safety/safety_contract.dart';
 
-/// A fake local server: returns [status] and streams [chunks] (each chunk
-/// arrives separately, so frames can be split anywhere).
-class _FakeAdapter implements HttpClientAdapter {
-  _FakeAdapter(this.status, this.chunks);
-  final int status;
-  final List<String> chunks;
-  RequestOptions? lastRequest;
-  Object? lastBody;
+import '../support/fake_chat_server.dart';
 
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    lastRequest = options;
-    lastBody = options.data;
-    final stream = Stream<Uint8List>.fromIterable(
-      chunks.map((c) => Uint8List.fromList(utf8.encode(c))),
-    );
-    return ResponseBody(
-      stream,
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['text/event-stream'],
-      },
-    );
-  }
+const _token = 'fake-test-token-not-real';
 
-  @override
-  void close({bool force = false}) {}
-}
-
-ChatApiClient _client(_FakeAdapter adapter) => ChatApiClient(
-  baseUrl: 'http://fake.local',
-  dio: Dio()..httpClientAdapter = adapter,
-);
+Map<String, Object?> _body({
+  String message = 'hello',
+  List<ChatTurn> history = const [],
+}) => chatRequestBody(message: message, sessionHistory: history);
 
 void main() {
-  group('SseChatParser', () {
-    test('latency, deltas and done (full_text overrides, emotion)', () {
-      final deltas = <String>[];
-      final p = SseChatParser(onDelta: deltas.add)
-        ..add('event: latency\ndata: {"latency_ms": 412}\n\n')
-        ..add('event: delta\ndata: {"text": "Hel"}\n\n')
-        ..add('event: delta\ndata: {"text": "lo"}\n\n')
-        ..add(
-          'event: done\ndata: {"full_text": "Hello!", '
-          '"companion_state": {"emotion": "happy"}}\n\n',
-        );
-      expect(deltas, ['Hel', 'lo']);
-      expect(p.result.fullText, 'Hello!');
-      expect(p.result.emotion, Emotion.happy);
-      expect(p.result.latencyMs, 412);
-    });
+  late FakeChatServer server;
+  setUp(() async => server = await FakeChatServer.start());
+  tearDown(() => server.close());
 
-    test('frames split across chunks; trailing partial frame waits', () {
-      final p = SseChatParser();
-      p.add('event: del');
-      p.add('ta\ndata: {"te');
-      expect(p.fullText, ''); // nothing complete yet
-      p.add('xt": "A"}\n');
-      expect(p.fullText, ''); // still no blank line
-      p.add(
-        '\nevent: delta\ndata: {"text": "B"}\n\nevent: delta\ndata: {"text": "C"}',
+  ChatApiClient client({Duration? deadline}) => ChatApiClient(
+    baseUrl: server.base,
+    deadline: deadline ?? const Duration(seconds: 240),
+  );
+
+  group('configuration (web chatEndpoint())', () {
+    test('valid bases; trailing / stripped', () {
+      expect(
+        parseApiBase('http://127.0.0.1:8000/')?.toString(),
+        'http://127.0.0.1:8000',
       );
-      expect(p.fullText, 'AB'); // "C" is an unterminated frame
-      p.add('\n\n');
-      expect(p.fullText, 'ABC');
-    });
-
-    test('bad JSON lines are skipped, the stream continues', () {
-      final p = SseChatParser()
-        ..add('event: delta\ndata: {not json\n\n')
-        ..add('event: delta\ndata: {"text": "ok"}\n\n');
-      expect(p.fullText, 'ok');
-    });
-
-    test('empty full_text keeps the deltas; unknown emotion → neutral', () {
-      final p = SseChatParser()
-        ..add('event: delta\ndata: {"text": "x"}\n\n')
-        ..add(
-          'event: done\ndata: {"full_text": "", '
-          '"companion_state": {"emotion": "joy"}}\n\n',
-        );
-      expect(p.fullText, 'x');
-      expect(p.emotion, Emotion.neutral);
-    });
-
-    test('non-number latency_ms → null; event persists across frames', () {
-      final p = SseChatParser()
-        ..add('event: latency\ndata: {"latency_ms": "fast"}\n\n')
-        ..add('event: delta\ndata: {"text": "a"}\n\n')
-        ..add('data: {"text": "b"}\n\n'); // still "delta"
-      expect(p.latencyMs, isNull);
-      expect(p.fullText, 'ab');
-    });
-  });
-
-  group('ChatApiClient.streamChat (fake local stream)', () {
-    test('POSTs JSON with the Bearer token and parses the stream', () async {
-      final adapter = _FakeAdapter(200, [
-        'event: latency\ndata: {"latency_ms": 90}\n\nevent: del',
-        'ta\ndata: {"text": "Hi "}\n\nevent: delta\ndata: {"text": "there"}\n\n',
-        'event: done\ndata: {"full_text": "Hi there", "companion_state": {"emotion": "calm"}}\n\n',
-      ]);
-      final r = await _client(adapter).streamChat(
-        idToken: 'tok',
-        message: 'hello',
-        sessionHistory: const [ChatTurn(role: 'user', content: 'earlier')],
+      expect(
+        parseApiBase(' https://example.test/koi/ ')?.toString(),
+        'https://example.test/koi',
       );
-      expect(r.fullText, 'Hi there');
-      expect(r.emotion, Emotion.calm);
-      expect(r.latencyMs, 90);
-
-      final req = adapter.lastRequest!;
-      expect(req.method, 'POST');
-      expect(req.uri.toString(), 'http://fake.local/api/v1/chat');
-      expect(req.headers['Authorization'], 'Bearer tok');
-      expect(jsonDecode(adapter.lastBody! as String), {
-        'message': 'hello',
-        'session_history': [
-          {'role': 'user', 'content': 'earlier'},
-        ],
-      });
     });
 
-    test('non-200: throws with status and body, never parses SSE', () async {
-      final adapter = _FakeAdapter(401, [
-        '{"detail": "invalid token"}',
-        // Would be parsed if the status were ignored:
-        '\n\nevent: delta\ndata: {"text": "SHOULD NOT APPEAR"}\n\n',
-      ]);
+    test('empty / invalid → not configured', () {
+      for (final bad in [
+        '',
+        '   ',
+        'ftp://example.test',
+        'https://user:pw@example.test',
+        'https://example.test/?a=1',
+        'https://example.test/#x',
+        'not a url',
+      ]) {
+        expect(parseApiBase(bad), isNull, reason: bad);
+      }
+      expect(ChatApiClient(baseUrl: '').isConfigured, isFalse);
+    });
+
+    test('not configured → ChatApiException, no request', () async {
       await expectLater(
-        _client(adapter)
-            .streamChat(idToken: 't', message: 'm', sessionHistory: const []),
+        ChatApiClient(baseUrl: '').streamChat(idToken: _token, body: _body()),
         throwsA(
           isA<ChatApiException>().having(
-            (e) => e.message,
-            'message',
-            allOf(
-              startsWith(
-                '/api/v1/chat returned 401: {"detail": "invalid token"}',
-              ),
-            ),
+            (e) => e.code,
+            'code',
+            ChatApiException.notConfigured,
           ),
         ),
       );
     });
+  });
 
-    test('error body is cut to 300 characters', () async {
-      final adapter = _FakeAdapter(500, ['x' * 1000]);
-      try {
-        await _client(adapter)
-            .streamChat(idToken: 't', message: 'm', sessionHistory: const []);
-        fail('should throw');
-      } on ChatApiException catch (e) {
-        expect(e.message, '/api/v1/chat returned 500: ${'x' * 300}');
+  group('request', () {
+    test('body keys, roles user/assistant, no risk; Bearer + Accept', () async {
+      server.handler = (req, _) => writeSse(req, okTurn());
+      final body = chatRequestBody(
+        message: 'now',
+        sessionHistory: const [
+          ChatTurn(role: 'user', content: 'u'),
+          ChatTurn(role: 'model', content: 'm'),
+          ChatTurn(role: 'ai', content: 'a'),
+          ChatTurn(role: 'assistant', content: 'x'),
+        ],
+        exerciseState: 'opaque.TOKEN==',
+        clientEvent: ClientEvent.playbackDone,
+        crisisPath: CrisisPath.reachedOut,
+      );
+      await client().streamChat(idToken: _token, body: body);
+
+      final seen = server.requests.single;
+      expect(seen.method, 'POST');
+      expect(seen.uri.path, '/api/v1/chat');
+      expect(seen.header('authorization'), 'Bearer $_token');
+      expect(seen.header('accept'), 'text/event-stream');
+      expect(seen.header('content-type'), startsWith('application/json'));
+      final json = seen.json;
+      expect(json.keys.toSet(), {
+        'message',
+        'session_history',
+        'exercise_state',
+        'client_event',
+        'policy_event',
+        'crisis_path',
+      });
+      expect(json.containsKey('risk'), isFalse);
+      expect(json['message'], 'now');
+      expect(
+        (json['session_history']! as List).map((t) => (t as Map)['role']),
+        ['user', 'assistant', 'assistant', 'assistant'],
+      );
+      expect(json['exercise_state'], 'opaque.TOKEN==');
+      expect(json['client_event'], 'playback_done');
+      expect(json['policy_event'], 'crisis_resolved');
+      expect(json['crisis_path'], 'reached_out');
+    });
+
+    test('defaults: every key present, null where unknown', () {
+      expect(_body(), {
+        'message': 'hello',
+        'session_history': <Object?>[],
+        'exercise_state': null,
+        'client_event': 'none',
+        'policy_event': null,
+        'crisis_path': null,
+      });
+    });
+  });
+
+  group('stream', () {
+    test(
+      'parses SSE split across chunks; companion_state before text',
+      () async {
+        server.handler = (req, _) =>
+            writeSse(req, okTurn(a: 'سلام 😀', b: ' ok'), chunkBytes: 1);
+        final order = <String>[];
+        final r = await client().streamChat(
+          idToken: _token,
+          body: _body(),
+          handlers: ChatHandlers(
+            onCompanionState: (_) => order.add('state'),
+            onDelta: (_) => order.add('delta'),
+          ),
+        );
+        expect(order, ['state', 'delta', 'delta']);
+        expect(r.fullText, 'سلام 😀 ok');
+        expect(r.companionState.emotion, AvatarEmotion.joy);
+        expect(r.latencyMs, 12);
+        expect((r.exerciseStateChanged, r.exerciseState), (true, 'tok-1'));
+      },
+    );
+
+    test('401 / 500: status only, the body is never surfaced', () async {
+      for (final status in [401, 500]) {
+        server.handler = (req, _) async {
+          req.response
+            ..statusCode = status
+            ..write('{"detail":"PRIVATE generation output"}');
+          await req.response.close();
+        };
+        final c = client();
+        Object? error;
+        try {
+          await c.streamChat(idToken: _token, body: _body());
+        } catch (e) {
+          error = e;
+        }
+        expect(error, isA<ChatApiException>());
+        expect((error! as ChatApiException).code, '$status');
+        expect('$error', isNot(contains('PRIVATE')));
+        expect(c.lastDiagnostics!.status, '$status');
       }
     });
 
-    test('no base URL configured: throws before any request', () async {
-      final adapter = _FakeAdapter(200, const []);
-      final client = ChatApiClient(
-        baseUrl: '',
-        dio: Dio()..httpClientAdapter = adapter,
-      );
-      expect(client.isConfigured, isFalse);
+    test('network failure → ChatApiException(network)', () async {
+      final c = ChatApiClient(baseUrl: server.base);
+      await server.close();
       await expectLater(
-        client.streamChat(idToken: 't', message: 'm', sessionHistory: const []),
+        c.streamChat(idToken: _token, body: _body()),
+        throwsA(
+          isA<ChatApiException>().having((e) => e.code, 'code', 'network'),
+        ),
+      );
+      expect(c.lastDiagnostics!.status, 'network');
+    });
+  });
+
+  group('C7: 303 redirect-and-poll', () {
+    test('two 303 hops → GET poll URL with Authorization, then SSE', () async {
+      server.handler = (req, seen) async {
+        final n = server.requests.length;
+        if (n <= 2) {
+          req.response
+            ..statusCode = 303
+            ..headers.set('location', '/api/v1/chat?__poll=abc');
+          await req.response.close();
+          return;
+        }
+        await writeSse(req, okTurn());
+      };
+      final c = client();
+      final r = await c.streamChat(idToken: _token, body: _body());
+      expect(r.fullText, 'Hello there.');
+      expect(server.requests.map((s) => s.method), ['POST', 'GET', 'GET']);
+      for (final hop in server.requests.skip(1)) {
+        expect(hop.uri.queryParameters['__poll'], 'abc');
+        expect(hop.header('authorization'), 'Bearer $_token');
+        expect(hop.header('accept'), 'text/event-stream');
+      }
+      expect(c.lastDiagnostics!.hops, 2);
+      expect(c.lastDiagnostics!.status, '200');
+    });
+
+    test('cross-origin Location is rejected (token never sent)', () async {
+      final other = await FakeChatServer.start();
+      addTearDown(other.close);
+      server.handler = (req, _) async {
+        req.response
+          ..statusCode = 303
+          ..headers.set('location', '${other.base}/poll');
+        await req.response.close();
+      };
+      await expectLater(
+        client().streamChat(idToken: _token, body: _body()),
+        throwsA(
+          isA<ChatApiException>().having(
+            (e) => e.code,
+            'code',
+            ChatApiException.redirect,
+          ),
+        ),
+      );
+      expect(other.requests, isEmpty);
+    });
+
+    test('more than 10 hops fails', () async {
+      server.handler = (req, _) async {
+        req.response
+          ..statusCode = 303
+          ..headers.set('location', '/api/v1/chat?__poll=same');
+        await req.response.close();
+      };
+      await expectLater(
+        client().streamChat(idToken: _token, body: _body()),
         throwsA(isA<ChatApiException>()),
       );
-      expect(adapter.lastRequest, isNull);
+      expect(server.requests, hasLength(11)); // POST + 10 GETs
     });
 
-    test('no --dart-define is invented: the default base is empty', () {
-      expect(koiApiBase, isEmpty);
+    test('one overall deadline across hops; no callbacks after it', () async {
+      server.handler = (req, _) async {
+        if (req.method == 'POST') {
+          req.response
+            ..statusCode = 303
+            ..headers.set('location', '/api/v1/chat?__poll=1');
+          await req.response.close();
+          return;
+        }
+        req.response.headers.contentType = ContentType('text', 'event-stream');
+        req.response.write(sseFrame('delta', {'text': 'partial'}));
+        await req.response.flush();
+        await Future<void>.delayed(const Duration(seconds: 5));
+        req.response.write(sseFrame('delta', {'text': 'late'}));
+        await req.response.close();
+      };
+      final deltas = <String>[];
+      final c = client(deadline: const Duration(milliseconds: 400));
+      final watch = Stopwatch()..start();
+      await expectLater(
+        c.streamChat(
+          idToken: _token,
+          body: _body(),
+          handlers: ChatHandlers(onDelta: deltas.add),
+        ),
+        throwsA(isA<ChatTimeoutException>()),
+      );
+      expect(watch.elapsed, lessThan(const Duration(seconds: 3)));
+      expect(c.lastDiagnostics!.status, 'timeout');
+      expect(c.lastDiagnostics!.hops, 1);
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      expect(deltas, ['partial']);
     });
 
-    test('Q3 role constants are isolated', () {
-      expect(historyRoleUser, 'user');
-      expect(historyRoleAi, 'model'); // web value; TODO(Q3)
+    test('the default deadline is 240 s, max 10 hops', () {
+      final c = ChatApiClient(baseUrl: 'http://127.0.0.1:1');
+      expect(c.deadline, const Duration(seconds: 240));
+      expect(c.maxHops, 10);
+    });
+  });
+
+  group('diagnostics', () {
+    test('one debug line: time, status, hops, elapsed, event names; '
+        'never the token or text', () async {
+      server.handler = (req, _) => writeSse(req, okTurn(a: 'SECRET words'));
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? m, {int? wrapWidth}) => logs.add(m ?? '');
+      try {
+        await ChatApiClient(
+          baseUrl: server.base,
+          now: () => DateTime(2026, 10, 18, 9, 5, 7),
+        ).streamChat(
+          idToken: _token,
+          body: _body(message: 'SECRET message'),
+        );
+      } finally {
+        debugPrint = original;
+      }
+      expect(logs, hasLength(1));
+      expect(
+        logs.single,
+        matches(
+          RegExp(
+            r'^\[KOI\] chat: 09:05:07 status=200 hops=0 elapsed=\d+\.\ds '
+            r'backend_events=latency,companion_state,delta,state,done$',
+          ),
+        ),
+      );
+      final all = logs.join('\n');
+      expect(all, isNot(contains(_token)));
+      expect(all, isNot(contains('SECRET')));
+      expect(all, isNot(contains('127.0.0.1')));
+    });
+  });
+
+  group('GET /health', () {
+    test('no Authorization; true on 2xx, false otherwise', () async {
+      var status = 200;
+      server.handler = (req, _) async {
+        req.response
+          ..statusCode = status
+          ..write('{"status":"ok"}');
+        await req.response.close();
+      };
+      expect(await client().checkHealth(), isTrue);
+      final seen = server.requests.single;
+      expect((seen.method, seen.uri.path), ('GET', '/health'));
+      expect(seen.header('authorization'), isNull);
+
+      status = 503;
+      expect(await client().checkHealth(), isFalse);
+      expect(await ChatApiClient(baseUrl: '').checkHealth(), isFalse);
     });
   });
 }

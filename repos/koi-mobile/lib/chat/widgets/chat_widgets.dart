@@ -82,6 +82,30 @@ final List<Path> mailIconPaths = [
   parseSvgPolyline('22,6 12,13 2,6'),
 ];
 
+/// Mobile-only (contract C7): shown above the composer while the chat
+/// service is starting up. Not an error: muted text, no red.
+class WakingLine extends StatelessWidget {
+  const WakingLine({super.key});
+
+  static const String text =
+      'KOI is waking up… the first reply can take up to 3 minutes.';
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    key: const Key('chat-waking'),
+    padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+    child: Semantics(
+      liveRegion: true,
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        // No web equivalent; Tailwind gray-500, like web's muted text.
+        style: bodyText(13, color: const Color(0xFF6B7280)),
+      ),
+    ),
+  );
+}
+
 /// chat/page.tsx OfflineBanner (shown only when offline).
 class OfflineBanner extends StatelessWidget {
   const OfflineBanner({super.key});
@@ -530,12 +554,17 @@ class InputBar extends StatefulWidget {
     super.key,
     required this.onSend,
     this.disabled = false,
+    this.keepTypingEnabled = false,
     this.focusNode,
     this.leading,
   });
 
   final ValueChanged<String> onSend;
   final bool disabled;
+
+  /// Mobile-only: while [disabled], only Send is off and the field still
+  /// takes typing (a cold-start reply can take minutes). false = web.
+  final bool keepTypingEnabled;
   final FocusNode? focusNode;
 
   /// Mobile-only: a widget left of the input pill (the Chat screen's avatar
@@ -610,7 +639,7 @@ class _InputBarState extends State<InputBar> {
                 key: const Key('chat-input'),
                 controller: _text,
                 focusNode: widget.focusNode,
-                enabled: !widget.disabled,
+                enabled: !widget.disabled || widget.keepTypingEnabled,
                 minLines: 1,
                 maxLines: null,
                 // Web: Enter (without Shift) sends.

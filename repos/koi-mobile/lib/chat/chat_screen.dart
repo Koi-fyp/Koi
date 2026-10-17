@@ -9,6 +9,7 @@ import '../avatar/avatar_call_screen.dart';
 import '../avatar/avatar_providers.dart';
 import '../avatar/avatar_view.dart' show AvatarImage, AvatarType;
 import '../avatar/call_icons.dart';
+import 'backend_warmup.dart';
 import '../onboarding/step_layout.dart';
 import '../theme/koi_colors.dart';
 import 'widgets/chat_widgets.dart';
@@ -72,18 +73,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           LayoutId(id: _Slot.banner, child: const _OfflineBannerHost()),
           LayoutId(
             id: _Slot.list,
+            // The typing dots until the first delta, then the live bubble.
             child: MessageList(
               messages: chat.messages,
-              isTyping: chat.isTyping,
+              isTyping: chat.isTyping && !chat.isStreaming,
             ),
           ),
           LayoutId(
             id: _Slot.input,
-            child: InputBar(
-              onSend: chat.send,
-              disabled: chat.isTyping,
-              focusNode: _input,
-              leading: const _CallEntryButton(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (chat.backendStatus == BackendStatus.waking)
+                  const WakingLine(),
+                InputBar(
+                  onSend: chat.send,
+                  // One message at a time; typing stays possible.
+                  disabled: chat.isTyping,
+                  keepTypingEnabled: true,
+                  focusNode: _input,
+                  leading: const _CallEntryButton(),
+                ),
+              ],
             ),
           ),
         ],

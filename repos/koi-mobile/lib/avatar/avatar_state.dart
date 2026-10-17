@@ -76,16 +76,41 @@ class AvatarStateUpdate extends AvatarStateEvent {
 }
 
 /// Where the call screen gets avatar updates from.
-///
-/// TODO(backend): a real source maps the chat stream's companion_state
-/// {emotion, intensity} (Blueprint §4.1) onto [AvatarStateUpdate]s. Not
-/// built yet: nothing here parses backend events or calls the backend.
 abstract class AvatarStateSource {
   Stream<AvatarStateEvent> get events;
   void dispose();
 }
 
-/// The production default until the backend is connected: never emits.
+/// The live source: starts session [sessionId], then passes on [updates]
+/// (ChatController.avatarEvents: the chat stream's companion_state
+/// {emotion, intensity} and the thinking / speaking / idle state).
+class StreamAvatarStateSource implements AvatarStateSource {
+  StreamAvatarStateSource(this.sessionId, this.updates);
+
+  final String sessionId;
+  final Stream<AvatarStateEvent> updates;
+
+  // A plain controller rather than `async* { yield ...; yield* updates; }`:
+  // cancelling that generator's subscription never completed in tests.
+  @override
+  Stream<AvatarStateEvent> get events {
+    StreamSubscription<AvatarStateEvent>? sub;
+    late final StreamController<AvatarStateEvent> out;
+    out = StreamController<AvatarStateEvent>(
+      onListen: () {
+        out.add(AvatarSessionStarted(sessionId));
+        sub = updates.listen(out.add, onDone: out.close);
+      },
+      onCancel: () => sub?.cancel(),
+    );
+    return out.stream;
+  }
+
+  @override
+  void dispose() {}
+}
+
+/// Never emits (no signed-in chat).
 class NoAvatarStateSource implements AvatarStateSource {
   @override
   Stream<AvatarStateEvent> get events => const Stream.empty();

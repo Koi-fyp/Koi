@@ -318,8 +318,12 @@ void main() {
         'misunderstanding',
       ]);
       expect(ClientEvent.values.map((e) => e.wire), [
+        'none',
         'playback_done',
         'playback_stopped',
+        'start_breathing',
+        'start_grounding',
+        'start_plan',
       ]);
       expect(crisisResolvedPolicyEvent, 'crisis_resolved');
     });

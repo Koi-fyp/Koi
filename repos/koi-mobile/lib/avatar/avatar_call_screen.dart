@@ -46,10 +46,9 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
       widget.avatarController ?? AvatarViewController();
   final FocusNode _input = FocusNode();
 
-  // TODO(backend): drive the avatar from companion_state once the real
-  // backend is connected (Q2/Q3). Blueprint §4.1: companion_state
-  // {emotion, intensity}, already in the 5 AvatarEmotion names; do not map
-  // the chat's user emotions onto it. The source below is the seam for it.
+  // The chat stream's companion_state {emotion, intensity} (already the 5
+  // AvatarEmotion names; the chat's user emotions are never mapped onto
+  // it) and thinking / speaking / idle, via avatarStateSourceFactoryProvider.
   late final AvatarStateSource _stateSource;
   StreamSubscription<AvatarStateEvent>? _stateSub;
 
@@ -156,7 +155,7 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
                       Positioned.fill(
                         child: _TranscriptPanel(
                           messages: chat.messages,
-                          isTyping: chat.isTyping,
+                          isTyping: chat.isTyping && !chat.isStreaming,
                           onClose: () => _setTranscript(false),
                         ),
                       ),
@@ -171,6 +170,7 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
                 InputBar(
                   onSend: chat.send,
                   disabled: chat.isTyping,
+                  keepTypingEnabled: true,
                   focusNode: _input,
                 ),
               _CallControls(

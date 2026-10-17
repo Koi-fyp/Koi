@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/providers.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_text.dart';
 import '../widgets/neo_button.dart';
@@ -103,8 +105,12 @@ class SafetyDebugButton extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: const Key('safety-debug-button'),
-        onTap: () =>
-            showSafetyDebugMenu(context, ref.read(safetyControllerProvider)),
+        onTap: () => showSafetyDebugMenu(
+          context,
+          ref.read(safetyControllerProvider),
+          lastChatDiagnostics: () =>
+              ref.read(chatApiProvider).lastDiagnostics?.line,
+        ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Text(
@@ -131,17 +137,27 @@ class SafetyDebugTrigger extends ConsumerWidget {
     return GestureDetector(
       key: const Key('safety-debug-trigger'),
       behavior: HitTestBehavior.opaque,
-      onLongPress: () =>
-          showSafetyDebugMenu(context, ref.read(safetyControllerProvider)),
+      onLongPress: () => showSafetyDebugMenu(
+        context,
+        ref.read(safetyControllerProvider),
+        lastChatDiagnostics: () =>
+            ref.read(chatApiProvider).lastDiagnostics?.line,
+      ),
       child: child,
     );
   }
 }
 
+const String copyChatDiagnosticsLabel = 'Copy last chat diagnostics';
+const String noChatDiagnostics = '[KOI] chat: no request yet';
+
+/// [lastChatDiagnostics] gives the last chat request's one-line diagnostics
+/// (time, status, hops, elapsed, event names; no message text or token).
 Future<void> showSafetyDebugMenu(
   BuildContext context,
-  SafetyController controller,
-) => showModalBottomSheet<void>(
+  SafetyController controller, {
+  String? Function()? lastChatDiagnostics,
+}) => showModalBottomSheet<void>(
   context: context,
   useRootNavigator: true,
   builder: (sheet) {
@@ -211,6 +227,16 @@ Future<void> showSafetyDebugMenu(
               'crisis_resolved sent',
               controller.crisisResolutionSent,
             ),
+            if (lastChatDiagnostics != null)
+              item(
+                'copy-chat-diagnostics',
+                copyChatDiagnosticsLabel,
+                () => Clipboard.setData(
+                  ClipboardData(
+                    text: lastChatDiagnostics() ?? noChatDiagnostics,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

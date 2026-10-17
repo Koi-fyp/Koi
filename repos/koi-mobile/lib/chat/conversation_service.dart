@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -6,7 +7,10 @@ import 'package:koi_flutter_lib/services/crypto_service.dart';
 import '../core/crypto_context.dart';
 import '../core/emotion.dart';
 import '../core/sync_queue.dart';
+import '../safety/safety_contract.dart' show RiskResult;
 import 'chat_api.dart';
+import 'chat_session_state.dart';
+import 'crisis_api.dart';
 import 'message_record.dart';
 
 /// conversationService.ts `SendMessageResult`.
@@ -16,10 +20,25 @@ class SendMessageResult {
     required this.reply,
     required this.emotion,
     required this.latencyMs,
+    this.companionState,
+    this.isFallback = false,
+    this.failureCode,
   });
   final String reply;
+
+  /// The label stored with the reply (web storedEmotion()).
   final Emotion emotion;
   final num? latencyMs;
+
+  /// The backend's companion_state; null for the fallback reply.
+  final CompanionState? companionState;
+
+  /// The connection-trouble reply (never sent back as history).
+  final bool isFallback;
+
+  /// Why the fallback was used: an HTTP status, `timeout`, `network`,
+  /// another [ChatApiException] code or an error type. Never a body.
+  final String? failureCode;
 }
 
 /// Resolves the crypto context (crypto_context.dart, correct two-argument
@@ -74,6 +93,7 @@ class ConversationService {
     required this.syncQueue,
     required this.api,
     required this.idToken,
+    this.crisis,
     DateTime Function()? now,
     String Function()? newId,
   }) : _now = now ?? DateTime.now,
@@ -84,7 +104,15 @@ class ConversationService {
   final MessageStore store;
   final SyncQueue syncQueue;
   final ChatApiClient api;
+
+  /// Called at send time for every request; the token is never kept.
   final IdTokenGetter idToken;
+
+  /// Only used when KOI_CRISIS_BASE is set (contract C8 open; see
+  /// CrisisApiClient).
+  final CrisisApiClient? crisis;
+
+  static bool _loggedNotConfigured = false;
   final DateTime Function() _now;
   final String Function() _newId;
 
@@ -136,28 +164,54 @@ class ConversationService {
     synced: false,
   );
 
+  /// Whether KOI_API_BASE is set and valid.
+  bool get isConfigured => api.isConfigured;
+
   /// sendMessage(): the user message is persisted BEFORE the AI call; on any
-  /// failure the fallback reply is saved and returned.
+  /// failure the fallback reply is saved and returned, so chat never breaks.
+  ///
+  /// [session] supplies exercise_state / client_event / crisis_path and is
+  /// updated only after a successful stream; [onResolutionSent] runs when
+  /// that stream carried a crisis path. With KOI_CRISIS_BASE set, the crisis
+  /// service is called in parallel and its result goes to
+  /// [ChatHandlers.onRisk] only.
   Future<SendMessageResult> sendMessage({
     required String userId,
     required String conversationId,
     required String text,
     required List<ChatTurn> context,
-    void Function(String chunk)? onDelta,
+    ChatHandlers handlers = const ChatHandlers(),
+    ChatSessionState? session,
+    VoidCallback? onResolutionSent,
   }) async {
     await saveMessage(
       _record(conversationId, 'user', text, Emotion.neutral),
       userId,
     );
 
+    final state = session ?? ChatSessionState();
     try {
+      if (!api.isConfigured) {
+        if (kDebugMode && !_loggedNotConfigured) {
+          _loggedNotConfigured = true;
+          debugPrint('[KOI] chat: not configured');
+        }
+        throw const ChatApiException(ChatApiException.notConfigured);
+      }
       final token = await idToken();
+      final turn = state.beginTurn();
+      _checkCrisis(text, turn.sequence, state, handlers.onRisk);
       final r = await api.streamChat(
         idToken: token,
-        message: text,
-        sessionHistory: context,
-        onDelta: onDelta,
+        body: state.requestBody(turn, message: text, sessionHistory: context),
+        handlers: handlers,
       );
+      if (r.fullText.trim().isEmpty) {
+        // web parseChatResponse(): an empty reply is invalid.
+        throw const ChatApiException(ChatApiException.emptyReply);
+      }
+      if (state.turnSucceeded(turn, r)) onResolutionSent?.call();
+      // The full, untrimmed reply.
       await saveMessage(
         _record(conversationId, 'ai', r.fullText, r.emotion),
         userId,
@@ -166,19 +220,44 @@ class ConversationService {
         reply: r.fullText,
         emotion: r.emotion,
         latencyMs: r.latencyMs,
+        companionState: r.companionState,
       );
     } catch (e) {
-      // Error type only; never message content.
-      debugPrint('[KOI] sendMessage failed: ${e.runtimeType}');
+      // Error code / type only; never message content or a token.
+      final code = e is ChatApiException
+          ? e.code
+          : e is ChatTimeoutException
+          ? 'timeout'
+          : e.runtimeType.toString();
+      debugPrint('[KOI] sendMessage failed: $code');
       await saveMessage(
         _record(conversationId, 'ai', fallbackReply, fallbackEmotion),
         userId,
       );
-      return const SendMessageResult(
+      return SendMessageResult(
         reply: fallbackReply,
         emotion: fallbackEmotion,
         latencyMs: null,
+        isFallback: true,
+        failureCode: code,
       );
     }
+  }
+
+  void _checkCrisis(
+    String text,
+    int sequence,
+    ChatSessionState state,
+    void Function(RiskResult risk)? onRisk,
+  ) {
+    final client = crisis;
+    if (client == null || !client.isConfigured || onRisk == null) return;
+    unawaited(
+      client.check(idToken: idToken, text: text, turnId: '$sequence').then((
+        result,
+      ) {
+        if (result != null && state.acceptsRisk(sequence)) onRisk(result);
+      }),
+    );
   }
 }

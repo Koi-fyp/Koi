@@ -67,14 +67,11 @@ class BreathingRun {
 
 /// Holds the crisis-flow and breathing state driven by backend events.
 ///
-/// The wiring owner calls [handleHandoff], [handleRisk] and [handleUiAction]
-/// with parsed events and sets [onClientEvent] / [onCrisisPath] to send the
-/// results on the next chat request. Until then only the debug menu feeds it
-/// (simulated events).
-// TODO(wiring): connect the chat SSE stream (handoff, risk, ui_action) to
-// this controller, and send onClientEvent / onCrisisPath on the next request
-// (crisis_path goes with policy_event "crisis_resolved", then call
-// [crisisResolutionSent]).
+/// The chat stream (ChatController) calls [handleHandoff], [handleRisk] and
+/// [handleUiAction] with parsed events. [onClientEvent] / [onCrisisPath] are
+/// held by ChatSessionState and sent with the next chat request, which then
+/// calls [crisisResolutionSent]. The debug menu can also feed simulated
+/// events.
 class SafetyController extends ChangeNotifier {
   SafetyController({this.onClientEvent, this.onCrisisPath});
 

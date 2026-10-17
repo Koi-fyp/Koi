@@ -23,6 +23,17 @@ enum Emotion {
       values.firstWhere((e) => e.name == raw, orElse: () => Emotion.neutral);
 }
 
+/// The label stored with an AI message for the backend's companion_state
+/// emotion (`neutral | joy | angry | sorrow | fun`). Mirrors storedEmotion()
+/// in feat/web-v11-wiring conversationService.ts: joy → happy, sorrow → sad,
+/// fun → calm, anything else → neutral. Storage format is unchanged.
+Emotion storedEmotion(String companionEmotion) => switch (companionEmotion) {
+  'joy' => Emotion.happy,
+  'sorrow' => Emotion.sad,
+  'fun' => Emotion.calm,
+  _ => Emotion.neutral,
+};
+
 /// Mirrors normalizeEmotion() in conversationService.ts: a deliberate,
 /// visible shim, NOT a canonical mapping. Known labels pass through; any other
 /// string is logged and becomes 'neutral'; non-strings become 'neutral'

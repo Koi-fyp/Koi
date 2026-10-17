@@ -37,6 +37,8 @@ class RootRouter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authServiceProvider);
     final onboarding = ref.watch(onboardingStoreProvider);
+    // Keeps the /health warm-up alive from app start (it fires on sign-in).
+    ref.listen(backendWarmupProvider, (_, _) {});
     final route = resolveRootRoute(
       restored: auth.sessionRestored,
       loading: auth.loading,

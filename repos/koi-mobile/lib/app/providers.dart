@@ -1,15 +1,20 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../chat/backend_warmup.dart';
 import '../chat/chat_api.dart';
 import '../chat/chat_controller.dart';
+import '../chat/chat_session_state.dart';
 import '../chat/conversation_service.dart';
+import '../chat/crisis_api.dart';
 import '../chat/message_record.dart';
 import '../core/crypto_context.dart';
 import '../core/sync_queue.dart';
 import '../core/auth/auth_service.dart';
 import '../core/onboarding_store.dart';
 import '../onboarding/onboarding_service.dart';
+import '../safety/safety_providers.dart';
 import '../settings/settings_prefs.dart';
 
 /// Overridden in main.dart (and in tests) with a concrete implementation.
@@ -88,6 +93,44 @@ final chatApiProvider = Provider<ChatApiClient>(
   (ref) => ChatApiClient(baseUrl: koiApiBase),
 );
 
+/// Not configured (never called) unless KOI_CRISIS_BASE is set (C8 open).
+final crisisApiProvider = Provider<CrisisApiClient>(
+  (ref) => CrisisApiClient(baseUrl: koiCrisisBase),
+);
+
+/// exercise_state / client_event / crisis_path for the signed-in user's
+/// conversation; a new one for every uid. SafetyController's callbacks feed
+/// it.
+final chatSessionStateProvider = Provider<ChatSessionState>((ref) {
+  ref.watch(authServiceProvider.select((a) => a.user?.uid));
+  final session = ChatSessionState();
+  ref.read(safetyControllerProvider)
+    ..onClientEvent = session.setClientEvent
+    ..onCrisisPath = session.setCrisisPath;
+  return session;
+});
+
+/// `/health` warm-up and the "waking up" status. Created by RootRouter so
+/// the warm-up runs as soon as a user is signed in (also from onboarding),
+/// and again when the app returns after more than 5 minutes away.
+final backendWarmupProvider = ChangeNotifierProvider<BackendWarmup>((ref) {
+  final chat = ref.read(chatApiProvider);
+  final crisis = ref.read(crisisApiProvider);
+  final warmup = BackendWarmup(
+    chatHealth: chat.isConfigured ? chat.checkHealth : null,
+    crisisHealth: crisis.isConfigured ? crisis.checkHealth : null,
+  );
+  ref.listen(authServiceProvider.select((a) => a.user?.uid), (prev, uid) {
+    if (uid != null && uid != prev) warmup.warmUp();
+  }, fireImmediately: true);
+  final lifecycle = AppLifecycleListener(
+    onHide: warmup.appBackgrounded,
+    onShow: warmup.appResumed,
+  );
+  ref.onDispose(lifecycle.dispose);
+  return warmup;
+});
+
 final messageCipherProvider = Provider<MessageCipher>(
   (ref) => KoiMessageCipher(),
 );
@@ -127,6 +170,7 @@ final conversationServiceProvider = Provider<ConversationService>((ref) {
     syncQueue: ref.read(syncQueueProvider),
     api: ref.read(chatApiProvider),
     idToken: auth.getIdToken,
+    crisis: ref.read(crisisApiProvider),
   );
 });
 
@@ -139,6 +183,9 @@ final chatControllerProvider = ChangeNotifierProvider.autoDispose
         service: ref.read(conversationServiceProvider),
         isOnline: online.check,
         onlineChanges: online.changes,
+        safety: ref.read(safetyControllerProvider),
+        session: ref.read(chatSessionStateProvider),
+        backend: ref.read(backendWarmupProvider),
       );
       controller.loadHistory().then((_) => controller.warmUpKey());
       return controller;

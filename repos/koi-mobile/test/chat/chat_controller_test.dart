@@ -1,11 +1,21 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:koi_mobile/avatar/avatar_state.dart';
+import 'package:koi_mobile/chat/backend_warmup.dart';
 import 'package:koi_mobile/chat/chat_api.dart';
 import 'package:koi_mobile/chat/chat_controller.dart';
+import 'package:koi_mobile/chat/chat_session_state.dart';
 import 'package:koi_mobile/chat/conversation_service.dart';
 import 'package:koi_mobile/chat/message_record.dart';
 import 'package:koi_mobile/core/emotion.dart';
+import 'package:koi_mobile/safety/safety_contract.dart';
+import 'package:koi_mobile/safety/safety_controller.dart';
 
 import '../support/chat_fakes.dart';
+import '../support/fake_chat_server.dart';
 
 /// Captures the context of each call and replies "r1", "r2", ...
 class _ScriptedService extends ConversationService {
@@ -27,7 +37,9 @@ class _ScriptedService extends ConversationService {
     required String conversationId,
     required String text,
     required List<ChatTurn> context,
-    void Function(String chunk)? onDelta,
+    ChatHandlers handlers = const ChatHandlers(),
+    ChatSessionState? session,
+    VoidCallback? onResolutionSent,
   }) async {
     contexts.add(context);
     return SendMessageResult(
@@ -89,7 +101,7 @@ void main() {
       expect(service.contexts[0], isEmpty);
       expect(service.contexts[1].map((t) => (t.role, t.content)), [
         ('user', 'm1'),
-        ('model', 'r1'),
+        ('assistant', 'r1'),
       ]);
       expect(service.contexts[3].map((t) => t.content), [
         'r1',
@@ -184,4 +196,224 @@ void main() {
       ]);
     },
   );
+
+  test('fallback replies are never sent back as history (B)', () async {
+    final store = MemoryMessageStore();
+    final cipher = FakeCipher();
+    await store.put(
+      MessageRecord(
+        id: 'f',
+        conversationId: 'u1',
+        sender: 'ai',
+        content: await cipher.encrypt(
+          ConversationService.fallbackReply,
+          's',
+          'x',
+        ),
+        timestamp: DateTime.utc(2026),
+        emotion: Emotion.calm,
+        emotionConfidence: 1,
+        synced: false,
+      ),
+    );
+    final service = _ScriptedService(store);
+    final c = ChatController(
+      uid: 'u1',
+      service: service,
+      isOnline: () async => true,
+    );
+    await c.loadHistory();
+    expect(c.messages.single.isFallback, isTrue); // still shown
+    await c.send('m1');
+    expect(service.contexts.single, isEmpty);
+  });
+
+  group('live stream wiring (127.0.0.1)', () {
+    late FakeChatServer server;
+    setUp(() async => server = await FakeChatServer.start());
+    tearDown(() => server.close());
+
+    ChatController controller({
+      SafetyController? safety,
+      BackendWarmup? backend,
+      ChatSessionState? session,
+    }) => ChatController(
+      uid: 'u1',
+      service: ConversationService(
+        cryptoContext: (_) async => testCryptoContext,
+        cipher: FakeCipher(),
+        store: MemoryMessageStore(),
+        syncQueue: RecordingSyncQueue(),
+        api: ChatApiClient(baseUrl: server.base),
+        idToken: () async => 'fake-test-token',
+      ),
+      isOnline: () async => true,
+      safety: safety,
+      backend: backend,
+      session: session,
+    );
+
+    test('deltas fill a live bubble that becomes the saved reply', () async {
+      final gate = Completer<void>();
+      server.handler = (req, _) async {
+        req.response.headers.contentType = ContentType('text', 'event-stream');
+        req.response.write(sseFrame('delta', {'text': 'Hel'}));
+        await req.response.flush();
+        await gate.future;
+        req.response.write(
+          sseFrame('delta', {'text': 'lo'}) +
+              sseFrame('done', {'full_text': 'Hello'}),
+        );
+        await req.response.close();
+      };
+      final c = controller();
+      final sending = c.send('hi');
+      while (!c.isStreaming) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      expect(c.messages.last.content, 'Hel');
+      final liveId = c.messages.last.id;
+      expect(c.isTyping, isTrue);
+
+      // One message at a time.
+      await c.send('second');
+      expect(c.messages.where((m) => m.isUser), hasLength(1));
+
+      gate.complete();
+      await sending;
+      expect(c.isStreaming, isFalse);
+      expect(c.messages.map((m) => m.content), ['hi', 'Hello']);
+      expect(c.messages.last.id, liveId);
+    });
+
+    test('avatar: thinking → companion_state → speaking → idle', () async {
+      server.handler = (req, _) => writeSse(
+        req,
+        sseFrame('companion_state', {'emotion': 'mystery', 'intensity': 9}) +
+            sseFrame('companion_state', {'emotion': 'fun', 'intensity': 9}) +
+            sseFrame('delta', {'text': 'a'}) +
+            sseFrame('delta', {'text': 'b'}) +
+            sseFrame('done', {'full_text': 'ab'}),
+      );
+      final c = controller();
+      final events = <AvatarStateUpdate>[];
+      final sub = c.avatarEvents.listen(
+        (e) => events.add(e as AvatarStateUpdate),
+      );
+      await c.send('hi');
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(
+        events.map(
+          (e) => (e.emotion?.name, e.intensity, e.conversationState?.name),
+        ),
+        [
+          (null, 0.0, 'thinking'),
+          ('neutral', 1.0, null), // unknown → neutral, clamped
+          ('fun', 1.0, null),
+          (null, 0.0, 'speaking'),
+          (null, 0.0, 'idle'),
+        ],
+      );
+      expect(events.every((e) => e.sessionId == c.conversationId), isTrue);
+    });
+
+    test('ui_action / handoff / risk reach SafetyController', () async {
+      server.handler = (req, _) => writeSse(
+        req,
+        sseFrame('ui_action', {
+              'name': 'start_breathing',
+              'args': {
+                'inhale_s': 4,
+                'exhale_s': 6,
+                'cycles': 2,
+                'cue_audio': ['in', 'out'],
+              },
+            }) +
+            sseFrame('delta', {'text': 'ok'}) +
+            sseFrame('done', {'full_text': 'ok'}),
+      );
+      final safety = SafetyController();
+      final c = controller(safety: safety);
+      await c.send('breathe');
+      expect(safety.breathing, isNotNull);
+
+      server.handler = (req, _) => writeSse(
+        req,
+        sseFrame('delta', {'text': 'here'}) +
+            sseFrame('handoff', {'to': 'crisis', 'reason': 'risk'}) +
+            sseFrame('done', {'full_text': 'here'}),
+      );
+      await c.send('one');
+      await c.send('two'); // the handoff repeats every turn
+      expect(safety.crisisCount, 1);
+      expect(safety.breathing, isNull); // crisis stopped the animation
+    });
+
+    test('risk unavailable never shows anything', () async {
+      server.handler = (req, _) => writeSse(
+        req,
+        sseFrame('delta', {'text': 'ok'}) +
+            sseFrame('risk', {'status': 'unavailable'}) +
+            sseFrame('done', {
+              'full_text': 'ok',
+              'risk': {'status': 'unavailable'},
+            }),
+      );
+      final safety = SafetyController();
+      await controller(safety: safety).send('hi');
+      expect(safety.crisis, isNull);
+      expect(safety.crisisCount, 0);
+    });
+
+    test('crisis path sent once, then crisisResolutionSent()', () async {
+      server.handler = (req, _) => writeSse(
+        req,
+        sseFrame('handoff', {'to': 'crisis', 'reason': 'r'}) +
+            sseFrame('delta', {'text': 'ok'}) +
+            sseFrame('done', {'full_text': 'ok'}),
+      );
+      final session = ChatSessionState();
+      final safety = SafetyController(
+        onCrisisPath: session.setCrisisPath,
+        onClientEvent: session.setClientEvent,
+      );
+      final c = controller(safety: safety, session: session);
+      await c.send('one');
+      expect(safety.crisis, isNotNull);
+      safety.chooseCrisisPath(CrisisPath.reachedOut);
+      expect(safety.resolutionPending, isTrue);
+
+      server.handler = (req, _) => writeSse(
+        req,
+        sseFrame('delta', {'text': 'ok'}) +
+            sseFrame('done', {'full_text': 'ok'}),
+      );
+      await c.send('two');
+      expect(server.requests[1].json['crisis_path'], 'reached_out');
+      expect(server.requests[1].json['policy_event'], 'crisis_resolved');
+      expect(safety.resolutionPending, isFalse);
+      await c.send('three');
+      expect(server.requests[2].json['crisis_path'], isNull);
+    });
+
+    test('waking after the threshold; cleared on the first event', () async {
+      final gate = Completer<void>();
+      server.handler = (req, _) async {
+        await gate.future;
+        await writeSse(req, okTurn());
+      };
+      final backend = BackendWarmup(
+        chatHealth: null,
+        wakingAfter: const Duration(milliseconds: 50),
+      );
+      final c = controller(backend: backend);
+      final sending = c.send('hi');
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(c.backendStatus, BackendStatus.waking);
+      gate.complete();
+      await sending;
+      expect(c.backendStatus, BackendStatus.ready);
+    });
+  });
 }

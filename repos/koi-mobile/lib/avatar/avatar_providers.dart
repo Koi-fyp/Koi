@@ -17,14 +17,19 @@ final avatarWebPageFactoryProvider = Provider<AvatarWebPageFactory>(
 );
 
 /// Makes the call screen's conversation-state source (the screen disposes
-/// it). Until the backend is connected: nothing, or with the mock page in a
-/// debug build, the simulator stepping through the emotions.
+/// it): the signed-in chat's stream (companion_state + thinking / speaking /
+/// idle), or with the mock page in a debug build, the simulator stepping
+/// through the emotions.
 final avatarStateSourceFactoryProvider = Provider<AvatarStateSource Function()>(
   (ref) {
     final mock = ref.watch(avatarSourceProvider) == AvatarSource.mock;
-    return () => mock && kDebugMode
-        ? SimulatedAvatarStateSource.cycling()
-        : NoAvatarStateSource();
+    return () {
+      if (mock && kDebugMode) return SimulatedAvatarStateSource.cycling();
+      final uid = ref.read(authServiceProvider).user?.uid;
+      if (uid == null) return NoAvatarStateSource();
+      final chat = ref.read(chatControllerProvider(uid));
+      return StreamAvatarStateSource(chat.conversationId, chat.avatarEvents);
+    };
   },
 );
 

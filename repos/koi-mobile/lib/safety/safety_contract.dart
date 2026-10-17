@@ -359,10 +359,15 @@ class BreathingPattern {
   }
 }
 
-/// `client_event` values this part of the app produces.
+/// `client_event` (§1): `none | playback_done | playback_stopped |
+/// start_breathing | start_grounding | start_plan`.
 enum ClientEvent {
+  none('none'),
   playbackDone('playback_done'),
-  playbackStopped('playback_stopped');
+  playbackStopped('playback_stopped'),
+  startBreathing('start_breathing'),
+  startGrounding('start_grounding'),
+  startPlan('start_plan');
 
   const ClientEvent(this.wire);
   final String wire;
