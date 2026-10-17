@@ -72,6 +72,7 @@ export default function ChatPage() {
       >
         <OfflineBanner />
         <Link href="/companion-scene" style={{ padding: '8px 16px' }}>Open avatar conversation</Link>
+        <Link href="/history" style={{ padding: '8px 16px' }}>Browse saved history</Link>
         {error && <p role="alert" style={{ padding: '0 16px' }}>{error}</p>}
         <MessageList messages={messages} isTyping={isTyping} />
         <InputBar onSend={send} disabled={isTyping || blocked} inputRef={inputRef} />

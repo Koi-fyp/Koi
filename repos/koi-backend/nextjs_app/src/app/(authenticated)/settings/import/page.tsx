@@ -1,12 +1,14 @@
 'use client';
 
 import BackButton from '../components/BackButton';
+import BackupPreview from '@/components/data-portability/BackupPreview';
 
 export default function ImportPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F9F9F9 0%, #FAFAFA 100%)' }}>
       <div style={{ padding: '1.5rem', maxWidth: '480px', margin: '0 auto' }}>
         <BackButton />
+        <BackupPreview />
 
         {/* Coming Soon Hero */}
         <div
