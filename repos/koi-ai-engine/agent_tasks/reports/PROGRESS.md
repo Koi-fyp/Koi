@@ -107,3 +107,5 @@ NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b); then smoke
 2026-10-17T00:13:15Z | CORRECTION | P2.2 | commit af2384c was report-only (P2_REPORT.md + PROGRESS.md); KOI_RAG_ENABLED flag NOT implemented; koi_rag_hook.py is a stub returning None
 2026-10-17T00:13:15Z | CORRECTION | P2.3 | commit 5f941b6 was report-only; no RAG assets in image, /health rag_enabled and rag_assets_loaded NOT implemented
 2026-10-17T00:13:15Z | RAG-READINESS | STARTED
+2026-10-17T00:13:15Z | RAG-READINESS | DONE | commit bd8e819 | verify: rag_prototype offline tests (stub encoder) prefilter 32, load_labels 13, ablation 24, diagnose 6, embedder_comparison 22, super_run 33, m2_m3 51, crisis_router 26, haystack_pipeline 36 PASS, all rc=0; holdout test not run
+2026-10-17T00:13:15Z | MULTIPART-SMOKE | STARTED
