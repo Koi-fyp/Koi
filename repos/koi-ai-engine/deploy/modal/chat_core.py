@@ -33,6 +33,13 @@ POST_REPLY_RISK_CAP_S = 5.0
 # DRAFT, English only (no native-speaker or clinician review): sent when the model
 # gives no usable reply twice.
 FALLBACK_REPLY = "I'm sorry, I couldn't put my reply into words just now. Could you say that again?"
+# DRAFT, English only: the single reply when a start_* request cannot start (no risk tier, or director error).
+CANNOT_START_REPLY = "I can't start that right now. Please try again in a moment."
+# Mirrors of koi_policy director.CLIENT_EVENTS / policy.CRISIS_PATHS (test_g0b checks they match), so bad
+# values are a 422 before scoring or the director run, with or without KOI_EXERCISES.
+CLIENT_EVENTS = ("none", "playback_done", "playback_stopped", "start_breathing", "start_grounding", "start_plan")
+CRISIS_PATHS = ("reached_out", "said_but_did_not", "misunderstanding")
+CRISIS_TIERS = ("HIGH", "CRITICAL")
 
 
 def _trace_enabled() -> bool:
@@ -120,7 +127,13 @@ class ParsedChat:
 
 def _model_validate(data: dict[str, Any]) -> ChatRequest:
     validator = getattr(ChatRequest, "model_validate", None)
-    return validator(data) if validator else ChatRequest.parse_obj(data)
+    req = validator(data) if validator else ChatRequest.parse_obj(data)
+    # Empty strings keep meaning "none", as before.
+    if req.client_event and req.client_event not in CLIENT_EVENTS:
+        raise HTTPException(422, "unknown client_event")
+    if req.crisis_path and req.crisis_path not in CRISIS_PATHS:
+        raise HTTPException(422, "invalid crisis_path")
+    return req
 
 
 def _normalize_risk(value: Any) -> dict[str, Any]:
@@ -144,7 +157,10 @@ async def _parse_chat_request(request: Request) -> ParsedChat:
             return ParsedChat(_model_validate(await request.json()))
         except ValueError as exc:
             raise HTTPException(422, "invalid JSON payload") from exc
-    form = await request.form()
+    try:
+        form = await request.form()
+    except Exception as exc:  # malformed multipart body or boundary
+        raise HTTPException(422, "corrupt multipart body") from exc
     raw_payload = form.get("payload")
     if not isinstance(raw_payload, str):
         raise HTTPException(422, "multipart payload must include a JSON payload field")
@@ -160,6 +176,8 @@ async def _parse_chat_request(request: Request) -> ParsedChat:
         if upload is None:
             media[name] = None
             continue
+        if isinstance(upload, str):
+            raise HTTPException(422, f"{name} must be a file")
         data = await upload.read()
         if len(data) > limits[name]:
             raise HTTPException(413, f"{name} file too large")
@@ -355,6 +373,10 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=wait_seconds)
         except asyncio.TimeoutError:
             pass
+        except asyncio.CancelledError:
+            if not score_task.cancelled():   # this request itself is being cancelled
+                raise
+            risk = {"status": "unavailable"}
         except Exception:
             risk = {"status": "unavailable"}
         risk = _normalize_risk(risk) if risk is not None else None
@@ -367,6 +389,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
         messages(req, effective_message)
         t0 = time.monotonic()
         director_events = []
+        cannot_start = False
         exercises = os.environ.get("KOI_EXERCISES") == "1"
         if exercises:
             secret = os.environ.get("KOI_DIRECTOR_SECRET")
@@ -400,16 +423,32 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 return None, iter((out,))
             # Director is synchronous and intentionally isolated from the event loop.
             handler = director.handle_turn
-            if tier in {"HIGH", "CRITICAL"} and req.exercise_state:
-                handler = director.on_risk
-                director_events = await asyncio.to_thread(
-                    handler, req.exercise_state, tier, time.time(), secret=secret
-                )
-            else:
-                director_events = await asyncio.to_thread(
-                    handler, turn, req.exercise_state, secret=secret,
-                    phrase_fn=lambda d: asyncio.run_coroutine_threadsafe(phrase_async(d), loop).result(timeout=20)
-                )
+            start_requested = (req.client_event or "").startswith("start_")
+            try:
+                if tier in {"HIGH", "CRITICAL"} and req.exercise_state:
+                    handler = director.on_risk
+                    director_events = await asyncio.to_thread(
+                        handler, req.exercise_state, tier, time.time(), secret=secret
+                    )
+                else:
+                    director_events = await asyncio.to_thread(
+                        handler, turn, req.exercise_state, secret=secret,
+                        phrase_fn=lambda d: asyncio.run_coroutine_threadsafe(phrase_async(d), loop).result(timeout=20)
+                    )
+            except Exception:
+                if not start_requested:
+                    raise
+                logging.getLogger("koi.chat").warning("director failed on %s", req.client_event)
+                try:
+                    fresh = director.new_token(secret)
+                except Exception:
+                    fresh = None
+                director_events = [{"type": "state", "token": fresh}] if fresh else []
+                cannot_start = True
+            # A start_* that started nothing (no tier, or director error): one fixed line, no generation.
+            if start_requested and tier is None and not any(
+                    e.get("type") in ("sentence", "ui_action") for e in director_events):
+                cannot_start = True
 
         async def stream():
             stream_risk = risk
@@ -449,7 +488,14 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             use_api = (os.environ.get("KOI_REPLY_BACKEND") == "api"
                        and (not crisis or os.environ.get("KOI_API_ON_HANDOFF") == "1")
                        and not any(e.get("type") in ("sentence", "ui_action", "companion_state") for e in director_events))
-            async for name, value in normal_events(req, uid, t0, transcript, use_api):
+            async def cannot_start_events():
+                state = _clamp_state(None)
+                yield "companion_state", state
+                yield "delta", {"text": CANNOT_START_REPLY}
+                yield "_complete", {"reply": CANNOT_START_REPLY, "state": state, "trimmed": 0,
+                                    "backend": "local", "fallback": None}
+            events = cannot_start_events() if cannot_start else normal_events(req, uid, t0, transcript, use_api)
+            async for name, value in events:
                 if name == "_trace":
                     trace.append(value)
                 elif name == "_complete":
@@ -480,6 +526,10 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                         stream_risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=remaining or None)
                     else:
                         stream_risk = {"status": "unavailable"}
+                except asyncio.CancelledError:
+                    if not score_task.cancelled():   # client went away: stop streaming
+                        raise
+                    stream_risk = {"status": "unavailable"}
                 except (asyncio.TimeoutError, Exception):
                     stream_risk = {"status": "unavailable"}
                 stream_risk = _normalize_risk(stream_risk)
@@ -489,6 +539,12 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 yield frame("risk", stream_risk)
                 emitted_risk = True
             handoff = crisis
+            # Final tier HIGH/CRITICAL (incl. a score that arrived after the reply) always ends in a crisis
+            # handoff, emitted once, before state/done. Unavailable is never a tier.
+            final_tier = stream_risk.get("risk_category") if isinstance(stream_risk, dict) else None
+            if handoff is None and final_tier in CRISIS_TIERS:
+                handoff = {"to": "crisis", "reason": f"tier {final_tier}"}
+                yield frame("handoff", handoff)
             for event in director_events:
                 if event.get("type") == "handoff" and event.get("to") == "crisis":
                     yield frame("handoff", {"to": "crisis", "reason": event.get("reason", "")})
