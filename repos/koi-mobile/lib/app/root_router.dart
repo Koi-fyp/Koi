@@ -41,7 +41,7 @@ class RootRouter extends ConsumerWidget {
       restored: auth.sessionRestored,
       loading: auth.loading,
       signedIn: auth.user != null,
-      onboardingComplete: onboarding.isComplete,
+      onboardingComplete: onboarding.isCompleteFor(auth.user?.uid),
     );
     // Web uses router.replace(): no back-stack between these states, so the
     // root simply swaps its child.

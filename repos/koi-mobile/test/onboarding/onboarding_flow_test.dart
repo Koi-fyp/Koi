@@ -88,7 +88,7 @@ void main() {
     await tester.tap(find.byKey(const Key('notification-complete')));
     await tester.pump();
 
-    expect(onboarding.isComplete, isTrue);
+    expect(onboarding.isCompleteFor('u1'), isTrue);
     expect(users.saved, hasLength(1));
     final (uid, data) = users.saved.single;
     expect(uid, 'u1');

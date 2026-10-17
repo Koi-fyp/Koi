@@ -74,6 +74,12 @@ Future<void> main() async {
   final onboarding = OnboardingStore(
     await HiveKeyValueStore.open(OnboardingStore.boxName),
   );
+  // The old per-device onboarding flag belongs to the persisted debug uid,
+  // if any; every other uid goes through onboarding.
+  await onboarding.migrateDeviceFlag(
+    (await HiveKeyValueStore.open(DebugLocalAuthService.boxName))
+        .get(DebugLocalAuthService.uidKey),
+  );
   final messages = await HiveMessageStore.open();
   final online = ConnectivityOnlineStatus();
 

@@ -52,10 +52,10 @@ void main() {
         users: RecordingUserWriter(fail: true),
         currentUid: () => 'u1',
       ).complete(_data); // must not throw
-      expect(flag.isComplete, isTrue);
+      expect(flag.isCompleteFor('u1'), isTrue);
     });
 
-    test('no uid: flag set, no user record (web `if (uid)`)', () async {
+    test('no uid: nothing marked, no user record (web `if (uid)`)', () async {
       final flag = OnboardingStore(MemoryKeyValueStore());
       final users = RecordingUserWriter();
       await OnboardingService(
@@ -63,7 +63,8 @@ void main() {
         users: users,
         currentUid: () => null,
       ).complete(_data);
-      expect(flag.isComplete, isTrue);
+      expect(flag.isCompleteFor(null), isFalse);
+      expect(flag.isCompleteFor('u1'), isFalse);
       expect(users.saved, isEmpty);
     });
 
@@ -183,6 +184,6 @@ class _OrderWriter implements OnboardingUserWriter {
 
   @override
   Future<void> save(String uid, OnboardingData data) async {
-    order.add('user(flag=${kv.values[OnboardingStore.key]})');
+    order.add('user(flag=${kv.values[OnboardingStore.keyFor(uid)]})');
   }
 }

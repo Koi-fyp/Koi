@@ -133,20 +133,26 @@ class OnboardingService {
   final SyncQueue? profileQueue;
 
   Future<void> complete(OnboardingData data) async {
-    // "Always persist locally first — cloud writes are best-effort"
-    await flag.markComplete();
-
     final uid = currentUid();
+    // The flag is per uid; onboarding is only shown to a signed-in user, so
+    // with nobody signed in there is nothing to record (web `if (uid)`).
+    if (uid == null) {
+      debugPrint('KOI: onboarding finished with no signed-in user');
+      return;
+    }
+
+    // "Always persist locally first — cloud writes are best-effort"
+    await flag.markComplete(uid);
 
     // Local user record (web: IndexedDB). Failure is logged, never thrown.
     try {
-      if (uid != null) await users.save(uid, data);
+      await users.save(uid, data);
     } catch (e) {
       debugPrint('KOI: local user write failed: $e');
     }
 
     // Best-effort Firestore merge, same as onboarding.ts. Queued, so offline
     // or rejected writes retry later and never block finishing onboarding.
-    if (uid != null) profileQueue?.enqueue(onboardingProfileItem(uid, data));
+    profileQueue?.enqueue(onboardingProfileItem(uid, data));
   }
 }

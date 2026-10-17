@@ -93,6 +93,9 @@ class RecordingUserWriter implements OnboardingUserWriter {
   }
 }
 
-OnboardingStore onboardingStore({bool complete = false}) => OnboardingStore(
-  MemoryKeyValueStore({if (complete) OnboardingStore.key: 'true'}),
-);
+/// [complete] marks onboarding done for [uid] (FakeAuthService signs in as
+/// 'u1').
+OnboardingStore onboardingStore({bool complete = false, String uid = 'u1'}) =>
+    OnboardingStore(
+      MemoryKeyValueStore({if (complete) OnboardingStore.keyFor(uid): 'true'}),
+    );

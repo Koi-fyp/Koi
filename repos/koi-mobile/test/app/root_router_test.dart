@@ -118,9 +118,9 @@ void main() {
       await pumpRouter(tester, FakeAuthService(fakeUser: _user), onboarding);
       expect(find.byType(OnboardingScreen), findsOneWidget);
 
-      await onboarding.markComplete(); // the last onboarding step's effect
+      await onboarding.markComplete('u1'); // the last onboarding step's effect
       await tester.pump(const Duration(seconds: 1));
-      expect(onboarding.isComplete, isTrue);
+      expect(onboarding.isCompleteFor('u1'), isTrue);
       expect(find.byType(AppShell), findsOneWidget);
       expect(find.byType(ChatScreen), findsOneWidget);
     },
@@ -144,7 +144,44 @@ void main() {
 
     expect(auth.signOutCalls, 1);
     expect(find.byType(LandingScreen), findsOneWidget);
-    expect(onboarding.isComplete, isTrue); // web never clears it on sign-out
+    expect(
+      onboarding.isCompleteFor('u1'),
+      isTrue,
+    ); // web never clears it on sign-out
+  });
+
+  testWidgets('same uid signs back in → chat (onboarding skipped)', (
+    tester,
+  ) async {
+    final auth = FakeAuthService(fakeUser: _user);
+    await pumpRouter(tester, auth, onboardingStore(complete: true));
+    expect(find.byType(ChatScreen), findsOneWidget);
+
+    auth.set(user: null);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(LandingScreen), findsOneWidget);
+
+    auth.set(user: _user);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(ChatScreen), findsOneWidget);
+    expect(find.byType(OnboardingScreen), findsNothing);
+  });
+
+  testWidgets('new uid (after sign-out or debug → Firebase) → onboarding', (
+    tester,
+  ) async {
+    final auth = FakeAuthService(fakeUser: _user);
+    final onboarding = onboardingStore(complete: true); // done for u1 only
+    await pumpRouter(tester, auth, onboarding);
+    expect(find.byType(ChatScreen), findsOneWidget);
+
+    auth.set(user: null);
+    await tester.pump(const Duration(seconds: 1));
+    auth.set(user: const KoiUser(uid: 'u2', isAnonymous: true));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    expect(onboarding.isCompleteFor('u2'), isFalse);
+    expect(onboarding.isCompleteFor('u1'), isTrue);
   });
 
   testWidgets('with the debug stand-in: splash, then restored user → chat', (
@@ -154,7 +191,11 @@ void main() {
       DebugLocalAuthService.uidKey: 'debug-persisted',
     });
     final auth = DebugLocalAuthService(() async => kv);
-    await pumpRouter(tester, auth, onboardingStore(complete: true));
+    await pumpRouter(
+      tester,
+      auth,
+      onboardingStore(complete: true, uid: 'debug-persisted'),
+    );
     expect(find.byType(SplashScreen), findsOneWidget);
 
     await auth.restoreSession();
