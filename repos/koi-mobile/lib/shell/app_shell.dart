@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../chat/chat_screen.dart';
 import '../progress/progress_screen.dart';
+import '../safety/safety_host.dart';
 import '../settings/settings_screen.dart';
 import '../theme/koi_colors.dart';
 import 'top_nav.dart';
@@ -48,7 +49,8 @@ class _AppShellState extends State<AppShell> {
     return PopScope<Object?>(
       canPop: _tab == KoiTab.chat,
       onPopInvokedWithResult: _onBack,
-      child: _scaffold(),
+      // Crisis (Flow 4) and breathing screens open above any page.
+      child: SafetyHost(child: _scaffold()),
     );
   }
 

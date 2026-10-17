@@ -7,6 +7,7 @@ import '../app/providers.dart';
 import '../chat/chat_controller.dart';
 import '../chat/widgets/chat_widgets.dart';
 import '../onboarding/step_layout.dart';
+import '../safety/safety_providers.dart';
 import '../settings/widgets/settings_widgets.dart'
     show SettingsToastLayer, ToastMessage, ToastType;
 import '../theme/koi_colors.dart';
@@ -109,6 +110,14 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     final chat = ref.watch(chatControllerProvider(uid));
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     ref.listen(selectedAvatarProvider, (_, next) => _avatar.setAvatar(next));
+    // Crisis flow opened (contract §3: stop any animation): back to idle,
+    // neutral, no mouth movement.
+    ref.listen(safetyControllerProvider.select((s) => s.crisisCount), (_, _) {
+      _avatar
+        ..setMouthCues(const [])
+        ..setConversationState(AvatarConversationState.idle)
+        ..setEmotion(AvatarEmotion.neutral, 0);
+    });
 
     return PopScope<Object?>(
       canPop: !_transcriptOpen,

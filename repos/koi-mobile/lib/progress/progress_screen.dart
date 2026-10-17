@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
 import '../chat/widgets/chat_widgets.dart' show StrokeIcon;
+import '../safety/safety_debug_menu.dart';
 import '../settings/widgets/settings_widgets.dart'
     show
         SettingsToastLayer,
@@ -152,12 +153,15 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Text(
-              'Your Progress',
-              style: settingsText(
-                32,
-                weight: FontWeight.w800,
-                letterSpacing: -0.03 * 32,
+            // Debug builds: long-press for simulated safety events.
+            SafetyDebugTrigger(
+              child: Text(
+                'Your Progress',
+                style: settingsText(
+                  32,
+                  weight: FontWeight.w800,
+                  letterSpacing: -0.03 * 32,
+                ),
               ),
             ),
             Positioned(

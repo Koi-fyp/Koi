@@ -8,6 +8,7 @@ import '../app/providers.dart';
 import '../avatar/avatar_providers.dart';
 import '../avatar/avatar_state.dart';
 import '../onboarding/steps/ai_disclosure_step.dart' show AIDisclosureStep;
+import '../safety/safety_debug_menu.dart';
 import '../theme/koi_colors.dart';
 import '../widgets/neo_button.dart';
 import '../chat/widgets/chat_widgets.dart' show StrokeIcon;
@@ -215,13 +216,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     children: [
       Padding(
         padding: const EdgeInsets.only(bottom: 24),
-        child: Text(
-          'Settings',
-          // 900, 2rem, letter-spacing -0.03em, #000
-          style: settingsText(
-            32,
-            weight: FontWeight.w900,
-            letterSpacing: -0.03 * 32,
+        // Debug builds: long-press for simulated safety events.
+        child: SafetyDebugTrigger(
+          child: Text(
+            'Settings',
+            // 900, 2rem, letter-spacing -0.03em, #000
+            style: settingsText(
+              32,
+              weight: FontWeight.w900,
+              letterSpacing: -0.03 * 32,
+            ),
           ),
         ),
       ),
