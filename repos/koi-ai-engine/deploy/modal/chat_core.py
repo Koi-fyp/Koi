@@ -253,34 +253,52 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 reply = value
                 yield "delta", {"text": value}
 
-        # Optional hosted reply (KOI_REPLY_BACKEND=api): one non-streaming call, emitted through handle() as one
-        # companion_state + one delta. Any failure -> the local generation below. Only system + history + message are sent.
+        # Optional hosted reply (KOI_REPLY_BACKEND=api): primary (KOI_LLM_*) -> secondary (KOI_LLM2_*, only when fully
+        # configured) -> the local generation below. Each attempt is one non-streaming call, emitted through handle() as
+        # one companion_state + one delta. Only system + history + message are sent; each request uses only its own key.
         backend, fallback = "local", None
         if use_api:
-            cfg = reply_api.config()
-            if cfg is None:
-                fallback = "not_configured"
-            else:
+            secondary = reply_api.secondary_config()
+            attempts = [("api", reply_api.config())] + ([("api2", secondary)] if secondary else [])
+            deadline = time.monotonic() + reply_api.total_budget() if secondary else None   # budget only with a chain
+            reasons = []
+            for label, cfg in attempts:
+                if cfg is None:
+                    reasons.append("not_configured")
+                    continue
+                if deadline is None:
+                    limit = cfg["timeout"] + 5                                   # single provider: unchanged
+                else:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        reasons.append("budget_exhausted")
+                        break
+                    cfg, limit = dict(cfg, timeout=min(cfg["timeout"], remaining)), remaining
+                reason = None
                 try:
                     api_state, api_reply = await asyncio.wait_for(asyncio.to_thread(
                         reply_api.generate, cfg, SYSTEM_PROMPT, msg[1:-1], msg[-1]["content"],
-                        CHAT_JSON_SCHEMA, _clamp_state, reply_fetch), timeout=cfg["timeout"] + 5)
+                        CHAT_JSON_SCHEMA, _clamp_state, reply_fetch), timeout=limit)
                     if looks_like_json(api_reply):
-                        fallback = "invalid_json"
+                        reason = "invalid_json"
                     else:
                         for event in handle([("companion_state", api_state), ("reply", api_reply)]):
                             yield event
-                        backend = "api"
+                        backend = label
                 except asyncio.TimeoutError:
-                    fallback = "timeout"
+                    reason = "timeout"
                 except reply_api.ReplyAPIError as exc:
-                    fallback = exc.reason   # already logged (reason only) by reply_api
+                    reason = exc.reason   # already logged (reason only) by reply_api
                 except Exception:
-                    fallback = "internal_error"
-                if fallback in ("invalid_json", "timeout", "internal_error") and backend == "local":
-                    logging.getLogger("koi.chat").warning("reply api fallback: %s", fallback)
+                    reason = "internal_error"
+                if backend != "local":
+                    break
+                if reason in ("invalid_json", "timeout", "internal_error"):
+                    logging.getLogger("koi.chat").warning("reply api fallback: %s", reason)
+                reasons.append(reason)
+            fallback = "|".join(reasons) or None
 
-        for attempt in range(0 if backend == "api" else 2):  # empty reply -> retry once, then the fixed fallback line
+        for attempt in range(0 if backend != "local" else 2):  # empty reply -> retry once, then the fixed fallback line
             extractor = StreamExtractor()
             try:
                 # vLLM returns cumulative text that is not always prefix-stable for

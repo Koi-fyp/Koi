@@ -60,7 +60,7 @@ class Fetch:
         self.status, self.body, self.exc, self.sleep, self.calls = status, body, exc, sleep, []
 
     def __call__(self, url, headers, body, timeout):
-        self.calls.append({"url": url, "headers": headers, "body": json.loads(body), "raw": body})
+        self.calls.append({"url": url, "headers": headers, "body": json.loads(body), "raw": body, "timeout": timeout})
         if self.sleep:
             time.sleep(self.sleep)
         if self.exc:
@@ -71,7 +71,8 @@ class Fetch:
 @pytest.fixture
 def env(monkeypatch):
     for name in ("KOI_EXERCISES", "KOI_DEBUG_TRACE", "KOI_LLM_BASE_URL", "KOI_LLM_TIMEOUT_S", "KOI_LLM_REASONING_EFFORT",
-                 "KOI_API_ON_HANDOFF"):
+                 "KOI_API_ON_HANDOFF", "KOI_LLM_TOTAL_BUDGET_S", "KOI_LLM2_PROVIDER", "KOI_LLM2_MODEL",
+                 "KOI_LLM2_API_KEY", "KOI_LLM2_BASE_URL", "KOI_LLM2_REASONING_EFFORT", "KOI_LLM2_TIMEOUT_S"):
         monkeypatch.delenv(name, raising=False)
 
     def set_provider(provider, backend="api", **extra):
@@ -403,3 +404,183 @@ def test_generate_unit_parse_and_clamp():
     with pytest.raises(reply_api.ReplyAPIError) as err:
         reply_api.generate(None, "sys", [], "hi", CHAT_JSON_SCHEMA, _clamp_state, fetch)
     assert err.value.reason == "not_configured"
+
+
+# ---- secondary provider chain (KOI_LLM2_*) ----------------------------------------------------------------------
+KEY2 = "sk-test-SECOND-SENTINEL-1a2b3c"
+ORDERS = [("gemini", "openai_compat"), ("openai_compat", "gemini"), ("gemini", "gemini"),
+          ("openai_compat", "openai_compat")]
+ORDER_IDS = ["%s>%s" % o for o in ORDERS]
+
+
+class Router:
+    """One fetcher for both providers; routes by the key in the headers and checks each request carries exactly one key."""
+
+    def __init__(self, primary, secondary):
+        self.by_key, self.order = {KEY: primary, KEY2: secondary}, []
+
+    def __call__(self, url, headers, body, timeout):
+        carried = [k for k in (KEY, KEY2) if k in " ".join(headers.values()) or k in url or k.encode() in body]
+        assert len(carried) == 1, "a request must carry only its own key"
+        self.order.append("primary" if carried[0] == KEY else "secondary")
+        return self.by_key[carried[0]](url, headers, body, timeout)
+
+
+@pytest.fixture
+def chain(env, monkeypatch):
+    def set_chain(p1, p2, **extra):
+        env(p1)
+        values = {"KOI_LLM2_PROVIDER": p2, "KOI_LLM2_MODEL": "second-model", "KOI_LLM2_API_KEY": KEY2}
+        if p2 == "openai_compat":
+            values["KOI_LLM2_BASE_URL"] = "https://llm2.example.invalid/v1"
+        for k, v in {**values, **extra}.items():
+            if v is None:
+                monkeypatch.delenv(k, raising=False)
+            else:
+                monkeypatch.setenv(k, v)
+    return set_chain
+
+
+@pytest.mark.parametrize("p1,p2", ORDERS, ids=ORDER_IDS)
+def test_chain_primary_ok_never_calls_secondary(chain, p1, p2):
+    chain(p1, p2)
+    router = Router(Fetch(body=provider_body(p1)), Fetch(body=provider_body(p2)))
+    _, events, engine = run_turn(router)
+    assert router.order == ["primary"] and engine.calls == 0
+    assert (done_of(events)["reply_backend"], done_of(events)["reply_fallback_reason"]) == ("api", None)
+
+
+@pytest.mark.parametrize("p1,p2", ORDERS, ids=ORDER_IDS)
+def test_chain_primary_fails_secondary_ok(chain, p1, p2):
+    chain(p1, p2)
+    router = Router(Fetch(status=500), Fetch(body=provider_body(p2)))
+    _, events, engine = run_turn(router)
+    names = [n for n, _ in events]
+    done = done_of(events)
+    assert router.order == ["primary", "secondary"] and engine.calls == 0
+    assert (done["reply_backend"], done["reply_fallback_reason"]) == ("api2", "http_5xx")
+    assert done["full_text"] == API_REPLY and names.count("delta") == 1 and names.count("companion_state") == 1
+    assert names.index("companion_state") < names.index("delta") and names[-2:] == ["state", "done"]
+
+
+@pytest.mark.parametrize("p1,p2", ORDERS, ids=ORDER_IDS)
+def test_chain_both_fail_goes_local_with_joined_reasons(chain, p1, p2):
+    chain(p1, p2)
+    router = Router(Fetch(body=provider_body(p1, blocked=True)), Fetch(body=provider_body(p2, text="not json")))
+    _, events, engine = run_turn(router)
+    done = done_of(events)
+    assert router.order == ["primary", "secondary"] and engine.calls == 1
+    assert (done["reply_backend"], done["reply_fallback_reason"]) == ("local", "blocked|invalid_json")
+    assert done["full_text"] == LOCAL_REPLY
+
+
+def test_chain_unconfigured_primary_then_secondary(chain, monkeypatch):
+    chain("gemini", "openai_compat")
+    monkeypatch.delenv("KOI_LLM_API_KEY")
+    router = Router(Fetch(body=provider_body("gemini")), Fetch(body=provider_body("openai_compat")))
+    _, events, _ = run_turn(router)
+    assert router.order == ["secondary"]
+    assert (done_of(events)["reply_backend"], done_of(events)["reply_fallback_reason"]) == ("api2", "not_configured")
+
+
+@pytest.mark.parametrize("missing", [{"KOI_LLM2_API_KEY": None}, {"KOI_LLM2_MODEL": None}, {"KOI_LLM2_PROVIDER": "x"},
+                                     {"KOI_LLM2_BASE_URL": None}, {"KOI_LLM2_TIMEOUT_S": "abc"}])
+def test_incomplete_secondary_is_todays_single_provider_path(chain, missing):
+    chain("gemini", "openai_compat", KOI_LLM_TOTAL_BUDGET_S="0.5", **missing)
+    primary, secondary = Fetch(status=500), Fetch(body=provider_body("openai_compat"))
+    _, events, engine = run_turn(Router(primary, secondary))
+    assert secondary.calls == [] and engine.calls == 1
+    assert primary.calls[0]["timeout"] == 20                  # no budget applied without a complete secondary
+    assert (done_of(events)["reply_backend"], done_of(events)["reply_fallback_reason"]) == ("local", "http_5xx")
+
+
+def test_budget_exhausted_skips_secondary(chain):
+    chain("gemini", "openai_compat", KOI_LLM_TOTAL_BUDGET_S="0.4")
+    primary, secondary = Fetch(body=provider_body("gemini"), sleep=1.0), Fetch(body=provider_body("openai_compat"))
+    t0 = time.monotonic()
+    _, events, engine = run_turn(Router(primary, secondary))
+    assert time.monotonic() - t0 < 3
+    assert secondary.calls == [] and engine.calls == 1
+    assert (done_of(events)["reply_backend"], done_of(events)["reply_fallback_reason"]) == (
+        "local", "timeout|budget_exhausted")
+    assert primary.calls[0]["timeout"] <= 0.4 + 1e-6
+
+
+def test_per_provider_timeouts_and_budget_cap(chain):
+    chain("gemini", "openai_compat", KOI_LLM_TIMEOUT_S="3", KOI_LLM2_TIMEOUT_S="7", KOI_LLM_TOTAL_BUDGET_S="100")
+    primary, secondary = Fetch(status=500), Fetch(status=500)
+    run_turn(Router(primary, secondary))
+    assert primary.calls[0]["timeout"] == 3 and 6.9 < secondary.calls[0]["timeout"] <= 7
+
+    chain("gemini", "openai_compat", KOI_LLM_TIMEOUT_S="3", KOI_LLM2_TIMEOUT_S=None, KOI_LLM_TOTAL_BUDGET_S="100")
+    primary, secondary = Fetch(status=500), Fetch(status=500)
+    run_turn(Router(primary, secondary))
+    assert secondary.calls[0]["timeout"] == 3                 # KOI_LLM2_TIMEOUT_S defaults to KOI_LLM_TIMEOUT_S
+
+    chain("gemini", "openai_compat", KOI_LLM_TIMEOUT_S="20", KOI_LLM_TOTAL_BUDGET_S="5")
+    primary, secondary = Fetch(status=500), Fetch(status=500)
+    run_turn(Router(primary, secondary))
+    assert 4 < primary.calls[0]["timeout"] <= 5 + 1e-6 and secondary.calls[0]["timeout"] <= 5 + 1e-6
+
+
+@pytest.mark.parametrize("p1,p2", ORDERS, ids=ORDER_IDS)
+def test_chain_keys_never_in_frames_logs_or_reason(chain, caplog, p1, p2):
+    chain(p1, p2)
+    router = Router(Fetch(exc=RuntimeError("boom " + KEY)), Fetch(exc=RuntimeError("boom " + KEY2)))
+    with caplog.at_level(logging.DEBUG):
+        text, events, _ = run_turn(router)
+    assert done_of(events)["reply_fallback_reason"] == "internal_error|internal_error"
+    for secret in (KEY, KEY2, "boom", "I have a presentation tomorrow"):
+        assert secret not in text and secret not in caplog.text
+
+
+@pytest.mark.parametrize("p1,p2", ORDERS, ids=ORDER_IDS)
+def test_chain_payload_hygiene_and_history_cap_for_both(chain, p1, p2):
+    chain(p1, p2)
+    primary, secondary = Fetch(status=500), Fetch(body=provider_body(p2))
+    history = [{"role": "user" if i % 2 == 0 else "assistant", "content": "turn-%02d" % i} for i in range(20)]
+    body = {"message": "latest", "session_history": history, "exercise_state": "ex-SENTINEL",
+            "turn_id": "turn-SENTINEL", "risk": {"risk_category": "LOW", "crisis_score": 0.123456}}
+    run_turn(Router(primary, secondary), body=body)
+    for fetch, provider, key in ((primary, p1, KEY), (secondary, p2, KEY2)):
+        call = fetch.calls[0]
+        raw = call["raw"].decode()
+        for banned in ("SENTINEL", "0.123456", "0.987654", "risk_category", "exercise_state", "Bearer tok"):
+            assert banned not in raw
+        if provider == "gemini":
+            texts = [c["parts"][0]["text"] for c in call["body"]["contents"]]
+            assert call["headers"]["x-goog-api-key"] == key and "User-Agent" not in call["headers"]
+        else:
+            texts = [m["content"] for m in call["body"]["messages"][1:]]
+            assert call["headers"]["Authorization"] == "Bearer " + key
+            assert call["headers"]["User-Agent"] == reply_api.USER_AGENT
+        assert texts == ["turn-%02d" % i for i in range(4, 20)] + ["latest"]
+
+
+def test_chain_secondary_uses_its_own_model_url_and_effort(chain):
+    chain("gemini", "openai_compat", KOI_LLM_REASONING_EFFORT="high", KOI_LLM2_REASONING_EFFORT="low")
+    primary, secondary = Fetch(status=500), Fetch(body=provider_body("openai_compat"))
+    run_turn(Router(primary, secondary))
+    call = secondary.calls[0]
+    assert call["url"] == "https://llm2.example.invalid/v1/chat/completions"
+    assert call["body"]["model"] == "second-model" and call["body"]["reasoning_effort"] == "low"
+    assert "second-model" not in primary.calls[0]["url"]
+
+
+@pytest.mark.parametrize("flag,expected", [(None, []), ("1", ["primary", "secondary"])])
+def test_chain_on_handoff_turns_only_with_flag(chain, exercises, monkeypatch, flag, expected):
+    chain("gemini", "openai_compat")
+    if flag:
+        monkeypatch.setenv("KOI_API_ON_HANDOFF", flag)
+    router = Router(Fetch(status=500), Fetch(body=provider_body("openai_compat")))
+    events, names = _handoff_turn(router)
+    assert router.order == expected and "handoff" in names
+    assert done_of(events)["reply_backend"] == ("api2" if flag else "local")
+
+
+def test_chain_exercise_turn_never_calls_either(chain, exercises, monkeypatch):
+    chain("gemini", "openai_compat")
+    monkeypatch.setenv("KOI_API_ON_HANDOFF", "1")
+    router = Router(Fetch(body=provider_body("gemini")), Fetch(body=provider_body("openai_compat")))
+    run_turn(router, body={"message": "can we do a breathing exercise", "client_event": "start_breathing"})
+    assert router.order == []

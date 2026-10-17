@@ -9,6 +9,9 @@ Config comes ONLY from the environment; there are no defaults for provider, mode
     KOI_LLM_REASONING_EFFORT  openai_compat only; sent as `reasoning_effort` when set (use the model's lowest
                        value); unset/empty = parameter not sent
 Missing or invalid config -> config() returns None (API disabled).
+Optional secondary provider: the same variables with prefix KOI_LLM2_ (KOI_LLM2_TIMEOUT_S defaults to
+KOI_LLM_TIMEOUT_S). Used only when fully configured; then KOI_LLM_TOTAL_BUDGET_S (default 12) caps the total
+wall-clock of both attempts. Without a complete secondary, behaviour is exactly the single-provider path.
 
 Sent: system prompt + the last HISTORY_TURNS history turns + the new message. Nothing else (no uid, token, risk,
 exercise_state, audio or video). Every failure raises ReplyAPIError(reason) with an enum reason; logs carry only
@@ -36,7 +39,7 @@ GEMINI_BLOCKED = {"SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SP
 JSON_ONLY = (" Respond ONLY with one JSON object, keys in this order: \"companion_state\" "
              "(object with \"emotion\" and \"intensity\") then \"reply\" (string). No markdown, no other text.")
 REASONS = ("not_configured", "timeout", "http_4xx", "http_5xx", "network", "invalid_json", "empty", "blocked",
-           "bad_emotion", "bad_shape", "internal_error")
+           "bad_emotion", "bad_shape", "internal_error", "budget_exhausted")
 _FENCE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.S | re.I)
 
 
@@ -46,24 +49,41 @@ class ReplyAPIError(Exception):
         self.reason = reason if reason in REASONS else "internal_error"
 
 
-def config(env=None):
-    """dict or None. Never logs or returns anything derived from the key except the key itself for the request."""
+def config(env=None, prefix="KOI_LLM"):
+    """dict or None. Never logs or returns anything derived from the key except the key itself for the request.
+
+    prefix "KOI_LLM" = primary provider; "KOI_LLM2" = optional secondary (its timeout defaults to KOI_LLM_TIMEOUT_S)."""
     env = os.environ if env is None else env
-    provider = (env.get("KOI_LLM_PROVIDER") or "").strip()
-    model = (env.get("KOI_LLM_MODEL") or "").strip()
-    key = (env.get("KOI_LLM_API_KEY") or "").strip()
-    base = (env.get("KOI_LLM_BASE_URL") or "").strip().rstrip("/")
+    provider = (env.get(prefix + "_PROVIDER") or "").strip()
+    model = (env.get(prefix + "_MODEL") or "").strip()
+    key = (env.get(prefix + "_API_KEY") or "").strip()
+    base = (env.get(prefix + "_BASE_URL") or "").strip().rstrip("/")
     try:
-        timeout = float(env.get("KOI_LLM_TIMEOUT_S") or 20)
+        timeout = float(env.get(prefix + "_TIMEOUT_S") or env.get("KOI_LLM_TIMEOUT_S") or 20)
     except ValueError:
         return None
     if provider not in PROVIDERS or not model or not key or timeout <= 0:
         return None
     if provider == "openai_compat" and not base.startswith(("https://", "http://")):
         return None
-    effort = (env.get("KOI_LLM_REASONING_EFFORT") or "").strip() or None
+    effort = (env.get(prefix + "_REASONING_EFFORT") or "").strip() or None
     return {"provider": provider, "model": model, "key": key, "base_url": base, "timeout": timeout,
             "reasoning_effort": effort}
+
+
+def secondary_config(env=None):
+    """Optional second provider (KOI_LLM2_*); None unless fully configured."""
+    return config(env, prefix="KOI_LLM2")
+
+
+def total_budget(env=None):
+    """KOI_LLM_TOTAL_BUDGET_S (default 12): wall-clock cap across primary + secondary attempts."""
+    env = os.environ if env is None else env
+    try:
+        value = float(env.get("KOI_LLM_TOTAL_BUDGET_S") or 12)
+    except ValueError:
+        return 12.0
+    return value if value > 0 else 12.0
 
 
 def _http_fetch(url, headers, body, timeout):
