@@ -120,3 +120,5 @@ NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b); then smoke
 2026-10-17T00:19:14Z | STEP4-multipart-smoke | STARTED
 2026-10-17T00:19:35Z | STEP4-multipart-smoke | DONE | commit 9540b7e (no new changes) | verify: pytest deploy\modal\test_multipart_smoke.py -q -> 6 passed in 1.15s; never run live
 2026-10-17T00:19:35Z | STEP5-rag-flag | STARTED
+2026-10-17T00:22:54Z | STEP5-rag-flag | DONE | commit de175cb | verify: pytest deploy\modal\test_rag_hook.py -q -> 18 passed in 11.36s; full offline suite 86 passed in 22.78s; koi_policy 71/44/34; hashes fc2d52a9e1d7 1a318edfb932 39be0f36a002 ca135c692c52 9c56b1366f88 ebeee43db081 2cb6bd501eb4 unchanged; flag default OFF, not deployed
+NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b, chat fixes; crisis with KOI_RAG_ENABLED unset); then smoke

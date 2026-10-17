@@ -49,5 +49,17 @@ No failures. At resume, before P3.4b, `test_normal_event_contract` FAILED (strea
 - Offline test `deploy/modal/test_multipart_smoke.py`: 6 passed (local uvicorn app with fake engine/scorer, never the live service). Full chat/crisis suites still 54 passed; koi_policy hashes unchanged.
 - Finding (not changed): on audio turns the server sends `transcript` **before** `latency`; contract v1 table lists `latency` first, v1.1 additions only require `transcript` before `companion_state`. Clients that assume `latency` is first should not.
 
+### RAG hook behind a flag — `de175cb` (separate commit; NOT enabled, NOT live)
+- `koi_rag_hook.py` now calls `rag_prototype` `haystack_pipeline.run_crisis` only when `KOI_RAG_ENABLED=1`, HIGH only; default OFF. With the default, a crisis redeploy behaves exactly as today (static DRAFT fallback) and `/health` adds `rag_enabled: false`, `rag_assets_loaded: false`.
+- `crisis_app.py` forwards `KOI_RAG_ENABLED` (default "0"). `run_live.bat` and env defaults unchanged. The image does NOT contain the RAG dependencies; enabling without them gives `rag_assets_loaded: false` and the static fallback. Dependency list: `RAG_READINESS.md`.
+- Tests: `test_rag_hook.py` 18 passed (stand-in encoder, no network). Full offline suite 86 passed; koi_policy 71/44/34; hashes unchanged.
+
+### Skipped / unverified (all of this session's later steps)
+- Nothing run against the live service; no deploy; no push.
+- Grounded RAG path only exercised with a mocked pipeline; real encoder, egress audit, `dev_zero_vote_check.py`, VERA-MH, `test_holdout_once.py`: not run.
+- Empty-reply fallback line is English-only DRAFT, unreviewed.
+- PROGRESS.md line 18 reads "RAG On" (pre-existing, author not recorded in the line). It is not a deploy approval from this session; Ahmad should confirm or annotate it before any agent treats it as the MASTER P5.2 gate.
+- One ledger line written this session (STEP3 verify) was reworded before its commit to avoid quoting the enablement phrase; no committed line was edited.
+
 ## Instruction
 Ahmad: run agent_tasks\run_live.bat once, then smoke_only.bat with both URLs
