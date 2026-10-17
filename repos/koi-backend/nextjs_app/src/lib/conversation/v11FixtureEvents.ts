@@ -26,7 +26,8 @@ export const INPUT_MODE_STATUS = {
   'audio+video': { allowed: true, enabled: false },
 } as const;
 
-// Compile-time guard against accidentally routing candidate events through the v1 event union.
-type _V1HasNoV11Events = Extract<ChatServerEvent['event'], V11FixtureEventName> extends never ? true : never;
-const _v1Isolation: _V1HasNoV11Events = true;
-void _v1Isolation;
+// Fixture payloads remain opt-in; the production transport separately validates the
+// documented text-mode v1.1 risk/transcript fields before dispatching them.
+type _V11FixtureEventsRemainTyped = Extract<ChatServerEvent['event'], V11FixtureEventName>;
+const _fixtureEventNames: _V11FixtureEventsRemainTyped[] = [];
+void _fixtureEventNames;

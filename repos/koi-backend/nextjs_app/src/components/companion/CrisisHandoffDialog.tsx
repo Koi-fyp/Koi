@@ -55,6 +55,7 @@ export default function CrisisHandoffDialog({ open, content, onChoose }: {
         {safeContent.items.map((item) => <article key={item.id}><h3>{item.title}</h3><p>{item.body}</p></article>)}
         {safeContent.helpline && <p>{safeContent.helpline.label}: {safeContent.helpline.number} <small>({safeContent.helpline.source})</small></p>}
         {safeContent.source === 'verified_fallback' && <p className={styles.crisisSource}>Verified support information</p>}
+        {safeContent.source === 'backend_fallback' && <p className={styles.crisisSource}>Backend-provided fallback content; not independently verified</p>}
       </div> : <p className={styles.crisisUnavailable}>Support details are unavailable in this chat response.</p>}
       <div className={styles.crisisChoices} aria-label="Choose what happened">
         {paths.map(({ value, label }) => <button key={value} type="button" onClick={() => choose(value)}>{label}</button>)}

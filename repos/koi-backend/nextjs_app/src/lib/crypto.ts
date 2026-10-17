@@ -284,6 +284,7 @@ export async function getActiveCryptoContext(
 
   let existingSalt: string | undefined;
   try {
+    if (!firestore) throw new Error('Firebase Firestore is not configured.');
     const userDocRef = doc(firestore, 'users', uid);
     const snapshot = await getDoc(userDocRef);
     existingSalt = snapshot.data()?.public_crypto_metadata?.salt as string | undefined;

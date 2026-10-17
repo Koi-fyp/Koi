@@ -63,7 +63,7 @@ export class ConversationSession {
     const policyPath = this.snapshot.policyPathPending ?? undefined;
     const request = createChatRequest(text, this.snapshot.messages.filter((message) => message.status === 'completed').slice(-5)
       .map((message) => ({ role: message.sender === 'user' ? 'user' : 'assistant', content: message.content })), {
-        ...(this.snapshot.exerciseState !== null ? { exercise_state: this.snapshot.exerciseState } : {}),
+        exercise_state: this.snapshot.exerciseState,
         ...(clientEvent ? { client_event: clientEvent } : {}),
         ...(policyPath ? { policy_event: 'crisis_resolved' as const, crisis_path: policyPath } : {}),
       });

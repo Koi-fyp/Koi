@@ -17,7 +17,7 @@ try {
   assert.deepEqual(Object.entries(INPUT_MODE_STATUS).map(([key, value]) => [key, value.enabled]), [
     ['text', true], ['audio', false], ['text+video', false], ['audio+video', false],
   ]);
-  console.log(JSON.stringify({ passed: true, checks: ['v1.1 fixture parser defaults off and is development-only', 'candidate transcript/risk payloads stay opaque without invented schema', 'v1 union remains isolated', 'only text input is enabled; the other three allowed combinations remain unavailable'] }, null, 2));
+  console.log(JSON.stringify({ passed: true, checks: ['offline fixture parser defaults off and is development-only', 'unknown fixture fields stay isolated', 'production transport separately validates documented text-mode risk/transcript events', 'only text input is enabled; the other three allowed combinations remain unavailable'] }, null, 2));
 } finally {
   if (old.env === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = old.env;
   if (old.flag === undefined) delete process.env.NEXT_PUBLIC_KOI_V11_FIXTURE_EVENTS; else process.env.NEXT_PUBLIC_KOI_V11_FIXTURE_EVENTS = old.flag;

@@ -12,7 +12,7 @@ export async function completeOnboarding(data: OnboardingData): Promise<void> {
   // Always persist locally first — cloud writes are best-effort
   localStorage.setItem('koi_onboarding_complete', 'true');
 
-  const uid = auth.currentUser?.uid;
+  const uid = auth?.currentUser?.uid;
 
   // IndexedDB write
   try {
@@ -46,7 +46,7 @@ export async function completeOnboarding(data: OnboardingData): Promise<void> {
     if (uid) {
       const { doc, setDoc } = await import('firebase/firestore');
       const { firestore } = await import('./firebase');
-      if (!firestore?.app) throw new Error("Firestore not properly initialized");
+      if (!firestore) throw new Error("Firestore not properly initialized");
       await setDoc(
         doc(firestore, 'users', uid),
         {

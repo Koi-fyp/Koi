@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { FirebaseConfigurationError } from '@/lib/firebase';
 import { isOnboardingComplete } from '@/lib/onboarding';
 
 const BLOCKS = [
@@ -103,6 +104,9 @@ export default function RootPage() {
   }, [signInAnonymously]);
 
   const isLoading = starting || loading;
+  const authErrorMessage = error instanceof FirebaseConfigurationError
+    ? error.message
+    : 'Sign-in could not connect. Check your network and try again.';
 
   return (
     <>
@@ -196,7 +200,7 @@ export default function RootPage() {
               <div className="hero-stagger-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 {error && !user ? (
                   <div className="flex flex-col gap-3">
-                    <p className="text-sm font-semibold text-red-500">⚠ Connection failed. Check your network and try again.</p>
+                    <p className="text-sm font-semibold text-red-500" role="alert">{authErrorMessage}</p>
                     <button onClick={handleGetStarted} disabled={isLoading} className="neo-btn-primary">
                       {isLoading ? 'Connecting…' : 'Try Again'}
                     </button>

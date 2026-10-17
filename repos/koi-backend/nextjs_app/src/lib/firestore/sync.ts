@@ -1,5 +1,5 @@
 import { firestore } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, type Firestore } from 'firebase/firestore';
 
 export interface SyncItem {
   collection: string;
@@ -11,8 +11,8 @@ export interface SyncItem {
 
 const QUEUE_KEY = 'koi_sync_queue';
 
-function isFirestoreReady(): boolean {
-  return !!(firestore as any).app;
+function getReadyFirestore(): Firestore | null {
+  return firestore?.app ? firestore : null;
 }
 
 function loadQueue(): SyncItem[] {
@@ -28,12 +28,13 @@ function saveQueue(items: SyncItem[]): void {
 }
 
 async function flushQueue(): Promise<void> {
-  if (!isFirestoreReady()) return;
+  const activeFirestore = getReadyFirestore();
+  if (!activeFirestore) return;
   const items = loadQueue().sort((a, b) => a.priority - b.priority);
   const remaining: SyncItem[] = [];
   for (const item of items) {
     try {
-      await setDoc(doc(firestore, item.collection, item.docId), item.data, { merge: true });
+      await setDoc(doc(activeFirestore, item.collection, item.docId), item.data, { merge: true });
     } catch {
       remaining.push(item);
     }
@@ -47,14 +48,15 @@ if (typeof window !== 'undefined') {
 
 export const syncQueue = {
   enqueue(item: SyncItem): void {
-    if (!isFirestoreReady()) {
+    const activeFirestore = getReadyFirestore();
+    if (!activeFirestore) {
       const queue = loadQueue();
       queue.push({ ...item, timestamp: Date.now() });
       saveQueue(queue);
       return;
     }
 
-    setDoc(doc(firestore, item.collection, item.docId), item.data, { merge: true }).catch(() => {
+    setDoc(doc(activeFirestore, item.collection, item.docId), item.data, { merge: true }).catch(() => {
       const queue = loadQueue();
       queue.push({ ...item, timestamp: Date.now() });
       saveQueue(queue);

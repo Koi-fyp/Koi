@@ -12,7 +12,7 @@ import type { ChatServerEvent, ExerciseClientEvent } from '@/lib/conversation/ch
 import styles from './CompanionScene.module.css';
 import ExerciseDirector from './ExerciseDirector';
 import CrisisHandoffDialog from './CrisisHandoffDialog';
-import type { CrisisInterventionDisplay } from '@/lib/conversation/crisisContract';
+import { riskInterventionForDisplay, type CrisisInterventionDisplay } from '@/lib/conversation/crisisContract';
 
 export interface CompanionSceneProps {
   companionName: string;
@@ -51,9 +51,21 @@ export default function CompanionScene({ companionName, modelUrl, messages, subt
   const [dismissedHandoffId, setDismissedHandoffId] = useState<number | null>(null);
   const [crisisSelectionQueued, setCrisisSelectionQueued] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const activeCrisisRef = useRef<{ id: number; handoff: { to: 'crisis'; reason: string } } | null>(null);
   const closeText = () => { setTextOpen(false); toggleRef.current?.focus(); };
-  const handoffEvent = serverEvents?.find((item) => item.event.event === 'handoff' && item.id !== dismissedHandoffId);
-  const handoff = handoffEvent?.event.event === 'handoff' ? handoffEvent.event.data : undefined;
+  const candidateHandoff = serverEvents?.find((item) => item.event.event === 'handoff');
+  const highRiskEvent = serverEvents?.find((item) => item.event.event === 'risk'
+    && item.event.data.status === 'ok' && (item.event.data.risk_category === 'HIGH' || item.event.data.risk_category === 'CRITICAL'));
+  if (!serverEvents?.length) activeCrisisRef.current = null;
+  if (!activeCrisisRef.current && (candidateHandoff || highRiskEvent)) {
+    activeCrisisRef.current = candidateHandoff
+      ? { id: candidateHandoff.id, handoff: candidateHandoff.event.event === 'handoff' ? candidateHandoff.event.data : { to: 'crisis', reason: '' } }
+      : { id: highRiskEvent!.id, handoff: { to: 'crisis', reason: `server-risk-event-${highRiskEvent!.id}` } };
+  }
+  const activeCrisis = activeCrisisRef.current;
+  const handoff = activeCrisis?.handoff;
+  const handoffEventId = activeCrisis?.id ?? null;
+  const riskForContent = highRiskEvent?.event.event === 'risk' ? riskInterventionForDisplay(highRiskEvent.event.data) : undefined;
   useEffect(() => { if (serverEvents?.length === 0) setCrisisSelectionQueued(false); }, [serverEvents]);
   return <main className={styles.scene} style={viewportOffset ? { height: `calc(100dvh - ${viewportOffset}px)` } : undefined} onKeyDown={(event) => {
     if (event.key === 'Escape') { if (textOpen) closeText(); setSettingsOpen(false); }
@@ -69,10 +81,10 @@ export default function CompanionScene({ companionName, modelUrl, messages, subt
       </section>}
       {(textOpen || !avatarEnabled) && <ConversationTextPanel messages={messages} companionName={companionName} notice={transcriptNotice} allowClose={avatarEnabled} onClose={closeText} />}
     </div>
-    {serverEvents && onExerciseRequest && onQueueClientEvent && <ExerciseDirector events={serverEvents} disabled={exerciseControlsDisabled} interruptKey={handoffEvent?.id ?? 0}
+    {serverEvents && onExerciseRequest && onQueueClientEvent && <ExerciseDirector events={serverEvents} disabled={exerciseControlsDisabled} interruptKey={handoffEventId ?? 0}
       onRequest={onExerciseRequest} onQueueClientEvent={onQueueClientEvent} />}
-    <CrisisHandoffDialog open={!!handoff && !!onCrisisResolution} content={crisisIntervention}
-      onChoose={(path) => { if (handoff && handoffEvent && onCrisisResolution) { onCrisisResolution(path, handoff); setDismissedHandoffId(handoffEvent.id); setCrisisSelectionQueued(true); } }} />
+    <CrisisHandoffDialog open={!!handoff && handoffEventId !== dismissedHandoffId && !!onCrisisResolution} content={crisisIntervention ?? riskForContent}
+      onChoose={(path) => { if (handoff && handoffEventId !== null && onCrisisResolution) { onCrisisResolution(path, handoff); setDismissedHandoffId(handoffEventId); setCrisisSelectionQueued(true); } }} />
     {composer && <div style={{ flexShrink: 0, paddingTop: 10 }}>{composer}</div>}
     <ConversationControls textOpen={textOpen || !avatarEnabled} textLocked={!avatarEnabled} toggleRef={toggleRef} onToggleText={() => setTextOpen((open) => !open)} onEnd={onEnd} />
   </main>;

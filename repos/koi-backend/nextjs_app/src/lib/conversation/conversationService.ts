@@ -28,7 +28,7 @@ async function saveMessage(record: MessageRecord, secret: string, saltB64: strin
 export async function sendMessage(uid: string, conversationId: string, text: string, context: ChatTurn[], authState: AuthState, options: ChatSendOptions,
   requestFields: Pick<ChatRequest, 'exercise_state' | 'client_event' | 'policy_event' | 'crisis_path'> = {}): Promise<ChatResponse> {
   options.signal.throwIfAborted();
-  const user = auth.currentUser as User | undefined;
+  const user = auth?.currentUser as User | undefined;
   if (!user || user.uid !== uid) throw new ChatError('authentication', 'An authenticated KOI session is required.');
   const linked = !user.isAnonymous && user.providerData.some((provider) => provider.providerId === 'password');
   if (linked !== authState.isLinked) throw new ChatError('authentication', 'Your account state changed. Start a new chat session.');
@@ -37,7 +37,7 @@ export async function sendMessage(uid: string, conversationId: string, text: str
   const token = await user.getIdToken();
   if (!token) throw new ChatError('authentication', 'An authenticated KOI session is required.');
   options.signal.throwIfAborted();
-  const ensureOwner = () => { const active = auth.currentUser as User | undefined; const activeLinked = active && !active.isAnonymous && active.providerData.some((provider) => provider.providerId === 'password'); if (active?.uid !== uid || !!activeLinked !== linked) throw new ChatError('authentication', 'Your account changed. Start a new chat session.'); };
+  const ensureOwner = () => { const active = auth?.currentUser as User | undefined; const activeLinked = active && !active.isAnonymous && active.providerData.some((provider) => provider.providerId === 'password'); if (active?.uid !== uid || !!activeLinked !== linked) throw new ChatError('authentication', 'Your account changed. Start a new chat session.'); };
   ensureOwner();
   const { secret, saltB64 } = await (linked ? getActiveCryptoContext(uid, authState) : anonymousCryptoContext(uid));
   ensureOwner(); options.signal.throwIfAborted();

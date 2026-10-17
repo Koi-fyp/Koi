@@ -1,4 +1,4 @@
-import { ChatError, createChatRequest, parseChatResponse, type ChatRequest, type ChatResponse, type ChatServerEvent, type CompanionState } from './chatContract';
+import { ChatError, createChatRequest, parseChatResponse, parseRiskResult, type ChatRequest, type ChatResponse, type ChatServerEvent, type CompanionState, type RiskResult } from './chatContract';
 import { SseParser } from './sseParser';
 
 export const DEFAULT_CHAT_TIMEOUT_MS = 160_000;
@@ -50,9 +50,14 @@ export async function postJsonChat(request: ChatRequest, options: {
     reader = response.body.getReader();
     const parser = new SseParser();
     let deltaText = '';
+    let presentedDeltaText = '';
+    let exerciseSentenceMode = request.exercise_state !== undefined && request.exercise_state !== null
+      || request.client_event?.startsWith('start_') === true;
     let latency: number | undefined;
     let terminal = false;
     let finalResponse: ChatResponse | undefined;
+    let generationError = false;
+    let latestRisk: RiskResult | undefined;
     const parseJson = (frame: { event: string; data: string }): unknown => {
       try { return JSON.parse(frame.data); }
       catch { throw new ChatError('invalid-response', `The companion sent malformed ${frame.event} event data.`); }
@@ -70,6 +75,8 @@ export async function postJsonChat(request: ChatRequest, options: {
       }
       return { emotion: data.emotion as CompanionState['emotion'], intensity: data.intensity };
     };
+    const riskResult = (value: unknown): RiskResult => parseRiskResult(value) ?? { status: 'unavailable' };
+    const sameRisk = (left: RiskResult, right: RiskResult) => JSON.stringify(left) === JSON.stringify(right);
     const parseHandoff = (value: unknown): { to: 'crisis'; reason: string } => {
       const data = object(value);
       if (data.to !== 'crisis' || typeof data.reason !== 'string') throw new ChatError('invalid-response', 'The companion sent an invalid handoff event.');
@@ -88,9 +95,19 @@ export async function postJsonChat(request: ChatRequest, options: {
     const emit = (event: ChatServerEvent) => { abort.signal.throwIfAborted(); options.onEvent?.(event); };
     const consume = (frame: { event: string; data: string }) => {
       if (terminal) throw new ChatError('invalid-response', 'The companion sent events after completing the turn.');
-      if (!['latency', 'companion_state', 'delta', 'ui_action', 'handoff', 'state', 'done'].includes(frame.event)) return;
+      if (!['latency', 'transcript', 'risk', 'companion_state', 'delta', 'ui_action', 'handoff', 'state', 'error', 'done'].includes(frame.event)) return;
       const data = object(parseJson(frame));
       switch (frame.event) {
+        case 'transcript': {
+          if (typeof data.text !== 'string' || !data.text.trim() || (data.language !== undefined && typeof data.language !== 'string')) throw new ChatError('invalid-response', 'The companion sent an invalid transcript event.');
+          emit({ event: 'transcript', data: { text: data.text, ...(typeof data.language === 'string' ? { language: data.language } : {}) } });
+          break;
+        }
+        case 'risk': {
+          latestRisk = riskResult(data);
+          emit({ event: 'risk', data: latestRisk });
+          break;
+        }
         case 'latency': {
           if (typeof data.latency_ms !== 'number' || !Number.isFinite(data.latency_ms) || data.latency_ms < 0) throw new ChatError('invalid-response', 'The companion sent invalid latency metadata.');
           latency = data.latency_ms;
@@ -101,37 +118,57 @@ export async function postJsonChat(request: ChatRequest, options: {
         case 'delta': {
           if (typeof data.text !== 'string') throw new ChatError('invalid-response', 'The companion sent an invalid text delta.');
           deltaText += data.text;
-          emit({ event: 'delta', data: { text: data.text } });
+          const separator = exerciseSentenceMode && presentedDeltaText && data.text
+            && !/^\s/.test(data.text) && !/\s$/.test(presentedDeltaText) ? ' ' : '';
+          const presentedText = separator + data.text;
+          presentedDeltaText += presentedText;
+          emit({ event: 'delta', data: { text: presentedText } });
           break;
         }
         case 'ui_action': {
           const [action] = parseActions([data]);
+          if (['start_breathing', 'start_grounding', 'start_plan'].includes(action.name)) exerciseSentenceMode = true;
           emit({ event: 'ui_action', data: action });
           break;
         }
         case 'handoff': emit({ event: 'handoff', data: parseHandoff(data) }); break;
         case 'state': {
-          if (typeof data.exercise_state !== 'string' || !data.exercise_state) throw new ChatError('invalid-response', 'The companion sent an invalid exercise state.');
-          emit({ event: 'state', data: { exercise_state: data.exercise_state } });
+          if (data.exercise_state !== null && (typeof data.exercise_state !== 'string' || !data.exercise_state)) throw new ChatError('invalid-response', 'The companion sent an invalid exercise state.');
+          emit({ event: 'state', data: { exercise_state: data.exercise_state as string | null } });
+          break;
+        }
+        case 'error': {
+          if ((data.code !== 'no_reply' && data.code !== 'generation_failed') || typeof data.detail !== 'string' || data.detail.length > 240) throw new ChatError('invalid-response', 'The companion returned a generation error.');
+          generationError = true;
+          // Backend detail is diagnostic metadata and is never displayed or retained.
+          emit({ event: 'error', data: { code: data.code } });
           break;
         }
         case 'done': {
           const state = companionState(data.companion_state);
-          if (typeof data.full_text !== 'string' || !data.full_text.trim()
+          if (typeof data.full_text !== 'string'
             || typeof data.total_generation_s !== 'number' || !Number.isFinite(data.total_generation_s) || data.total_generation_s < 0) {
             throw new ChatError('invalid-response', 'The companion sent an incomplete final event.');
           }
+          if (!data.full_text.trim() && !generationError) throw new ChatError('invalid-response', 'The companion sent an empty reply without a terminal error.');
           if (data.exercise_state !== undefined && data.exercise_state !== null && typeof data.exercise_state !== 'string') throw new ChatError('invalid-response', 'The companion sent invalid final exercise state.');
           const actions = data.ui_actions === undefined ? undefined : parseActions(data.ui_actions);
           const finalHandoff = data.handoff === undefined || data.handoff === null ? data.handoff as null | undefined : parseHandoff(data.handoff);
+          if (Object.prototype.hasOwnProperty.call(data, 'risk')) {
+            const finalRisk = riskResult(data.risk);
+            if (latestRisk && !sameRisk(latestRisk, finalRisk)) throw new ChatError('invalid-response', 'The companion returned inconsistent safety metadata.');
+            if (!latestRisk) { latestRisk = finalRisk; emit({ event: 'risk', data: finalRisk }); }
+          }
           // Final text replaces deltas; it is never appended, preventing duplicate content.
-          finalResponse = parseChatResponse({ reply: data.full_text, latency_ms: latency ?? data.total_generation_s * 1000, companion_state: state });
+          const reconciledText = exerciseSentenceMode && data.full_text === deltaText ? presentedDeltaText : data.full_text;
+          if (!generationError) finalResponse = parseChatResponse({ reply: reconciledText, latency_ms: latency ?? data.total_generation_s * 1000, companion_state: state });
           terminal = true;
           const doneEvent: Extract<ChatServerEvent, { event: 'done' }>['data'] = {
             full_text: data.full_text, companion_state: state,
             ui_actions: actions, handoff: finalHandoff, total_generation_s: data.total_generation_s,
           };
           if (Object.prototype.hasOwnProperty.call(data, 'exercise_state')) doneEvent.exercise_state = data.exercise_state as string | null;
+          if (latestRisk) doneEvent.risk = latestRisk;
           emit({ event: 'done', data: doneEvent });
           break;
         }
@@ -147,7 +184,9 @@ export async function postJsonChat(request: ChatRequest, options: {
     }
     parser.finish().forEach(consume);
     abort.signal.throwIfAborted();
-    if (!terminal || !finalResponse) throw new ChatError('invalid-response', 'The companion stream ended before the turn completed.');
+    if (!terminal) throw new ChatError('invalid-response', 'The companion stream ended before the turn completed.');
+    if (generationError) throw new ChatError('generation', 'KOI could not complete this reply. Please try again.');
+    if (!finalResponse) throw new ChatError('invalid-response', 'The companion stream ended before the turn completed.');
     return finalResponse;
   } catch (error) {
     if (options.signal.aborted) throw new DOMException('Request cancelled.', 'AbortError');

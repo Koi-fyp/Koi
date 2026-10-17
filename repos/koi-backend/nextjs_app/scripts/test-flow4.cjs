@@ -5,8 +5,8 @@ const ts = require('typescript');
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, filename);
 const root = path.resolve(__dirname, '..');
 const { ConversationSession } = require('../src/lib/conversation/ConversationSession.ts');
-const { parseChatResponse } = require('../src/lib/conversation/chatContract.ts');
-const { parseCrisisInterventionDisplay } = require('../src/lib/conversation/crisisContract.ts');
+const { parseChatResponse, parseRiskResult } = require('../src/lib/conversation/chatContract.ts');
+const { parseCrisisInterventionDisplay, riskInterventionForDisplay } = require('../src/lib/conversation/crisisContract.ts');
 const dialog = fs.readFileSync(path.join(root, 'src/components/companion/CrisisHandoffDialog.tsx'), 'utf8');
 const scene = fs.readFileSync(path.join(root, 'src/components/companion/CompanionScene.tsx'), 'utf8');
 const style = fs.readFileSync(path.join(root, 'src/components/companion/CompanionScene.module.css'), 'utf8');
@@ -31,6 +31,15 @@ const style = fs.readFileSync(path.join(root, 'src/components/companion/Companio
   await session.send('A later ordinary turn');
   assert.equal(Object.hasOwn(requests[2], 'policy_event'), false, 'resolution policy is consumed exactly once');
 
+  const riskSession = new ConversationSession({ send: async (_request, options) => {
+    options.onEvent({ event: 'risk', data: { status: 'ok', risk_category: 'CRITICAL', crisis_score: 0.94, confidence: 'reduced', confidence_reasons: ['fixture'], modalities_used: ['text'], trigger_flags: [], model: { version: 'fixture-v1', calibrated: false } } });
+    options.onEvent({ event: 'handoff', data: { to: 'crisis', reason: 'synthetic duplicate trigger' } });
+    return parseChatResponse({ reply: 'Synthetic concurrent safety response.', companion_state: { emotion: 'neutral', intensity: 0 }, latency_ms: 1 });
+  } }, 'risk-flow4-fixture');
+  await riskSession.send('Synthetic fixture only');
+  assert.equal(riskSession.getSnapshot().serverEvents.filter(({ event }) => event.event === 'risk').length, 1);
+  assert.equal(riskSession.getSnapshot().serverEvents.filter(({ event }) => event.event === 'handoff').length, 1);
+
   assert.match(dialog, /role="alertdialog" aria-modal="true"/);
   assert.match(dialog, /event\.key === 'Escape'[\s\S]*?event\.preventDefault\(\)/);
   assert.match(dialog, /event\.shiftKey[\s\S]*?lastControl\.focus\(\)/);
@@ -41,13 +50,28 @@ const style = fs.readFileSync(path.join(root, 'src/components/companion/Companio
   assert.deepEqual(parseCrisisInterventionDisplay(displayFixture), displayFixture);
   assert.equal(parseCrisisInterventionDisplay({ ...displayFixture, source: 'unknown' }), null);
   assert.equal(parseCrisisInterventionDisplay({ ...displayFixture, items: [{ id: 'bad', title: 'oversize', body: 'x'.repeat(1201) }] }), null);
-  assert.match(scene, /interruptKey=\{handoffEvent\?\.id \?\? 0\}/);
+  assert.match(scene, /interruptKey=\{handoffEventId \?\? 0\}/);
   assert.match(scene, /Your selection is saved for your next message/);
+  assert.match(scene, /risk_category === 'HIGH' \|\| item\.event\.data\.risk_category === 'CRITICAL'/);
+  const serverRisk = parseRiskResult({ status: 'ok', risk_category: 'HIGH', crisis_score: 0.84, confidence: 'reduced', confidence_reasons: ['fixture'], modalities_used: ['text'], trigger_flags: [], model: { version: 'fixture-v1', calibrated: false }, intervention_content: {
+    source: 'fallback', language: 'en', items: [{ text: 'Synthetic supplied fixture only.', chunk_id: 'item-1', source_corpus: 'fixture', evidence_role: 'test', review_status: 'test' }],
+    helpline: { name: 'Synthetic fixture', number: '000', verified: false }, trace: 'must not display',
+  }, trace: 'must not retain' });
+  assert.equal(serverRisk.status, 'ok'); assert.equal(serverRisk.risk_category, 'HIGH');
+  assert.equal(serverRisk.intervention_content.trace, undefined);
+  const riskDisplay = riskInterventionForDisplay(serverRisk);
+  assert.equal(riskDisplay.source, 'backend_fallback');
+  assert.equal(riskDisplay.items[0].body, 'Synthetic supplied fixture only.');
+  assert.match(riskDisplay.helpline.source, /Backend marked unverified/);
+  assert.equal(riskInterventionForDisplay({ status: 'unavailable' }), undefined);
+  assert.equal(parseRiskResult({ status: 'unavailable', risk_category: 'LOW' }).status, 'unavailable');
+  assert.equal(parseRiskResult({ status: 'ok', risk_category: 'HIGH' }), null, 'incomplete risk object must not trigger Flow 4');
   assert.match(style, /\.crisisBackdrop[\s\S]*position: fixed/);
   console.log(JSON.stringify({ passed: true, checks: [
     'one non-dismissible Flow 4 handoff surface with focus trap and three response paths',
     'support details unavailable state has no fabricated emergency number',
     'resolution queued exactly once on the next chat request; stale repeated handoff suppressed',
+    'authoritative HIGH/CRITICAL risk is available to Flow 4; risk and handoff duplicate triggers are session-deduplicated',
     'handoff interrupts active exercise UI; no live risk or crisis classification used',
   ], scope: 'synthetic in-memory fixtures; no real crisis data or live backend' }, null, 2));
 })().catch((error) => { console.error(error); process.exitCode = 1; });

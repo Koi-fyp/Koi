@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase';
+import { auth, firebaseConfigurationError } from '@/lib/firebase';
 import {
   onAuthStateChanged,
   signInWithCustomToken,
@@ -79,15 +79,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    if (!auth) {
+      setError(firebaseConfigurationError ?? new Error('Firebase authentication is unavailable in this environment.'));
+      setLoading(false);
+      return;
+    }
+
     // Firebase's own persisted-session listener. Fires synchronously with
     // the cached user (if any) before any network call completes, so this
     // works offline. Updates again once/if a fresh token round-trip
     // resolves. No manual encryption/decryption needed — see file header.
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
+    try {
+      const unsubscribe = onAuthStateChanged(
+        auth,
+        (firebaseUser) => {
+          setUser(firebaseUser);
+          setLoading(false);
+          setError(null);
+        },
+        (listenerError) => {
+          setError(listenerError);
+          setLoading(false);
+        },
+      );
+      return () => unsubscribe();
+    } catch {
+      setError(firebaseConfigurationError ?? new Error('Firebase authentication could not be initialized.'));
       setLoading(false);
-    });
-    return () => unsubscribe();
+    }
   }, []);
 
   // Derived, not stored — always reflects Firebase's own live user object.
@@ -98,6 +117,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user.providerData.some((p) => p.providerId === 'password');
 
   const signInAnonymously = async () => {
+    if (!auth) {
+      setError(firebaseConfigurationError ?? new Error('Firebase authentication is unavailable in this environment.'));
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -115,6 +139,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const linkWithEmail = async (email: string, password: string) => {
+    if (!auth) {
+      const configurationError = firebaseConfigurationError ?? new Error('Firebase authentication is unavailable in this environment.');
+      setError(configurationError);
+      throw configurationError;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -140,6 +169,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (!auth) {
+      setError(firebaseConfigurationError ?? new Error('Firebase authentication is unavailable in this environment.'));
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
