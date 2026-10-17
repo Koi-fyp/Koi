@@ -40,18 +40,22 @@ class LandingScreen extends ConsumerStatefulWidget {
     (
       '🧠',
       'Remembers You',
-      'Context-aware conversations that get better over time.',
+      'Uses recent context and restores saved local history.',
     ),
-    ('⚡', 'Instant Response', 'Powered by cutting-edge AI — no waiting, ever.'),
+    (
+      '⚡',
+      'Streaming Replies',
+      'Replies stream when the service is available; connection can take time.',
+    ),
     (
       '🔒',
-      'Fully Private',
-      'Zero accounts, zero data storage. Your thoughts stay yours.',
+      'Encrypted Storage',
+      'History is encrypted locally. Inference processes the text you send.',
     ),
     (
       '🎯',
-      'Always Present',
-      'Available 24/7, in your pocket, whenever you need.',
+      'Text Companion',
+      'Text conversation requires connectivity and service availability.',
     ),
   ];
 
@@ -62,35 +66,39 @@ class LandingScreen extends ConsumerStatefulWidget {
     ),
     Faq(
       'Do I need to create an account?',
-      'Not at all. KOI works instantly with an anonymous session. No email, no password, no friction. Your conversations are stored privately on your device.',
+      'KOI uses Firebase anonymous sign-in. No email is required. Saved history is encrypted on this device.',
     ),
     Faq(
       'How is my data kept private?',
-      'Your conversations are encrypted on your device using AES-256. We never sell your data, share it with advertisers, or store your real name. Your session ID is anonymous by design.',
+      'Saved content uses AES-256-GCM client-side encryption. Inference receives readable prompts and recent context. This is not end-to-end encryption.',
     ),
     Faq(
       'What languages does KOI support?',
-      'KOI currently supports English and Urdu, with more languages planned. You can choose your preferred language during onboarding.',
+      'You can save an English or Urdu preference during onboarding. Interface translation and reply language are not guaranteed.',
     ),
     Faq(
       'How does KOI detect how I am feeling?',
-      'KOI uses a combination of natural language understanding and sentiment analysis to gently detect emotional tone in your messages. This helps KOI respond with more empathy and adjust its presence accordingly.',
+      'The service supplies companion expression metadata. Avatar animations are not a diagnosis or a mental-health measurement.',
     ),
     Faq(
       'Can I use KOI during a crisis?',
-      'KOI includes crisis detection and will surface emergency helpline numbers if it senses you may be in distress. However, in an emergency always contact emergency services (15 / 1122) or Umang helpline at 0311-7786264 directly.',
+      'KOI can display service-supplied safety information. It is not an emergency service and cannot guarantee detection or immediate help. Contact a trusted local emergency provider when needed.',
     ),
     Faq(
       'Is KOI available offline?',
-      'KOI stores your conversation history locally so you can read past messages offline. Sending new messages requires a connection, but any messages composed offline will be queued and sent automatically when you reconnect.',
+      // app/page.tsx:57 says "when browser storage and encryption are
+      // available" and "Messages are not automatically resent". Mobile has no
+      // browser and still queues offline messages (G18 open), so those two
+      // parts are reworded / kept from the old copy (decision 2026-10-18).
+      'Saved history may be restored when device storage and encryption are available. New replies require a connection. Messages composed offline will be queued and sent automatically when you reconnect.',
     ),
   ];
 
   // Hero CTA strings
-  static const String startLabel = "Start Talking — It's Free ✦";
+  static const String startLabel = 'Start Talking ✦';
   static const String startingLabel = 'Getting ready…';
   static const String errorText =
-      '⚠ Connection failed. Check your network and try again.';
+      'Sign-in could not connect. Check your network and try again.';
 
   /// Mobile-only (approved 2026-10-17): Firebase anonymous sign-in is turned
   /// off in the console.
@@ -303,15 +311,19 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            LandingScreen.errorTextFor(
-                              ref.read(authServiceProvider).error,
-                            ),
-                            style: bodyText(
-                              14,
-                              weight: FontWeight.w600,
-                              color: const Color(0xFFEF4444),
-                              height: 20 / 14,
+                          // role="alert" (app/page.tsx:203)
+                          Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              LandingScreen.errorTextFor(
+                                ref.read(authServiceProvider).error,
+                              ),
+                              style: bodyText(
+                                14,
+                                weight: FontWeight.w600,
+                                color: const Color(0xFFEF4444),
+                                height: 20 / 14,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12), // gap-3
@@ -346,7 +358,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No account · No credit card',
+                            'Anonymous sign-in · Local history',
                             style: bodyText(
                               14,
                               weight: FontWeight.w500,
@@ -541,7 +553,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 448),
               child: Text(
-                'Jump in immediately — no sign-up, no friction. Your first conversation is one tap away.',
+                'Start with anonymous sign-in, choose a companion, and open a text conversation.',
                 style: bodyText(
                   16,
                   color: const Color(0xB3FFFFFF),
@@ -553,7 +565,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
             _TalkButton(isLoading: isLoading, onTap: _start),
             const SizedBox(height: 16), // gap-4
             Text(
-              'Private · No account · Always free',
+              'Text chat · Encrypted local history',
               style: bodyText(
                 12,
                 weight: FontWeight.w600,
@@ -706,7 +718,7 @@ class _NeoTag extends StatelessWidget {
         ),
         const SizedBox(width: 6), // gap .375rem
         Text(
-          'AI Companion · Free to use',
+          'AI Companion · Text conversation',
           style: bodyText(
             12.8,
             weight: FontWeight.w600,
@@ -718,7 +730,7 @@ class _NeoTag extends StatelessWidget {
   );
 }
 
-/// The overlapping A/S/M/L circles + "2,400+ people talking right now".
+/// The overlapping A/S/M/L circles + "Text & avatars for your conversations".
 class _SocialProof extends StatelessWidget {
   const _SocialProof();
 
@@ -776,13 +788,13 @@ class _SocialProof extends StatelessWidget {
             ),
             children: const [
               TextSpan(
-                text: '2,400+',
+                text: 'Text & avatars',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: KoiColors.neoBlack,
                 ),
               ),
-              TextSpan(text: ' people talking right now'),
+              TextSpan(text: ' for your conversations'),
             ],
           ),
         ),

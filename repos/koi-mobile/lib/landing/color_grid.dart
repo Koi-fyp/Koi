@@ -19,7 +19,7 @@ class ColorBlock {
 }
 
 /// page.tsx `ColorGrid()`: a 3-column grid of bouncing colour blocks with a
-/// blurred blue glow, a rotated yellow "🐟 Meet KOI" tag and an "∞" card.
+/// blurred blue glow, a rotated yellow "🐟 Meet KOI" tag and an "AI" card.
 ///
 /// Tailwind: 1 unit = 4px; text-xs 0.75rem/1rem; text-2xl 1.5rem/2rem;
 /// tracking-widest 0.1em; tracking-tight -0.025em; rotate-6 = 6deg.
@@ -172,12 +172,12 @@ class ColorGrid extends StatelessWidget {
                   children: [
                     // text-2xl font-black text-black leading-none
                     Text(
-                      '∞',
+                      'AI',
                       style: bodyText(24, weight: FontWeight.w700, height: 1),
                     ),
                     const SizedBox(height: 2), // mt-0.5
                     Text(
-                      'Conversations possible',
+                      'Conversation companion',
                       style: bodyText(
                         12,
                         weight: FontWeight.w600,

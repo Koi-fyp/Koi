@@ -42,7 +42,7 @@ class HowItWorksScreen extends ConsumerStatefulWidget {
 
   final InfoLinks links;
 
-  static const String startLabel = "Start Talking — It's Free ✦";
+  static const String startLabel = 'Start Talking ✦';
   static const String startingLabel = 'Getting ready…';
 
   static const List<Pillar> pillars = [
@@ -52,11 +52,11 @@ class HowItWorksScreen extends ConsumerStatefulWidget {
       'What KOI is',
       Color(0xFFFFD100),
       KoiColors.neoBlack,
-      'KOI is an AI companion — not a therapist, not a chatbot, not a search engine. It is a presence. Designed to listen deeply, remember what matters to you, and respond with warmth and without judgment. Think of KOI as a thoughtful friend who is always available, never distracted, and genuinely interested in how you are doing.',
+      'KOI is an AI companion — not a therapist, not a chatbot, not a search engine. It is a presence. Designed to listen deeply, remember what matters to you, and respond with warmth and without judgment. Think of KOI as an AI interface for reflection when the service is available.',
       [
         'Remembers context across your conversation',
-        'Detects emotional tone and adapts its response',
-        'Available in English and Urdu',
+        'Displays companion expressions supplied by the service',
+        'English and Urdu preference; translation is not guaranteed',
         'Designed specifically for Pakistani users',
       ],
     ),
@@ -66,12 +66,12 @@ class HowItWorksScreen extends ConsumerStatefulWidget {
       'How it thinks',
       Color(0xFF2D63EB),
       KoiColors.neoWhite,
-      "KOI is powered by a large language model fine-tuned for empathetic conversation. Every response is shaped by emotional context — not just the literal words you type, but the sentiment underneath them. A built-in emotion classifier analyses each message for signals of happiness, sadness, anxiety, or calm, and adjusts KOI's tone accordingly.",
+      'KOI uses a language-model service for text responses. Responses can be incomplete or incorrect. The service also supplies companion expression metadata; these animations do not measure your mental-health condition.',
       [
-        'Emotion classification: happy, sad, anxious, calm, neutral',
+        'Companion expressions: neutral, joy, angry, sorrow, fun',
         'Context window of recent messages for continuity',
-        'Crisis detection with automatic helpline surfacing',
-        'Fallback responses when connectivity is lost',
+        'Safety information when supplied by the service',
+        'Saved history and visible connection errors',
       ],
     ),
     Pillar(
@@ -80,15 +80,15 @@ class HowItWorksScreen extends ConsumerStatefulWidget {
       'How we protect you',
       Color(0xFF0A0A0A),
       KoiColors.neoWhite,
-      'Every conversation you have with KOI is encrypted on your device using AES-256-GCM before it ever touches any server. Your encryption key lives only on your device. We cannot read your conversations. No one can. Your session is anonymous by default — no name, no email, no phone number required.',
+      'Conversation content is encrypted using AES-256-GCM before storage and sync attempts. Inference receives readable prompts and recent context. This is CSE at rest, not end-to-end encryption. Anonymous sign-in requires no email.',
       [
         'AES-256-GCM encryption, on-device key storage',
-        'Anonymous sessions — no account required',
+        'Firebase anonymous identity; email is optional',
         // how-it-works/page.tsx:46 says "stored in local IndexedDB"; mobile
         // stores them in Hive, so this line is reworded (decision
         // 2026-10-14). See WEB_BUGS_FOUND_DURING_MOBILE.md.
         'Offline-first: conversations stored in local encrypted storage on your device',
-        'Firestore sync is encrypted and opt-in',
+        'Encrypted sync may be pending or unavailable',
       ],
     ),
     Pillar(
@@ -97,10 +97,14 @@ class HowItWorksScreen extends ConsumerStatefulWidget {
       'What it feels like',
       Color(0xFF2DD36F),
       KoiColors.neoBlack,
-      'We obsessed over every detail of the KOI experience — the soft bounce of the avatar, the warm colour shifts when your mood changes, the gentle typing indicator. Every visual and interaction choice was made to create a sense of calm presence. KOI should feel less like an app and more like opening a door to a quiet room where you can think out loud.',
+      'We obsessed over every detail of the KOI experience — the soft bounce of the avatar, the companion expressions supplied by the service, the gentle typing indicator. Every visual and interaction choice was made to create a sense of calm presence. KOI should feel less like an app and more like opening a door to a quiet room where you can think out loud.',
       [
         'Emotion-driven avatar with breathing + blinking animations',
-        'Colour-tinted background that shifts with your mood',
+        'Consistent colors; service-supplied expressions',
+        // how-it-works/page.tsx:60-61 say "no automatic message resend" and
+        // "reduced-motion support". Mobile still queues offline messages (G18
+        // open) and does not honour reduce-motion, so these two lines keep
+        // the old copy (decision 2026-10-18).
         'Offline-aware UI with queued message delivery',
         'Smooth animations designed to reduce anxiety, not add to it',
       ],
@@ -292,7 +296,7 @@ class _HowItWorksScreenState extends ConsumerState<HowItWorksScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 32), // mb-8
               child: Text(
-                'No account, no credit card. Just you and KOI.',
+                'Start with Firebase anonymous sign-in and choose your companion.',
                 textAlign: TextAlign.center,
                 style: bodyText(
                   16,

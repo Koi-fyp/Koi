@@ -104,7 +104,9 @@ void main() {
       await scrollThrough(tester, const Key('how-scroll'));
       expect(find.text('READY?'), findsOneWidget);
       expect(
-        find.text('No account, no credit card. Just you and KOI.'),
+        find.text(
+          'Start with Firebase anonymous sign-in and choose your companion.',
+        ),
         findsOneWidget,
       );
     });
@@ -119,8 +121,8 @@ void main() {
       expect(b.left, greaterThanOrEqualTo(card.left));
       expect(b.right, lessThanOrEqualTo(card.right));
       final label = tester.getSize(find.text(HowItWorksScreen.startLabel));
-      // Only a slight shrink (~92%) of the ~194dp label.
-      expect(label.width, greaterThan(170));
+      // "Start Talking ✦" (how-it-works/page.tsx:269) is ~113dp.
+      expect(label.width, greaterThan(100));
       expect(tester.takeException(), isNull);
     });
 
@@ -212,18 +214,75 @@ void main() {
         await tester.ensureVisible(find.text(t));
         expect(find.text(t), findsOneWidget, reason: t);
       }
-      expect(find.text('Learn more →'), findsNWidgets(3));
+      expect(find.text('Learn more →'), findsNothing);
+      expect(find.text(AboutScreen.biographyUnavailable), findsNWidgets(3));
       expect(find.byType(Image), findsNothing);
       await scrollThrough(tester, const Key('about-scroll'));
     });
 
-    testWidgets('Learn more → shows "Profiles coming soon!"', (tester) async {
+    testWidgets('team buttons are disabled "Biography unavailable"', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
       await pump(tester, AboutScreen(links: links()));
-      await tapVisible(tester, find.text('Learn more →').first);
-      expect(find.text(AboutScreen.learnMoreSoon), findsOneWidget);
-      await tester.pump(const Duration(seconds: 4));
-      await tester.pump();
-      expect(find.text(AboutScreen.learnMoreSoon), findsNothing);
+      final button = find.text(AboutScreen.biographyUnavailable).first;
+      // Reveal keeps the card at opacity 0 (no semantics) until 15% shows.
+      Scrollable.ensureVisible(tester.element(button), alignment: 0.5);
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        tester.getSemantics(button),
+        matchesSemantics(
+          label: 'Biography unavailable',
+          tooltip: 'Additional biography is unavailable',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+      handle.dispose();
+      await tester.tap(button);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.textContaining('coming soon'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('copy matches web 223e97c: no invented numbers or dates', (
+      tester,
+    ) async {
+      expect(AboutScreen.timeline.map((t) => t.$1), [
+        'Purpose',
+        'Foundation',
+        'Language',
+        'Now',
+      ]);
+      final all = [
+        for (final v in AboutScreen.values) v.$3,
+        for (final t in AboutScreen.timeline) t.$3,
+        for (final m in AboutScreen.missionPoints) m.$2,
+        for (final p in HowItWorksScreen.pillars) ...[p.desc, ...p.points],
+        HowItWorksScreen.startLabel,
+      ].join(' | ');
+      for (final banned in [
+        '50,000+',
+        'Lahore',
+        '2024',
+        '2025',
+        'Thousands',
+        'free',
+        'Free',
+        'without accounts',
+        'fine-tuned',
+        'No one can',
+        'opt-in',
+        'Colour-tinted',
+        'Crisis detection',
+        'Web app',
+        'IndexedDB',
+      ]) {
+        expect(all, isNot(contains(banned)), reason: banned);
+      }
+      expect(all, contains('This is CSE at rest, not end-to-end encryption.'));
     });
 
     testWidgets('timeline line runs the full height, solid coral', (

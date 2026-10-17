@@ -55,23 +55,23 @@ void main() {
     await pumpLanding(tester);
     expect(tester.takeException(), isNull);
 
-    expect(find.text('AI Companion · Free to use'), findsOneWidget);
+    expect(find.text('AI Companion · Text conversation'), findsOneWidget);
     expect(find.byKey(const Key('hero-title')), findsOneWidget);
     expect(find.text(LandingScreen.startLabel), findsOneWidget);
-    expect(find.text('No account · No credit card'), findsOneWidget);
+    expect(find.text('Anonymous sign-in · Local history'), findsOneWidget);
     expect(find.text('Get Started →'), findsOneWidget);
 
     for (final f in [
       find.text('THINK'),
       find.text('🐟 Meet KOI'),
-      find.text('Conversations possible'),
+      find.text('Conversation companion'),
       find.text('WHY KOI'),
       for (final (_, title, _) in LandingScreen.features) find.text(title),
       find.text('GOT QUESTIONS'),
       for (final q in LandingScreen.faqs) find.text(q.q),
       find.text('How We Do It →'),
       find.text('Talk to KOI ✦'),
-      find.text('Private · No account · Always free'),
+      find.text('Text chat · Encrypted local history'),
       find.text('© 2025 KOI · All rights reserved'),
       find.text('Built with care in Pakistan 🇵🇰'),
     ]) {
@@ -115,8 +115,60 @@ void main() {
 
   testWidgets('error state', (tester) async {
     await pumpLanding(tester, error: Exception('offline'));
+    expect(
+      LandingScreen.errorText,
+      'Sign-in could not connect. Check your network and try again.',
+    );
     expect(find.text(LandingScreen.errorText), findsOneWidget);
     expect(find.text(LandingScreen.retryLabel), findsOneWidget);
+    // role="alert" (app/page.tsx:203)
+    expect(
+      find.ancestor(
+        of: find.text(LandingScreen.errorText),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.liveRegion == true,
+        ),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('copy matches web 223e97c: no invented or false claims', (
+    tester,
+  ) async {
+    await pumpLanding(tester);
+    expect(LandingScreen.startLabel, 'Start Talking ✦');
+    expect(LandingScreen.features.map((f) => f.$2), [
+      'Remembers You',
+      'Streaming Replies',
+      'Encrypted Storage',
+      'Text Companion',
+    ]);
+    await scrollTo(tester, find.text('Built with care in Pakistan 🇵🇰'));
+    final all = [
+      for (final t in tester.widgetList<Text>(find.byType(Text)))
+        t.data ?? t.textSpan?.toPlainText() ?? '',
+      for (final f in LandingScreen.features) f.$3,
+      for (final q in LandingScreen.faqs) q.a,
+    ].join(' | ');
+    expect(all, contains('Text & avatars for your conversations'));
+    expect(all, contains('Anonymous sign-in · Encrypted local history'));
+    for (final banned in [
+      '2,400+',
+      'Free',
+      'free',
+      '24/7',
+      'no waiting',
+      'No account',
+      'no sign-up',
+      'Zero accounts',
+      '∞',
+      'sentiment analysis',
+      'crisis detection',
+      'Always here',
+    ]) {
+      expect(all, isNot(contains(banned)), reason: banned);
+    }
   });
 
   testWidgets('nav shrinks to 52dp once scrolled past 20px', (tester) async {

@@ -6,8 +6,6 @@ import '../chat/widgets/chat_widgets.dart' show StrokeIcon;
 import '../landing/koi_footer.dart';
 import '../landing/reveal.dart';
 import '../onboarding/step_layout.dart' show bodyText;
-import '../settings/widgets/settings_widgets.dart'
-    show SettingsToastLayer, ToastMessage, ToastType;
 import '../shell/svg_path.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_text.dart';
@@ -22,9 +20,10 @@ class AboutScreen extends StatefulWidget {
 
   final InfoLinks links;
 
-  /// Mobile-only toast for the team cards' "Learn more →" (no handler on
-  /// web; decision 2026-10-14).
-  static const String learnMoreSoon = 'Profiles coming soon!';
+  /// The team cards' disabled `.team-btn` (about/page.tsx:328, :386, :445).
+  static const String biographyUnavailable = 'Biography unavailable';
+  static const String biographyUnavailableTitle =
+      'Additional biography is unavailable';
 
   // VALUES (about/page.tsx:5-10)
   static const List<(String, String, String)> values = [
@@ -36,12 +35,12 @@ class AboutScreen extends StatefulWidget {
     (
       '🔒',
       'Privacy First',
-      'Your thoughts are yours. We designed KOI from day one to work without accounts, without data harvesting, without compromise.',
+      'Your thoughts are yours. We designed KOI from day one to work with anonymous sign-in and encrypted local conversation storage.',
     ),
     (
       '🌍',
       'Built for Pakistan',
-      'Mental health support in Pakistan is scarce and stigmatised. KOI speaks Urdu, understands local context, and is free — always.',
+      'Mental health support in Pakistan is scarce and stigmatised. KOI offers English and Urdu preferences; quality and availability can vary.',
     ),
     (
       '🧪',
@@ -53,33 +52,34 @@ class AboutScreen extends StatefulWidget {
   // TIMELINE (about/page.tsx:12-17)
   static const List<(String, String, String)> timeline = [
     (
-      '2024',
+      'Purpose',
       'The Idea',
       'Born from a personal experience of loneliness — the realisation that sometimes you just need something to listen, at 2am, without judgment.',
     ),
     (
-      'Early 2025',
+      'Foundation',
       'First Build',
-      'A small team of two. The first working prototype with emotion detection and on-device encryption. Tested quietly with 50 users in Lahore.',
+      'Firebase identity and client-side encryption support locally stored conversation content.',
     ),
     (
-      'Mid 2025',
+      'Language',
       'Urdu Support',
-      "KOI learns to speak Urdu. The first AI companion that can hold a meaningful conversation in Pakistan's native tongue.",
+      // about/page.tsx:15 says "in the Web app" (decision 2026-10-18).
+      'English and Urdu preferences are offered. Speech output is not enabled in the mobile app.',
     ),
     (
       'Now',
       'Growing',
-      'Thousands of conversations. Constant iteration. A deepening belief that accessible mental health support can change lives.',
+      'Current work focuses on continuity, companion rendering and honest local data.',
     ),
   ];
 
   // Mission list (about/page.tsx:110-115)
   static const List<(String, String)> missionPoints = [
     ('🇵🇰', 'Made in Pakistan, for Pakistan'),
-    ('💬', '50,000+ conversations and counting'),
-    ('🔐', 'Zero data ever sold or shared'),
-    ('🌙', 'Available at 2am when you need it most'),
+    ('💬', 'Text conversation with saved local history'),
+    ('🔐', 'Encrypted storage; readable text for inference'),
+    ('🌙', 'Service availability depends on connectivity'),
   ];
 
   @override
@@ -91,8 +91,6 @@ const Color _blue = Color(0xFF2D63EB);
 class _AboutScreenState extends State<AboutScreen> {
   final ScrollController _scroll = ScrollController();
   bool _scrolled = false; // window.scrollY > 20
-  ToastMessage? _toast;
-  int _toastSeq = 0;
 
   @override
   void initState() {
@@ -108,14 +106,6 @@ class _AboutScreenState extends State<AboutScreen> {
     _scroll.dispose();
     super.dispose();
   }
-
-  void _learnMore() => setState(
-    () => _toast = ToastMessage(
-      AboutScreen.learnMoreSoon,
-      ToastType.info,
-      ++_toastSeq,
-    ),
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +123,7 @@ class _AboutScreenState extends State<AboutScreen> {
                 _hero(context, topInset),
                 _mission(),
                 _values(),
-                _TeamSection(onLearnMore: _learnMore),
+                const _TeamSection(),
                 _timeline(),
                 KoiFooter(
                   links: [
@@ -154,10 +144,6 @@ class _AboutScreenState extends State<AboutScreen> {
               topInset: topInset,
               onHome: widget.links.home,
             ),
-          ),
-          SettingsToastLayer(
-            toast: _toast,
-            onClose: () => setState(() => _toast = null),
           ),
         ],
       ),
@@ -235,8 +221,8 @@ class _AboutScreenState extends State<AboutScreen> {
             Text(
               'We are not building a product. We are building infrastructure '
               'for emotional wellbeing — one conversation at a time. KOI '
-              'exists to make that support available to anyone, anywhere, in '
-              'any language, at any hour.',
+              'exists to make that support available to anyone, anywhere, '
+              'with clear language, connectivity and availability limits.',
               style: bodyText(
                 16,
                 color: const Color(0x99000000), // black/60
@@ -533,8 +519,7 @@ class _TimelineItem extends StatelessWidget {
 /// (transform cubic-bezier(0.34,1.2,0.64,1)), staggered 0.12s, when 15%
 /// visible. Hover lift is not mirrored.
 class _TeamSection extends StatelessWidget {
-  const _TeamSection({required this.onLearnMore});
-  final VoidCallback onLearnMore;
+  const _TeamSection();
 
   static Reveal _reveal(int i, Widget child) => Reveal(
     threshold: 0.15,
@@ -600,7 +585,6 @@ class _TeamSection extends StatelessWidget {
             id: 'SP23-BSE-047',
             role: 'AI Engineer & Research',
             desc: 'Leads model fine-tuning, emotion classification, and all things research.',
-            onLearnMore: onLearnMore,
           ),
         ),
         const SizedBox(height: 20), // gap 1.25rem
@@ -636,14 +620,10 @@ class _TeamSection extends StatelessWidget {
             id: 'SP23-BSE-063',
             role: 'Architecture & Solutions',
             desc: 'Owns system design, data architecture, and solution scalability.',
-            onLearnMore: onLearnMore,
           ),
         ),
         const SizedBox(height: 20),
-        _reveal(
-          2,
-          _AhmadCard(key: const Key('team-ahmad'), onLearnMore: onLearnMore),
-        ),
+        _reveal(2, const _AhmadCard(key: Key('team-ahmad'))),
       ],
     ),
   );
@@ -669,7 +649,6 @@ class _TeamCard extends StatelessWidget {
     required this.id,
     required this.role,
     required this.desc,
-    required this.onLearnMore,
   });
 
   final CssRadialBackground background;
@@ -679,7 +658,6 @@ class _TeamCard extends StatelessWidget {
   final String id;
   final String role;
   final String desc;
-  final VoidCallback onLearnMore;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -735,7 +713,7 @@ class _TeamCard extends StatelessWidget {
               desc,
               style: bodyText(12, color: const Color(0xFF626570), height: 1.5),
             ),
-            _LearnMore(onTap: onLearnMore),
+            const _BiographyButton(),
           ],
         ),
       ],
@@ -746,8 +724,7 @@ class _TeamCard extends StatelessWidget {
 /// The vertical card (Ahmad): rows 240px / auto at ≤768px; the image
 /// area also has min-height 220px.
 class _AhmadCard extends StatelessWidget {
-  const _AhmadCard({super.key, required this.onLearnMore});
-  final VoidCallback onLearnMore;
+  const _AhmadCard({super.key});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -867,7 +844,7 @@ class _AhmadCard extends StatelessWidget {
               ),
             ),
             // inline marginTop 1rem replaces .team-btn's 0.5rem
-            _LearnMore(onTap: onLearnMore, top: 16),
+            const _BiographyButton(top: 16),
           ],
         ),
       ],
@@ -939,55 +916,35 @@ class _Avatar extends StatelessWidget {
   );
 }
 
-/// `.team-btn` "Learn more →": #FFD100, 700 .8rem, border 2px, radius 6px,
-/// padding .35rem .875rem, shadow 3px, margin-top .5rem. Web has no click
-/// handler (hover only); mobile shows a "coming soon" toast (decision
-/// 2026-10-14) and uses web's hover look (translate 3px, no shadow) as the
-/// pressed state.
-class _LearnMore extends StatefulWidget {
-  const _LearnMore({required this.onTap, this.top = 8});
-  final VoidCallback onTap;
+/// `<button disabled title="Additional biography is unavailable"
+/// className="team-btn">Biography unavailable</button>`
+/// (about/page.tsx:328, :386, :445). `.team-btn` (globals.css:565-586):
+/// #FFD100, 700 .8rem, border 2px, radius 6px, padding .35rem .875rem,
+/// shadow 3px, margin-top .5rem; it has no `:disabled` style, so it looks
+/// the same and does nothing on tap. `title` becomes the semantics tooltip.
+class _BiographyButton extends StatelessWidget {
+  const _BiographyButton({this.top = 8});
   final double top;
 
   @override
-  State<_LearnMore> createState() => _LearnMoreState();
-}
-
-class _LearnMoreState extends State<_LearnMore> {
-  bool _down = false;
-
-  void _set(bool v) {
-    if (_down != v) setState(() => _down = v);
-  }
-
-  @override
   Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.only(top: widget.top),
+    padding: EdgeInsets.only(top: top),
     child: Semantics(
+      container: true,
       button: true,
-      child: GestureDetector(
-        onTapDown: (_) => _set(true),
-        onTapUp: (_) => _set(false),
-        onTapCancel: () => _set(false),
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120), // 0.12s ease
-          curve: Curves.ease,
-          transform: Matrix4.translationValues(_down ? 3 : 0, _down ? 3 : 0, 0),
-          padding: const EdgeInsets.symmetric(vertical: 5.6, horizontal: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFD100),
-            border: Border.all(width: 2),
-            borderRadius: BorderRadius.circular(6),
-            // hover: box-shadow 0 0 0 #000
-            boxShadow: [
-              BoxShadow(offset: Offset(_down ? 0 : 3, _down ? 0 : 3)),
-            ],
-          ),
-          child: Text(
-            'Learn more →',
-            style: bodyText(12.8, weight: FontWeight.w700),
-          ),
+      enabled: false,
+      tooltip: AboutScreen.biographyUnavailableTitle,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 5.6, horizontal: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFD100),
+          border: Border.all(width: 2),
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: const [BoxShadow(offset: Offset(3, 3))],
+        ),
+        child: Text(
+          AboutScreen.biographyUnavailable,
+          style: bodyText(12.8, weight: FontWeight.w700),
         ),
       ),
     ),

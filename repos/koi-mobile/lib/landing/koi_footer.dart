@@ -101,7 +101,7 @@ class KoiFooter extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Private · No account needed · Always here for you',
+                'Anonymous sign-in · Encrypted local history',
                 style: bodyText(
                   12,
                   weight: FontWeight.w500,
