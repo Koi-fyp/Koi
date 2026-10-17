@@ -32,5 +32,6 @@ export function mouthAt(frame: SpeechFrame): { preset: MouthPreset | null; weigh
   // Media-time envelope, not accumulated animation time: identical position => identical weights.
   const ramp = cue ? Math.min(0.04, (cue.end - cue.start) / 2) : 0;
   const t = cue && preset ? Math.max(0, Math.min(1, (frame.time - cue.start) / ramp, (cue.end - frame.time) / ramp)) : 0;
-  return { preset, weight: 0.7 * t * t * (3 - 2 * t), cue: cue?.value ?? null };
+  // Clamp: the smoothstep product can round to 0.7000000000000001 on very short cues.
+  return { preset, weight: Math.min(0.7, 0.7 * t * t * (3 - 2 * t)), cue: cue?.value ?? null };
 }

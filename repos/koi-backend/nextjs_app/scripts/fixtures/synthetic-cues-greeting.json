@@ -1,0 +1,12 @@
+{
+  "metadata": { "soundFile": "SYNTHETIC-no-audio-greeting.wav", "duration": 1.23 },
+  "mouthCues": [
+    { "start": 0.00, "end": 0.12, "value": "X" },
+    { "start": 0.12, "end": 0.30, "value": "B" },
+    { "start": 0.30, "end": 0.55, "value": "D" },
+    { "start": 0.55, "end": 0.71, "value": "C" },
+    { "start": 0.71, "end": 0.86, "value": "F" },
+    { "start": 0.86, "end": 1.02, "value": "E" },
+    { "start": 1.02, "end": 1.23, "value": "X" }
+  ]
+}
