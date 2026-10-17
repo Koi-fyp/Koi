@@ -6,6 +6,8 @@ Config comes ONLY from the environment; there are no defaults for provider, mode
     KOI_LLM_API_KEY    sent only in a header (gemini: x-goog-api-key; openai_compat: Authorization: Bearer)
     KOI_LLM_BASE_URL   openai_compat only, e.g. https://host/v1 (POST {base}/chat/completions)
     KOI_LLM_TIMEOUT_S  default 20
+    KOI_LLM_REASONING_EFFORT  openai_compat only; sent as `reasoning_effort` when set (use the model's lowest
+                       value); unset/empty = parameter not sent
 Missing or invalid config -> config() returns None (API disabled).
 
 Sent: system prompt + the last HISTORY_TURNS history turns + the new message. Nothing else (no uid, token, risk,
@@ -26,6 +28,7 @@ import urllib.request
 log = logging.getLogger("koi.reply_api")
 
 HISTORY_TURNS = 16
+OAI_MAX_TOKENS = 2048   # room for hidden reasoning tokens so they cannot exhaust the reply budget
 PROVIDERS = ("gemini", "openai_compat")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
 GEMINI_BLOCKED = {"SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY", "OTHER"}
@@ -57,7 +60,9 @@ def config(env=None):
         return None
     if provider == "openai_compat" and not base.startswith(("https://", "http://")):
         return None
-    return {"provider": provider, "model": model, "key": key, "base_url": base, "timeout": timeout}
+    effort = (env.get("KOI_LLM_REASONING_EFFORT") or "").strip() or None
+    return {"provider": provider, "model": model, "key": key, "base_url": base, "timeout": timeout,
+            "reasoning_effort": effort}
 
 
 def _http_fetch(url, headers, body, timeout):
@@ -115,7 +120,10 @@ def openai_compat_request(cfg, system, history, message, schema):
     messages = [{"role": "system", "content": system + JSON_ONLY}]
     messages += [{"role": t["role"], "content": t["content"]} for t in history]
     messages.append({"role": "user", "content": message})
-    body = {"model": cfg["model"], "messages": messages, "response_format": {"type": "json_object"}}
+    body = {"model": cfg["model"], "messages": messages, "response_format": {"type": "json_object"},
+            "max_tokens": OAI_MAX_TOKENS}
+    if cfg.get("reasoning_effort"):
+        body["reasoning_effort"] = cfg["reasoning_effort"]
     headers = {"Content-Type": "application/json", "Authorization": "Bearer " + cfg["key"]}
     return cfg["base_url"] + "/chat/completions", headers, json.dumps(body).encode("utf-8")
 
@@ -128,6 +136,7 @@ def openai_compat_text(data):
     msg = first.get("message") or {}
     if first.get("finish_reason") == "content_filter" or msg.get("refusal"):
         raise ReplyAPIError("blocked")
+    # Only `content` is used; reasoning fields (reasoning_content / reasoning) are ignored and never logged.
     return msg.get("content") or ""
 
 

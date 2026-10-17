@@ -70,7 +70,7 @@ class Fetch:
 
 @pytest.fixture
 def env(monkeypatch):
-    for name in ("KOI_EXERCISES", "KOI_DEBUG_TRACE", "KOI_LLM_BASE_URL", "KOI_LLM_TIMEOUT_S"):
+    for name in ("KOI_EXERCISES", "KOI_DEBUG_TRACE", "KOI_LLM_BASE_URL", "KOI_LLM_TIMEOUT_S", "KOI_LLM_REASONING_EFFORT"):
         monkeypatch.delenv(name, raising=False)
 
     def set_provider(provider, backend="api", **extra):
@@ -279,7 +279,8 @@ def test_payload_contains_only_prompt_history_message(env, provider):
         assert [(m["role"], m["content"]) for m in msgs[1:]] == [
             ("user", "My name is Sam."), ("assistant", "Nice to meet you, Sam."), ("user", "What is my name?")]
         assert call["body"]["response_format"] == {"type": "json_object"}
-        assert set(call["body"]) == {"model", "messages", "response_format"}
+        assert call["body"]["max_tokens"] >= 2048
+        assert set(call["body"]) == {"model", "messages", "response_format", "max_tokens"}   # no reasoning_effort when unset
 
 
 def test_audio_turn_sends_transcript_text_only(env):
@@ -307,6 +308,39 @@ def test_history_capped_at_16_turns(env, provider):
     else:
         texts = [m["content"] for m in body["messages"][1:]]
     assert texts == ["turn-%02d" % i for i in range(4, 20)] + ["latest"]
+
+
+@pytest.mark.parametrize("value,sent", [("", None), ("  ", None), ("low", "low"), ("minimal", "minimal")])
+def test_openai_reasoning_effort_only_when_set(env, value, sent):
+    env("openai_compat", KOI_LLM_REASONING_EFFORT=value)
+    fetch = Fetch(body=provider_body("openai_compat"))
+    run_turn(fetch)
+    assert fetch.calls[0]["body"].get("reasoning_effort") == sent
+    assert fetch.calls[0]["body"]["max_tokens"] >= 2048
+
+
+def test_gemini_never_sends_reasoning_or_thinking(env):
+    env("gemini", KOI_LLM_REASONING_EFFORT="low")
+    fetch = Fetch(body=provider_body("gemini"))
+    run_turn(fetch)
+    raw = fetch.calls[0]["raw"].decode()
+    assert "reasoning" not in raw and "thinking" not in raw
+
+
+def test_reasoning_content_is_ignored_and_not_logged(env, caplog):
+    env("openai_compat", KOI_LLM_REASONING_EFFORT="low")
+    body = provider_body("openai_compat")
+    body["choices"][0]["message"]["reasoning_content"] = "HIDDEN-REASONING-SENTINEL"
+    with caplog.at_level(logging.DEBUG):
+        text, events, _ = run_turn(Fetch(body=body))
+    assert done_of(events)["reply_backend"] == "api" and done_of(events)["full_text"] == API_REPLY
+    assert "HIDDEN-REASONING-SENTINEL" not in text and "HIDDEN-REASONING-SENTINEL" not in caplog.text
+    only_reasoning = {"choices": [{"message": {"content": "", "reasoning_content": "HIDDEN-REASONING-SENTINEL"},
+                                   "finish_reason": "length"}]}
+    with caplog.at_level(logging.DEBUG):
+        text, events, _ = run_turn(Fetch(body=only_reasoning))
+    assert (done_of(events)["reply_backend"], done_of(events)["reply_fallback_reason"]) == ("local", "empty")
+    assert "HIDDEN-REASONING-SENTINEL" not in text and "HIDDEN-REASONING-SENTINEL" not in caplog.text
 
 
 def test_generate_unit_parse_and_clamp():
