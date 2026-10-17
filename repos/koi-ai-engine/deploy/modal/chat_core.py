@@ -439,6 +439,8 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                                  "total_generation_s": round(time.monotonic()-t0, 3),
                                  "history_trimmed": complete["trimmed"]}
             payload["risk"] = stream_risk
+            # Same precedence as the transcript event: ASR-detected language, else the request's; no detection here.
+            payload["language"] = (stream_risk.get("language") if isinstance(stream_risk, dict) else None) or req.language
             if _trace_enabled():
                 payload["trace"] = trace
             yield frame("done", payload)
