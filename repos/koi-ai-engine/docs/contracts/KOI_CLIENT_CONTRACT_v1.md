@@ -18,9 +18,11 @@ Sources: `chat_app.py` (Modal/vLLM build, Sep 22-23 + Oct 15 paste), `crisis_app
 
 Base URLs come from `modal deploy` (persistent). Never use a `modal serve` URL in a client build: it changes every session.
 Both require `Authorization: Bearer <Firebase ID token>`. Identity is taken from the token only.
+*[Superseded in part by v1.1 C §C6: `GET /health` needs NO token in either service; the POST routes require it.]*
 
 **Cold start:** 60-190 s after idle. Modal caps one HTTP request at 150 s. Clients: call `GET /health` on app open
 and retry a failed first request once. During a demo window the backend owner sets `KOI_MIN_CONTAINERS=1` (costs GPU time).
+*[Extended by v1.1 C §C7: HTTP 303 redirect-and-poll, client timeout, "waking up" state.]*
 
 ---
 
@@ -55,6 +57,8 @@ and retry a failed first request once. During a demo window the backend owner se
 - `risk`: the latest `/api/v1/crisis` result the client holds (section 4). Set `is_new: true` only the first time
   you send a given result. Omit or `null` until the first crisis result arrives.
   **Fail-closed:** with no `risk`, the server never starts or offers an exercise (normal chat still works).
+  *[Superseded by v1.1 C §C5: risk is computed server-side every turn; a request `risk` is ignored. Fail-closed now
+  applies to the server's own score.]*
 - `policy_event` + `crisis_path`: send once, on the first request after the user finishes UX Flow 4, with the path
   they took (Flow 4's three paths). Until this arrives the conversation stays in crisis mode and every turn carries
   `handoff: crisis`. After sending it, drop the held `risk` result and send `risk` again only when a NEWER crisis
@@ -74,6 +78,8 @@ and retry a failed first request once. During a demo window the backend owner se
 | 6 | `handoff` (0..1) | `{"to": "crisis", "reason": "string"}` | show the crisis flow (UX Flow 4) **alongside** the reply; never instead of it |
 | 7 | `state` (0..1) | `{"exercise_state": "string"}` | store; echo next turn |
 | 8 | `done` | `{"full_text": "...", "companion_state": {...}, "exercise_state": "...\|null", "ui_actions": [...], "handoff": {...}\|null, "total_generation_s": number}` | always last |
+
+*[Rows 7-8 superseded by v1.1 C §C3: `state` is always sent; exact `done` fields listed there.]*
 
 Errors before the stream starts are normal JSON: `401 {"detail": ...}`, `422 {"detail": ...}`. Check `res.ok` first.
 
@@ -102,6 +108,8 @@ Client: run the avatar breathing animation with these timings, play/show the cue
   It repeats on every turn until `crisis_resolved` is sent: if Flow 4 is already on screen, do not open it again.
 
 ## 4. Crisis (TSD) — client calls it every turn, in parallel
+
+*[Whether clients call `/api/v1/crisis` at all is OPEN (v1.1 C §C8). Rule 5 below is superseded by v1.1 C §C5.]*
 
 `POST {CRISIS_BASE}/api/v1/crisis`, `multipart/form-data`, Bearer token.
 Fields (each optional, at least one usable input): `text` (typed message), `audio` (file, ≤25 MB, first 30 s),
@@ -146,10 +154,12 @@ Source of truth: `deploy/modal/chat_core.py`, `deploy/modal/stream_extract.py`, 
 
 - Clients call ONLY `POST /api/v1/chat` and `GET /health`. The server scores crisis risk itself every turn;
   clients never call `/api/v1/crisis` (it stays for tools/explicit checks).
+  *[Superseded by v1.1 C §C8: the server does score every turn, but whether clients also call `/api/v1/crisis` is OPEN.]*
 - Request may be JSON (as v1) or `multipart/form-data` with `payload` (JSON string: v1 fields + optional
   `language`, `turn_id`; `message` optional with audio), `audio`, `video`. Allowed: text | audio | text+video |
   audio+video; anything else → 422. Limits: audio 25 MB, video 80 MB. Request `risk` is deprecated and ignored
   when the server has its own result.
+  *[Superseded by v1.1 C §C5: request `risk` is ignored always, also when the server's score is unavailable.]*
 - New events:
   - `transcript` `{"text", "language"}` (audio turns): before `companion_state`. Append it to `session_history`
     as the user turn.
@@ -171,3 +181,62 @@ Source of truth: `deploy/modal/chat_core.py`, `deploy/modal/stream_extract.py`, 
 - `done` gains `risk` (same object as the streamed `risk`).
 - `delta` never carries JSON-looking text: replies that are themselves JSON are unwrapped (`reply`, tolerant of
   misspelled keys) or dropped.
+
+## v1.1 C — CONSOLIDATED (Oct 17 2026; supersedes the lines marked *[Superseded ...]* above)
+Source of truth: `deploy/modal/chat_core.py`, `deploy/modal/crisis_app.py`, `deploy/modal/chat_app.py`; tests in
+`deploy/modal/test_chat_v11.py`, `test_done_language.py`, `test_smoke_tools.py`. Not yet verified against a live deployment.
+
+**C1. Empty model reply.** If the model gives no usable reply text, the server retries generation once, then sends one
+fixed DRAFT English line as a normal `delta`. No `error` event is ever sent on this path. Every turn has at least one
+`delta`. Clients must still ignore unknown events.
+
+**C2. Do NOT trim `delta` text.** In exercise turns each sentence is its own `delta`, and every `delta` after the first
+starts with a space (unless the previous one already ended with whitespace). Append deltas exactly as received:
+`done.full_text == "".join(deltas)` holds only for the untrimmed text.
+
+**C3. `done` fields, exactly as the server builds them:**
+| field | value |
+|---|---|
+| `full_text` | `"".join` of every `delta.text` sent in this response |
+| `companion_state` | `{"emotion", "intensity"}`, same as the streamed `companion_state` |
+| `exercise_state` | signed string from the director, or `null` |
+| `ui_actions` | list of the turn's ui_action objects (`{"type": "ui_action", "name", "args"}`) |
+| `handoff` | `{"to": "crisis", "reason"}` or `null` |
+| `total_generation_s` | number |
+| `history_trimmed` | number of oldest `session_history` turns dropped to fit the context window |
+| `risk` | same object as the streamed `risk` event (`{"status": "unavailable"}` on a miss) |
+| `language` | the crisis result's ASR language (audio turns), else the request's `language`, else `null`. The server does NOT detect the language of typed text. |
+| `trace` | debug only, see C4 |
+
+`state` is always sent immediately before `done`: `{"exercise_state": "string" | null}`.
+
+**C4. Debug trace.** `done.trace` and `state.trace` are absent unless the server sets `KOI_DEBUG_TRACE` to
+1/true/yes/on (any case). "0", "false", empty or unset = absent. The final production deploy sets it to "0".
+
+**C5. Risk is server-side.** The chat server scores crisis risk itself on every turn. A `risk` object in the request
+body is accepted but ignored, always, including when the server's own score is unavailable (then no tier is used and
+no exercise starts). Clients must not rely on sending `risk`.
+
+**C6. Auth.** `POST /api/v1/chat` and `POST /api/v1/crisis` require `Authorization: Bearer <Firebase ID token>`
+(401 otherwise). `GET /health` needs NO token in either service. Chat `/health` returns `{"status": "ok"}`. Crisis
+`/health` returns `status, model_version, calibrated, calibration_version, asr, rag_hook, rag_enabled,
+rag_assets_loaded, auth_disabled, head_seeds, heads_loaded, max_category, load_seconds, device`. Other pre-stream errors
+are JSON: 401, 413 (media too large), 422 (bad payload / modality / role), 503 (server misconfigured).
+
+**C7. Cold start, 150 s cap, HTTP 303.** After idle a container takes 60-190 s to start. Modal caps one HTTP request at
+150 s and answers a slow request with an HTTP 303 redirect to a poll URL, possibly several times in a row. Clients must
+follow redirects (browser `fetch` follows by default; do not set `redirect: "manual"`; the Dart client's handling of a
+303 after POST is unverified), use an overall
+request timeout of at least 240 s, call `GET /health` on app open to warm both services, and show a "waking up"
+state instead of an error while the first request is pending.
+
+**C8. Crisis-call model: OPEN.** Whether clients also call `POST /api/v1/crisis` every turn (as the reference
+`conversationService.ts` does today) or rely only on the risk the chat server computes is undecided. Do not change
+client behaviour until the owner decides.
+
+**C9. CORS.** Chat allows origins from `KOI_CORS_ORIGINS` (the deploy script sets `*`). Crisis CORS is always `*`:
+the crisis app does not forward `KOI_CORS_ORIGINS` into its container. Both allow methods `POST, GET, OPTIONS` and
+headers `Authorization, Content-Type`; credentials (cookies) are not allowed.
+
+**C10. RAG.** `KOI_RAG_ENABLED` is forwarded to the crisis service with default "0" and is not enabled. HIGH
+`intervention_content` is the static fallback; crisis `/health` reports `rag_enabled: false`.
