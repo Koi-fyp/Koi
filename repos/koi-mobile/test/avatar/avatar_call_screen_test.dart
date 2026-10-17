@@ -163,15 +163,13 @@ void main() {
     });
   }
 
-  testWidgets('input and send stay disabled until the avatar is ready', (
-    tester,
-  ) async {
+  testWidgets('input and send work before the avatar is ready', (tester) async {
     await pumpShell(tester);
     await tester.tap(find.byKey(const Key('avatar-call-entry')));
     await tester.pump(); // first frame of the call screen
 
-    expect(inputEnabled(tester), isFalse);
-    // InputBar.disabled also blocks send (_submit and the send button).
+    expect(inputEnabled(tester), isTrue);
+    // InputBar.disabled would block send (_submit and the send button).
     expect(
       tester
           .widget<InputBar>(
@@ -182,7 +180,7 @@ void main() {
             ),
           )
           .disabled,
-      isTrue,
+      isFalse,
     );
     expect(find.text('Connecting…', skipOffstage: false), findsOneWidget);
 
@@ -282,7 +280,51 @@ void main() {
     expect(find.byType(ChatScreen), findsOneWidget);
   });
 
-  testWidgets('fallback: static Male.png + Reconnect; input disabled', (
+  testWidgets('avatar failed: the user can still type and send (chat never '
+      'depends on the avatar)', (tester) async {
+    final avatar = AvatarViewController();
+    addTearDown(avatar.dispose);
+    await pumpShell(tester);
+    await openCall(tester, avatar: avatar);
+    avatar.markFailed();
+    await tester.pump();
+    expect(find.byKey(const Key('avatar-fallback')), findsOneWidget);
+
+    final input = find.descendant(
+      of: callScreen,
+      matching: find.byKey(callInput),
+    );
+    await tester.tap(input);
+    await tester.enterText(input, 'Still here?');
+    await tester.pump();
+    await tester.tap(
+      find.descendant(
+        of: callScreen,
+        matching: find.byKey(const Key('chat-send')),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.byKey(const Key('transcript-toggle')));
+    await tester.pump();
+    expect(
+      find.descendant(of: panel, matching: find.text('Still here?')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: panel,
+        matching: find.text(ConversationService.fallbackReply),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('avatar-fallback')), findsOneWidget);
+    expect(inputEnabled(tester), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('fallback: static Male.png + Reconnect; input stays enabled', (
     tester,
   ) async {
     final avatar = AvatarViewController();
@@ -303,7 +345,7 @@ void main() {
     expect((image.image as AssetImage).assetName, 'assets/images/Male.png');
     expect(find.text(AvatarView.reconnectLabel), findsOneWidget);
     expect(find.text('Avatar offline'), findsOneWidget);
-    expect(inputEnabled(tester), isFalse);
+    expect(inputEnabled(tester), isTrue);
 
     await tester.tap(find.byKey(const Key('avatar-reconnect')));
     await tester.pump(); // loading

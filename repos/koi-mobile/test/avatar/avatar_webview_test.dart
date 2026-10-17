@@ -108,7 +108,7 @@ void main() {
     );
     expect(loading, findsOneWidget);
     expect(find.text('Connecting…'), findsOneWidget);
-    expect(inputEnabled(tester), isFalse);
+    expect(inputEnabled(tester), isTrue);
     expect(page.scripts, isEmpty); // nothing before ready
 
     page.handlers.onMessage('SOMETHING_ELSE');
@@ -161,7 +161,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Avatar offline'), findsOneWidget);
-    expect(inputEnabled(tester), isFalse);
+    expect(inputEnabled(tester), isTrue);
 
     await tester.tap(find.byKey(const Key('avatar-reconnect')));
     await tester.pump();

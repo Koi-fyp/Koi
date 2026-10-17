@@ -53,7 +53,6 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
   StreamSubscription<AvatarStateEvent>? _stateSub;
 
   CallInputs _inputs = CallInputs.initial;
-  bool _ready = false; // AvatarView.onReady (AVATAR_READY)
   bool _transcriptOpen = false;
   ToastMessage? _toast;
   int _toastSeq = 0;
@@ -86,11 +85,10 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
 
   void _onText() {
     setState(() => _inputs = _inputs.selectText());
-    if (_ready) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _input.requestFocus();
-      });
-    }
+    // Typing never waits for the avatar.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _input.requestFocus();
+    });
   }
 
   void _onCamera() => _soon(AvatarCallScreen.cameraSoon);
@@ -139,11 +137,9 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
                           controller: _avatar,
                           source: ref.watch(avatarSourceProvider),
                           pageFactory: ref.watch(avatarWebPageFactoryProvider),
-                          onReady: () => setState(() => _ready = true),
-                          onFailed: () {
-                            _input.unfocus();
-                            setState(() => _ready = false);
-                          },
+                          // Chat never depends on the avatar: typing and
+                          // sending work while it loads, fails or is ready.
+                          onReady: () {},
                         ),
                       ),
                     ),
@@ -165,7 +161,7 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
               if (_inputs.textOn)
                 InputBar(
                   onSend: chat.send,
-                  disabled: !_ready || chat.isTyping,
+                  disabled: chat.isTyping,
                   focusNode: _input,
                 ),
               _CallControls(
