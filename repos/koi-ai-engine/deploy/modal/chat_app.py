@@ -21,7 +21,7 @@ app = modal.App("koi-chat-api")
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(VLLM_VERSION, "transformers", "torch", "fastapi", "firebase-admin")
-    .add_local_python_source("chat_core", "stream_extract", "crisis_client")
+    .add_local_python_source("chat_core", "stream_extract", "crisis_client", "reply_api")
     .add_local_dir(str(REPO_ROOT / "koi_policy"), remote_path="/root/koi_policy")
 )
 volume = modal.Volume.from_name("koi-merged-model")
@@ -29,14 +29,25 @@ firebase_secret = modal.Secret.from_name("firebase-service-account")
 director_secret = modal.Secret.from_name("koi-director")
 
 
+def reply_backend(env=os.environ):
+    """Deploy-time flag: "api" only when KOI_REPLY_BACKEND=api in the deploying shell; anything else is "local"."""
+    return "api" if env.get("KOI_REPLY_BACKEND") == "api" else "local"
+
+
+def llm_secrets(env=os.environ):
+    """The hosted-LLM secret is referenced ONLY for an api deploy, so a missing secret cannot break the default deploy."""
+    return [modal.Secret.from_name("koi-llm-api")] if reply_backend(env) == "api" else []
+
+
 @app.cls(
     image=image, gpu="T4", volumes={VOLUME_MOUNT: volume},
-    secrets=[firebase_secret, director_secret],
+    secrets=[firebase_secret, director_secret, *llm_secrets()],
     env={
         "VLLM_ATTENTION_BACKEND": "TRITON_ATTN",
         "KOI_EXERCISES": os.environ.get("KOI_EXERCISES", "0"),
         "KOI_CORS_ORIGINS": os.environ.get("KOI_CORS_ORIGINS", "*"),
         "KOI_DEBUG_TRACE": os.environ.get("KOI_DEBUG_TRACE", "0"),
+        "KOI_REPLY_BACKEND": reply_backend(),
     },
     scaledown_window=300, min_containers=int(os.environ.get("KOI_MIN_CONTAINERS", "0")),
     timeout=600,
