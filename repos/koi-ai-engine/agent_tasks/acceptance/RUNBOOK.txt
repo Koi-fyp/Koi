@@ -1,0 +1,104 @@
+KOI BACKEND ACCEPTANCE KIT - RUNBOOK (Work Package A)                      written 2026-10-18, NOT yet run
+=====================================================================================================================
+Target: the deploy made by agent_tasks\deploy_and_verify.bat on 17 Oct 2026 21:29 PKT (VERIFY.txt in
+agent_tasks\reports\live3), commit c172d35, branch feat/exercise-director-modal.
+  CHAT_URL   = https://ahsulem--koi-chat-api-chatserver-web.us-east.modal.run
+  CRISIS_URL = https://ahsulem--koi-crisis-crisis-web.us-east.modal.run   (the kit does not call it directly)
+
+These scripts only READ the deployed service. They never deploy, never run `modal`, never touch git.
+
+---------------------------------------------------------------------------------------------------------------------
+!! QUOTA / COST WARNING
+---------------------------------------------------------------------------------------------------------------------
+* Every chat request can use the HOSTED LLM providers. If the chat app was deployed with KOI_REPLY_BACKEND=api
+  (deploy\modal\chat_app.py:32-34, 39, 50), each ordinary chat turn calls the primary provider and, on failure, the
+  secondary one (chat_core.py:261-304). Exercise turns, director acknowledgements and crisis-handoff turns stay
+  local unless KOI_API_ON_HANDOFF=1 (chat_core.py:447-451). run_live.bat does NOT set KOI_REPLY_BACKEND, so whether
+  the 21:29 deploy is "api" depends on the shell it ran in: done.reply_backend in the outputs answers that.
+* One full kit run = 1 probe request + at most 25 matrix requests (hard cap in accept_matrix.py, 3 s apart).
+  Do not loop it. Free-tier provider limits (requests/minute and per day) can be hit; a hosted failure silently
+  falls back (reply_backend "local", reply_fallback_reason set), which the matrix records.
+* Each request also wakes two T4 GPU containers (chat + crisis) that then idle-bill for 5 min (chat) and 15 min
+  (crisis) after the last request (see the next section).
+
+---------------------------------------------------------------------------------------------------------------------
+HOW LONG TO WAIT FOR A TRUE COLD START
+---------------------------------------------------------------------------------------------------------------------
+Settings (quoted):
+  deploy\modal\chat_app.py:52    scaledown_window=300, min_containers=int(os.environ.get("KOI_MIN_CONTAINERS", "0"))
+  deploy\modal\chat_app.py:53    timeout=600
+  deploy\modal\crisis_app.py:23  MIN_CONTAINERS = int(os.environ.get("KOI_MIN_CONTAINERS", "0"))
+  deploy\modal\crisis_app.py:98  min_containers=MIN_CONTAINERS, scaledown_window=900, timeout=120)
+  agent_tasks\run_live.bat:27,62,82   set KOI_MIN_CONTAINERS=0   (chat, crisis, final chat redeploy)
+=> chat scales to zero 5 min after its last request, crisis 15 min after its last request.
+   Every chat POST calls crisis, so the crisis clock restarts with every chat request.
+=> TRUE COLD (both services): wait at least 15 min after the LAST request to EITHER service; use 17 min margin.
+   Chat-only cold (crisis maybe warm): 6 min.
+Expected cold start: 60-190 s (docs\contracts\KOI_CLIENT_CONTRACT_v1.md:23 and C7 :226-231). Modal answers a request
+still running after ~150 s with HTTP 303 to a poll URL, possibly several times; the probe prints every hop.
+Do NOT call /health, open the web app, or run any other tool against either URL during the wait.
+
+---------------------------------------------------------------------------------------------------------------------
+COMMANDS (cmd.exe, one window, in this order)
+---------------------------------------------------------------------------------------------------------------------
+rem --- 0. environment (koivenv only; no bytecode; UTF-8 so Urdu reply text cannot crash the console)
+cd /d E:\Koi\Koi-App\repos\koi-ai-engine
+set PYTHONDONTWRITEBYTECODE=1
+set PYTHONIOENCODING=utf-8
+set PYTHONUTF8=1
+set "PY=E:\Setups\anaconda\envs\koivenv\python.exe"
+set "CHAT_URL=https://ahsulem--koi-chat-api-chatserver-web.us-east.modal.run"
+set "R=agent_tasks\reports\acceptance"
+if not exist "%R%" mkdir "%R%"
+
+rem --- 1. (optional) see the plan; sends NOTHING, needs no token, writes a DRY RUN report
+"%PY%" agent_tasks\acceptance\accept_matrix.py %CHAT_URL% --dry-run
+
+rem --- 2. wait >= 17 minutes with no traffic to either service (true cold start). Note the clock time.
+
+rem --- 3. token (same steps as agent_tasks\deploy_and_verify.bat:31-36). The token is never echoed.
+rem        Mint it right before step 4: it lives ~1 hour. get_anon_token prints project/uid/expiry only.
+set "TOKFILE=%TEMP%\koi_tok.txt"
+if exist "%TOKFILE%" del "%TOKFILE%"
+set /p WEBKEY=<"E:\Koi\secrets\firebase_web_api_key.txt"
+"%PY%" deploy\modal\tools\get_anon_token.py %WEBKEY% --token-file "%TOKFILE%"
+set "WEBKEY="
+set /p KOI_TOKEN=<"%TOKFILE%"
+del "%TOKFILE%"
+
+rem --- 4. cold-start probe (GET /health, then ONE POST with client_event start_breathing). On a cold system the
+rem        crisis score cannot arrive within the 3 s director wait, so this one request also shows the
+rem        risk-"unavailable" path: expect risk status=unavailable and NO start_breathing ui_action.
+"%PY%" agent_tasks\acceptance\cold_start_probe.py %CHAT_URL% --event start_breathing > "%R%\cold_probe.txt" 2>&1
+type "%R%\cold_probe.txt"
+
+rem --- 5. acceptance matrix (<= 25 requests, 3 s apart, ~3-6 min warm). Writes accept_matrix_<stamp>.json/.md.
+"%PY%" agent_tasks\acceptance\accept_matrix.py %CHAT_URL% > "%R%\accept_matrix_console.txt" 2>&1
+type "%R%\accept_matrix_console.txt"
+
+rem --- 6. clean up the token
+set "KOI_TOKEN="
+
+rem --- 7. (optional, second cold window) the matrix's first case U0 reproduces "unavailable" only on a cold crisis
+rem        container. To capture it inside the matrix too: wait >= 17 min again, redo step 3, run step 5 FIRST
+rem        (skip step 4). Costs another <= 25 requests.
+
+---------------------------------------------------------------------------------------------------------------------
+WHAT TO SEND BACK
+---------------------------------------------------------------------------------------------------------------------
+agent_tasks\reports\acceptance\cold_probe.txt
+agent_tasks\reports\acceptance\accept_matrix_console.txt
+agent_tasks\reports\acceptance\accept_matrix_<stamp>.md  (+ .json)
+None of these contain the token, a trace, or a full exercise_state (10-char prefix + decoded mode/journey/step).
+Fill agent_tasks\reports\acceptance\ACCEPTANCE_REPORT_TEMPLATE.md from them.
+
+---------------------------------------------------------------------------------------------------------------------
+READING THE RESULTS
+---------------------------------------------------------------------------------------------------------------------
+* cold_probe.txt: "hop N ... status=303 Location=<host><path>" lines = Modal's 150 s poll redirects. The time of
+  "first SSE event" on a cold system is the user-visible wake-up time; compare with 60-190 s.
+* Verdicts: PASS / FAIL / INCONCLUSIVE (the precondition did not occur, e.g. the text did not score HIGH) / ERROR.
+  The crisis model is an emotion proxy: the category of any synthetic text is not guaranteed; it is recorded as seen.
+* Watch especially: H10 "HIGH risk event without a handoff" (score missed the 1 s director wait),
+  C12/C15 "crisis_resolved ignored" (resolving text scored HIGH), X4 silent reset, risk_exactly_once,
+  state_immediately_before_done, full_text_equals_deltas, trace_present (must be False on the final deploy).

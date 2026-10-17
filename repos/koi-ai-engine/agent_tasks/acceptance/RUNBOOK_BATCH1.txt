@@ -1,0 +1,92 @@
+KOI BATCH 1 RUNBOOK (Ahmad runs this)                                              written 2026-10-18
+=====================================================================================================================
+Repo E:\Koi\Koi-App\repos\koi-ai-engine, branch feat/exercise-director-modal, HEAD c172d35.
+Target: CHAT_URL = https://ahsulem--koi-chat-api-chatserver-web.us-east.modal.run (deploy of 17 Oct 21:29 PKT)
+
+Status when written:
+  g0b_repro.py    RUN by the agent (in-memory, no network). Output is in KOI_AHMAD_BASELINE_AND_DEPENDENCIES.md.
+  audio_smoke.py  NOT RUN. It calls the deployed service.
+  video_smoke.py  NOT RUN. It calls the deployed service.
+
+QUOTA: each smoke sends ONE chat request. That request wakes both T4 containers (chat idles for 5 min, crisis for
+15 min) and can call the hosted LLM provider if the chat app was deployed with KOI_REPLY_BACKEND=api.
+Total for this runbook: 3 requests (audio, text+video, audio+video).
+
+[CODE] READ THIS BEFORE THE AUDIO RUNS. An audio turn waits at most 3 s for the crisis service's ASR result
+(chat_core.py:348-352). Without a transcript in time, the request fails with HTTP 422, error class "no_transcript"
+(chat_core.py:361-364; reproduced in memory by g0b case a5). So:
+  * warm both services first (step 2), and
+  * keep the audio SHORT (about 3-5 s of clear speech). A long clip, or silence, will very likely give 422.
+
+---------------------------------------------------------------------------------------------------------------------
+0. Environment (cmd.exe)
+---------------------------------------------------------------------------------------------------------------------
+cd /d E:\Koi\Koi-App\repos\koi-ai-engine
+set PYTHONDONTWRITEBYTECODE=1
+set PYTHONIOENCODING=utf-8
+set PYTHONUTF8=1
+set "PY=E:\Setups\anaconda\envs\koivenv\python.exe"
+set "CHAT_URL=https://ahsulem--koi-chat-api-chatserver-web.us-east.modal.run"
+set "R=agent_tasks\reports\acceptance"
+if not exist "%R%" mkdir "%R%"
+
+---------------------------------------------------------------------------------------------------------------------
+1. Local harness. No network, no token. Optional re-run.
+---------------------------------------------------------------------------------------------------------------------
+"%PY%" -B agent_tasks\acceptance\g0b_repro.py > "%R%\g0b_repro_out.txt" 2>&1
+type "%R%\g0b_repro_out.txt"
+(Takes about 30 s. The "Did not find boundary character" line on stderr comes from the corrupt-multipart case and is
+expected.)
+
+---------------------------------------------------------------------------------------------------------------------
+2. Media fixtures + warm-up
+---------------------------------------------------------------------------------------------------------------------
+rem 2a. A short English speech WAV made OFFLINE by Windows' built-in synthesizer (no install, no network):
+powershell -NoProfile -Command "Add-Type -AssemblyName System.Speech; $s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.SetOutputToWaveFile('%TEMP%\koi_smoke.wav'); $s.Speak('I had a long day, but I am okay.'); $s.Dispose()"
+rem    Or use your own short WAV (PCM, at most 25 MiB; only the first 30 s are scored).
+rem 2b. An MP4 with a face (at most 80 MiB; only the first 60 s and 8 frames are used; must be a normal seekable MP4).
+rem     Nothing suitable exists in the repo. Put one at %TEMP%\koi_smoke.mp4.
+rem 2c. Warm both services (GET /health needs no token; contract C6):
+rem    (typed at the prompt, so single %; inside a .bat file write %%)
+curl -s -L --max-time 240 -o nul -w "chat health %{http_code} in %{time_total}s\n" %CHAT_URL%/health
+curl -s -L --max-time 240 -o nul -w "crisis health %{http_code} in %{time_total}s\n" https://ahsulem--koi-crisis-crisis-web.us-east.modal.run/health
+rem    Run both again until each answers 200 in a few seconds.
+
+---------------------------------------------------------------------------------------------------------------------
+3. Token (same steps as agent_tasks\deploy_and_verify.bat:31-36; the token is never echoed; it lives about 1 h)
+---------------------------------------------------------------------------------------------------------------------
+set "TOKFILE=%TEMP%\koi_tok.txt"
+if exist "%TOKFILE%" del "%TOKFILE%"
+set /p WEBKEY=<"E:\Koi\secrets\firebase_web_api_key.txt"
+"%PY%" deploy\modal\tools\get_anon_token.py %WEBKEY% --token-file "%TOKFILE%"
+set "WEBKEY="
+set /p KOI_TOKEN=<"%TOKFILE%"
+del "%TOKFILE%"
+
+---------------------------------------------------------------------------------------------------------------------
+4. Smokes (one request each, about 10 s apart)
+---------------------------------------------------------------------------------------------------------------------
+"%PY%" -B agent_tasks\acceptance\audio_smoke.py %CHAT_URL% "%TEMP%\koi_smoke.wav" --language en > "%R%\audio_smoke.txt" 2>&1
+type "%R%\audio_smoke.txt"
+"%PY%" -B agent_tasks\acceptance\video_smoke.py %CHAT_URL% "%TEMP%\koi_smoke.mp4" > "%R%\video_smoke_text.txt" 2>&1
+type "%R%\video_smoke_text.txt"
+"%PY%" -B agent_tasks\acceptance\video_smoke.py %CHAT_URL% "%TEMP%\koi_smoke.mp4" --with-audio "%TEMP%\koi_smoke.wav" > "%R%\video_smoke_av.txt" 2>&1
+type "%R%\video_smoke_av.txt"
+
+---------------------------------------------------------------------------------------------------------------------
+5. Clean up
+---------------------------------------------------------------------------------------------------------------------
+set "KOI_TOKEN="
+del "%TEMP%\koi_smoke.wav"
+
+---------------------------------------------------------------------------------------------------------------------
+WHAT TO SEND BACK: agent_tasks\reports\acceptance\audio_smoke.txt, video_smoke_text.txt, video_smoke_av.txt
+(and g0b_repro_out.txt if you re-ran it). None of them contain the token or any transcript or reply text, only lengths.
+
+READING THEM
+  HTTP 200 + "transcript: length=N language=xx"   the ASR transcript arrived within the 3 s wait.
+  HTTP 422 + "error class: no_transcript"          the transcript was late, or no speech was found. Re-run once warm
+                                                   with a shorter clip before calling it a failure.
+  HTTP 413 "too_large", 422 "modality_combination"  request-side problem (limits in _media_common.py).
+  text+video: risk.modalities_used should contain "text" and "video"; confidence_reasons explain any reduction.
+  audio+video: transcript present and modalities_used contains "audio" and "video".
