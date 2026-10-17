@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
 import '../avatar/avatar_call_screen.dart';
+import '../avatar/avatar_providers.dart';
+import '../avatar/avatar_view.dart' show AvatarImage, AvatarType;
 import '../avatar/call_icons.dart';
 import '../onboarding/step_layout.dart';
 import '../theme/koi_colors.dart';
@@ -50,6 +52,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (uid == null) return const SizedBox.shrink();
     final chat = ref.watch(chatControllerProvider(uid));
     final hasMessages = chat.messages.isNotEmpty;
+    final avatar = ref.watch(selectedAvatarProvider);
 
     return ColoredBox(
       color: KoiColors.background,
@@ -60,7 +63,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             id: _Slot.panel,
             child: hasMessages
                 ? const SizedBox.shrink()
-                : _AvatarPanel(mounted: _mounted, onCta: _focusInput),
+                : _AvatarPanel(
+                    mounted: _mounted,
+                    avatar: avatar,
+                    onCta: _focusInput,
+                  ),
           ),
           LayoutId(id: _Slot.banner, child: const _OfflineBannerHost()),
           LayoutId(
@@ -154,8 +161,15 @@ class _OfflineBannerHost extends ConsumerWidget {
 /// overflow clip); below [minCard] the whole panel hides, e.g. while the
 /// keyboard is open on a 360x800dp phone.
 class _AvatarPanel extends StatelessWidget {
-  const _AvatarPanel({required this.mounted, required this.onCta});
+  const _AvatarPanel({
+    required this.mounted,
+    required this.avatar,
+    required this.onCta,
+  });
   final bool mounted;
+
+  /// The selected avatar's image (Settings "Avatar").
+  final AvatarType avatar;
   final VoidCallback onCta;
 
   // transition: opacity/transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)
@@ -209,11 +223,8 @@ class _AvatarPanel extends StatelessWidget {
                           ),
                           child: AspectRatio(
                             aspectRatio: _imageAspect,
-                            child: Image.asset(
-                              'assets/images/Male.png', // public/Male.png
-                              semanticLabel: 'KOI companion',
-                              fit: BoxFit.contain,
-                            ),
+                            // public/Male.png (female: same image for now)
+                            child: AvatarImage(avatar),
                           ),
                         ),
                       ),

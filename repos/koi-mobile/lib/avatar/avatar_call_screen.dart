@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +10,7 @@ import '../onboarding/step_layout.dart';
 import '../settings/widgets/settings_widgets.dart'
     show SettingsToastLayer, ToastMessage, ToastType;
 import '../theme/koi_colors.dart';
+import 'avatar_providers.dart';
 import 'avatar_view.dart';
 import 'call_icons.dart';
 import 'call_inputs.dart';
@@ -38,22 +41,35 @@ class AvatarCallScreen extends ConsumerStatefulWidget {
 }
 
 class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
-  // TODO(backend): drive setEmotion from companion_state once the real
-  // backend is connected (Q2/Q3). Blueprint §4.1: companion_state
-  // {emotion, intensity}, already in the 5 AvatarEmotion names; do not map
-  // the chat's user emotions onto it.
   late final AvatarViewController _avatar =
       widget.avatarController ?? AvatarViewController();
   final FocusNode _input = FocusNode();
 
+  // TODO(backend): drive the avatar from companion_state once the real
+  // backend is connected (Q2/Q3). Blueprint §4.1: companion_state
+  // {emotion, intensity}, already in the 5 AvatarEmotion names; do not map
+  // the chat's user emotions onto it. The source below is the seam for it.
+  late final AvatarStateSource _stateSource;
+  StreamSubscription<AvatarStateEvent>? _stateSub;
+
   CallInputs _inputs = CallInputs.initial;
-  bool _ready = false; // AvatarView.onReady (later: AVATAR_READY)
+  bool _ready = false; // AvatarView.onReady (AVATAR_READY)
   bool _transcriptOpen = false;
   ToastMessage? _toast;
   int _toastSeq = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _avatar.setAvatar(ref.read(selectedAvatarProvider));
+    _stateSource = ref.read(avatarStateSourceFactoryProvider)();
+    _stateSub = _stateSource.events.listen(_avatar.apply);
+  }
+
+  @override
   void dispose() {
+    _stateSub?.cancel();
+    _stateSource.dispose();
     if (widget.avatarController == null) _avatar.dispose();
     _input.dispose();
     super.dispose();
@@ -63,11 +79,10 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     () => _toast = ToastMessage(message, ToastType.info, ++_toastSeq),
   );
 
-  void _onMic() {
-    setState(() => _inputs = _inputs.toggleMic());
-    if (_inputs.micOn) _input.unfocus();
-    _soon(AvatarCallScreen.voiceSoon);
-  }
+  // Voice and camera aren't available yet: the buttons are greyed out and
+  // only show the coming-soon toast (no permission request, no preview).
+  // CallInputs keeps the four approved modes for when they are.
+  void _onMic() => _soon(AvatarCallScreen.voiceSoon);
 
   void _onText() {
     setState(() => _inputs = _inputs.selectText());
@@ -78,10 +93,7 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     }
   }
 
-  void _onCamera() {
-    setState(() => _inputs = _inputs.toggleCamera());
-    _soon(AvatarCallScreen.cameraSoon);
-  }
+  void _onCamera() => _soon(AvatarCallScreen.cameraSoon);
 
   void _endCall() => Navigator.of(context).pop();
 
@@ -98,6 +110,7 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     if (uid == null) return const SizedBox.shrink();
     final chat = ref.watch(chatControllerProvider(uid));
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    ref.listen(selectedAvatarProvider, (_, next) => _avatar.setAvatar(next));
 
     return PopScope<Object?>(
       canPop: !_transcriptOpen,
@@ -124,6 +137,8 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
                         padding: const EdgeInsets.fromLTRB(16, 4, 22, 14),
                         child: AvatarView(
                           controller: _avatar,
+                          source: ref.watch(avatarSourceProvider),
+                          pageFactory: ref.watch(avatarWebPageFactoryProvider),
                           onReady: () => setState(() => _ready = true),
                           onFailed: () {
                             _input.unfocus();
@@ -410,7 +425,8 @@ class _CallControls extends StatelessWidget {
           key: const Key('call-mic'),
           label: 'Mic',
           paths: micIconPaths,
-          active: inputs.micOn,
+          active: false,
+          disabled: true,
           compact: compact,
           onTap: onMic,
         ),
@@ -418,7 +434,8 @@ class _CallControls extends StatelessWidget {
           key: const Key('call-camera'),
           label: 'Camera',
           paths: videoIconPaths,
-          active: inputs.cameraOn,
+          active: false,
+          disabled: true,
           compact: compact,
           onTap: onCamera,
         ),
@@ -454,6 +471,7 @@ class _CallButton extends StatefulWidget {
     required this.active,
     required this.onTap,
     this.danger = false,
+    this.disabled = false,
     required this.compact,
   });
 
@@ -461,6 +479,10 @@ class _CallButton extends StatefulWidget {
   final List<Path> paths;
   final bool active;
   final bool danger;
+
+  /// Not available yet: greyed out; a tap still calls [onTap] (the
+  /// coming-soon toast).
+  final bool disabled;
 
   /// Keyboard open: no label under the button.
   final bool compact;
@@ -488,51 +510,59 @@ class _CallButtonState extends State<_CallButton> {
     return Semantics(
       button: true,
       label: widget.label,
-      toggled: widget.danger ? null : widget.active,
+      toggled: widget.danger || widget.disabled ? null : widget.active,
+      enabled: widget.disabled ? false : null,
+      hint: widget.disabled ? 'Coming soon' : null,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => setState(() => _pressed = true),
+        onTapDown: (_) => setState(() => _pressed = !widget.disabled),
         onTapUp: (_) => setState(() => _pressed = false),
         onTapCancel: () => setState(() => _pressed = false),
         onTap: widget.onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 100),
-              width: _CallButton.size,
-              height: _CallButton.size,
-              transform: Matrix4.translationValues(
-                _pressed ? 2 : 0,
-                _pressed ? 2 : 0,
-                0,
+        child: Opacity(
+          key: const Key('call-button-opacity'),
+          opacity: widget.disabled ? 0.4 : 1,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 100),
+                width: _CallButton.size,
+                height: _CallButton.size,
+                transform: Matrix4.translationValues(
+                  _pressed ? 2 : 0,
+                  _pressed ? 2 : 0,
+                  0,
+                ),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: bg,
+                  shape: BoxShape.circle,
+                  border: Border.all(width: 2.5),
+                  boxShadow: [
+                    BoxShadow(
+                      offset: _pressed
+                          ? const Offset(1, 1)
+                          : const Offset(3, 3),
+                    ),
+                  ],
+                ),
+                child: StrokeIcon(
+                  paths: widget.paths,
+                  size: 24,
+                  strokeWidth: 2.2,
+                  color: fg,
+                ),
               ),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: bg,
-                shape: BoxShape.circle,
-                border: Border.all(width: 2.5),
-                boxShadow: [
-                  BoxShadow(
-                    offset: _pressed ? const Offset(1, 1) : const Offset(3, 3),
-                  ),
-                ],
-              ),
-              child: StrokeIcon(
-                paths: widget.paths,
-                size: 24,
-                strokeWidth: 2.2,
-                color: fg,
-              ),
-            ),
-            // No label while the keyboard is open, to leave room for the
-            // avatar on short phones (Semantics keeps the label).
-            if (!widget.compact) ...[
-              const SizedBox(height: 6),
-              Text(widget.label, style: displayText(12)),
+              // No label while the keyboard is open, to leave room for the
+              // avatar on short phones (Semantics keeps the label).
+              if (!widget.compact) ...[
+                const SizedBox(height: 6),
+                Text(widget.label, style: displayText(12)),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

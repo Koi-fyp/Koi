@@ -75,6 +75,9 @@ flutter:
   assets:
     # Copied from repos/koi-backend/nextjs_app/public/Male.png (chat header image)
     - assets/images/Male.png
+    # Debug-only mock avatar page (KOI_AVATAR_URL=mock; ignored in release
+    # builds by AvatarSource.parse, but still bundled).
+    - assets/avatar_mock/mock_avatar.html
     # Bricolage Grotesque + DM Sans (SIL OFL 1.1), bundled so google_fonts
     # works offline. Exact files google_fonts 6.3.3 fetches (hash-verified).
     - assets/google_fonts/

@@ -1,0 +1,97 @@
+<!doctype html>
+<!--
+  MOCK avatar page, debug only (KOI_AVATAR_URL=mock). Not the real avatar:
+  it imitates the avatar host contract from feat/avatar-webview-host
+  (WEBVIEW_HOST.md) so the Flutter WebView bridge can be tried on a phone.
+  - posts "AVATAR_READY" on window.KoiBridge after a short delay
+  - defines window.AvatarController.setEmotion(emotion, intensity) and shows
+    the last call it received
+  - "Simulate failure" reloads the page without ever posting AVATAR_READY,
+    so the app falls back after its 20 s ready timeout
+  No network requests, no fonts or images from anywhere.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MOCK avatar</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 12px; padding: 16px; box-sizing: border-box;
+    background: #FFD100; color: #000; font-family: system-ui, sans-serif;
+    text-align: center;
+  }
+  .badge {
+    border: 3px solid #000; border-radius: 9999px; background: #FF6B6B;
+    padding: 4px 14px; font-weight: 900; letter-spacing: .08em;
+  }
+  .card {
+    border: 3px solid #000; border-radius: 16px; background: #fff;
+    box-shadow: 4px 4px 0 #000; padding: 12px 16px; min-width: 200px;
+  }
+  .big { font-size: 28px; font-weight: 800; word-break: break-word; }
+  button {
+    border: 2.5px solid #000; border-radius: 9999px; background: #fff;
+    box-shadow: 3px 3px 0 #000; padding: 10px 18px; font: inherit;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+  <div class="badge">MOCK AVATAR · DEBUG ONLY</div>
+  <div class="card">
+    <div id="status">Loading…</div>
+    <div class="big" id="emotion">–</div>
+    <div id="intensity">intensity –</div>
+    <div id="calls">0 setEmotion calls</div>
+  </div>
+  <button id="fail" type="button">Simulate failure</button>
+<script>
+(function () {
+  'use strict';
+  var failing = location.hash === '#fail';
+  // Reconnect loads the asset again without the hash anyway.
+  if (failing) {
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
+  var calls = 0;
+  var ready = false;
+  function show(id, text) { document.getElementById(id).textContent = text; }
+
+  window.AvatarController = Object.freeze({
+    get ready() { return ready; },
+    get lifecycle() { return ready ? 'ready' : 'not-ready'; },
+    setEmotion: function (emotion, intensity) {
+      calls++;
+      show('emotion', String(emotion));
+      show('intensity', 'intensity ' + Number(intensity).toFixed(2));
+      show('calls', calls + ' setEmotion call' + (calls === 1 ? '' : 's'));
+      return true;
+    }
+  });
+
+  if (failing) {
+    show('status', 'Simulated failure: AVATAR_READY will not be sent');
+  } else {
+    setTimeout(function () {
+      ready = true;
+      show('status', 'Ready (AVATAR_READY sent)');
+      try {
+        if (window.KoiBridge) window.KoiBridge.postMessage('AVATAR_READY');
+        else show('status', 'Ready, but no KoiBridge channel');
+      } catch (e) {
+        show('status', 'KoiBridge.postMessage failed');
+      }
+    }, 1500);
+  }
+
+  document.getElementById('fail').addEventListener('click', function () {
+    location.hash = 'fail';
+    location.reload();
+  });
+})();
+</script>
+</body>
+</html>

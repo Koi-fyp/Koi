@@ -347,51 +347,59 @@ void main() {
     );
   });
 
-  testWidgets('controls: mic/text exclusive, camera only with one of them, '
-      'coming-soon toasts, no camera preview', (tester) async {
+  testWidgets('controls: Mic and Camera greyed out, tap = coming-soon toast '
+      'only; text stays on; no permission, no camera preview', (tester) async {
     await pumpShell(tester);
     await openCall(tester);
     final inputBar = find.descendant(
       of: callScreen,
       matching: find.byType(InputBar),
     );
+    double opacity(String key) => tester
+        .widget<Opacity>(
+          find.descendant(
+            of: find.byKey(Key(key)),
+            matching: find.byKey(const Key('call-button-opacity')),
+          ),
+        )
+        .opacity;
+    bool? enabled(String key) => tester
+        .widget<Semantics>(
+          find
+              .descendant(
+                of: find.byKey(Key(key)),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        )
+        .properties
+        .enabled;
 
     expect(toggled(tester, 'call-text'), isTrue);
-    expect(toggled(tester, 'call-mic'), isFalse);
-    expect(toggled(tester, 'call-camera'), isFalse);
+    for (final k in ['call-mic', 'call-camera']) {
+      expect(opacity(k), 0.4, reason: k);
+      expect(enabled(k), isFalse, reason: k);
+      expect(toggled(tester, k), isNull, reason: k);
+    }
+    expect(opacity('call-text'), 1);
+    expect(opacity('call-end'), 1);
 
     await tester.tap(find.byKey(const Key('call-mic')));
     await tester.pump();
-    expect(toggled(tester, 'call-mic'), isTrue);
-    expect(toggled(tester, 'call-text'), isFalse);
-    expect(inputBar, findsNothing); // no typing while the mic is on
     expect(find.text(AvatarCallScreen.voiceSoon), findsOneWidget);
+    expect(toggled(tester, 'call-text'), isTrue);
+    expect(inputBar, findsOneWidget); // still typing
 
     await tester.tap(find.byKey(const Key('call-camera')));
     await tester.pump();
-    expect(toggled(tester, 'call-camera'), isTrue);
-    expect(toggled(tester, 'call-mic'), isTrue);
     expect(find.text(AvatarCallScreen.cameraSoon), findsOneWidget);
+    expect(toggled(tester, 'call-text'), isTrue);
+    expect(inputBar, findsOneWidget);
     expect(find.byType(Texture), findsNothing);
     expect(find.byType(PlatformViewSurface), findsNothing);
 
     await tester.tap(find.byKey(const Key('call-text')));
     await tester.pump();
-    expect(toggled(tester, 'call-text'), isTrue);
-    expect(toggled(tester, 'call-mic'), isFalse);
-    expect(toggled(tester, 'call-camera'), isTrue); // text + camera
-    expect(inputBar, findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('call-mic'))); // voice + camera
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('call-mic'))); // mic off → text
-    await tester.pump();
-    expect(toggled(tester, 'call-text'), isTrue);
-    expect(toggled(tester, 'call-camera'), isTrue);
-
-    await tester.tap(find.byKey(const Key('call-camera')));
-    await tester.pump();
-    expect(toggled(tester, 'call-camera'), isFalse);
     expect(toggled(tester, 'call-text'), isTrue);
     expect(tester.takeException(), isNull);
     await drainToasts(tester);

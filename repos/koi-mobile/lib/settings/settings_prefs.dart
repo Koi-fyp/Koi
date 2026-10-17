@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:koi_flutter_lib/storage/repositories/user_repository.dart';
 
+import '../avatar/avatar_state.dart';
 import '../onboarding/onboarding_service.dart';
 
 /// The values the Settings page shows and changes.
@@ -18,6 +19,7 @@ class SettingsPrefs {
     this.name = '',
     this.language = 'en',
     this.notificationsEnabled = true,
+    this.avatarType = AvatarType.male,
   });
 
   /// page.tsx initial state: useState('koi'), useState(''), useState('en'),
@@ -35,16 +37,22 @@ class SettingsPrefs {
   final String language;
   final bool notificationsEnabled;
 
+  /// Mobile-only "Avatar: Male / Female" row; HiveUser.avatarType, which
+  /// onboarding sets to male_human (Q8). Web Settings has no such row.
+  final AvatarType avatarType;
+
   SettingsPrefs copyWith({
     String? companion,
     String? name,
     String? language,
     bool? notificationsEnabled,
+    AvatarType? avatarType,
   }) => SettingsPrefs(
     companion: companion ?? this.companion,
     name: name ?? this.name,
     language: language ?? this.language,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+    avatarType: avatarType ?? this.avatarType,
   );
 }
 
@@ -78,6 +86,7 @@ class HiveUserSettingsStore implements SettingsPrefsStore {
       name: name is String ? name : '',
       language: user.language,
       notificationsEnabled: enabled is bool ? enabled : true,
+      avatarType: AvatarType.fromStored(user.avatarType),
     );
   }
 
@@ -91,6 +100,7 @@ class HiveUserSettingsStore implements SettingsPrefsStore {
     }
     user
       ..language = prefs.language
+      ..avatarType = prefs.avatarType.stored
       ..settings = jsonEncode({
         ...HiveUserOnboardingWriter.decodeSettings(user.settings),
         HiveUserOnboardingWriter.companionKey: prefs.companion,

@@ -6,6 +6,7 @@ import 'package:hive/hive.dart';
 import 'package:koi_flutter_lib/models/hive_user_model.dart';
 import 'package:koi_flutter_lib/storage/hive_manager.dart';
 import 'package:koi_flutter_lib/storage/repositories/user_repository.dart';
+import 'package:koi_mobile/avatar/avatar_state.dart';
 import 'package:koi_mobile/onboarding/onboarding_service.dart';
 import 'package:koi_mobile/settings/settings_prefs.dart';
 
@@ -62,11 +63,12 @@ void main() {
         name: 'Sara',
         language: 'en',
         notificationsEnabled: true,
+        avatarType: AvatarType.female,
       ),
     );
     final user = (await repo.getUser('u1'))!;
     expect(user.language, 'en');
-    expect(user.avatarType, 'female_human'); // untouched
+    expect(user.avatarType, 'female_human');
     expect(user.notificationTime, '21:15'); // untouched
     final s = jsonDecode(user.settings) as Map<String, dynamic>;
     expect(s['companion'], 'aisha');
@@ -76,6 +78,17 @@ void main() {
     final back = await store.load('u1');
     expect(back.name, 'Sara');
     expect(back.companion, 'aisha');
+  });
+
+  test('avatarType: read from and saved to HiveUser.avatarType', () async {
+    await onboard(); // female_human
+    final store = HiveUserSettingsStore(repo);
+    final p = await store.load('u1');
+    expect(p.avatarType, AvatarType.female);
+    await store.save('u1', p.copyWith(avatarType: AvatarType.male));
+    expect((await repo.getUser('u1'))!.avatarType, 'male_human');
+    expect((await store.load('u1')).avatarType, AvatarType.male);
+    expect((await store.load('u1')).companion, 'raza'); // companion untouched
   });
 
   test('save without a user record writes nothing', () async {
