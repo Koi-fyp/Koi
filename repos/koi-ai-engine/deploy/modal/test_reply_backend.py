@@ -313,6 +313,7 @@ def test_payload_contains_only_prompt_history_message(env, provider):
     assert KEY not in call["url"] and KEY not in raw and KEY not in text
     if provider == "gemini":
         assert call["headers"]["x-goog-api-key"] == KEY and "Authorization" not in call["headers"]
+        assert "User-Agent" not in call["headers"]                       # Gemini: unchanged, no custom UA
         assert call["body"]["systemInstruction"]["parts"][0]["text"] == SYSTEM_PROMPT
         assert [(c["role"], c["parts"][0]["text"]) for c in call["body"]["contents"]] == [
             ("user", "My name is Sam."), ("model", "Nice to meet you, Sam."), ("user", "What is my name?")]
@@ -324,6 +325,7 @@ def test_payload_contains_only_prompt_history_message(env, provider):
     else:
         assert call["url"] == "https://llm.example.invalid/v1/chat/completions"
         assert call["headers"]["Authorization"] == "Bearer " + KEY
+        assert call["headers"]["User-Agent"] == reply_api.USER_AGENT == "koi-companion/1.0"
         msgs = call["body"]["messages"]
         assert msgs[0]["role"] == "system" and msgs[0]["content"].startswith(SYSTEM_PROMPT)
         assert [(m["role"], m["content"]) for m in msgs[1:]] == [

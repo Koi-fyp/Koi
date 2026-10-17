@@ -29,6 +29,7 @@ log = logging.getLogger("koi.reply_api")
 
 HISTORY_TURNS = 16
 OAI_MAX_TOKENS = 2048   # room for hidden reasoning tokens so they cannot exhaust the reply budget
+USER_AGENT = "koi-companion/1.0"   # openai_compat only: some gateways (Groq) answer 403 / 1010 to Python's default UA
 PROVIDERS = ("gemini", "openai_compat")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
 GEMINI_BLOCKED = {"SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY", "OTHER"}
@@ -124,7 +125,7 @@ def openai_compat_request(cfg, system, history, message, schema):
             "max_tokens": OAI_MAX_TOKENS}
     if cfg.get("reasoning_effort"):
         body["reasoning_effort"] = cfg["reasoning_effort"]
-    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + cfg["key"]}
+    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + cfg["key"], "User-Agent": USER_AGENT}
     return cfg["base_url"] + "/chat/completions", headers, json.dumps(body).encode("utf-8")
 
 
