@@ -112,9 +112,13 @@ void main() {
       context: const [],
     );
     expect(queue.items.map((i) => i.collection).toSet(), {
-      'conversations/u1/messages',
+      'users/u1/conversations/u1/messages',
     });
     expect(queue.items.every((i) => i.priority == 3), isTrue);
+    expect(
+      queue.items.every((i) => i.timestampFields.single == 'timestamp'),
+      isTrue,
+    );
     expect(queue.items.map((i) => i.docId), ['id0', 'id1']);
   });
 

@@ -8,9 +8,16 @@ import 'package:koi_flutter_lib/storage/hive_manager.dart';
 import 'package:koi_flutter_lib/storage/repositories/user_repository.dart';
 import 'package:koi_mobile/core/key_value_store.dart';
 import 'package:koi_mobile/core/onboarding_store.dart';
+import 'package:koi_mobile/core/sync_queue.dart';
 import 'package:koi_mobile/onboarding/onboarding_service.dart';
 
 import '../support/fake_auth.dart';
+
+class _Queue implements SyncQueue {
+  final items = <SyncItem>[];
+  @override
+  void enqueue(SyncItem item) => items.add(item);
+}
 
 const _data = OnboardingData(
   avatar: 'male_human',
@@ -58,6 +65,42 @@ void main() {
       ).complete(_data);
       expect(flag.isComplete, isTrue);
       expect(users.saved, isEmpty);
+    });
+
+    test('queues the Firestore profile merge (onboarding.ts fields)', () async {
+      final queue = _Queue();
+      await OnboardingService(
+        flag: OnboardingStore(MemoryKeyValueStore()),
+        users: RecordingUserWriter(),
+        currentUid: () => 'u1',
+        profileQueue: queue,
+      ).complete(_data);
+      final item = queue.items.single;
+      expect(item.collection, 'users');
+      expect(item.docId, 'u1');
+      expect(item.priority, 4);
+      expect(item.op, SyncOp.merge);
+      expect(item.data, {
+        'profile': {
+          'avatar': 'male_human',
+          'companion': 'aisha',
+          'language': 'ur',
+          'notificationTime': '21:15',
+        },
+        'onboarding_complete': true,
+        'settings': {'notifications_enabled': false},
+      });
+    });
+
+    test('no uid or no Firebase → no profile merge', () async {
+      final queue = _Queue();
+      await OnboardingService(
+        flag: OnboardingStore(MemoryKeyValueStore()),
+        users: RecordingUserWriter(),
+        currentUid: () => null,
+        profileQueue: queue,
+      ).complete(_data);
+      expect(queue.items, isEmpty);
     });
   });
 

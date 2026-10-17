@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
+import '../core/auth/auth_service.dart';
 import '../onboarding/step_layout.dart';
 import '../info/about_screen.dart';
 import '../info/how_it_works_screen.dart';
@@ -90,6 +91,14 @@ class LandingScreen extends ConsumerStatefulWidget {
   static const String startingLabel = 'Getting ready…';
   static const String errorText =
       '⚠ Connection failed. Check your network and try again.';
+
+  /// Mobile-only (approved 2026-10-17): Firebase anonymous sign-in is turned
+  /// off in the console.
+  static const String anonymousDisabledText =
+      'Sign-in is turned off for this app right now. Please try again later.';
+
+  static String errorTextFor(Object? error) =>
+      error is AnonymousSignInDisabledError ? anonymousDisabledText : errorText;
   static const String retryLabel = 'Try Again';
   static const String retryingLabel = 'Connecting…';
 
@@ -295,7 +304,9 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            LandingScreen.errorText,
+                            LandingScreen.errorTextFor(
+                              ref.read(authServiceProvider).error,
+                            ),
                             style: bodyText(
                               14,
                               weight: FontWeight.w600,

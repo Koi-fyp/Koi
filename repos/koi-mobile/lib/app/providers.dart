@@ -35,8 +35,13 @@ final onboardingServiceProvider = Provider<OnboardingService>(
     flag: ref.read(onboardingStoreProvider),
     users: ref.read(onboardingUserWriterProvider),
     currentUid: () => ref.read(authServiceProvider).user?.uid,
+    profileQueue: ref.read(profileSyncQueueProvider),
   ),
 );
+
+/// Queue for users/{uid} profile merges. Null (no Firestore writes) unless
+/// main.dart has a Firebase config.
+final profileSyncQueueProvider = Provider<SyncQueue?>((ref) => null);
 
 // ── Chat (Prompt 6) ─────────────────────────────────────────────────────────
 
@@ -87,13 +92,15 @@ final messageCipherProvider = Provider<MessageCipher>(
   (ref) => KoiMessageCipher(),
 );
 
+/// Without Firebase (debug builds without the config): every Firestore call
+/// fails, so anonymous users generate and cache a salt locally and queue the
+/// create-once; linked users are blocked. main.dart overrides this with the
+/// Firestore-backed resolver when Firebase is configured.
 final cryptoContextResolverProvider = Provider<CryptoContextResolver>(
   (ref) => CryptoContextResolver(
-    // TODO(firebase): read users/{uid}.public_crypto_metadata.salt from
-    // Firestore. Until then the fetch fails; anonymous users then generate
-    // and cache a salt locally (crypto.ts fallback), linked users are blocked.
-    fetchSalt: (uid) async =>
-        throw StateError('Firestore is not connected yet'),
+    fetchSalt: (uid) async => throw StateError('Firestore is not connected'),
+    createSaltOnce: (uid, candidate) async =>
+        throw StateError('Firestore is not connected'),
     isOnline: () => ref.read(onlineStatusProvider).check(),
     syncQueue: ref.read(syncQueueProvider),
   ),

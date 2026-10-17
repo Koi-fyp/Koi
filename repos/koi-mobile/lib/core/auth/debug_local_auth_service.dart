@@ -5,12 +5,12 @@ import 'package:flutter/foundation.dart';
 import '../key_value_store.dart';
 import 'auth_service.dart';
 
-/// ⚠ TEMPORARY, DEBUG-ONLY stand-in for the real AuthService. ⚠
+/// ⚠ DEBUG-ONLY stand-in for FirebaseAuthService. ⚠
 ///
-/// It talks to no server and creates no Firebase user. It only lets the app
-/// flow (splash → landing → onboarding → shell) be exercised before Q1 is
-/// answered and google-services.json exists. See the TODO in
-/// auth_service.dart. Delete this file when the real implementation lands.
+/// It talks to no server and creates no Firebase user. main.dart uses it
+/// only in debug builds that were started WITHOUT the private Firebase
+/// config (firebase.local.json), so teammates without it can still run the
+/// app flow (splash → landing → onboarding → shell).
 ///
 /// "Session persistence" is a fake uid in a plain local Hive box, standing in
 /// for Firebase's own persisted session so a restart keeps you signed in.

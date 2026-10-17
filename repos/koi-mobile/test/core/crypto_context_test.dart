@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/core/crypto_context.dart';
+import 'package:koi_mobile/core/koi_cryptography.dart';
 import 'package:koi_mobile/core/sync_queue.dart';
 
 const _uid = 'user-123';
@@ -20,11 +22,22 @@ class _RecordingQueue implements SyncQueue {
 }
 
 /// Test harness with scripted connectivity and Firestore results.
+///
+/// The create-once fake behaves like UserDocumentStore.createSaltOnce:
+/// returns [remoteSalt] when Firestore "has" one, otherwise stores and
+/// returns the candidate.
 class _Harness {
-  _Harness({this.online = true, this.fetchResult, this.fetchThrows = false}) {
+  _Harness({
+    this.online = true,
+    this.fetchResult,
+    this.fetchThrows = false,
+    this.remoteSalt,
+    this.createThrows = false,
+  }) {
     resolver = CryptoContextResolver(
       storage: storage,
       syncQueue: queue,
+      saltCache: SaltCache(storage: storage, onReplaced: () => keyClears++),
       isOnline: () async {
         onlineChecks++;
         return online;
@@ -34,14 +47,23 @@ class _Harness {
         if (fetchThrows) throw Exception('firestore unavailable');
         return fetchResult;
       },
+      createSaltOnce: (uid, candidate) async {
+        creates.add((uid, candidate));
+        if (createThrows) throw Exception('permission-denied');
+        return remoteSalt ??= candidate;
+      },
     );
   }
 
   bool online;
   String? fetchResult;
   bool fetchThrows;
+  String? remoteSalt;
+  bool createThrows;
   int onlineChecks = 0;
+  int keyClears = 0;
   final fetches = <String>[];
+  final creates = <(String, String)>[];
   final queue = _RecordingQueue();
   final storage = const FlutterSecureStorage();
   late final CryptoContextResolver resolver;
@@ -116,16 +138,26 @@ void main() {
     });
 
     test('anonymous ignores connectivity and still tries Firestore', () async {
-      final h = _Harness(online: false, fetchResult: _remoteSalt);
+      final h = _Harness(online: false, remoteSalt: _remoteSalt);
       final ctx = await h.resolver.getActiveCryptoContext(_uid, _anon);
       expect(ctx.saltB64, _remoteSalt);
-      expect(h.fetches, [_uid]);
+      expect(h.creates.single.$1, _uid);
       expect(h.onlineChecks, 0);
+    });
+
+    test('anonymous + salt exists in Firestore → use it, cache, no queue',
+        () async {
+      final h = _Harness(remoteSalt: _remoteSalt);
+      final ctx = await h.resolver.getActiveCryptoContext(_uid, _anon);
+      expect(ctx.saltB64, _remoteSalt);
+      expect(await h.storage.read(key: _cacheKey), _remoteSalt);
+      expect(h.queue.items, isEmpty);
+      expect(h.fetches, isEmpty); // the read is inside the transaction
     });
 
     test('anonymous secret is created once in secure storage and reused',
         () async {
-      final h = _Harness(fetchResult: _remoteSalt);
+      final h = _Harness(remoteSalt: _remoteSalt);
       final first = await h.resolver.getActiveCryptoContext(_uid, _anon);
       final stored = await h.storage.read(key: _anonKey);
       expect(stored, first.secret);
@@ -134,14 +166,16 @@ void main() {
       expect(second.secret, first.secret);
     });
 
-    test('anonymous + fetch fails → generate salt, cache, queue write',
+    test('anonymous + create-once fails → generate, cache, queue create-once',
         () async {
-      final h = _Harness(fetchThrows: true);
+      final h = _Harness(createThrows: true);
       final ctx = await h.resolver.getActiveCryptoContext(_uid, _anon);
       expect(base64Decode(ctx.saltB64), hasLength(16));
+      expect(h.creates.single.$2, ctx.saltB64);
       expect(await h.storage.read(key: _cacheKey), ctx.saltB64);
 
       final item = h.queue.items.single;
+      expect(item.op, SyncOp.saltCreateOnce);
       expect(item.collection, 'users');
       expect(item.docId, _uid);
       expect(item.priority, 4);
@@ -150,21 +184,121 @@ void main() {
       });
     });
 
-    test('anonymous + no salt on record → generate, cache, queue', () async {
-      final h = _Harness(fetchResult: null);
+    test('anonymous + no salt in Firestore → ours stored, cached, no queue',
+        () async {
+      final h = _Harness();
       final ctx = await h.resolver.getActiveCryptoContext(_uid, _anon);
+      expect(h.remoteSalt, ctx.saltB64); // create-once stored ours
       expect(await h.storage.read(key: _cacheKey), ctx.saltB64);
-      expect(h.queue.items, hasLength(1));
+      expect(h.queue.items, isEmpty);
     });
 
     test('anonymous second call uses the cache (no new salt, no new write)',
         () async {
-      final h = _Harness(fetchResult: null);
+      final h = _Harness(createThrows: true);
       final first = await h.resolver.getActiveCryptoContext(_uid, _anon);
       final second = await h.resolver.getActiveCryptoContext(_uid, _anon);
       expect(second.saltB64, first.saltB64);
       expect(h.queue.items, hasLength(1));
-      expect(h.fetches, hasLength(1));
+      expect(h.creates, hasLength(1));
+    });
+
+    test('linked users never create a salt', () async {
+      final h = _Harness(fetchResult: null);
+      await expectLater(h.resolver.getActiveCryptoContext(_uid, _linked),
+          throwsA(_blocked(SaltBlockedReason.fetchFailed)));
+      expect(h.creates, isEmpty);
+    });
+  });
+
+  group('ensureSaltStored (after sign-in, online)', () {
+    test('no cache + Firestore has a salt → cached, no queue', () async {
+      final h = _Harness(remoteSalt: _remoteSalt);
+      await h.resolver.ensureSaltStored(_uid, _anon);
+      expect(await h.storage.read(key: _cacheKey), _remoteSalt);
+      expect(h.queue.items, isEmpty);
+      expect(h.keyClears, 0);
+    });
+
+    test('no cache + Firestore has none → ours stored and cached', () async {
+      final h = _Harness();
+      await h.resolver.ensureSaltStored(_uid, _anon);
+      final cached = await h.storage.read(key: _cacheKey);
+      expect(cached, isNotNull);
+      expect(h.remoteSalt, cached);
+      expect(h.queue.items, isEmpty);
+    });
+
+    test('cache matches Firestore → nothing changes', () async {
+      FlutterSecureStorage.setMockInitialValues({_cacheKey: _remoteSalt});
+      final h = _Harness(remoteSalt: _remoteSalt);
+      await h.resolver.ensureSaltStored(_uid, _anon);
+      expect(h.creates.single.$2, _remoteSalt);
+      expect(await h.storage.read(key: _cacheKey), _remoteSalt);
+      expect(h.keyClears, 0);
+    });
+
+    test('remote differs from local → Firestore wins, keys cleared, '
+        'Firestore not overwritten', () async {
+      FlutterSecureStorage.setMockInitialValues({_cacheKey: 'local-salt'});
+      final h = _Harness(remoteSalt: _remoteSalt);
+      await h.resolver.ensureSaltStored(_uid, _anon);
+      expect(h.creates.single.$2, 'local-salt'); // offered ours
+      expect(h.remoteSalt, _remoteSalt); // never overwritten
+      expect(await h.storage.read(key: _cacheKey), _remoteSalt);
+      expect(h.keyClears, 1);
+      final ctx = await h.resolver.getActiveCryptoContext(_uid, _anon);
+      expect(ctx.saltB64, _remoteSalt);
+    });
+
+    test('Firestore fails with a cached salt → cache kept, no throw, '
+        'no extra queue item', () async {
+      FlutterSecureStorage.setMockInitialValues({_cacheKey: 'local-salt'});
+      final h = _Harness(createThrows: true);
+      await h.resolver.ensureSaltStored(_uid, _anon);
+      expect(await h.storage.read(key: _cacheKey), 'local-salt');
+      expect(h.queue.items, isEmpty);
+      expect(h.keyClears, 0);
+    });
+
+    test('Firestore fails without a cache → generated, cached, queued',
+        () async {
+      final h = _Harness(createThrows: true);
+      await h.resolver.ensureSaltStored(_uid, _anon);
+      final cached = await h.storage.read(key: _cacheKey);
+      expect(h.queue.items.single.op, SyncOp.saltCreateOnce);
+      expect(saltFromUserData(h.queue.items.single.data), cached);
+    });
+
+    test('linked: does nothing', () async {
+      final h = _Harness();
+      await h.resolver.ensureSaltStored(_uid, _linked);
+      expect(h.creates, isEmpty);
+      expect(await h.storage.read(key: _cacheKey), isNull);
+    });
+  });
+
+  group('SaltCache.adopt', () {
+    test('first salt: cached, keys not cleared', () async {
+      var clears = 0;
+      final c = SaltCache(onReplaced: () => clears++);
+      expect(await c.adopt(_uid, 'a'), isFalse);
+      expect(await c.read(_uid), 'a');
+      expect(clears, 0);
+    });
+
+    test('default onReplaced clears the real session key cache', () async {
+      FlutterSecureStorage.setMockInitialValues({_cacheKey: 'old'});
+      CachingPbkdf2.clear();
+      // Put one derived key into CachingPbkdf2's static cache.
+      await CachingPbkdf2(
+        Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: 1, bits: 256),
+      ).deriveKey(secretKey: SecretKey([1, 2, 3]), nonce: [4, 5, 6]);
+      expect(CachingPbkdf2.cachedCount, 1);
+
+      expect(await SaltCache().adopt(_uid, 'new'), isTrue);
+      expect(CachingPbkdf2.cachedCount, 0);
+      expect(await const FlutterSecureStorage().read(key: _cacheKey), 'new');
     });
   });
 

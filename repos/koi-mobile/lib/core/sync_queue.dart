@@ -1,9 +1,26 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 import 'key_value_store.dart';
+
+/// How the remote writer applies a [SyncItem].
+enum SyncOp {
+  /// sync.ts: `setDoc(doc(firestore, collection, docId), data, {merge: true})`.
+  merge('merge'),
+
+  /// Mobile-only: write users/{uid}.public_crypto_metadata.salt only if
+  /// Firestore has none (a transaction). Never overwrites.
+  saltCreateOnce('saltCreateOnce');
+
+  const SyncOp(this.wire);
+  final String wire;
+
+  static SyncOp fromWire(Object? v) =>
+      values.firstWhere((o) => o.wire == v, orElse: () => merge);
+}
 
 /// Mirrors `SyncItem` in repos/koi-backend/nextjs_app/src/lib/firestore/sync.ts.
 @immutable
@@ -14,7 +31,20 @@ class SyncItem {
     required this.data,
     required this.priority,
     this.timestamp,
+    this.op = SyncOp.merge,
+    this.timestampFields = const [],
   });
+
+  /// The queued create-once salt write (priority 4, like sync.ts tasks/user).
+  factory SyncItem.saltCreateOnce(String uid, String saltB64) => SyncItem(
+    collection: 'users',
+    docId: uid,
+    data: {
+      'public_crypto_metadata': {'salt': saltB64},
+    },
+    priority: 4,
+    op: SyncOp.saltCreateOnce,
+  );
 
   final String collection;
   final String docId;
@@ -28,12 +58,29 @@ class SyncItem {
   /// sync.ts sets this to Date.now() (ms) when an item is queued locally.
   final int? timestamp;
 
+  final SyncOp op;
+
+  /// Top-level keys of [data] that hold ISO-8601 strings while queued and
+  /// are written to Firestore as a `Timestamp` (web writes a JS Date).
+  final List<String> timestampFields;
+
+  /// The uid this item belongs to: the segment after `users/` in its path,
+  /// or null when the path is not under users/{uid}.
+  String? get ownerUid {
+    final segments = [...collection.split('/'), docId];
+    return segments.length >= 2 && segments.first == 'users'
+        ? segments[1]
+        : null;
+  }
+
   SyncItem withTimestamp(int ms) => SyncItem(
     collection: collection,
     docId: docId,
     data: data,
     priority: priority,
     timestamp: ms,
+    op: op,
+    timestampFields: timestampFields,
   );
 
   Map<String, Object?> toJson() => {
@@ -42,6 +89,8 @@ class SyncItem {
     'data': data,
     'priority': priority,
     if (timestamp != null) 'timestamp': timestamp,
+    if (op != SyncOp.merge) 'op': op.wire,
+    if (timestampFields.isNotEmpty) 'timestampFields': timestampFields,
   };
 
   factory SyncItem.fromJson(Map<String, Object?> j) => SyncItem(
@@ -50,6 +99,10 @@ class SyncItem {
     data: (j['data']! as Map).cast<String, Object?>(),
     priority: j['priority']! as int,
     timestamp: j['timestamp'] as int?,
+    op: SyncOp.fromWire(j['op']),
+    timestampFields: [
+      for (final f in (j['timestampFields'] as List?) ?? const []) f as String,
+    ],
   );
 }
 
@@ -57,31 +110,41 @@ abstract interface class SyncQueue {
   void enqueue(SyncItem item);
 }
 
-/// The remote side of the queue: `setDoc(doc(firestore, collection, docId),
-/// data, { merge: true })`.
+/// The remote side of the queue (core/firestore/firestore_remote_writer.dart).
 abstract interface class RemoteWriter {
-  /// sync.ts isFirestoreReady().
+  /// sync.ts isFirestoreReady(). Mobile: Firebase is set up and signed in.
   bool get isReady;
 
-  Future<void> setMerge(
-    String collection,
-    String docId,
-    Map<String, Object?> data,
-  );
+  /// True when [item] is under the signed-in user's users/{uid}. Items for
+  /// another uid (e.g. an old debug uid) are kept queued, never written.
+  bool owns(SyncItem item);
+
+  /// Applies [item] as its [SyncItem.op] says. Throws on any failure.
+  Future<void> write(SyncItem item);
 }
 
-/// TODO(firebase): replace with a cloud_firestore writer once
-/// google-services.json exists. Until then nothing is ever ready, so every
-/// item stays queued locally, exactly like web when Firestore is not
-/// initialised.
+/// Used when there is no Firebase config (debug builds only). Nothing is
+/// ever ready, so every item stays queued locally, exactly like web when
+/// Firestore is not initialised.
 class FirestoreNotConnectedWriter implements RemoteWriter {
   const FirestoreNotConnectedWriter();
   @override
   bool get isReady => false;
   @override
-  Future<void> setMerge(String c, String d, Map<String, Object?> data) =>
-      Future.error(StateError('Firestore is not connected yet'));
+  bool owns(SyncItem item) => false;
+  @override
+  Future<void> write(SyncItem item) =>
+      Future.error(StateError('Firestore is not connected'));
 }
+
+/// A short, non-sensitive reason for a failed write: the Firebase error code
+/// (e.g. `permission-denied` while the rules are not deployed), `timeout`,
+/// or the error type. Never the item data.
+String syncFailureReason(Object e) => switch (e) {
+  FirebaseException(:final code) => code,
+  TimeoutException() => 'timeout',
+  _ => e.runtimeType.toString(),
+};
 
 /// Mirrors sync.ts `syncQueue`: write straight through when Firestore is
 /// ready, otherwise (or on failure) persist locally with a timestamp; flush in
@@ -141,12 +204,14 @@ class PersistentSyncQueue implements SyncQueue {
   });
 
   /// Completes when the item is either written or persisted locally (web's
-  /// enqueue is fire-and-forget; tests await this).
+  /// enqueue is fire-and-forget; tests await this). A failed write (e.g.
+  /// permission-denied while the rules are not deployed) is kept queued.
   Future<void> enqueueAsync(SyncItem item) async {
-    if (!remote.isReady) return _append(item);
+    if (!remote.isReady || !remote.owns(item)) return _append(item);
     try {
-      await remote.setMerge(item.collection, item.docId, item.data);
-    } catch (_) {
+      await remote.write(item);
+    } catch (e) {
+      debugPrint('[KOI] sync: write kept queued (${syncFailureReason(e)})');
       await _append(item);
     }
   }
@@ -154,17 +219,35 @@ class PersistentSyncQueue implements SyncQueue {
   @override
   void enqueue(SyncItem item) => unawaited(enqueueAsync(item));
 
-  /// sync.ts flushQueue().
+  /// sync.ts flushQueue(). Priority order (1 first); items of equal priority
+  /// keep their queue order, so a later profile merge still lands after an
+  /// earlier one. Items for another uid are skipped and kept.
   Future<void> flush() => _locked(() async {
     if (!remote.isReady) return;
-    final items = _load()..sort((a, b) => a.priority.compareTo(b.priority));
+    final loaded = _load();
+    final order = List<int>.generate(loaded.length, (i) => i)
+      ..sort((a, b) {
+        final byPriority = loaded[a].priority.compareTo(loaded[b].priority);
+        return byPriority != 0 ? byPriority : a.compareTo(b);
+      });
     final remaining = <SyncItem>[];
-    for (final item in items) {
+    var failed = 0;
+    String? reason;
+    for (final item in [for (final i in order) loaded[i]]) {
+      if (!remote.owns(item)) {
+        remaining.add(item);
+        continue;
+      }
       try {
-        await remote.setMerge(item.collection, item.docId, item.data);
-      } catch (_) {
+        await remote.write(item);
+      } catch (e) {
+        failed++;
+        reason ??= syncFailureReason(e);
         remaining.add(item);
       }
+    }
+    if (failed > 0) {
+      debugPrint('[KOI] sync: $failed write(s) kept queued ($reason)');
     }
     await _save(remaining);
   });

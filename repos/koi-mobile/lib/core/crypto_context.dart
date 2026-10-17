@@ -15,12 +15,19 @@
 // - navigator.onLine → connectivity_plus (any interface other than `none`).
 // - Dependencies (Firestore read, connectivity, sync queue, sleep) are
 //   injected so every branch can be unit-tested.
+// - Salt create-once (decided 2026-10-17, mobile is the only salt writer):
+//   a new anonymous salt is stored with a Firestore transaction that never
+//   overwrites an existing one (web: a blind setDoc merge). If Firestore
+//   already has a salt, it wins and replaces the local cache. Offline or
+//   rejected, the create-once is queued (SyncOp.saltCreateOnce).
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:koi_flutter_lib/services/crypto_service.dart';
 
+import 'koi_cryptography.dart';
 import 'sync_queue.dart';
 
 /// crypto.ts SALT_CACHE_PREFIX.
@@ -108,22 +115,67 @@ OnlineCheck connectivityOnlineCheck([Connectivity? connectivity]) =>
     () async => isOnlineFrom(
         await (connectivity ?? Connectivity()).checkConnectivity());
 
+/// Stores [candidate] as users/{uid}.public_crypto_metadata.salt only if
+/// Firestore has none, and returns the salt Firestore holds afterwards.
+/// Throws when Firestore can't be reached or rejects the write.
+/// (UserDocumentStore.createSaltOnce.)
+typedef SaltCreateOnce = Future<String> Function(String uid, String candidate);
+
+/// The local salt cache: flutter_secure_storage key `koi_salt_cache_{uid}`
+/// (crypto.ts SALT_CACHE_PREFIX).
+class SaltCache {
+  SaltCache({FlutterSecureStorage? storage, void Function()? onReplaced})
+      : _storage = storage ?? const FlutterSecureStorage(),
+        _onReplaced = onReplaced ?? CachingPbkdf2.clear;
+
+  final FlutterSecureStorage _storage;
+
+  /// Called when a cached salt is replaced: forgets the session keys
+  /// derived with the old one, so the next encrypt re-derives.
+  final void Function() _onReplaced;
+
+  /// The cached salt, or null (JS `if (cached)`: '' counts as none).
+  Future<String?> read(String uid) async {
+    final v = await _storage.read(key: '$saltCachePrefix$uid');
+    return v == null || v.isEmpty ? null : v;
+  }
+
+  Future<void> write(String uid, String saltB64) =>
+      _storage.write(key: '$saltCachePrefix$uid', value: saltB64);
+
+  /// Makes Firestore's salt the cached one. Returns true when it replaced a
+  /// different cached salt (and cleared the session keys). Old messages
+  /// still decrypt: every v1 payload carries its own salt.
+  Future<bool> adopt(String uid, String remoteSalt) async {
+    final current = await read(uid);
+    if (current == remoteSalt) return false;
+    await write(uid, remoteSalt);
+    if (current == null) return false;
+    debugPrint('[KOI] crypto: local salt replaced by the stored one');
+    _onReplaced();
+    return true;
+  }
+}
+
 class CryptoContextResolver {
   CryptoContextResolver({
     required this.fetchSalt,
+    required this.createSaltOnce,
     required this.isOnline,
     required this.syncQueue,
     FlutterSecureStorage? storage,
     KoiCryptoService? crypto,
-  })  : _storage = storage ?? const FlutterSecureStorage(),
+    SaltCache? saltCache,
+  })  : saltCache = saltCache ?? SaltCache(storage: storage),
         _crypto = crypto ??
             KoiCryptoService(
                 secureStorage: storage ?? const FlutterSecureStorage());
 
   final SaltFetcher fetchSalt;
+  final SaltCreateOnce createSaltOnce;
   final OnlineCheck isOnline;
   final SyncQueue syncQueue;
-  final FlutterSecureStorage _storage;
+  final SaltCache saltCache;
   final KoiCryptoService _crypto;
 
   /// crypto.ts getActiveCryptoContext(uid, authState). Makes exactly ONE
@@ -146,16 +198,20 @@ class CryptoContextResolver {
         ? linkedSecret!
         : await _crypto.getOrCreateAnonymousSecret();
 
-    final cacheKey = '$saltCachePrefix$uid';
-
     // 1. Local cache first.
-    final cached = await _storage.read(key: cacheKey);
-    if (cached != null && cached.isNotEmpty) {
+    final cached = await saltCache.read(uid);
+    if (cached != null) {
       return CryptoContext(secret: secret, saltB64: cached);
     }
 
-    // 2. No cache: branch point for the locked block decision.
-    if (authState.isLinked && !await isOnline()) {
+    if (!authState.isLinked) {
+      // 2a. ANONYMOUS, no cache: salt create-once.
+      return CryptoContext(
+          secret: secret, saltB64: await _createOrQueueSalt(uid));
+    }
+
+    // 2b. LINKED, no cache: branch point for the locked block decision.
+    if (!await isOnline()) {
       throw const SaltFetchBlockedError(SaltBlockedReason.noNetwork);
     }
 
@@ -163,37 +219,57 @@ class CryptoContextResolver {
     try {
       existingSalt = await fetchSalt(uid);
     } catch (_) {
-      if (authState.isLinked) {
-        throw const SaltFetchBlockedError(SaltBlockedReason.fetchFailed);
-      }
-      // Anonymous: same fallback as web.
-      existingSalt = null;
+      throw const SaltFetchBlockedError(SaltBlockedReason.fetchFailed);
     }
 
-    if (existingSalt != null && existingSalt.isNotEmpty) {
-      await _storage.write(key: cacheKey, value: existingSalt);
-      return CryptoContext(secret: secret, saltB64: existingSalt);
-    }
-
-    if (authState.isLinked) {
+    if (existingSalt == null || existingSalt.isEmpty) {
       // Firestore answered but has no salt for a linked user: inconsistent
       // account state. Block rather than guess.
       throw const SaltFetchBlockedError(SaltBlockedReason.fetchFailed);
     }
+    await saltCache.write(uid, existingSalt);
+    return CryptoContext(secret: secret, saltB64: existingSalt);
+  }
 
-    // 3. Brand-new ANONYMOUS user only: generate, cache locally, queue the
-    // Firestore write (users/{uid}.public_crypto_metadata.salt, priority 4).
-    final saltB64 = _crypto.generateSalt();
-    await _storage.write(key: cacheKey, value: saltB64);
-    syncQueue.enqueue(SyncItem(
-      collection: 'users',
-      docId: uid,
-      data: {
-        'public_crypto_metadata': {'salt': saltB64},
-      },
-      priority: 4,
-    ));
-    return CryptoContext(secret: secret, saltB64: saltB64);
+  /// Anonymous user without a cached salt: offer a new salt to Firestore
+  /// (create-once) and cache whichever salt Firestore holds. If Firestore
+  /// can't be reached or rejects the write, cache the new salt and queue the
+  /// create-once for later. Returns the cached salt.
+  Future<String> _createOrQueueSalt(String uid) async {
+    final candidate = _crypto.generateSalt();
+    String saltB64;
+    try {
+      saltB64 = await createSaltOnce(uid, candidate);
+    } catch (e) {
+      debugPrint('[KOI] crypto: salt create-once queued '
+          '(${syncFailureReason(e)})');
+      saltB64 = candidate;
+      syncQueue.enqueue(SyncItem.saltCreateOnce(uid, candidate));
+    }
+    await saltCache.write(uid, saltB64);
+    return saltB64;
+  }
+
+  /// Run right after sign-in when online, so the salt is in Firestore before
+  /// the first message. Anonymous only (a linked user's salt is never
+  /// created on this device). Never throws.
+  ///
+  /// - No cached salt: same as the first encrypt ([_createOrQueueSalt]).
+  /// - Cached salt: offered to Firestore; if Firestore already has a
+  ///   different one, that one replaces the cache ([SaltCache.adopt]).
+  Future<void> ensureSaltStored(String uid, AuthState authState) async {
+    if (authState.isLinked) return;
+    try {
+      final cached = await saltCache.read(uid);
+      if (cached == null) {
+        await _createOrQueueSalt(uid);
+        return;
+      }
+      await saltCache.adopt(uid, await createSaltOnce(uid, cached));
+    } catch (e) {
+      // A queued create-once (from when the salt was generated) retries it.
+      debugPrint('[KOI] crypto: salt check skipped (${syncFailureReason(e)})');
+    }
   }
 
   /// crypto.ts resolveSaltWithRetry(). Up to [maxAttempts] (locked: 5)

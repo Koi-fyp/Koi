@@ -461,9 +461,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       const _AppInfo(),
 
-      // Developer-only: web Settings has no sign-out. Kept so the temporary
-      // debug sign-in can be reset on device. TODO(Q1, firebase): remove or
-      // replace once the real AuthService exists.
+      // Debug builds only: web Settings has no sign-out. Signs out of
+      // Firebase (or the debug stand-in). For an anonymous Firebase user this
+      // abandons the account: the next sign-in creates a new uid.
       if (kDebugMode)
         Padding(
           padding: const EdgeInsets.only(bottom: 24),

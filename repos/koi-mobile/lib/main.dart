@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +14,13 @@ import 'app/root_router.dart';
 import 'chat/message_record.dart';
 import 'core/auth/auth_service.dart';
 import 'core/auth/debug_local_auth_service.dart';
+import 'core/auth/firebase_auth_service.dart';
+import 'core/crypto_context.dart';
+import 'core/firebase/firebase_config.dart';
+import 'core/firebase/firebase_session.dart';
+import 'core/firestore/firestore_remote_writer.dart';
+import 'core/firestore/profile_sync.dart';
+import 'core/firestore/user_document_store.dart';
 import 'core/koi_cryptography.dart';
 import 'core/key_value_store.dart';
 import 'core/onboarding_store.dart';
@@ -26,12 +35,6 @@ import 'theme/koi_theme.dart';
 const bool showDesignGallery =
     kDebugMode && bool.fromEnvironment('KOI_DESIGN_GALLERY');
 
-// TODO(firebase): Firebase is NOT initialised yet. No google-services.json has
-// been provided. Once android/app/google-services.json exists (or
-// `flutterfire configure` has been run against the KOI Firebase project), add
-// the Google Services Gradle plugin and call
-// `await Firebase.initializeApp()` here, after
-// `WidgetsFlutterBinding.ensureInitialized()`. Do not hand-write any config.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Fonts are bundled in assets/google_fonts/; never download them at runtime
@@ -40,6 +43,24 @@ Future<void> main() async {
   LicenseRegistry.addLicense(_bundledFontLicenses);
   // Native PBKDF2 + per-session key cache for KoiCryptoService (Prompt 6).
   KoiCryptography.install();
+
+  // Firebase options come from the gitignored firebase.local.json
+  // (--dart-define-from-file); see core/firebase/firebase_config.dart.
+  // Without them, debug builds run on the debug stand-in; release builds
+  // stop here with a clear message.
+  final firebaseOptions = FirebaseConfig.fromEnvironment();
+  if (firebaseOptions == null && !kDebugMode) {
+    throw StateError(FirebaseConfig.missingMessage);
+  }
+  FirebaseFirestore? firestore;
+  if (firebaseOptions != null) {
+    await Firebase.initializeApp(options: firebaseOptions);
+    firestore = FirebaseFirestore.instance
+      // No Firestore offline cache: the sync queue is the only retry path,
+      // and every call times out (firestoreTimeout) instead of waiting for
+      // the server forever.
+      ..settings = const Settings(persistenceEnabled: false);
+  }
 
   await Hive.initFlutter();
   // flutter_lib's encrypted boxes (users, messages, ...). Like web's
@@ -55,49 +76,82 @@ Future<void> main() async {
   );
   final messages = await HiveMessageStore.open();
   final online = ConnectivityOnlineStatus();
+
+  final auth = firestore != null
+      ? FirebaseAuthService(FirebaseAuthBackend())
+      : _createDebugAuthService();
+  // Forget derived keys when the user signs out.
+  auth.addListener(() {
+    if (auth.user == null) CachingPbkdf2.clear();
+  });
+
+  final saltCache = SaltCache();
+  final userDocs = firestore == null ? null : UserDocumentStore(firestore);
   final syncQueue = PersistentSyncQueue(
     store: await HiveKeyValueStore.open(PersistentSyncQueue.boxName),
-    // TODO(firebase): a cloud_firestore writer once Firebase is connected.
-    remote: const FirestoreNotConnectedWriter(),
+    remote: firestore == null || userDocs == null
+        ? const FirestoreNotConnectedWriter()
+        : FirestoreRemoteWriter(
+            firestore: firestore,
+            currentUid: () => auth.user?.uid,
+            userDocs: userDocs,
+            saltCache: saltCache,
+          ),
     onlineChanges: online.changes,
   );
+  SettingsPrefsStore settings = HiveUserSettingsStore(UserRepository());
+
+  final firebaseOverrides = <Override>[];
+  if (userDocs != null) {
+    final resolver = CryptoContextResolver(
+      fetchSalt: userDocs.fetchSalt,
+      createSaltOnce: userDocs.createSaltOnce,
+      isOnline: online.check,
+      syncQueue: syncQueue,
+      saltCache: saltCache,
+    );
+    final session = FirebaseSessionSync(
+      ensureUserDocument: userDocs.ensureCreated,
+      ensureSalt: (uid) =>
+          resolver.ensureSaltStored(uid, AuthState(isLinked: auth.isLinked)),
+      isOnline: online.check,
+      flush: syncQueue.flush,
+      onlineChanges: online.changes,
+    );
+    auth.addListener(() => session.userChanged(auth.user?.uid));
+    settings = SyncingSettingsPrefsStore(settings, syncQueue);
+    firebaseOverrides.addAll([
+      cryptoContextResolverProvider.overrideWithValue(resolver),
+      profileSyncQueueProvider.overrideWithValue(syncQueue),
+    ]);
+  }
 
   runApp(
     ProviderScope(
       overrides: [
-        authServiceProvider.overrideWith((ref) => _createAuthService()),
+        authServiceProvider.overrideWith((ref) => auth),
         onboardingStoreProvider.overrideWith((ref) => onboarding),
         onboardingUserWriterProvider.overrideWithValue(
           HiveUserOnboardingWriter(UserRepository()),
         ),
-        settingsPrefsStoreProvider.overrideWithValue(
-          HiveUserSettingsStore(UserRepository()),
-        ),
+        settingsPrefsStoreProvider.overrideWithValue(settings),
         onlineStatusProvider.overrideWithValue(online),
         messageStoreProvider.overrideWithValue(messages),
         syncQueueProvider.overrideWithValue(syncQueue),
+        ...firebaseOverrides,
       ],
       child: const KoiApp(),
     ),
   );
 }
 
-// TODO(Q1, firebase): replace with the real AuthService (see
-// core/auth/auth_service.dart). Release builds have no auth until then.
-AuthService _createAuthService() {
-  if (!kDebugMode) {
-    throw UnsupportedError(
-      'No AuthService in release builds yet: waiting on Q1 + Firebase config.',
-    );
-  }
+/// Debug builds without the Firebase config only (main() stops release
+/// builds without it first).
+AuthService _createDebugAuthService() {
   final service = DebugLocalAuthService(
     () => HiveKeyValueStore.open(DebugLocalAuthService.boxName),
   );
   service.restoreSession();
-  // Forget derived keys when the user signs out.
-  service.addListener(() {
-    if (service.user == null) CachingPbkdf2.clear();
-  });
   return service;
 }
 

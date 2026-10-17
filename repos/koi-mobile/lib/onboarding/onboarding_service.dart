@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:koi_flutter_lib/models/hive_user_model.dart';
 import 'package:koi_flutter_lib/storage/repositories/user_repository.dart';
 
+import '../core/firestore/profile_sync.dart';
 import '../core/onboarding_store.dart';
+import '../core/sync_queue.dart';
 
 /// Avatar ids, from `AvatarId` in
 /// repos/koi-backend/nextjs_app/src/app/onboarding/page.tsx.
@@ -119,11 +121,16 @@ class OnboardingService {
     required this.flag,
     required this.users,
     required this.currentUid,
+    this.profileQueue,
   });
 
   final OnboardingStore flag;
   final OnboardingUserWriter users;
   final String? Function() currentUid;
+
+  /// Where the Firestore profile merge is queued. Null when Firebase is not
+  /// configured (debug builds without firebase.local.json).
+  final SyncQueue? profileQueue;
 
   Future<void> complete(OnboardingData data) async {
     // "Always persist locally first — cloud writes are best-effort"
@@ -138,10 +145,8 @@ class OnboardingService {
       debugPrint('KOI: local user write failed: $e');
     }
 
-    // TODO(firebase): best-effort Firestore merge, same as onboarding.ts:
-    //   users/{uid} ← { profile: { avatar, companion, language,
-    //   notificationTime }, onboarding_complete: true }  (SetOptions merge)
-    // Firebase is not connected yet. When it is, wrap the write in
-    // try/catch so a failure never blocks finishing onboarding.
+    // Best-effort Firestore merge, same as onboarding.ts. Queued, so offline
+    // or rejected writes retry later and never block finishing onboarding.
+    if (uid != null) profileQueue?.enqueue(onboardingProfileItem(uid, data));
   }
 }

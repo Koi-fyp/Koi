@@ -26,9 +26,9 @@ class SendMessageResult {
 /// form — Q4). Injectable for tests.
 typedef CryptoContextGetter = Future<CryptoContext> Function(String uid);
 
-/// Returns the Firebase ID token. TODO(Q1, firebase): the debug stand-in has
-/// no Firebase user, so this throws, which takes the fallback path exactly
-/// like web when `getAuth().currentUser` is null.
+/// Returns the Firebase ID token. Throws when there is no Firebase user (the
+/// debug stand-in never has one), which takes the fallback path exactly like
+/// web when `getAuth().currentUser` is null.
 typedef IdTokenGetter = Future<String> Function();
 
 /// Encrypts/decrypts with flutter_lib's KoiCryptoService (format
@@ -93,30 +93,29 @@ class ConversationService {
       "I'm having a little trouble connecting right now. I'm still here with you.";
   static const Emotion fallbackEmotion = Emotion.calm;
 
-  /// Firestore path. Q5 (decided 2026-10-13): mobile uses
-  /// conversationId = uid, because firestore.rules only allow
-  /// conversations/{userId}/messages/... where the id equals the user's uid.
-  /// NOTE: web's useChat uses a random uuidv4() conversationId, which those
-  /// rules would reject.
-  static String messagesCollection(String conversationId) =>
-      'conversations/$conversationId/messages';
+  /// Firestore path users/{uid}/conversations/{conversationId}/messages
+  /// (team decision 2026-10-17; firestore.rules.proposed has this match
+  /// commented out, so these writes are rejected until it is enabled).
+  /// Q5: conversationId = uid. NOTE: web writes
+  /// conversations/{conversationId}/messages with a random uuidv4() id.
+  static String messagesCollection(String uid, String conversationId) =>
+      'users/$uid/conversations/$conversationId/messages';
 
   /// saveMessage(): encrypt → local store → enqueue the ENCRYPTED record only
-  /// (priority 3).
+  /// (priority 3). `timestamp` is written as a Firestore Timestamp.
   Future<void> saveMessage(MessageRecord record, String uid) async {
     final ctx = await cryptoContext(uid);
     final encrypted = record.copyWith(
       content: await cipher.encrypt(record.content, ctx.secret, ctx.saltB64),
     );
     await store.put(encrypted);
-    // TODO(firebase): when the cloud_firestore writer exists, convert the
-    // ISO timestamp to a Firestore Timestamp like web's Date field.
     syncQueue.enqueue(
       SyncItem(
-        collection: messagesCollection(record.conversationId),
+        collection: messagesCollection(uid, record.conversationId),
         docId: record.id,
         data: encrypted.toJson(),
         priority: 3,
+        timestampFields: const ['timestamp'],
       ),
     );
   }

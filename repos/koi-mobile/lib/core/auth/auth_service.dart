@@ -1,11 +1,24 @@
 import 'package:flutter/foundation.dart';
 
-// TODO(Q1, firebase): the real AuthService is NOT implemented yet. It depends
-// on (a) playbook Q1 — mirror the web's POST /api/auth/anonymous +
-// signInWithCustomToken (needs the deployed web base URL), or use
-// flutter_lib's native signInAnonymously() — and (b) google-services.json so
-// Firebase can be initialised. Until both are settled, debug builds use the
-// TEMPORARY DebugLocalAuthService (debug_local_auth_service.dart).
+// Implementations:
+// - FirebaseAuthService (firebase_auth_service.dart): Firebase anonymous
+//   sign-in (Q1 decided 2026-10-17: native signInAnonymously, not web's
+//   POST /api/auth/anonymous + signInWithCustomToken). Used whenever the
+//   Firebase config is present (core/firebase/firebase_config.dart).
+// - DebugLocalAuthService: debug builds WITHOUT the private Firebase config,
+//   so teammates can still run the app.
+
+/// Firebase rejected anonymous sign-in because it is turned off for the
+/// project (Firebase console → Authentication → Sign-in method → Anonymous).
+class AnonymousSignInDisabledError implements Exception {
+  const AnonymousSignInDisabledError(this.code);
+
+  /// The Firebase error code, e.g. `operation-not-allowed`.
+  final String code;
+
+  @override
+  String toString() => 'Anonymous sign-in is disabled ($code)';
+}
 
 /// The signed-in user, reduced to the fields AuthContext.tsx reads from the
 /// Firebase `User` (repos/koi-backend/nextjs_app/src/contexts/AuthContext.tsx).

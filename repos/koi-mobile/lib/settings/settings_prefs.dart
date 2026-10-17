@@ -109,9 +109,8 @@ class HiveUserSettingsStore implements SettingsPrefsStore {
         nameKey: prefs.name,
       });
     await _repo.saveUser(user);
-    // TODO(firebase): onboarding.ts merges profile fields into users/{uid}
-    // in Firestore. Web Settings writes nothing, so mobile doesn't either
-    // until the team decides Settings changes should sync.
+    // Firestore: SyncingSettingsPrefsStore (core/firestore/profile_sync.dart)
+    // wraps this store when Firebase is configured.
   }
 }
 
