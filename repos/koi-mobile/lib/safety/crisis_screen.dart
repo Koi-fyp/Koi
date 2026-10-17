@@ -20,9 +20,10 @@ Future<void> _launch(Uri uri) async {
 /// It cannot be dismissed: back is blocked and there is nothing to tap
 /// outside. The only ways out are the three path buttons.
 ///
-/// Mobile-only additions (not on Web): the risk category line, the
-/// "General support message" label for fallback content, and the call
-/// button. The crisis score is never shown.
+/// Mobile-only additions (not on Web): the "General support message" label
+/// for fallback content and the call button. Like Web, neither the risk
+/// category nor the crisis score is shown; the category is only used to
+/// decide when to open and which content is allowed (CrisisView).
 class CrisisScreen extends StatefulWidget {
   const CrisisScreen({
     super.key,
@@ -53,7 +54,6 @@ class CrisisScreen extends StatefulWidget {
 
   // Mobile-only text (user decision 2026-10-17).
   static const String fallbackLabel = 'General support message';
-  static String categoryText(RiskCategory c) => 'Risk category: ${c.wire}';
   static String callLabel(String number) => 'Call $number';
 
   /// `tel:` URI with only the dialable characters of [number].
@@ -82,14 +82,8 @@ class _CrisisScreenState extends State<CrisisScreen> {
     widget.onChoose(path);
   }
 
-  TextStyle _text(
-    double size, {
-    FontWeight? weight,
-    Color? color,
-    double? height,
-  }) => KoiText.body(
+  TextStyle _text(double size, {Color? color, double? height}) => KoiText.body(
     fontSize: size,
-    fontWeight: weight,
     color: color ?? CrisisScreen.textColor,
     height: height,
   );
@@ -160,15 +154,6 @@ class _CrisisScreenState extends State<CrisisScreen> {
           ),
         ),
         Text(CrisisScreen.description, style: _text(16, height: 1.55)),
-        if (view.category case final category?)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              CrisisScreen.categoryText(category),
-              key: const Key('crisis-category'),
-              style: _text(14, weight: FontWeight.w700),
-            ),
-          ),
         const SizedBox(height: 16),
         _contentBox(view),
         const SizedBox(height: 12),

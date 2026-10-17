@@ -68,6 +68,12 @@ void main() {
     await settle(tester);
   }
 
+  /// Every visible text on screen, joined.
+  String shownText(WidgetTester tester) => tester
+      .widgetList<Text>(find.byType(Text))
+      .map((t) => t.data ?? t.textSpan?.toPlainText() ?? '')
+      .join('\n');
+
   String cue(WidgetTester tester) =>
       tester.widget<Text>(find.byKey(const Key('breathing-cue'))).data!;
   String cycle(WidgetTester tester) =>
@@ -93,7 +99,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('shows category and content, never the score, max 3 items', (
+    testWidgets('shows content, never the category or score, max 3 items', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -101,7 +107,7 @@ void main() {
       await settle(tester);
       expect(find.text(CrisisScreen.title), findsOneWidget);
       expect(find.text(CrisisScreen.description), findsOneWidget);
-      expect(find.text('Risk category: HIGH'), findsOneWidget);
+      expect(c.crisis!.category, RiskCategory.high); // internal only
       for (var i = 0; i < 3; i++) {
         expect(find.byKey(Key('crisis-item-$i')), findsOneWidget);
       }
@@ -110,11 +116,11 @@ void main() {
       // Grounded: no source label; standard confidence: no limited note.
       expect(find.text(CrisisScreen.fallbackLabel), findsNothing);
       expect(find.text(CrisisScreen.limitedInformation), findsNothing);
-      // No score in any form, no "verified" wording.
-      final texts = tester
-          .widgetList<Text>(find.byType(Text))
-          .map((t) => t.data ?? t.textSpan?.toPlainText() ?? '')
-          .join('\n');
+      // No category, no score in any form, no "verified" wording.
+      final texts = shownText(tester);
+      expect(texts, isNot(contains('HIGH')));
+      expect(texts.toLowerCase(), isNot(contains('category')));
+      expect(texts.toLowerCase(), isNot(contains('risk')));
       expect(texts, isNot(contains('0.75')));
       expect(texts, isNot(contains('75')));
       expect(texts.toLowerCase(), isNot(contains('score')));
@@ -127,7 +133,9 @@ void main() {
       final c = await pumpHost(tester);
       c.handleRisk(SimulatedSafetyEvents.critical());
       await settle(tester);
-      expect(find.text('Risk category: CRITICAL'), findsOneWidget);
+      expect(c.crisis!.category, RiskCategory.critical); // internal only
+      expect(shownText(tester), isNot(contains('CRITICAL')));
+      expect(shownText(tester).toLowerCase(), isNot(contains('category')));
       expect(find.text(CrisisScreen.fallbackLabel), findsOneWidget);
       expect(find.text(CrisisScreen.limitedInformation), findsOneWidget);
       expect(find.textContaining('0.95'), findsNothing);
