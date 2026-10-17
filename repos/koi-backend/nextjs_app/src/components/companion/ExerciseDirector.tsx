@@ -94,8 +94,9 @@ function PacedBreathingPanel({ runId, pattern, command, onComplete, onStop }: {
   </section>;
 }
 
-export default function ExerciseDirector({ events, disabled = false, interruptKey = 0, onRequest, onQueueClientEvent }: {
+export default function ExerciseDirector({ events, disabled = false, interruptKey = 0, onRequest, onQueueClientEvent, consumeEvent }: {
   events: SessionEvent[];
+  consumeEvent?: (id: number) => boolean;
   disabled?: boolean;
   interruptKey?: number;
   onRequest: (event: ExerciseClientEvent) => void;
@@ -108,6 +109,17 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
   const [notice, setNotice] = useState('');
   const queueRef = useRef(onQueueClientEvent);
   queueRef.current = onQueueClientEvent;
+  const mountGeneration = useRef(0);
+  useEffect(() => {
+    const generation = ++mountGeneration.current;
+    return () => { queueMicrotask(() => {
+      if (mountGeneration.current === generation && activeBreathing.current) {
+        activeBreathing.current = false;
+        queueRef.current('playback_stopped');
+      }
+    }); };
+  }, []);
+
 
   useEffect(() => {
     if (!interruptKey) return;
@@ -126,6 +138,7 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
       if (item.id <= lastEventId.current) continue;
       lastEventId.current = item.id;
       if (item.event.event !== 'ui_action') continue;
+      if (consumeEvent && !consumeEvent(item.id)) continue;
       const { name, args } = item.event.data;
       if (name === 'start_breathing') {
         const pattern = parseBreathingPattern(args);

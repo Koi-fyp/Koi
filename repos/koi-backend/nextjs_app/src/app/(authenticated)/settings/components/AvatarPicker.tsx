@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { CompanionId } from '@/lib/avatar/avatarPreference';
 
 const companions = [
   { id: 'aisha', name: 'Aisha', trait: 'Warm & caring', color: '#FF4A60', icon: '👩' },
@@ -11,9 +12,9 @@ const companions = [
 interface AvatarPickerProps {
   isOpen: boolean;
   onClose: () => void;
-  currentAvatar?: string;
+  currentAvatar?: CompanionId;
   currentName?: string;
-  onSave: (avatar: string, name: string) => void;
+  onSave: (avatar: CompanionId, name: string) => Promise<boolean>;
 }
 
 interface CompanionCardProps {
@@ -67,18 +68,21 @@ function CompanionCard({ companion, isSelected, onSelect }: CompanionCardProps) 
 export default function AvatarPicker({ 
   isOpen, 
   onClose, 
-  currentAvatar = 'koi', 
+  currentAvatar = 'raza',
   currentName = '',
   onSave 
 }: AvatarPickerProps) {
   const [selected, setSelected] = useState(currentAvatar);
   const [name, setName] = useState(currentName);
+  const [saving, setSaving] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
-    onSave(selected, name);
-    onClose();
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try { if (await onSave(selected, name)) onClose(); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -180,14 +184,15 @@ export default function AvatarPicker({
               color: '#000'
             }}
           >
-            Your Name (Optional)
+            Companion nickname (optional, stored locally)
           </label>
           <input
             id="companion-name"
+            maxLength={64}
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="What should I call you?"
+            placeholder="Leave blank for the companion name"
             style={{
               width: '100%',
               padding: '0.875rem 1.25rem',
@@ -221,10 +226,11 @@ export default function AvatarPicker({
           </button>
           <button
             onClick={handleSave}
+            disabled={saving}
             className="neo-btn-primary"
             style={{ flex: 1 }}
           >
-            Save Changes ✓
+            {saving ? 'Saving...' : 'Save Changes ✓'}
           </button>
         </div>
       </div>

@@ -15,6 +15,8 @@ export interface SessionSnapshot {
 /** Single conversation source of truth; no auth, storage, media, timers or backend selection. */
 export class ConversationSession {
   private snapshot: SessionSnapshot;
+  private ready = true;
+  private consumedUiEvents = new Set<number>();
   private abort: AbortController | null = null;
   private version = 0; private active = true; private disposed = false;
   private eventSequence = 0;
@@ -27,11 +29,36 @@ export class ConversationSession {
       exerciseState: null, clientEventPending: null, policyPathPending: null, serverEvents: [] };
   }
   getSnapshot = () => this.snapshot;
+  setReady(ready: boolean) { this.ready = ready; }
+  consumeUiEvent = (id: number) => {
+    if (this.consumedUiEvents.has(id)) return false;
+    this.consumedUiEvents.add(id); this.patch({}); return true;
+  };
+  isHandoffResolved = (handoff: { to: 'crisis'; reason: string }) => this.resolvedHandoffKeys.has(JSON.stringify([handoff.to, handoff.reason]));
+  recoveryState() {
+    return { snapshot: this.snapshot, consumedUiEvents: [...this.consumedUiEvents], resolvedHandoffKeys: [...this.resolvedHandoffKeys], eventSequence: this.eventSequence };
+  }
+  restore(state: ReturnType<ConversationSession['recoveryState']>) {
+    const interrupted = state.snapshot.pending;
+    this.consumedUiEvents = new Set(state.consumedUiEvents);
+    this.resolvedHandoffKeys = new Set(state.resolvedHandoffKeys);
+    this.eventSequence = state.eventSequence;
+    this.patch({ ...state.snapshot, pending: false, conversationState: 'idle', subtitle: '',
+      messages: state.snapshot.messages.filter(m => !(m.sender === 'ai' && m.status === 'pending')).map(m => ({ ...m, timestamp: new Date(m.timestamp), status: m.status === 'pending' ? 'cancelled' : m.status })),
+      error: interrupted ? 'The previous reply was interrupted. Your message is preserved; it was not resent.' : state.snapshot.error });
+  }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private patch(update: Partial<SessionSnapshot>) { this.snapshot = { ...this.snapshot, ...update }; if (this.active) this.listeners.forEach((listener) => listener()); }
   activate() { if (!this.disposed) this.active = true; }
   deactivate() { this.cancel(); this.active = false; }
-  replaceMessages(messages: SessionMessage[]) { if (!this.disposed && this.active && !this.snapshot.pending) this.patch({ messages }); }
+  replaceMessages(messages: SessionMessage[]) {
+    if (!this.disposed && this.active && !this.snapshot.pending) {
+      const latestCompanion = [...messages].reverse().find(m => m.sender === 'ai' && m.status === 'completed')?.companion_state;
+      const fullyRecovered = messages.length > 0 && messages.every(m => m.status === 'completed');
+      this.patch({ messages, ...(latestCompanion ? { companion: latestCompanion } : {}),
+        error: fullyRecovered && this.snapshot.error?.startsWith('The previous reply was interrupted.') ? null : this.snapshot.error });
+    }
+  }
   inputFocused(focused: boolean) { if (!this.disposed && this.active && !this.snapshot.pending) this.patch({ conversationState: focused ? 'listening' : 'idle' }); }
   queueClientEvent(event: ExerciseClientEvent) {
     if (!this.disposed && this.active && !this.snapshot.clientEventPending) this.patch({ clientEventPending: event });
@@ -57,7 +84,7 @@ export class ConversationSession {
     return this.send(messages[event], event);
   }
   async send(text: string, explicitClientEvent?: ExerciseClientEvent): Promise<void> {
-    if (this.disposed || !this.active || !text.trim()) return;
+    if (this.disposed || !this.active || !this.ready || !text.trim()) return;
     this.cancel();
     const clientEvent = explicitClientEvent ?? this.snapshot.clientEventPending ?? undefined;
     const policyPath = this.snapshot.policyPathPending ?? undefined;
@@ -140,5 +167,5 @@ export class ConversationSession {
     this.version++; this.abort?.abort(); this.abort = null;
     if (this.snapshot.pending) this.patch({ pending: false, subtitle: '', conversationState: 'idle', companion: { emotion: 'neutral', intensity: 0 }, messages: this.snapshot.messages.filter((message) => !(message.sender === 'ai' && message.status === 'pending')).map((message) => message.status === 'pending' ? { ...message, status: 'cancelled' as const } : message) });
   }
-  dispose() { if (this.disposed) return; this.deactivate(); this.disposed = true; this.listeners.clear(); }
+  dispose() { if (this.disposed) return; this.deactivate(); this.snapshot = { ...this.snapshot, messages: [], subtitle: '', serverEvents: [], exerciseState: null, clientEventPending: null, policyPathPending: null, error: null, companion: { emotion: 'neutral', intensity: 0 } }; this.consumedUiEvents.clear(); this.resolvedHandoffKeys.clear(); this.disposed = true; this.listeners.clear(); }
 }

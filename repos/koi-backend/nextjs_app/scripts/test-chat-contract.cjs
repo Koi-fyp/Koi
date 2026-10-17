@@ -3,12 +3,13 @@ const fs = require('node:fs');
 const ts = require('typescript');
 const path = require('node:path');
 const Module = require('node:module');
+const http = require('node:http');
 const resolve = Module._resolveFilename;
 Module._resolveFilename = function (name, parent, ...rest) { return resolve.call(this, name.startsWith('@/') ? path.resolve(__dirname, '../src', name.slice(2)) : name, parent, ...rest); };
 require('fake-indexeddb/auto');
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, filename);
 const { createChatRequest, parseChatResponse, ChatError } = require('../src/lib/conversation/chatContract.ts');
-const { postJsonChat, chatEndpoint } = require('../src/lib/conversation/jsonChatTransport.ts');
+const { postJsonChat, chatEndpoint, chatHealthEndpoint, probeChatHealth, DEFAULT_CHAT_TIMEOUT_MS, MAX_MODAL_REDIRECTS } = require('../src/lib/conversation/jsonChatTransport.ts');
 const { SseParser } = require('../src/lib/conversation/sseParser.ts');
 const { ConversationSession } = require('../src/lib/conversation/ConversationSession.ts');
 const result = (emotion = 'joy', intensity = 0.7, reply = 'Scripted test response') => ({ reply, companion_state: { emotion, intensity }, latency_ms: 10 });
@@ -57,7 +58,7 @@ const checks = [];
     onEvent: (event) => events.push(event),
     fetchImpl: async (url, options) => { sent = { url, body: JSON.parse(options.body), accept: options.headers.get('Accept'), redirect: options.redirect }; return makeStreamResponse(wireV1(), { chunkSize: 2 }); } });
   assert.equal(response.reply, 'Final reconciled answer'); assert.equal(response.latency_ms, 12.5); assert.equal(response.companion_state.intensity, 0.7);
-  assert.equal(sent.url, 'http://localhost:8000/api/v1/chat'); assert.equal(sent.accept, 'text/event-stream'); assert.equal(sent.redirect, 'error'); assert.deepEqual(Object.keys(sent.body), ['message', 'session_history']);
+  assert.equal(sent.url, 'http://localhost:8000/api/v1/chat'); assert.equal(sent.accept, 'text/event-stream'); assert.equal(sent.redirect, 'manual'); assert.deepEqual(Object.keys(sent.body), ['message', 'session_history']);
   assert.deepEqual(events.map(({ event }) => event), v1Frames.map(([event]) => event));
   assert.equal(events.find(({ event }) => event === 'state').data.exercise_state, 'opaque-signed-fixture');
   assert.equal(events.find(({ event }) => event === 'done').data.full_text, 'Final reconciled answer');
@@ -142,7 +143,56 @@ const checks = [];
   checks.push('chunked UTF-8 SSE, comments, CRLF, multiline data, unterminated final event and v1 event schema');
   for (const status of [401, 422, 502]) await assert.rejects(postJsonChat(createChatRequest('fixture', []), { apiBase: 'http://localhost:8000', headers: new Headers(), signal: new AbortController().signal, fetchImpl: async () => new Response('PRIVATE BODY MUST NOT SURFACE', { status }) }), (error) => error.status === status && !error.message.includes('PRIVATE'));
   await assert.rejects(postJsonChat(createChatRequest('fixture', []), { apiBase: 'http://localhost:8000', headers: new Headers(), signal: new AbortController().signal, fetchImpl: async () => new Response('private-json', { headers: { 'content-type': 'application/json' } }) }), (error) => error.code === 'invalid-response');
-  await assert.rejects(postJsonChat(createChatRequest('fixture', []), { apiBase: 'http://localhost:8000', headers: new Headers(), signal: new AbortController().signal, fetchImpl: async () => new Response(null, { status: 303, headers: { location: 'https://untrusted.invalid/poll' } }) }), (error) => error.code === 'redirect');
+  const modalRequests = [];
+  const modalServer = http.createServer(async (request, response) => {
+    const chunks = []; for await (const chunk of request) chunks.push(chunk);
+    modalRequests.push({ method: request.method, url: request.url, authorization: request.headers.authorization, body: Buffer.concat(chunks).toString() });
+    if (request.method === 'POST') { response.writeHead(303, { location: '/api/v1/chat?modal_request=synthetic-fixture' }); response.end(); return; }
+    response.writeHead(200, { 'content-type': 'text/event-stream' }); response.end(wireV1());
+  });
+  await new Promise((resolve) => modalServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const port = modalServer.address().port;
+    const modalSignal = new AbortController().signal;
+    const modalResponse = await postJsonChat(createChatRequest('one non-sensitive fixture', []), { apiBase: `http://127.0.0.1:${port}`, headers: new Headers({ Authorization: 'Bearer test-only' }), signal: modalSignal });
+    assert.equal(modalResponse.reply, 'Final reconciled answer');
+    assert.equal(modalRequests.length, 2, 'the 303 result fetch must not replay the POST');
+    assert.equal(modalRequests[0].method, 'POST'); assert.equal(modalRequests[0].body.includes('one non-sensitive fixture'), true);
+    assert.equal(modalRequests[1].method, 'GET'); assert.equal(modalRequests[1].url, '/api/v1/chat?modal_request=synthetic-fixture');
+    assert.equal(modalRequests[1].body, ''); assert.equal(modalRequests[0].authorization, 'Bearer test-only');
+    assert.equal(modalRequests[1].authorization, 'Bearer test-only', 'authorization is retained only for the exact trusted origin/path');
+  } finally { await new Promise((resolve) => modalServer.close(resolve)); }
+  checks.push('same-origin Modal 303 fixture: one authenticated POST followed by GET of the original request result, with no POST replay');
+
+  let untrustedCalls = 0;
+  await assert.rejects(postJsonChat(createChatRequest('fixture', []), { apiBase: 'http://localhost:8000', headers: new Headers({ Authorization: 'Bearer test-only' }), signal: new AbortController().signal,
+    fetchImpl: async (_url, options) => { untrustedCalls++; assert.equal(options.method, 'POST'); return new Response(null, { status: 303, headers: { location: 'https://untrusted.invalid/poll' } }); } }), (error) => error.code === 'redirect');
+  assert.equal(untrustedCalls, 1, 'do not send the bearer token or any follow-up request to an untrusted origin');
+  await assert.rejects(postJsonChat(createChatRequest('fixture', []), { apiBase: 'http://localhost:8000', headers: new Headers(), signal: new AbortController().signal,
+    fetchImpl: async () => ({ status: 0, type: 'opaqueredirect', headers: new Headers(), url: '' }) }), (error) => error.code === 'redirect' && /cannot safely inspect/i.test(error.message));
+  let redirectCount = 0;
+  await assert.rejects(postJsonChat(createChatRequest('fixture', []), { apiBase: 'http://localhost:8000', headers: new Headers(), signal: new AbortController().signal,
+    fetchImpl: async () => { redirectCount++; return new Response(null, { status: 303, headers: { location: '/api/v1/chat?modal_request=pending' } }); } }), (error) => error.code === 'redirect' && /redirect limit/i.test(error.message));
+  assert.equal(redirectCount, MAX_MODAL_REDIRECTS + 1, 'follow no more than twenty Modal result redirects');
+  assert.equal(MAX_MODAL_REDIRECTS, 20); assert.equal(DEFAULT_CHAT_TIMEOUT_MS, 600_000);
+  assert.equal(chatHealthEndpoint('https://api.example.test'), 'https://api.example.test/health');
+  let healthRequest;
+  assert.equal(await probeChatHealth('https://api.example.test', { fetchImpl: async (url, options) => {
+    healthRequest = { url, method: options.method, auth: new Headers(options.headers).get('Authorization'), redirect: options.redirect };
+    return new Response(JSON.stringify({ status: 'ok' }), { headers: { 'content-type': 'application/json' } });
+  } }), true);
+  assert.deepEqual(healthRequest, { url: 'https://api.example.test/health', method: 'GET', auth: null, redirect: 'manual' });
+  const pollAbort = new AbortController(); let pollMethod; let pollSignal;
+  const pendingPoll = postJsonChat(createChatRequest('fixture', []), { apiBase: 'http://localhost:8000', headers: new Headers(), signal: pollAbort.signal,
+    fetchImpl: async (_url, options) => {
+      if (options.method === 'POST') return new Response(null, { status: 303, headers: { location: '/api/v1/chat?modal_request=abort-fixture' } });
+      pollMethod = options.method; pollSignal = options.signal;
+      return new Promise((_resolve, reject) => options.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true }));
+    } });
+  setTimeout(() => pollAbort.abort(), 10);
+  await assert.rejects(pendingPoll, (error) => error.name === 'AbortError');
+  assert.equal(pollMethod, 'GET'); assert.equal(pollSignal.aborted, true);
+  checks.push('untrusted/opaque redirects fail closed; redirect loop bound, GET /health probe, timeout and abort during result polling are covered');
   await assert.rejects(postJsonChat(createChatRequest('fixture', []), { apiBase: 'http://localhost:8000', headers: new Headers(), signal: new AbortController().signal, fetchImpl: async () => makeStreamResponse('event: delta\ndata: {bad-json}\n\n') }), (error) => error.code === 'invalid-response');
   await assert.rejects(postJsonChat(createChatRequest('fixture', []), { apiBase: 'http://localhost:8000', headers: new Headers(), signal: new AbortController().signal, fetchImpl: async () => makeStreamResponse('event: latency\ndata: {"latency_ms":1}\n\n') }), (error) => error.code === 'invalid-response');
   const streamAbort = new AbortController(); let streamCancelled = false;
@@ -249,14 +299,20 @@ const checks = [];
   checks.push('actual mock adapter refuses production/arbitrary text; actual real service rejects unauthenticated calls without fake tokens');
   const companionPage = fs.readFileSync(path.resolve(__dirname, '../src/app/(authenticated)/companion-scene/page.tsx'), 'utf8');
   const companionScene = fs.readFileSync(path.resolve(__dirname, '../src/components/companion/CompanionScene.tsx'), 'utf8');
+  const avatarPreference = fs.readFileSync(path.resolve(__dirname, '../src/lib/avatar/avatarPreference.ts'), 'utf8');
+  const chatPage = fs.readFileSync(path.resolve(__dirname, '../src/app/(authenticated)/chat/page.tsx'), 'utf8');
   const serviceSource = fs.readFileSync(path.resolve(__dirname, '../src/lib/conversation/conversationService.ts'), 'utf8');
   const sessionSource = fs.readFileSync(path.resolve(__dirname, '../src/lib/conversation/ConversationSession.ts'), 'utf8');
   const useSessionSource = fs.readFileSync(path.resolve(__dirname, '../src/hooks/useConversationSession.ts'), 'utf8');
   assert.match(companionPage, /emotion=\{chat\.currentEmotion\} emotionIntensity=\{chat\.currentIntensity\} conversationState=\{chat\.conversationState\}/);
   assert.match(companionScene, /VRMAvatarRenderer modelUrl=\{modelUrl\} emotion=\{emotion\} emotionIntensity=\{emotionIntensity\} conversationState=\{conversationState\}/);
   assert.match(companionPage, /subtitleUpdating=\{chat\.pending\}/);
-  assert.match(companionPage, /setLegacyFox\(profile\?\.avatar === 'fox'\)/);
-  assert.match(companionPage, /Your saved KOI fox avatar choice is preserved/);
+  assert.match(companionPage, /useAvatarPreference\(user\?\.uid, authLoading\)/);
+  assert.match(companionPage, /Your saved Koi fox choice is preserved/);
+  assert.match(chatPage, /useAvatarPreference\(user\?\.uid, authLoading\)/);
+  assert.match(avatarPreference, /imageSrc: '\/Female\.png', modelUrl: '\/models\/koi-female\.vrm'/);
+  assert.match(avatarPreference, /imageSrc: '\/Male\.png', modelUrl: '\/models\/koi-male\.vrm'/);
+  assert.match(avatarPreference, /imageSrc: null, modelUrl: null/);
   assert.match(fs.readFileSync(path.resolve(__dirname, '../src/lib/db.ts'), 'utf8'), /avatar\?: 'female_human' \| 'male_human' \| 'fox'/);
   assert.match(sessionSource, /abort\.signal\.aborted \|\| version !== this\.version \|\| !this\.active \|\| this\.disposed/);
   assert.match(serviceSource, /const response = await postJsonChat[\s\S]*?await saveMessage\(\{ id: options\.assistantMessageId/);

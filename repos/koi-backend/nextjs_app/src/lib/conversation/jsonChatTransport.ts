@@ -1,7 +1,10 @@
 import { ChatError, createChatRequest, parseChatResponse, parseRiskResult, type ChatRequest, type ChatResponse, type ChatServerEvent, type CompanionState, type RiskResult } from './chatContract';
 import { SseParser } from './sseParser';
 
-export const DEFAULT_CHAT_TIMEOUT_MS = 160_000;
+// The published Modal chat Function has a 600 second execution timeout. Modal
+// may return several request-result 303s while that single invocation runs.
+export const DEFAULT_CHAT_TIMEOUT_MS = 600_000;
+export const MAX_MODAL_REDIRECTS = 20;
 export function chatEndpoint(apiBase: string | undefined): string {
   if (!apiBase?.trim()) throw new ChatError('configuration', 'The self-hosted chat API is not configured.');
   let url: URL;
@@ -12,6 +15,94 @@ export function chatEndpoint(apiBase: string | undefined): string {
     throw new ChatError('configuration', 'Set NEXT_PUBLIC_KOI_API_BASE to the API base URL, without /api/v1 or /api/v1/chat.');
   }
   return url.href.replace(/\/$/, '') + '/api/v1/chat';
+}
+
+export function chatHealthEndpoint(apiBase: string | undefined): string {
+  const endpoint = new URL(chatEndpoint(apiBase));
+  return new URL('/health', endpoint.origin).href;
+}
+
+/**
+ * Follow only Modal's documented request-result redirect: HTTP 303 to the
+ * same URL/path with a query identifying the original invocation. The POST
+ * is never repeated; 303 changes the follow-up to GET. Browser fetch exposes
+ * cross-origin manual redirects as opaque, in which case we fail closed.
+ */
+async function fetchWithModalResultRedirects(
+  url: string,
+  init: RequestInit,
+  fetchImpl: typeof fetch,
+): Promise<Response> {
+  const original = new URL(url);
+  let nextUrl = original;
+  let method = init.method ?? 'GET';
+  let body = init.body;
+  const headers = new Headers(init.headers);
+
+  for (let redirects = 0; ; redirects++) {
+    const response = await fetchImpl(nextUrl.href, { ...init, method, body, headers, redirect: 'manual' });
+
+    if (response.type === 'opaqueredirect' || response.status === 0) {
+      throw new ChatError('redirect', 'Modal returned a cross-origin redirect that this browser cannot safely inspect. A CORS-compatible same-origin API path is required.');
+    }
+
+    if (response.status !== 303) {
+      if (response.redirected) {
+        const finalUrl = new URL(response.url || nextUrl.href);
+        if (finalUrl.origin !== original.origin || finalUrl.pathname !== original.pathname) {
+          throw new ChatError('redirect', 'The chat service redirected outside its trusted endpoint.');
+        }
+      }
+      return response;
+    }
+
+    if (redirects >= MAX_MODAL_REDIRECTS) {
+      throw new ChatError('redirect', 'The chat service exceeded Modal’s redirect limit. Please try again later.');
+    }
+
+    const location = response.headers.get('location');
+    if (!location) throw new ChatError('redirect', 'The chat service returned an incomplete Modal redirect.');
+    const target = new URL(location, nextUrl);
+    if (target.protocol !== original.protocol || target.origin !== original.origin
+      || target.pathname !== original.pathname || target.username || target.password || target.hash) {
+      throw new ChatError('redirect', 'The chat service redirected outside its trusted endpoint.');
+    }
+
+    try { await response.body?.cancel(); } catch { /* A redirect body is not part of the response. */ }
+    nextUrl = target;
+    method = 'GET';
+    body = undefined;
+    headers.delete('Content-Type');
+  }
+}
+
+/** A best-effort GET /health probe; success does not guarantee the next chat is warm. */
+export async function probeChatHealth(apiBase: string | undefined, options: {
+  signal?: AbortSignal; timeoutMs?: number; fetchImpl?: typeof fetch;
+} = {}): Promise<boolean> {
+  const url = chatHealthEndpoint(apiBase);
+  const abort = new AbortController();
+  let timedOut = false;
+  const onAbort = () => abort.abort();
+  options.signal?.throwIfAborted();
+  options.signal?.addEventListener('abort', onAbort, { once: true });
+  const timer = setTimeout(() => { timedOut = true; abort.abort(); }, options.timeoutMs ?? DEFAULT_CHAT_TIMEOUT_MS);
+  try {
+    const response = await fetchWithModalResultRedirects(url, {
+      method: 'GET', headers: { Accept: 'application/json' }, signal: abort.signal,
+    }, options.fetchImpl ?? fetch);
+    if (!response.ok || !(response.headers.get('content-type') ?? '').toLowerCase().includes('application/json')) return false;
+    const body: unknown = await response.json();
+    return !!body && typeof body === 'object' && (body as { status?: unknown }).status === 'ok';
+  } catch (error) {
+    if (options.signal?.aborted) throw new DOMException('Health probe cancelled.', 'AbortError');
+    if (timedOut) throw new ChatError('timeout', 'The self-hosted companion health check took too long.');
+    if (error instanceof ChatError) throw error;
+    throw new ChatError('network', 'Unable to check the self-hosted companion.');
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener('abort', onAbort);
+  }
 }
 /** Transport only. Authentication is enforced by conversationService before calling this function. */
 export async function postJsonChat(request: ChatRequest, options: {
@@ -26,22 +117,24 @@ export async function postJsonChat(request: ChatRequest, options: {
   const timer = setTimeout(() => { timedOut = true; abort.abort(); }, options.timeoutMs ?? DEFAULT_CHAT_TIMEOUT_MS);
   try {
     const headers = new Headers(options.headers); headers.set('Content-Type', 'application/json'); headers.set('Accept', 'text/event-stream');
-    // Redirect/poll semantics are unverified. Do not forward the Firebase token implicitly.
-    const response = await (options.fetchImpl ?? fetch)(url, { method: 'POST', headers, signal: abort.signal, redirect: 'error',
+    // Authentication is scoped to the configured API origin; the helper only
+    // reuses it after validating a same-origin, same-path Modal result URL.
+    const response = await fetchWithModalResultRedirects(url, { method: 'POST', headers, signal: abort.signal,
       body: JSON.stringify(createChatRequest(request.message, request.session_history, {
         exercise_state: request.exercise_state,
         client_event: request.client_event,
         policy_event: request.policy_event,
         crisis_path: request.crisis_path,
-      })) });
+      })) }, options.fetchImpl ?? fetch);
     abort.signal.throwIfAborted();
-    if (response.status >= 300 && response.status < 400) throw new ChatError('redirect', 'The chat service redirected this request. Its safe follow-up protocol is not configured yet.', response.status);
+    if (response.status >= 300 && response.status < 400) throw new ChatError('redirect', 'The chat service returned an unsupported redirect.', response.status);
     if (!response.ok) {
       // Never surface/log an arbitrary backend body, which may contain sensitive generation output.
       throw new ChatError(response.status === 401 || response.status === 403 ? 'authentication' : 'http',
         response.status === 401 || response.status === 403 ? 'Your session needs authentication. Please sign in again.' : `The self-hosted companion is unavailable (${response.status}).`, response.status);
     }
-    if (response.redirected || (response.url && new URL(response.url).origin !== new URL(url).origin)) {
+    if (response.redirected && response.url
+      && (new URL(response.url).origin !== new URL(url).origin || new URL(response.url).pathname !== new URL(url).pathname)) {
       throw new ChatError('redirect', 'The chat service redirected this request. Its safe follow-up protocol is not configured yet.');
     }
     if (!(response.headers.get('content-type') ?? '').toLowerCase().includes('text/event-stream')) throw new ChatError('invalid-response', 'The companion did not return a chat event stream.');

@@ -14,6 +14,8 @@ export interface ConversationMessageRecord {
   /** Optional additive presentation metadata; legacy records require no rewrite/index migration. */
   companion_state?: import('./conversation/chatContract').CompanionState;
   synced: boolean;
+  ownerUid?: string;
+  replyTo?: string;
 }
 export interface UserRecord {
   id?: number;
@@ -59,7 +61,18 @@ export interface SyncQueueRecord {
   priority: number;
   createdAt: Date;
 }
+export interface ConversationRecord {
+  uid: string;
+  conversationId: string;
+  createdAt: Date;
+  lastActiveAt: Date;
+  status: 'active';
+  revision: number;
+  /** Entire session snapshot is CSE ciphertext; no plaintext transcript or safety state. */
+  encryptedState?: string;
+}
 export class KoiDatabase extends Dexie {
+  conversations!: Table<ConversationRecord, string>;
   users!: Table<UserRecord, number>;
   messages!: Table<MessageRecord, string>;
   moodEntries!: Table<MoodEntryRecord, string>;
@@ -74,6 +87,7 @@ export class KoiDatabase extends Dexie {
       jigsawProgress: 'uid',
       syncQueue: '++id, priority, createdAt',
     });
+    this.version(2).stores({ conversations: 'uid, conversationId, lastActiveAt' });
   }
 }
 export const db = new KoiDatabase();

@@ -6,6 +6,7 @@ type Language = 'en' | 'ur';
 
 interface Props {
   readonly onNext: (language: Language) => void;
+  readonly initialLanguage?: Language;
 }
 
 const LANGUAGES = [
@@ -13,8 +14,8 @@ const LANGUAGES = [
   { id: 'ur' as Language, label: 'Urdu',    native: 'اردو',    flag: '🇵🇰' },
 ];
 
-export default function LanguageStep({ onNext }: Readonly<Props>) {
-  const [selected, setSelected] = useState<Language>('en');
+export default function LanguageStep({ onNext, initialLanguage = 'en' }: Readonly<Props>) {
+  const [selected, setSelected] = useState<Language>(initialLanguage);
 
   return (
     <div

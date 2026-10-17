@@ -16,13 +16,14 @@ export default function ModeSelector() {
   return (
     <div className="relative group flex-shrink-0">
       <motion.button
+        aria-label={`Mode: ${selected}`}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         whileHover={{ x: 2, y: 2, boxShadow: '2px 2px 0 0 rgba(0,0,0,1)' }}
         whileTap={{ x: 5, y: 5, boxShadow: '0 0 0 0 rgba(0,0,0,0)' }}
-        className="flex items-center gap-2 px-3 py-1 border-[2px] border-black rounded-full hover:translate-x-0.5 hover:translate-y-0.5 transition-all font-bold text-sm"
+        className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 min-h-[44px] border-[2px] border-black rounded-full hover:translate-x-0.5 hover:translate-y-0.5 transition-all font-bold text-xs sm:text-sm"
       >
-        <span>Mode: {selected}</span>
+        <span><span className="hidden sm:inline">Mode: </span>{selected}</span>
         <svg
           width="14"
           height="14"

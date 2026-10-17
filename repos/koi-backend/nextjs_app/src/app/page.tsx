@@ -21,10 +21,10 @@ const BLOCKS = [
 ];
 
 const FEATURES = [
-  { icon: '🧠', title: 'Remembers You',    desc: 'Context-aware conversations that get better over time.' },
-  { icon: '⚡', title: 'Instant Response', desc: 'Powered by cutting-edge AI — no waiting, ever.' },
-  { icon: '🔒', title: 'Fully Private',    desc: 'Zero accounts, zero data storage. Your thoughts stay yours.' },
-  { icon: '🎯', title: 'Always Present',   desc: 'Available 24/7, in your pocket, whenever you need.' },
+  { icon: '🧠', title: 'Remembers You',    desc: 'Uses recent context and restores saved local history.' },
+  { icon: '⚡', title: 'Streaming Replies', desc: 'Replies stream when the service is available; connection can take time.' },
+  { icon: '🔒', title: 'Encrypted Storage',    desc: 'History is encrypted locally. Inference processes the text you send.' },
+  { icon: '🎯', title: 'Text Companion',   desc: 'Text conversation requires connectivity and service availability.' },
 ];
 
 const FAQS = [
@@ -34,11 +34,11 @@ const FAQS = [
   },
   {
     q: 'Do I need to create an account?',
-    a: 'Not at all. KOI works instantly with an anonymous session. No email, no password, no friction. Your conversations are stored privately on your device.',
+    a: 'KOI uses Firebase anonymous sign-in. No email is required. Saved history is encrypted on this device.',
   },
   {
     q: 'How is my data kept private?',
-    a: 'Your conversations are encrypted on your device using AES-256. We never sell your data, share it with advertisers, or store your real name. Your session ID is anonymous by design.',
+    a: 'Saved content uses AES-256-GCM client-side encryption. Inference receives readable prompts and recent context. This is not end-to-end encryption.',
   },
   {
     q: 'What languages does KOI support?',
@@ -46,15 +46,15 @@ const FAQS = [
   },
   {
     q: 'How does KOI detect how I am feeling?',
-    a: 'KOI uses a combination of natural language understanding and sentiment analysis to gently detect emotional tone in your messages. This helps KOI respond with more empathy and adjust its presence accordingly.',
+    a: 'The service supplies companion expression metadata. Avatar animations are not a diagnosis or a mental-health measurement.',
   },
   {
     q: 'Can I use KOI during a crisis?',
-    a: 'KOI includes crisis detection and will surface emergency helpline numbers if it senses you may be in distress. However, in an emergency always contact emergency services (15 / 1122) or Umang helpline at 0311-7786264 directly.',
+    a: 'KOI can display service-supplied safety information. It is not an emergency service and cannot guarantee detection or immediate help. Contact a trusted local emergency provider when needed.',
   },
   {
     q: 'Is KOI available offline?',
-    a: 'KOI stores your conversation history locally so you can read past messages offline. Sending new messages requires a connection, but any messages composed offline will be queued and sent automatically when you reconnect.',
+    a: 'Saved history may be restored when browser storage and encryption are available. New replies require a connection. Messages are not automatically resent.',
   },
 ];
 
@@ -169,7 +169,7 @@ export default function RootPage() {
               <div className="hero-stagger-1">
                 <span className="neo-tag">
                   <span className="w-2 h-2 rounded-full" style={{ background: '#2DD36F', display: 'inline-block', animation: 'pulseDot 2s infinite' }} />
-                  AI Companion · Free to use
+                  AI Companion · Text conversation
                 </span>
               </div>
 
@@ -193,7 +193,7 @@ export default function RootPage() {
                   ))}
                 </div>
                 <p className="text-sm font-medium" style={{ color: '#6B7280' }}>
-                  <span className="font-black text-black">2,400+</span> people talking right now
+                  <span className="font-black text-black">Text &amp; avatars</span> for your conversations
                 </p>
               </div>
 
@@ -213,9 +213,9 @@ export default function RootPage() {
                           <span className="inline-block w-4 h-4 rounded-full border-2 border-white border-t-transparent" style={{ animation: 'spin 0.7s linear infinite' }} />
                           Getting ready…
                         </span>
-                      ) : "Start Talking — It's Free ✦"}
+                      ) : "Start Talking ✦"}
                     </button>
-                    <span className="text-sm font-medium" style={{ color: '#9CA3AF' }}>No account · No credit card</span>
+                    <span className="text-sm font-medium" style={{ color: '#9CA3AF' }}>Anonymous sign-in · Local history</span>
                   </>
                 )}
               </div>
@@ -328,7 +328,7 @@ export default function RootPage() {
                   Ready to feel&nbsp;<span style={{ color: '#FFD100' }}>heard?</span>
                 </h2>
                 <p className="mt-4 text-base lg:text-lg text-white/70 max-w-md leading-relaxed">
-                  Jump in immediately — no sign-up, no friction. Your first conversation is one tap away.
+                  Start with anonymous sign-in, choose a companion, and open a text conversation.
                 </p>
               </div>
               <div className="flex flex-col gap-4 items-start lg:items-end shrink-0">
@@ -375,7 +375,7 @@ export default function RootPage() {
                     <><span className="inline-block w-4 h-4 rounded-full border-2 border-black border-t-transparent" style={{ animation: 'spin 0.7s linear infinite' }} />Getting ready…</>
                   ) : 'Talk to KOI ✦'}
                 </button>
-                <p className="text-xs font-semibold text-white/50">Private · No account · Always free</p>
+                <p className="text-xs font-semibold text-white/50">Text chat · Encrypted local history</p>
               </div>
             </div>
           </div>
@@ -395,7 +395,7 @@ export default function RootPage() {
                 <Link href="/how-it-works" className="hover:text-black transition-colors">How It Works</Link>
                 <a href="#faq" className="hover:text-black transition-colors">FAQ</a>
               </div>
-              <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Private · No account needed · Always here for you</p>
+              <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Anonymous sign-in · Encrypted local history</p>
             </div>
             <div className="mt-6 pt-6 border-t-2 border-black/10 flex flex-col sm:flex-row items-center justify-between gap-2">
               <p className="text-xs font-semibold text-black/40">© 2025 KOI · All rights reserved</p>
@@ -430,8 +430,8 @@ function ColorGrid() {
         </div>
       </div>
       <div className="absolute -bottom-6 -left-4 neo-card px-4 py-3 z-10" style={{ minWidth: '170px' }}>
-        <p className="text-2xl font-black text-black leading-none">∞</p>
-        <p className="text-xs font-semibold mt-0.5" style={{ color: '#6B7280' }}>Conversations possible</p>
+        <p className="text-2xl font-black text-black leading-none">AI</p>
+        <p className="text-xs font-semibold mt-0.5" style={{ color: '#6B7280' }}>Conversation companion</p>
       </div>
     </div>
   );

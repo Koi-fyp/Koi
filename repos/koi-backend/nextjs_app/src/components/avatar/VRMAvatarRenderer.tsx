@@ -71,6 +71,8 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
     const container = containerRef.current;
     if (!container) return;
     let disposed = false;
+    let failed = false;
+    let resourcesReleased = false;
     let renderer: THREE.WebGLRenderer | undefined;
     let observer: ResizeObserver | undefined;
     let vrm: VRM | undefined;
@@ -92,16 +94,35 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
     setState('loading');
     setError('');
 
-    const fail = (cause: unknown) => {
-      if (disposed) return;
+    function releaseResources() {
+      if (resourcesReleased) return;
+      resourcesReleased = true;
+      abort.abort();
       cancelAnimationFrame(frame);
+      observer?.disconnect();
+      reducedMotion.removeEventListener('change', motionChanged);
       if (controller) { commands?.detach(controller); controller.dispose(); }
+      window.removeEventListener('resize', resize);
+      if (model) { scene.remove(model); disposeModel(model); model = undefined; }
+      if (renderer) {
+        renderer.domElement.removeEventListener('webglcontextlost', contextLost);
+        renderer.renderLists.dispose();
+        renderer.dispose();
+        renderer.forceContextLoss();
+        renderer.domElement.remove();
+      }
+      scene.clear();
+    }
+    const fail = (cause: unknown) => {
+      if (disposed || failed) return;
+      failed = true;
+      releaseResources();
       setError(cause instanceof Error ? cause.message : 'Unable to render this model.');
       setState('error');
       loadErrorRef.current?.();
     };
     const resize = () => {
-      if (!renderer || disposed) return;
+      if (!renderer || disposed || failed) return;
       const width = Math.max(1, container.clientWidth);
       const height = Math.max(1, container.clientHeight);
       camera.aspect = width / height;
@@ -114,7 +135,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
       renderer.setSize(width, height, false);
     };
     const tick = () => {
-      if (disposed || !renderer) return;
+      if (disposed || failed || !renderer) return;
       try {
         const delta = Math.min(clock.getDelta(), 0.05);
         controller?.setSpeechSource(speechRef.current);
@@ -161,7 +182,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
         const response = await fetch(modelUrl, { signal: abort.signal });
         if (!response.ok) throw new Error(`Model request failed (${response.status}).`);
         const bytes = await response.arrayBuffer();
-        if (disposed) return;
+        if (disposed || failed) return;
         if (bytes.byteLength < 12 || new DataView(bytes).getUint32(0, true) !== 0x46546c67) {
           throw new Error('The model response is not a binary glTF/VRM file.');
         }
@@ -169,7 +190,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
         loader.register((parser) => new VRMLoaderPlugin(parser));
         const resourcePath = new URL('.', new URL(modelUrl, window.location.href)).href;
         const gltf = await loader.parseAsync(bytes, resourcePath);
-        if (disposed) { disposeModel(gltf.scene); return; }
+        if (disposed || failed) { disposeModel(gltf.scene); return; }
         model = gltf.scene;
         const loaded = gltf.userData.vrm as VRM | undefined;
         if (!loaded) throw new Error('The file does not contain a supported VRM avatar.');
@@ -213,21 +234,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
 
     return () => {
       disposed = true;
-      abort.abort();
-      cancelAnimationFrame(frame);
-      observer?.disconnect();
-      reducedMotion.removeEventListener('change', motionChanged);
-      if (controller) { commands?.detach(controller); controller.dispose(); }
-      window.removeEventListener('resize', resize);
-      if (model) { scene.remove(model); disposeModel(model); }
-      if (renderer) {
-        renderer.domElement.removeEventListener('webglcontextlost', contextLost);
-        renderer.renderLists.dispose();
-        renderer.dispose();
-        renderer.forceContextLoss();
-        renderer.domElement.remove();
-      }
-      scene.clear();
+      releaseResources();
     };
   }, [modelUrl, attempt, maxPixelRatio, exposeController, animationSeed]);
 

@@ -4,16 +4,16 @@ import Link from 'next/link';
 
 const VALUES = [
   { icon: '🤝', title: 'Radical Empathy',   desc: 'We build every feature by asking: would this make someone feel more heard or less? Empathy is not a feature — it is the foundation.' },
-  { icon: '🔒', title: 'Privacy First',      desc: 'Your thoughts are yours. We designed KOI from day one to work without accounts, without data harvesting, without compromise.' },
-  { icon: '🌍', title: 'Built for Pakistan', desc: 'Mental health support in Pakistan is scarce and stigmatised. KOI speaks Urdu, understands local context, and is free — always.' },
+  { icon: '🔒', title: 'Privacy First',      desc: 'Your thoughts are yours. We designed KOI from day one to work with anonymous sign-in and encrypted local conversation storage.' },
+  { icon: '🌍', title: 'Built for Pakistan', desc: 'Mental health support in Pakistan is scarce and stigmatised. KOI offers English and Urdu preferences; quality and availability can vary.' },
   { icon: '🧪', title: 'Honest Technology', desc: 'KOI is transparent about being an AI. We will never pretend otherwise. Trust is built through honesty, not illusion.' },
 ];
 
 const TIMELINE = [
-  { year: '2024',       label: 'The Idea',    desc: 'Born from a personal experience of loneliness — the realisation that sometimes you just need something to listen, at 2am, without judgment.' },
-  { year: 'Early 2025', label: 'First Build', desc: 'A small team of two. The first working prototype with emotion detection and on-device encryption. Tested quietly with 50 users in Lahore.' },
-  { year: 'Mid 2025',   label: 'Urdu Support',desc: "KOI learns to speak Urdu. The first AI companion that can hold a meaningful conversation in Pakistan's native tongue." },
-  { year: 'Now',        label: 'Growing',     desc: 'Thousands of conversations. Constant iteration. A deepening belief that accessible mental health support can change lives.' },
+  { year: 'Purpose',       label: 'The Idea',    desc: 'Born from a personal experience of loneliness — the realisation that sometimes you just need something to listen, at 2am, without judgment.' },
+  { year: 'Foundation', label: 'First Build', desc: 'Firebase identity and client-side encryption support locally stored conversation content.' },
+  { year: 'Language',   label: 'Urdu Support',desc: "English and Urdu preferences are offered. Speech output is not enabled in the Web app." },
+  { year: 'Now',        label: 'Growing',     desc: 'Current work focuses on continuity, companion rendering and honest local data.' },
 ];
 
 export default function AboutPage() {
@@ -103,15 +103,15 @@ export default function AboutPage() {
                 <p className="text-base leading-relaxed text-black/60">
                   We are not building a product. We are building infrastructure for emotional wellbeing —
                   one conversation at a time. KOI exists to make that support available to anyone,
-                  anywhere, in any language, at any hour.
+                  with clear language, connectivity and availability limits.
                 </p>
               </div>
               <div className="flex-1 flex flex-col gap-4">
                 {[
                   ['🇵🇰', 'Made in Pakistan, for Pakistan'],
-                  ['💬', '50,000+ conversations and counting'],
-                  ['🔐', 'Zero data ever sold or shared'],
-                  ['🌙', 'Available at 2am when you need it most'],
+                  ['💬', 'Text conversation with saved local history'],
+                  ['🔐', 'Encrypted storage; readable text for inference'],
+                  ['🌙', 'Service availability depends on connectivity'],
                 ].map(([icon, text], i) => (
                   <div key={i} className="flex items-center gap-4 p-4 rounded-xl border-2 border-black/10 bg-black/[0.02]">
                     <span className="text-2xl">{icon}</span>
@@ -212,7 +212,7 @@ export default function AboutPage() {
                 <Link href="/how-it-works" className="hover:text-black transition-colors">How It Works</Link>
                 <Link href="/#faq" className="hover:text-black transition-colors">FAQ</Link>
               </div>
-              <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Private · No account needed · Always here for you</p>
+              <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Anonymous sign-in · Encrypted local history</p>
             </div>
             <div className="mt-6 pt-6 border-t-2 border-black/10 flex flex-col sm:flex-row items-center justify-between gap-2">
               <p className="text-xs font-semibold text-black/40">© 2025 KOI · All rights reserved</p>
@@ -325,7 +325,7 @@ export default function AboutPage() {
             <p className="text-xs" style={{ color: '#626570', lineHeight: 1.5 }}>
               Leads model fine-tuning, emotion classification, and all things research.
             </p>
-            <button className="team-btn">Learn more →</button>
+            <button disabled title="Additional biography is unavailable" className="team-btn">Biography unavailable</button>
           </div>
         </div>
 
@@ -383,7 +383,7 @@ export default function AboutPage() {
             <p className="text-xs" style={{ color: '#626570', lineHeight: 1.5 }}>
               Owns system design, data architecture, and solution scalability.
             </p>
-            <button className="team-btn">Learn more →</button>
+            <button disabled title="Additional biography is unavailable" className="team-btn">Biography unavailable</button>
           </div>
         </div>
 
@@ -442,7 +442,7 @@ export default function AboutPage() {
             <p className="text-sm mt-1" style={{ color: '#626570', lineHeight: 1.6 }}>
               Builds and maintains the full-stack infrastructure — from Next.js frontend to Firebase cloud functions. Owns deployment, CI/CD, and performance.
             </p>
-            <button className="team-btn" style={{ marginTop: '1rem' }}>Learn more →</button>
+            <button disabled title="Additional biography is unavailable" className="team-btn" style={{ marginTop: '1rem' }}>Biography unavailable</button>
           </div>
         </div>
 

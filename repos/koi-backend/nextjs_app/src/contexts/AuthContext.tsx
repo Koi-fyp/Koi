@@ -1,8 +1,10 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, firebaseConfigurationError } from '@/lib/firebase';
+import { isLocalTestAnonymousSignInEnabled } from '@/lib/auth/anonymousSignInMode';
 import {
   onAuthStateChanged,
+  signInAnonymously as firebaseSignInAnonymously,
   signInWithCustomToken,
   signOut as firebaseSignOut,
   User,
@@ -125,6 +127,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError(null);
     try {
+      if (isLocalTestAnonymousSignInEnabled()) {
+        if (auth.app.options.projectId !== 'koi-companion-fyp') {
+          throw new Error('Local anonymous testing requires the koi-companion-fyp Firebase project.');
+        }
+        await firebaseSignInAnonymously(auth);
+        // The Auth listener owns user state and Firebase persists this genuine
+        // client-issued anonymous session. No token is copied or stored here.
+        return;
+      }
+
       const res = await fetch('/api/auth/anonymous', { method: 'POST' });
       if (!res.ok) throw new Error('Failed to create anonymous session');
       const data = await res.json();
@@ -132,7 +144,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // No manual storeEncrypted() call needed — onAuthStateChanged above
       // picks up the new session automatically, and Firebase persists it.
     } catch (e: any) {
-      setError(e);
+      const failure = e?.code === 'auth/operation-not-allowed'
+        ? new Error('Anonymous sign-in is disabled for this Firebase project. Enable the Anonymous provider in Firebase Authentication.')
+        : e instanceof Error
+          ? e
+          : new Error('Anonymous sign-in failed. Check the Firebase configuration and try again.');
+      setError(failure);
     } finally {
       setLoading(false);
     }

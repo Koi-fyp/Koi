@@ -1,15 +1,18 @@
 'use client';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
+import type { CompanionId } from '@/lib/avatar/avatarPreference';
 
 const companions = [
-  { id: 'aisha', name: 'Aisha', trait: 'Warm & caring', color: '#FF4A60', icon: '👩' },
-  { id: 'raza', name: 'Raza', trait: 'Calm & grounded', color: '#FFC224', icon: '👨' },
-  { id: 'koi', name: 'Koi', trait: 'Playful & curious', color: '#06b6d4', icon: '🦊' },
+  { id: 'aisha', name: 'Aisha', trait: 'Warm & caring · Female avatar', color: '#FF4A60', image: '/Female.png' },
+  { id: 'raza', name: 'Raza', trait: 'Calm & grounded · Male avatar', color: '#FFC224', image: '/Male.png' },
+  { id: 'koi', name: 'Koi', trait: 'Playful & curious · Fox choice', color: '#06b6d4', image: null },
 ] as const;
 
 interface CompanionSelectionStepProps {
-  readonly onNext: (id: string) => void;
+  readonly onNext: (id: CompanionId) => void;
+  readonly initialSelection?: CompanionId;
 }
 
 interface CompanionCardProps {
@@ -19,9 +22,11 @@ interface CompanionCardProps {
 }
 
 function CompanionCard({ companion, isSelected, onSelect }: CompanionCardProps) {
+  const [imageFailed, setImageFailed] = useState(false);
   return (
     <motion.button
       type="button"
+      aria-pressed={isSelected}
       onClick={onSelect}
       whileHover={{ y: -4 }}
       whileTap={{ y: 2 }}
@@ -37,9 +42,10 @@ function CompanionCard({ companion, isSelected, onSelect }: CompanionCardProps) 
         className="p-8 flex justify-center items-center border-b-[3px] border-black transition-colors duration-300"
         style={{ backgroundColor: isSelected ? '#06b6d4' : '#F0F0F0' }}
       >
-        <div className="text-6xl transition-transform duration-300 group-hover:scale-110">
-          {companion.icon}
-        </div>
+        {companion.image && !imageFailed ? <Image src={companion.image} onError={() => setImageFailed(true)} alt={`${companion.name} avatar preview`} width={110} height={118} className="h-[118px] w-auto object-contain transition-transform duration-300 group-hover:scale-105" /> : companion.image ? <p role="status">{companion.name} preview unavailable. You can still select this companion.</p> :
+          <div className="flex h-[118px] flex-col items-center justify-center gap-2 text-5xl" aria-label="Fox avatar preview unavailable">
+            <span aria-hidden="true">🦊</span><span className="text-sm font-semibold">Fox preview unavailable</span>
+          </div>}
       </div>
 
       <div className="bg-white p-6 text-center flex-1">
@@ -50,8 +56,8 @@ function CompanionCard({ companion, isSelected, onSelect }: CompanionCardProps) 
   );
 }
 
-export default function CompanionSelectionStep({ onNext }: CompanionSelectionStepProps) {
-  const [selected, setSelected] = useState<(typeof companions)[number]['id']>('koi');
+export default function CompanionSelectionStep({ onNext, initialSelection = 'raza' }: CompanionSelectionStepProps) {
+  const [selected, setSelected] = useState<CompanionId>(initialSelection);
 
   const selectedCompanion = companions.find((c) => c.id === selected);
   const buttonColor = selectedCompanion?.color || '#06b6d4';
@@ -60,7 +66,7 @@ export default function CompanionSelectionStep({ onNext }: CompanionSelectionSte
     <div className="flex flex-col items-center gap-8 p-8">
       <div className="w-full max-w-4xl">
         <h2 className="text-3xl font-bold text-black mb-2">Choose Your Companion</h2>
-        <p className="text-gray-600 mb-8">Pick the personality that resonates with you</p>
+        <p className="text-gray-600 mb-8">Choose your companion and matching avatar. Aisha uses the female model, Raza the male model, and Koi keeps the fox choice.</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {companions.map((comp) => (

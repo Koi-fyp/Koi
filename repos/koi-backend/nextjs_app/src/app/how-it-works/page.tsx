@@ -11,7 +11,7 @@ const PILLARS = [
     subtitle: 'What KOI is',
     color: '#FFD100',
     textColor: '#000',
-    desc: 'KOI is an AI companion — not a therapist, not a chatbot, not a search engine. It is a presence. Designed to listen deeply, remember what matters to you, and respond with warmth and without judgment. Think of KOI as a thoughtful friend who is always available, never distracted, and genuinely interested in how you are doing.',
+    desc: 'KOI is an AI companion — not a therapist, not a chatbot, not a search engine. It is a presence. Designed to listen deeply, remember what matters to you, and respond with warmth and without judgment. Think of KOI as an AI interface for reflection when the service is available.',
     points: [
       'Remembers context across your conversation',
       'Detects emotional tone and adapts its response',
@@ -25,12 +25,12 @@ const PILLARS = [
     subtitle: 'How it thinks',
     color: '#2D63EB',
     textColor: '#fff',
-    desc: "KOI is powered by a large language model fine-tuned for empathetic conversation. Every response is shaped by emotional context — not just the literal words you type, but the sentiment underneath them. A built-in emotion classifier analyses each message for signals of happiness, sadness, anxiety, or calm, and adjusts KOI's tone accordingly.",
+    desc: "KOI is powered by a large language model fine-tuned for empathetic conversation. Every response is shaped by emotional context — not just the literal words you type, but the sentiment underneath them. The service also supplies companion expression metadata; these animations do not measure your mental-health condition.",
     points: [
-      'Emotion classification: happy, sad, anxious, calm, neutral',
+      'Companion expressions: neutral, joy, angry, sorrow, fun',
       'Context window of recent messages for continuity',
-      'Crisis detection with automatic helpline surfacing',
-      'Fallback responses when connectivity is lost',
+      'Safety information when supplied by the service',
+      'Saved history and visible connection errors',
     ],
   },
   {
@@ -39,12 +39,12 @@ const PILLARS = [
     subtitle: 'How we protect you',
     color: '#0A0A0A',
     textColor: '#fff',
-    desc: 'Every conversation you have with KOI is encrypted on your device using AES-256-GCM before it ever touches any server. Your encryption key lives only on your device. We cannot read your conversations. No one can. Your session is anonymous by default — no name, no email, no phone number required.',
+    desc: 'Conversation content is encrypted using AES-256-GCM before storage and sync attempts. Inference receives readable prompts and recent context. This is CSE at rest, not end-to-end encryption. Anonymous sign-in requires no email.',
     points: [
       'AES-256-GCM encryption, on-device key storage',
-      'Anonymous sessions — no account required',
+      'Firebase anonymous identity; email is optional',
       'Offline-first: conversations stored in local IndexedDB',
-      'Firestore sync is encrypted and opt-in',
+      'Encrypted sync may be pending or unavailable',
     ],
   },
   {
@@ -53,12 +53,12 @@ const PILLARS = [
     subtitle: 'What it feels like',
     color: '#2DD36F',
     textColor: '#000',
-    desc: 'We obsessed over every detail of the KOI experience — the soft bounce of the avatar, the warm colour shifts when your mood changes, the gentle typing indicator. Every visual and interaction choice was made to create a sense of calm presence. KOI should feel less like an app and more like opening a door to a quiet room where you can think out loud.',
+    desc: 'We obsessed over every detail of the KOI experience — the soft bounce of the avatar, the companion expressions supplied by the service, the gentle typing indicator. Every visual and interaction choice was made to create a sense of calm presence. KOI should feel less like an app and more like opening a door to a quiet room where you can think out loud.',
     points: [
       'Emotion-driven avatar with breathing + blinking animations',
-      'Colour-tinted background that shifts with your mood',
-      'Offline-aware UI with queued message delivery',
-      'Smooth animations designed to reduce anxiety, not add to it',
+      'Consistent colors; service-supplied expressions',
+      'Offline-aware UI; no automatic message resend',
+      'Smooth animations with reduced-motion support',
     ],
   },
 ];
@@ -207,7 +207,7 @@ export default function HowItWorksPage() {
               <span style={{ color: '#2D63EB' }}>Come say hello.</span>
             </h2>
             <p className="text-base text-black/50 max-w-lg mx-auto mb-8">
-              No account, no credit card. Just you and KOI.
+              Start with Firebase anonymous sign-in and choose your companion.
             </p>
             <StartButton/>
           </div>
@@ -227,7 +227,7 @@ export default function HowItWorksPage() {
                 <Link href="/about" className="hover:text-black transition-colors">About</Link>
                 <Link href="/#faq" className="hover:text-black transition-colors">FAQ</Link>
               </div>
-              <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Private · No account needed · Always here for you</p>
+              <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Anonymous sign-in · Encrypted local history</p>
             </div>
             <div className="mt-6 pt-6 border-t-2 border-black/10 flex flex-col sm:flex-row items-center justify-between gap-2">
               <p className="text-xs font-semibold text-black/40">© 2025 KOI · All rights reserved</p>
@@ -266,7 +266,7 @@ export default function HowItWorksPage() {
           <span className="inline-block w-4 h-4 rounded-full border-2 border-white border-t-transparent" style={{ animation: 'spin 0.7s linear infinite' }} />
           Getting ready…
         </span>
-      ) : "Start Talking — It's Free ✦"}
+      ) : "Start Talking ✦"}
     </button>
   );
 }

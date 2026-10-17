@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useChat } from '@/hooks/useChat';
 import MessageList from '@/components/chat/MessageList';
 import InputBar from '@/components/chat/InputBar';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAvatarPreference } from '@/hooks/useAvatarPreference';
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
@@ -44,9 +46,15 @@ function OfflineBanner() {
 
 export default function ChatPage() {
   const { messages, isTyping, send, error, blocked } = useChat();
+  const { user, loading: authLoading } = useAuth();
+  const avatarPreference = useAvatarPreference(user?.uid, authLoading);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const hasMessages = messages.length > 0;
   const [mounted, setMounted] = useState(false);
+  const [avatarImageFailed, setAvatarImageFailed] = useState(false);
+  const preference = avatarPreference.status === 'ready' ? avatarPreference.preference : null;
+  const imageSrc = preference?.status === 'selected' ? preference.imageSrc : null;
+  useEffect(() => setAvatarImageFailed(false), [imageSrc]);
 
   useEffect(() => {
     setMounted(true);
@@ -54,12 +62,12 @@ export default function ChatPage() {
 
   return (
     <div
-      className="flex flex-col-reverse sm:flex-row"
+      className="chatLayout"
       style={{ height: 'calc(100svh - 66px)', overflow: 'hidden', background: '#ffe5d9' }}
     >
       {/* ── Chat column (left on desktop, bottom on mobile) ── */}
       <div
-        className="flex flex-col min-w-0 overflow-hidden"
+        className="chatColumn"
         style={{ flex: 1 }}
       >
         <OfflineBanner />
@@ -71,26 +79,20 @@ export default function ChatPage() {
 
       {/* ── Avatar panel (right on desktop, top on mobile) ── */}
       <div
-        className={`flex flex-col gap-3 ${hasMessages ? 'hidden sm:flex' : 'flex'}`}
+        className="avatarPanel"
+        data-testid="chat-avatar-panel"
         style={{
-          width: '100%',
-          maxWidth: '340px',
-          flexShrink: 0,
-          padding: '16px 16px 16px 0',
+          opacity: mounted ? 1 : 0,
+          transition: 'opacity 0.4s ease',
         }}
       >
-        <div
-          className="h-full w-full flex items-center justify-center"
+        <div className="avatarStage"
           style={{
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? 'translateY(0)' : 'translateY(20px)',
-            transition: 'opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transform: mounted ? 'translateY(0)' : 'translateY(12px)',
+            transition: 'transform 0.4s ease',
           }}
         >
-          <div
-            className="w-full max-w-[340px] max-h-[80vh] overflow-hidden rounded-[1.5rem] border-[3px] border-black bg-[#FFD100] shadow-[6px_6px_0_0_#000] flex items-center justify-center relative"
-            style={{ maxHeight: '80vh' }}
-          >
+          <div className="avatarCard">
             {/* Thinking bubbles - show when typing */}
             {isTyping && (
               <>
@@ -136,24 +138,48 @@ export default function ChatPage() {
               </>
             )}
 
-            <Image
-              src="/Male.png"
-              alt="KOI companion"
-              width={800}
-              height={1000}
-              priority
-              sizes="(min-width: 640px) 340px, 90vw"
-              className="h-auto w-full object-contain relative z-10"
-              style={{
-                objectFit: 'contain',
-              }}
-            />
+            {avatarPreference.status === 'loading' ? (
+              <p className="avatarFallback" role="status">Loading saved avatar preference…</p>
+            ) : avatarPreference.status === 'error' ? (
+              <div className="avatarFallback" role="status">
+                <p>Your saved companion could not be loaded. The avatar preview is unavailable.</p>
+                <Link href="/onboarding">Review companion selection</Link>
+              </div>
+            ) : preference?.status === 'unselected' ? (
+              <div className="avatarFallback" role="status">
+                <p>No companion avatar is saved for this account yet.</p>
+                <Link href="/onboarding">Choose a companion</Link>
+              </div>
+            ) : preference?.status === 'selected' && preference.avatar === 'fox' ? (
+              <div className="avatarFallback" role="status">
+                <p>Your saved Koi fox choice is preserved. A fox preview image is not available.</p>
+                <Link href="/companion-scene">Open the 3D avatar conversation</Link>
+              </div>
+            ) : avatarImageFailed ? (
+              <div className="avatarFallback" role="status">
+                <p>The companion preview image could not be loaded.</p>
+                <Link href="/companion-scene">Open the 3D avatar conversation</Link>
+              </div>
+            ) : (
+              <Image
+                key={imageSrc}
+                src={imageSrc!}
+                alt={`${preference?.displayName || preference?.name || 'KOI'} companion avatar`}
+                width={491}
+                height={525}
+                priority
+                sizes="(min-width: 640px) 340px, 215px"
+                className="avatarImage"
+                onError={() => setAvatarImageFailed(true)}
+              />
+            )}
           </div>
         </div>
 
         {/* CTA — visible only before first message */}
         {!hasMessages && (
           <button
+            className="avatarCta"
             onClick={() => inputRef.current?.focus()}
             style={{
               display: 'flex',
@@ -199,6 +225,84 @@ export default function ChatPage() {
       </div>
 
       <style jsx>{`
+        .chatLayout {
+          display: flex;
+          flex-direction: column-reverse;
+        }
+        .chatColumn {
+          display: flex;
+          flex: 1 1 0%;
+          flex-direction: column;
+          min-width: 0;
+          min-height: 0;
+          overflow: hidden;
+        }
+        .avatarPanel {
+          box-sizing: border-box;
+          display: flex;
+          flex: 0 0 clamp(132px, 29svh, 230px);
+          flex-direction: column;
+          gap: 8px;
+          width: 100%;
+          min-width: 0;
+          padding: 8px 12px;
+        }
+        .avatarStage {
+          display: flex;
+          flex: 1 1 0%;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          min-height: 0;
+        }
+        .avatarCard {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: auto;
+          height: 100%;
+          max-width: 100%;
+          aspect-ratio: 491 / 525;
+          overflow: hidden;
+          border: 3px solid #000;
+          border-radius: 1.25rem;
+          background: #ffc224;
+          box-shadow: 5px 5px 0 #000;
+        }
+        .avatarImage {
+          position: relative;
+          z-index: 1;
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        .avatarFallback {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          max-width: 28rem;
+          padding: 16px;
+          text-align: center;
+          font-size: 0.85rem;
+          font-weight: 600;
+        }
+        .avatarFallback a { color: #000; text-decoration: underline; }
+        .avatarCta { display: none !important; }
+        @media (min-width: 640px) {
+          .chatLayout { flex-direction: row; }
+          .avatarPanel {
+            flex: 0 0 min(340px, 38vw);
+            width: min(340px, 38vw);
+            max-width: 38vw;
+            padding: 16px 16px 16px 0;
+          }
+          .avatarCard { width: 100%; height: auto; max-height: 80vh; }
+          .avatarCta { display: flex !important; }
+        }
         @keyframes thinkBubble1 {
           0%, 100% {
             transform: scale(0.8) translateY(0);

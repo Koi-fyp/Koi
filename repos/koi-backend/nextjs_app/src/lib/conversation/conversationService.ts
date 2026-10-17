@@ -41,7 +41,7 @@ export async function sendMessage(uid: string, conversationId: string, text: str
   ensureOwner();
   const { secret, saltB64 } = await (linked ? getActiveCryptoContext(uid, authState) : anonymousCryptoContext(uid));
   ensureOwner(); options.signal.throwIfAborted();
-  await saveMessage({ id: options.userMessageId, conversationId, sender: 'user', content: text, timestamp: new Date(), emotion: 'neutral', synced: false }, secret, saltB64, options.signal);
+  await saveMessage({ id: options.userMessageId, conversationId, sender: 'user', ownerUid: uid, content: text, timestamp: new Date(), emotion: 'neutral', synced: false }, secret, saltB64, options.signal);
   options.signal.throwIfAborted(); ensureOwner();
   const response = await postJsonChat({ message: text, session_history: context, ...requestFields }, {
     apiBase: process.env.NEXT_PUBLIC_KOI_API_BASE, headers: new Headers({ Authorization: `Bearer ${token}` }), signal: options.signal,
@@ -52,7 +52,7 @@ export async function sendMessage(uid: string, conversationId: string, text: str
     },
   });
   options.signal.throwIfAborted(); ensureOwner();
-  await saveMessage({ id: options.assistantMessageId, conversationId, sender: 'ai', content: response.reply,
+  await saveMessage({ id: options.assistantMessageId, conversationId, sender: 'ai', ownerUid: uid, replyTo: options.userMessageId, content: response.reply,
     timestamp: new Date(), emotion: storedEmotion(response.companion_state.emotion), companion_state: response.companion_state, synced: false }, secret, saltB64, options.signal);
   return response;
 }

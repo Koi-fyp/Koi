@@ -1,7 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAvatarPreference } from '@/hooks/useAvatarPreference';
+import { saveAvatarPreference, type CompanionId } from '@/lib/avatar/avatarPreference';
+import { saveUserPreferences, validTime, reminderStatus } from '@/lib/preferences/userPreferences';
 import SettingsRow from './components/SettingsRow';
 import AvatarPicker from './components/AvatarPicker';
 import Toast from './components/Toast';
@@ -10,40 +14,54 @@ const DIVIDER = <div style={{ height: '1px', background: '#f0f0f0' }} />;
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { user, loading } = useAuth();
+  const currentUid = useRef(user?.uid); currentUid.current = user?.uid;
+  const avatarPreference = useAvatarPreference(user?.uid, loading);
+  const selected = avatarPreference.status === 'ready' && avatarPreference.preference.status === 'selected' ? avatarPreference.preference : null;
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
-  const [currentAvatar, setCurrentAvatar] = useState('koi');
-  const [currentName, setCurrentName] = useState('');
-  const [language, setLanguage] = useState<'en' | 'ur'>('en');
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const currentAvatar = selected?.companion;
+  const profile = avatarPreference.status === 'ready' ? avatarPreference.profile : null;
+  const currentName = selected?.displayName ?? '';
+  const language = profile?.language;
+  const notificationsEnabled = profile?.notificationsEnabled === true;
+  const [preferenceSaving, setPreferenceSaving] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => { setNow(new Date()); const timer = window.setInterval(() => setNow(new Date()), 60000); return () => window.clearInterval(timer); }, []);
+  const preferenceDisabled = loading || avatarPreference.status !== 'ready' || preferenceSaving;
+  const updatePreference = async (fields: Parameters<typeof saveUserPreferences>[1]) => {
+    if (!user || preferenceDisabled) return;
+    const owner = user.uid; setPreferenceSaving(true);
+    try { await saveUserPreferences(owner, fields); if (currentUid.current === owner) setToast({ message: 'Preference saved on this device.', type: 'success' }); }
+    catch { if (currentUid.current === owner) setToast({ message: 'Preference could not be saved. Please retry.', type: 'error' }); }
+    finally { if (currentUid.current === owner) setPreferenceSaving(false); }
+  };
+  useEffect(() => { setPreferenceSaving(false); setTimeOpen(false); setToast(null); }, [user?.uid]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const [expandedHelp, setExpandedHelp] = useState<string | null>(null);
 
-  const handleAvatarSave = (avatar: string, name: string) => {
-    setCurrentAvatar(avatar);
-    setCurrentName(name);
-    setToast({ message: 'Companion updated successfully!', type: 'success' });
+  const handleAvatarSave = async (avatar: CompanionId, name: string) => {
+    if (!user || avatarPreference.status !== 'ready') {
+      setToast({ message: 'Wait for your saved companion to load before saving.', type: 'error' });
+      return false;
+    }
+    const owner = user.uid;
+    try {
+      await saveAvatarPreference(user.uid, avatar, name);
+      if (currentUid.current !== owner) return false;
+      setToast({ message: 'Companion saved on this device.', type: 'success' });
+      return true;
+    } catch {
+      if (currentUid.current !== owner) return false;
+      setToast({ message: 'Companion could not be saved. Please retry.', type: 'error' });
+      return false;
+    }
   };
 
-  const handleLanguageToggle = () => {
-    setLanguage(prev => prev === 'en' ? 'ur' : 'en');
-    setToast({
-      message: language === 'en' ? 'Language changed to Urdu' : 'Language changed to English',
-      type: 'info'
-    });
-  };
-
-  const handleClearHistory = () => {
-    setToast({ message: 'All conversations cleared', type: 'success' });
-  };
-
-  const handleNotificationToggle = () => {
-    setNotificationsEnabled(prev => !prev);
-    setToast({
-      message: notificationsEnabled ? 'Daily check-in disabled' : 'Daily check-in enabled',
-      type: 'info'
-    });
-  };
+  const handleLanguageToggle = () => { void updatePreference({ language: language === 'en' ? 'ur' : 'en' }); };
+  const handleClearHistory = () => { setToast({ message: 'History deletion is unavailable until its scope is approved.', type: 'info' }); };
+  const handleNotificationToggle = () => { void updatePreference({ notificationsEnabled: !notificationsEnabled }); };
 
   const toggleHelp = (section: string) => {
     setExpandedHelp(prev => prev === section ? null : section);
@@ -55,7 +73,7 @@ export default function SettingsPage() {
       raza: 'Raza 👨',
       koi: 'Koi 🦊'
     };
-    return avatars[currentAvatar] || 'Koi 🦊';
+    return currentAvatar ? `${avatars[currentAvatar]}${currentName ? ` · ${currentName}` : ''}` : avatarPreference.status === 'loading' ? 'Loading saved preference...' : 'Choose a companion';
   };
 
   return (
@@ -113,7 +131,7 @@ export default function SettingsPage() {
           <SettingsRow
             icon="🌐"
             label="Language"
-            desc={language === 'en' ? 'English' : 'Urdu'}
+            desc={language === 'en' ? 'English (preference)' : language === 'ur' ? 'Urdu (preference)' : 'No language preference saved'} disabled={preferenceDisabled}
             onClick={handleLanguageToggle}
           />
           {DIVIDER}
@@ -159,7 +177,7 @@ export default function SettingsPage() {
           <SettingsRow
             icon="🔔"
             label="Daily Check-in"
-            desc={notificationsEnabled ? "Every day at 8:00 PM" : "Disabled"}
+            desc={notificationsEnabled ? `Preferred time: ${validTime(profile?.notificationTime) ? profile.notificationTime : 'not set'}` : profile?.notificationsEnabled === false ? 'Preference off' : 'No preference saved'} disabled={preferenceDisabled}
             toggle
             on={notificationsEnabled}
             onClick={handleNotificationToggle}
@@ -168,10 +186,16 @@ export default function SettingsPage() {
           <SettingsRow
             icon="⏰"
             label="Reminder Time"
-            desc="Tap to change"
-            onClick={() => setToast({ message: 'Time picker coming soon!', type: 'info' })}
+            desc={validTime(profile?.notificationTime) ? profile.notificationTime : 'Choose a local preferred time'} disabled={preferenceDisabled}
+            onClick={() => setTimeOpen(value => !value)}
           />
         </div>
+
+        {timeOpen && <label className="block text-sm mb-4">Preferred time (device timezone)
+          <input aria-label="Preferred check-in time" type="time" defaultValue={validTime(profile?.notificationTime) ? profile.notificationTime : ''} disabled={preferenceDisabled}
+            onBlur={event => { if (event.target.value) void updatePreference({ notificationTime: event.target.value }); }} />
+        </label>}
+        <p role="status" className="text-xs mb-4">{now ? reminderStatus(profile, now) : 'Loading device time...'} Language is a saved preference; replies and interface translation are not guaranteed.</p>
 
         {/* Privacy */}
         <p style={{
@@ -213,7 +237,7 @@ export default function SettingsPage() {
           <SettingsRow
             icon="👁"
             label="Data Collection"
-            desc="Anonymous only"
+            desc="Storage and inference privacy"
             onClick={() => router.push('/settings/privacy')}
           />
           {DIVIDER}
@@ -654,6 +678,7 @@ export default function SettingsPage() {
 
       {/* Avatar Picker Modal */}
       <AvatarPicker
+        key={`${user?.uid}:${currentAvatar}:${currentName}:${avatarPickerOpen}`}
         isOpen={avatarPickerOpen}
         onClose={() => setAvatarPickerOpen(false)}
         currentAvatar={currentAvatar}

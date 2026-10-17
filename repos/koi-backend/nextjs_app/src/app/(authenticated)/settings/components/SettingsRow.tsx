@@ -5,6 +5,7 @@ interface RowProps {
   label: string;
   desc: string;
   danger?: boolean;
+  disabled?: boolean;
   toggle?: boolean;
   on?: boolean;
   onClick?: () => void;
@@ -14,13 +15,15 @@ export default function SettingsRow({
   icon, 
   label, 
   desc, 
-  danger = false, 
+  danger = false,
+  disabled = false,
   toggle = false, 
   on = false,
   onClick 
 }: RowProps) {
   return (
     <button
+      disabled={disabled}
       onClick={onClick}
       className="group"
       style={{

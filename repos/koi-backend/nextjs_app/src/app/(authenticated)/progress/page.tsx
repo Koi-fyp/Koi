@@ -1,11 +1,9 @@
 'use client';
 import { useState } from 'react';
-
-const STATS = [
-  { label: 'Days Streak', value: '12', unit: 'days', color: '#FFD100', icon: 'flame' },
-  { label: 'Total Sessions', value: '47', unit: 'sessions', color: '#2DD36F', icon: 'chat' },
-  { label: 'Avg Mood', value: '7.2', unit: '/ 10', color: '#2D63EB', icon: 'smile' },
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { useProgress } from '@/hooks/useProgress';
+import NeoCard from '@/components/ui/NeoCard';
+import NeoButton from '@/components/ui/NeoButton';
 
 const MILESTONES = [
   { id: 1, title: 'First Conversation', desc: 'You opened up for the first time.', done: true, color: '#2DD36F', reward: '+5 pieces' },
@@ -155,13 +153,27 @@ const Icon = ({ type, color = '#000', size = 16 }: { type: string; color?: strin
 };
 
 export default function ProgressPage() {
+  const { user, loading } = useAuth();
+  const { state: progress, retry } = useProgress(loading ? undefined : user?.uid);
   const [selectedMilestone, setSelectedMilestone] = useState<number | null>(null);
   const [jigsawExpanded, setJigsawExpanded] = useState(false);
   const [hoveredStat, setHoveredStat] = useState<string | null>(null);
   const [hoveredPiece, setHoveredPiece] = useState<number | null>(null);
   const [selectedMoodDay, setSelectedMoodDay] = useState<number | null>(null);
 
-  const totalPieces = 247;
+  if (loading || progress.status === 'loading') return <p role="status" className="p-6">Loading your progress...</p>;
+  if (progress.status === 'signed-out') return <p role="status" className="p-6">Sign in to view your progress.</p>;
+  if (progress.status === 'error') return <div className="max-w-[480px] mx-auto p-6">
+    <p role="alert" className="mb-4">Your progress could not be loaded. Please try again.</p>
+    <NeoButton onClick={retry}>Try again</NeoButton>
+  </div>;
+  const recorded = progress.summary.recordedProgress;
+  const totalPieces = recorded?.jigsaw_pieces ?? 0;
+  const STATS = [
+    { label: 'Completed Exchanges', value: String(progress.summary.completedExchanges), unit: 'exchanges', color: '#FFD100', icon: 'chat' },
+    { label: 'Conversations With Replies', value: String(progress.summary.conversationsWithReplies), unit: 'conversations', color: '#2DD36F', icon: 'chat' },
+    { label: 'Recorded Milestones', value: String(new Set(recorded?.milestones_reached ?? []).size), unit: 'milestones', color: '#2D63EB', icon: 'star' },
+  ];
   const filledCount = JIGSAW_ACHIEVEMENTS.filter((p) => p.filled).length;
   const filledPercentage = (filledCount / 25) * 100;
 
@@ -185,7 +197,7 @@ export default function ProgressPage() {
     const data = [];
     for (let w = 0; w < weeks; w++) {
       for (let d = 0; d < days; d++) {
-        const intensity = Math.floor(Math.random() * 5); // 0-4
+        const intensity = (w + d) % 5; // Stable preview, never inferred user activity.
         data.push({ week: w, day: d, intensity });
       }
     }
@@ -238,11 +250,24 @@ export default function ProgressPage() {
             fontWeight: 500,
           }}
         >
-          Every step matters. Keep growing.
+          Recorded puzzle totals and completed exchanges saved on this device.
         </p>
       </div>
 
-      {/* Jigsaw Hero Card - Expandable */}
+      <NeoCard className="p-4 mb-5">
+        <p className="text-sm">{recorded ? 'Your recorded puzzle totals are shown below.' : 'No puzzle progress has been recorded on this device yet.'} New puzzle rewards are not available yet.</p>
+        <details className="mt-3">
+          <summary className="font-bold cursor-pointer">Recorded pieces by activity</summary>
+          <dl className="mt-2">{([
+            ['conversations', 'Conversations'], ['check_ins', 'Check-ins'], ['breathing', 'Breathing'],
+            ['tasks', 'Tasks'], ['bonuses', 'Bonuses'],
+          ] as const).map(([key, label]) => <div key={key} className="flex justify-between gap-4 py-1">
+            <dt>{label}</dt><dd>{recorded?.pieces_by_source[key] ?? 0}</dd>
+          </div>)}</dl>
+        </details>
+      </NeoCard>
+
+      {/* Recorded total; expanded puzzle illustration remains an explicitly labelled preview. */}
       <div
         style={{
           background: jigsawExpanded ? '#1a54b8' : '#2D63EB',
@@ -290,7 +315,7 @@ export default function ProgressPage() {
                 textTransform: 'uppercase',
               }}
             >
-              Total Pieces Collected
+              Recorded Puzzle Pieces
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -331,7 +356,7 @@ export default function ProgressPage() {
                 color: 'rgba(255,255,255,0.6)',
               }}
             >
-              pieces of your story, preserved
+              pieces recorded on this device · Tap for a puzzle preview
             </p>
           </>
         ) : (
@@ -626,7 +651,7 @@ export default function ProgressPage() {
                   textAlign: 'center',
                 }}
               >
-                {filledCount} of 25 pieces unlocked · Keep growing to reveal more
+                {filledCount} of 25 sample pieces · Preview, not your unlocked pieces
               </p>
             </div>
           </div>
@@ -700,7 +725,9 @@ export default function ProgressPage() {
         ))}
       </div>
 
-      {/* Mood Trend Chart */}
+      <p role="note" className="text-sm mb-5">The puzzle illustration, mood chart, milestone timeline and heatmap are previews. They do not represent your saved activities or mood.</p>
+
+      {/* Sample mood data is not read from sensitive check-in ratings. */}
       <div
         style={{
           background: '#fff',
@@ -713,7 +740,7 @@ export default function ProgressPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <h3 style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: '1.1rem', color: '#000', letterSpacing: '-0.02em' }}>
-            Mood Trends
+            Mood Trends (Preview)
           </h3>
           <Icon type="trendingUp" color="#2DD36F" size={20} />
         </div>
@@ -783,7 +810,7 @@ export default function ProgressPage() {
         </div>
 
         <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: '#666', textAlign: 'center', lineHeight: 1.5 }}>
-          Your emotional journey over the past week shows growth and resilience
+          Sample mood values for the preview, not your mood history.
         </p>
       </div>
 
@@ -808,7 +835,7 @@ export default function ProgressPage() {
               letterSpacing: '-0.02em',
             }}
           >
-            Milestones
+            Milestones (Preview)
           </h2>
           <div
             style={{
@@ -821,7 +848,7 @@ export default function ProgressPage() {
               boxShadow: '2px 2px 0 #000',
             }}
           >
-            2/4 Complete
+            Sample milestones
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
@@ -930,7 +957,7 @@ export default function ProgressPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <h3 style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: '1.1rem', color: '#000', letterSpacing: '-0.02em' }}>
-            Activity Heatmap
+            Activity Heatmap (Preview)
           </h3>
           <Icon type="calendar" color="#2D63EB" size={20} />
         </div>
@@ -1023,7 +1050,7 @@ export default function ProgressPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <Icon type="brain" color="#1B5E20" size={24} />
           <h3 style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: '1rem', color: '#1B5E20' }}>
-            Emotional Growth
+            Emotional Growth (Preview)
           </h3>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
@@ -1054,7 +1081,7 @@ export default function ProgressPage() {
           ))}
         </div>
         <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: '#2E7D32', lineHeight: 1.5 }}>
-          Your puzzle reflects your emotional journey — each color represents a different feeling you've explored.
+          Example colors for the puzzle preview, not an assessment of your emotions.
         </p>
       </div>
 
@@ -1087,7 +1114,7 @@ export default function ProgressPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
             <Icon type="sparkles" color="#FFD100" size={24} />
             <h3 style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: '1.1rem', color: '#fff' }}>
-              Share Your Progress
+              Progress Card Preview
             </h3>
           </div>
 
@@ -1108,12 +1135,12 @@ export default function ProgressPage() {
                 <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)' }}>pieces collected</p>
               </div>
               <div>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '2rem', fontWeight: 800, color: '#2DD36F', lineHeight: 1 }}>47</p>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)' }}>days active</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '2rem', fontWeight: 800, color: '#2DD36F', lineHeight: 1 }}>{progress.summary.completedExchanges}</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)' }}>completed exchanges</p>
               </div>
               <div>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '2rem', fontWeight: 800, color: '#2D63EB', lineHeight: 1 }}>12</p>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)' }}>day streak</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '2rem', fontWeight: 800, color: '#2D63EB', lineHeight: 1 }}>{progress.summary.conversationsWithReplies}</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)' }}>conversations with replies</p>
               </div>
             </div>
             <p
@@ -1125,7 +1152,7 @@ export default function ProgressPage() {
                 fontStyle: 'italic',
               }}
             >
-              "Every conversation is a step toward understanding myself better"
+              Recorded activity only. No streak or mood score is inferred.
             </p>
           </div>
 

@@ -90,10 +90,10 @@ export default function PrivacyPage() {
             </div>
             <div>
               <h3 style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.25rem' }}>
-                Encryption Active
+                Conversation Encryption
               </h3>
               <p style={{ fontSize: '0.85rem', color: '#666' }}>
-                AES-256 • Military-grade
+                AES-256-GCM • Client-side storage
               </p>
             </div>
           </div>
@@ -107,8 +107,7 @@ export default function PrivacyPage() {
             }}
           >
             <p style={{ fontSize: '0.85rem', color: '#333', lineHeight: 1.6, margin: 0 }}>
-              All your conversations are encrypted on your device before being stored. 
-              Not even we can read them — your data stays completely private.
+              Conversation content is encrypted before storage and sync attempts. Inference receives readable prompts and recent history. This is CSE at rest, not end-to-end encryption.
             </p>
           </div>
         </div>
@@ -178,7 +177,7 @@ export default function PrivacyPage() {
               onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>☁️ Cloud (Optional)</span>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>☁️ Cloud Sync</span>
                 <span
                   style={{
                     background: '#FFD100',
@@ -194,9 +193,9 @@ export default function PrivacyPage() {
                 </span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.8rem', color: '#333', lineHeight: 1.6 }}>
-                <li>Session ID only (no personal info)</li>
-                <li>Usage statistics</li>
-                <li>Crash reports</li>
+                <li>Encrypted content when sync succeeds</li>
+                <li>Public salt and profile preferences</li>
+                <li>Sync may be pending or unavailable</li>
               </ul>
             </div>
 
@@ -213,7 +212,7 @@ export default function PrivacyPage() {
               onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>🚫 Never Stored</span>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>🔎 Trust Boundary</span>
                 <span
                   style={{
                     background: '#FF4A60',
@@ -229,10 +228,10 @@ export default function PrivacyPage() {
                 </span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.8rem', color: '#333', lineHeight: 1.6 }}>
-                <li>Your real name or email</li>
-                <li>Location data</li>
-                <li>Payment information</li>
-                <li>Shared with third parties</li>
+                <li>Firebase stores identity; linked email requires account linking</li>
+                <li>Inference processes readable text</li>
+                <li>Local preferences are not encrypted conversation content</li>
+                <li>Downloaded reports contain readable information</li>
               </ul>
             </div>
           </div>
@@ -256,10 +255,7 @@ export default function PrivacyPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {[
-              { action: 'Conversation saved', time: '2 minutes ago', icon: '💬' },
-              { action: 'Settings updated', time: '1 hour ago', icon: '⚙️' },
-              { action: 'Data synced', time: '3 hours ago', icon: '🔄' },
-              { action: 'Avatar changed', time: 'Yesterday', icon: '👤' },
+              { action: 'No recorded activity available', time: 'No successful-event activity ledger exists in this application.', icon: '📝' },
             ].map((log, i) => (
               <div
                 key={i}
@@ -316,12 +312,11 @@ export default function PrivacyPage() {
                 Danger Zone
               </h3>
               <p style={{ fontSize: '0.85rem', color: '#666', lineHeight: 1.6 }}>
-                Deleting your account will permanently remove all your data from our servers. 
-                This action cannot be undone.
+                Account deletion is unavailable. Local, queued and cloud deletion scope needs approval before this control can be enabled.
               </p>
             </div>
           </div>
-          <button
+          <button disabled title="Account deletion requires an approved deletion policy"
             className="neo-btn-ghost"
             style={{
               width: '100%',
@@ -338,7 +333,7 @@ export default function PrivacyPage() {
               e.currentTarget.style.color = '#FF4136';
             }}
           >
-            Delete My Account
+            Delete My Account (Unavailable)
           </button>
         </div>
       </div>

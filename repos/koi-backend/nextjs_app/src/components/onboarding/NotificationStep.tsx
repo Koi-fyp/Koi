@@ -5,11 +5,15 @@ import NeoCard from '@/components/ui/NeoCard';
 
 interface Props {
   onComplete: (notificationTime: string, notificationsEnabled: boolean) => void;
+  saving?: boolean;
+  disabled?: boolean;
+  initialEnabled?: boolean;
+  initialTime?: string;
 }
 
-export default function NotificationStep({ onComplete }: Props) {
-  const [enabled, setEnabled] = useState(true);
-  const [time, setTime]       = useState('20:00');
+export default function NotificationStep({ onComplete, saving = false, disabled = false, initialEnabled = true, initialTime = '20:00' }: Props) {
+  const [enabled, setEnabled] = useState(initialEnabled);
+  const [time, setTime]       = useState(initialTime);
 
   return (
     <div
@@ -37,7 +41,7 @@ export default function NotificationStep({ onComplete }: Props) {
           Daily Check-ins
         </h2>
         <p style={{ fontFamily: 'var(--font-body)', color: '#777', fontSize: '0.9rem', marginBottom: '1.75rem' }}>
-          KOI can gently check in with you each day to see how you&apos;re feeling.
+          Save a preferred check-in time on this device. Web notifications and scheduled messages are not enabled.
         </p>
 
         {/* Toggle */}
@@ -45,10 +49,10 @@ export default function NotificationStep({ onComplete }: Props) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: '#000' }}>
-                Enable daily reminders
+                Save daily check-in preference
               </p>
               <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: '#999', marginTop: '2px' }}>
-                A gentle nudge each day
+                Preference only; no notification is scheduled
               </p>
             </div>
             <button
@@ -125,11 +129,12 @@ export default function NotificationStep({ onComplete }: Props) {
 
       <NeoButton
         variant="secondary"
+        disabled={saving || disabled}
         onClick={() => onComplete(time, enabled)}
         fullWidth
         style={{ marginTop: '1.5rem' }}
       >
-        Let&apos;s Go ✦
+        {saving ? 'Saving companion...' : <>Let&apos;s Go ✦</>}
       </NeoButton>
     </div>
   );

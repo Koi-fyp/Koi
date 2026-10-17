@@ -4,12 +4,14 @@ import { useState } from 'react';
 import BackButton from '../components/BackButton';
 
 export default function ExportPage() {
+  const exportAvailable = false;
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [exportComplete, setExportComplete] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
 
   const generatePDF = async () => {
+    if (!exportAvailable) return;
     setIsExporting(true);
     setProgress(0);
     setExportComplete(false);
@@ -32,74 +34,11 @@ export default function ExportPage() {
 
       // Fetch user data (replace with actual data fetching)
       const wellnessData = {
-        reportDate: new Date().toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        }),
-        timeRange: 'Last 30 Days',
-
-        // Mood data
-        moodTrend: '+12%',
-        averageMood: 7.2,
-        moodEntries: 24,
-        moodData: [
-          { date: 'Week 1', score: 6.5 },
-          { date: 'Week 2', score: 6.8 },
-          { date: 'Week 3', score: 7.0 },
-          { date: 'Week 4', score: 7.4 },
-        ],
-
-        // Loneliness data
-        lonelinessScore: 6.2,
-        connectionRating: 7.5,
-        lonelinessData: [
-          { date: 'Week 1', score: 5.8 },
-          { date: 'Week 2', score: 6.0 },
-          { date: 'Week 3', score: 6.4 },
-          { date: 'Week 4', score: 6.2 },
-        ],
-
-        // Conversation themes
-        conversationThemes: [
-          { theme: 'Work & Career', count: 12, percentage: 30 },
-          { theme: 'Relationships', count: 8, percentage: 20 },
-          { theme: 'Personal Growth', count: 7, percentage: 17.5 },
-          { theme: 'Health & Wellness', count: 6, percentage: 15 },
-          { theme: 'Family', count: 5, percentage: 12.5 },
-          { theme: 'Hobbies', count: 2, percentage: 5 },
-        ],
-
-        // Activity data
-        totalConversations: 40,
-        checkInsCompleted: 24,
-        currentStreak: 12,
-        longestStreak: 15,
-        totalMessages: 487,
-
-        // Crisis events
-        crisisEvents: [
-          {
-            date: '2025-04-15',
-            severity: 'Moderate',
-            resourcesProvided: ['Umang Mental Health Helpline', 'Breathing Exercise'],
-            resolved: true
-          },
-          {
-            date: '2025-04-28',
-            severity: 'Low',
-            resourcesProvided: ['Rozan Counselling', 'Coping Strategies'],
-            resolved: true
-          }
-        ],
-
-        // Key insights
-        insights: [
-          'Your mood has improved by 12% over the past month',
-          'You maintained a 12-day conversation streak',
-          'Work-related discussions were your most common theme',
-          'Your connection ratings show positive progression',
-        ]
+        reportDate: 'Unavailable', timeRange: 'Local data only', moodTrend: 'Unavailable', averageMood: 'Unavailable', moodEntries: 'Unavailable',
+        moodData: [] as {date:string;score:number}[], lonelinessScore: 'Unavailable', connectionRating: 'Unavailable',
+        lonelinessData: [] as {date:string;score:number}[], conversationThemes: [] as {theme:string;count:number;percentage:number}[],
+        totalConversations: 'Unavailable', checkInsCompleted: 'Unavailable', currentStreak: 'Unavailable', longestStreak: 'Unavailable', totalMessages: 'Unavailable',
+        crisisEvents: [] as {date:string;severity:string;resolved:boolean;resourcesProvided:string[]}[], insights: [] as string[],
       };
 
       // Create a temporary container for HTML content
@@ -258,7 +197,7 @@ export default function ExportPage() {
                 <div style="font-size: 12px; margin-bottom: 5px;">Status: ${event.resolved ? '✓ Resolved' : 'In Progress'}</div>
                 <div style="font-size: 12px; color: #666; margin-top: 7px;">Resources Provided: ${event.resourcesProvided.join(', ')}</div>
               </div>
-            `).join('') : '<div style="background: #fff; border: 2px solid #000; border-radius: 10px; padding: 20px; box-shadow: 3px 3px 0 #000;"><p style="text-align: center; color: #2DD36F; margin: 0;">No crisis events recorded - Great job maintaining your wellbeing! 🌟</p></div>'}
+            `).join('') : '<div style="background: #fff; border: 2px solid #000; border-radius: 10px; padding: 20px; box-shadow: 3px 3px 0 #000;"><p style="text-align: center; color: #2DD36F; margin: 0;">Crisis records are unavailable; no inference about wellbeing is made.</p></div>'}
           </div>
 
           <!-- Key Insights Section -->
@@ -333,7 +272,7 @@ export default function ExportPage() {
         Export Wellness Report
       </h1>
       <p style={{ fontSize: '0.95rem', color: '#666', marginBottom: '2rem' }}>
-        Download your complete wellness journey as a beautifully formatted PDF
+        Local export is unavailable while verified records are connected. No sample report will be generated.
       </p>
 
       {/* Preview Card */}
@@ -416,7 +355,7 @@ export default function ExportPage() {
 
         {!isExporting && !exportComplete && (
           <button
-            onClick={generatePDF}
+            disabled={!exportAvailable} title="Export unavailable until verified records are connected" onClick={generatePDF}
             className="neo-btn-primary"
             style={{ width: '100%' }}
           >
@@ -545,7 +484,7 @@ export default function ExportPage() {
             </h4>
             <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.85rem', color: '#333', lineHeight: '1.7' }}>
               <li>Report generated locally on your device</li>
-              <li>All data remains encrypted</li>
+              <li>Downloaded PDF files are readable, not encrypted</li>
               <li>No personal information shared</li>
               <li>Download & keep forever</li>
             </ul>
