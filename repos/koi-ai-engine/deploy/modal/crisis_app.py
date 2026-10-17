@@ -84,6 +84,7 @@ secrets = [modal.Secret.from_dict({
     ),
     "KOI_HELPLINE_NUMBER": os.environ.get("KOI_HELPLINE_NUMBER", "1166"),
     "KOI_HELPLINE_VERIFIED": os.environ.get("KOI_HELPLINE_VERIFIED", "0"),
+    "KOI_RAG_ENABLED": os.environ.get("KOI_RAG_ENABLED", "0"),   # default OFF; see koi_rag_hook.py
 })]
 if not AUTH_DISABLED:
     assert FIREBASE_SECRET, "set KOI_FIREBASE_SECRET to the Modal secret that chat_app.py uses (modal secret list)"
@@ -267,6 +268,15 @@ class Crisis:
         return np.ascontiguousarray(fr[idx])
 
     # ---------------- intervention ----------------
+    def _rag_status(self):
+        """/health rag_enabled + rag_assets_loaded, as reported by the hook; false when it cannot say."""
+        try:
+            status = self.rag.status() if self.rag is not None and hasattr(self.rag, "status") else {}
+        except Exception:
+            status = {}
+        return {"rag_enabled": bool(status.get("rag_enabled")),
+                "rag_assets_loaded": bool(status.get("rag_assets_loaded"))}
+
     def _intervention(self, category, text, language):
         from concurrent.futures import ThreadPoolExecutor
         res = None
@@ -411,7 +421,7 @@ class Crisis:
         def health():
             return {"status": "ok", "model_version": "pilot-0.1", "calibrated": self.calibrated,
                     "calibration_version": self.cal.get("version"), "asr": self.asr is not None,
-                    "rag_hook": self.rag is not None, "auth_disabled": self.auth_disabled,
+                    "rag_hook": self.rag is not None, **self._rag_status(), "auth_disabled": self.auth_disabled,
                     "head_seeds": self.head_seeds, "heads_loaded": bool(self.heads),
                     "max_category": self.cal["max_category"], "load_seconds": self.load_s, "device": self.dev}
 
