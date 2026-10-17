@@ -30,5 +30,18 @@ No failures. At resume, before P3.4b, `test_normal_event_contract` FAILED (strea
 - Crisis web JSON gains `language` when ASR ran (additive).
 - Strays (not deleted): `E:\Koi\Koi-App\koi-ai-enginekoi_policyadapter_qwen.py`, untracked `E:\Koi\Koi-App\docs\` (canon). `agent_tasks\run_live.bat` is untracked. rag_prototype CRLF-only modifications left uncommitted.
 
+## Prep steps added after the handoff (no deploy, no flag change, nothing run live)
+### RAG readiness — `bd8e819`, report `agent_tasks/reports/RAG_READINESS.md`
+- **RAG is not wired.** `deploy/modal/koi_rag_hook.py` is a stub (returns None); `KOI_RAG_ENABLED`, `/health` `rag_enabled` and `rag_assets_loaded` do not exist in code. HIGH/CRITICAL content = static built-in fallback only. `rag_hook: true` on `/health` only means the stub imported.
+- Ledger corrections appended: P2.2 (`af2384c`) and P2.3 (`5f941b6`) were report-only commits.
+- DEMO_RUNBOOK.md / UX_FLOWS_STATUS.md now say HIGH content is the static fallback and RAG is not wired.
+- Offline RAG tests (stub encoder only), all rc=0: prefilter 32, load_labels 13, ablation 24, diagnose 6, embedder_comparison 22, super_run 33, m2_m3 51, crisis_router 26, haystack_pipeline 36 PASS. Not run: real-encoder egress audit, `test_holdout_once.py` (holdout off-limits).
+- The report lists what real wiring needs (hook → `rag_prototype/scripts/crisis_service.py`, image pins incl. a transformers/sentence-transformers conflict, assets, timeout vs the chat 5 s risk budget, content review status). Not implemented.
+
+### Multipart live-smoke prep — `9540b7e`
+- `agent_tasks\multipart_smoke.py <CHAT_URL>` (KOI_TOKEN from env): audio; text+video; audio+video. 2 s silent WAV generated in memory; mp4 via ffmpeg if on PATH, else both video cases print `SKIPPED` (ffmpeg is NOT on PATH on this machine). Prints event names and `transcript` / `risk` / `error` events, checks v1.1 ordering. Silent audio → HTTP 422 (no speech) is reported as expected, not a failure.
+- Offline test `deploy/modal/test_multipart_smoke.py`: 6 passed (local uvicorn app with fake engine/scorer, never the live service). Full chat/crisis suites still 54 passed; koi_policy hashes unchanged.
+- Finding (not changed): on audio turns the server sends `transcript` **before** `latency`; contract v1 table lists `latency` first, v1.1 additions only require `transcript` before `companion_state`. Clients that assume `latency` is first should not.
+
 ## Instruction
 Ahmad: run agent_tasks\run_live.bat once, then smoke_only.bat with both URLs

@@ -109,3 +109,6 @@ NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b); then smoke
 2026-10-17T00:13:15Z | RAG-READINESS | STARTED
 2026-10-17T00:13:15Z | RAG-READINESS | DONE | commit bd8e819 | verify: rag_prototype offline tests (stub encoder) prefilter 32, load_labels 13, ablation 24, diagnose 6, embedder_comparison 22, super_run 33, m2_m3 51, crisis_router 26, haystack_pipeline 36 PASS, all rc=0; holdout test not run
 2026-10-17T00:13:15Z | MULTIPART-SMOKE | STARTED
+2026-10-17T00:14:49Z | MULTIPART-SMOKE | DONE | commit 9540b7e | verify: pytest deploy\modal\test_multipart_smoke.py -q -> 6 passed in 1.13s (local uvicorn app, fake engine/scorer); no-token rc=2; never run against live
+2026-10-17T00:15:02Z | HANDOFF | UPDATED | RAG readiness + multipart smoke prep added; hashes ok fc2d52a9e1d7 1a318edfb932 39be0f36a002 ca135c692c52 9c56b1366f88 ebeee43db081 2cb6bd501eb4
+NEXT: Ahmad redeploys (P3.4b, P3.11, P3.2b); then smoke
