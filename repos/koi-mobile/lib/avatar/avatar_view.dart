@@ -24,16 +24,16 @@ enum AvatarStatus { loading, ready, failed }
 ///
 /// Web contract: feat/avatar-webview-host
 /// src/components/avatar/WEBVIEW_HOST.md. Nothing is sent before
-/// AVATAR_READY; only the latest emotion is kept and sent once ready, and
-/// again after every reload.
+/// AVATAR_READY; only the latest emotion and conversation state are kept
+/// and sent once ready, and again after every reload.
 ///
-/// TODO(fatima): to be confirmed and connected by Fatima. The host's other
-/// commands are kept as Dart state only, no JavaScript is run for them:
+/// - emotion: `AvatarController.setEmotion(emotion, intensity)`.
 /// - conversation state: `AvatarController.setConversationState(state)`,
-///   'idle' | 'listening' | 'thinking' | 'speaking'.
+///   'idle' | 'listening' | 'thinking' | 'speaking' (approved by Fatima).
 /// - avatar model: no JS method; the host only reads `?model=male|female`
 ///   from its URL (applied through [AvatarSource.pageUrl], with a reload).
-/// - lip-sync: no JS method yet (mouth cues/audio to be agreed with Ahmad).
+/// - TODO(fatima): lip-sync is a Dart hook only ([setMouthCues]); the
+///   audio/mouth-cue bridge is not finalized, so no JavaScript is run.
 /// - `AvatarController.reset()` exists on the host; not used.
 class AvatarViewController extends ChangeNotifier {
   AvatarViewController({this.readyTimeout = defaultReadyTimeout});
@@ -44,7 +44,12 @@ class AvatarViewController extends ChangeNotifier {
   static const String readyMessage = 'AVATAR_READY';
 
   static const String setEmotionFunction = 'AvatarController.setEmotion';
-  static const Set<String> _jsFunctions = {setEmotionFunction};
+  static const String setConversationStateFunction =
+      'AvatarController.setConversationState';
+  static const Set<String> _jsFunctions = {
+    setEmotionFunction,
+    setConversationStateFunction,
+  };
 
   /// A call to one of the host's fixed functions; every argument goes
   /// through [jsonEncode], never pasted into the source as-is.
@@ -108,14 +113,16 @@ class AvatarViewController extends ChangeNotifier {
     _notify();
   }
 
-  /// Dart state only (see the TODO above).
+  /// `AvatarController.setConversationState(state)` once the avatar is
+  /// ready; until then only the latest value is kept.
   void setConversationState(AvatarConversationState state) {
     if (state == _conversation) return;
     _conversation = state;
     _notify();
+    _sendConversationState();
   }
 
-  /// Dart state only (see the TODO above).
+  /// Dart state only (see the lip-sync TODO above).
   void setMouthCues(List<MouthCue> cues) {
     _mouthCues = List.unmodifiable(cues);
     _notify();
@@ -185,11 +192,13 @@ class AvatarViewController extends ChangeNotifier {
     if (message == readyMessage) markReady();
   }
 
-  /// The avatar can be shown; sends the current emotion.
+  /// The avatar can be shown; sends the current emotion and conversation
+  /// state.
   void markReady() {
     _timeout?.cancel();
     _set(AvatarStatus.ready);
     _sendEmotion();
+    _sendConversationState();
   }
 
   /// The avatar can't load; shows the fallback (image + Reconnect).
@@ -208,16 +217,22 @@ class AvatarViewController extends ChangeNotifier {
     }
   }
 
-  void _sendEmotion() {
+  void _sendEmotion() => _send(setEmotionFunction, [_emotion.name, _intensity]);
+
+  void _sendConversationState() =>
+      _send(setConversationStateFunction, [_conversation.name]);
+
+  /// Runs [function] in the page, only while it is ready.
+  void _send(String function, List<Object?> args) {
     final run = _run;
     if (run == null || !isReady) return;
-    final js = jsCall(setEmotionFunction, [_emotion.name, _intensity]);
+    final js = jsCall(function, args);
     try {
       run(js).catchError((Object e) {
-        debugPrint('KOI: avatar setEmotion failed: ${e.runtimeType}');
+        debugPrint('KOI: avatar $function failed: ${e.runtimeType}');
       });
     } catch (e) {
-      debugPrint('KOI: avatar setEmotion failed: ${e.runtimeType}');
+      debugPrint('KOI: avatar $function failed: ${e.runtimeType}');
     }
   }
 
@@ -372,7 +387,7 @@ class _AvatarViewState extends State<AvatarView> with WidgetsBindingObserver {
   }
 
   /// Back from the background: if the page was lost, load it again (the
-  /// emotion is re-sent on AVATAR_READY).
+  /// emotion and conversation state are re-sent on AVATAR_READY).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;

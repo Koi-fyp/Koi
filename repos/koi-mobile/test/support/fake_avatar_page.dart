@@ -22,6 +22,13 @@ class FakeAvatarPage implements AvatarWebPage {
       .where((s) => s.contains(AvatarViewController.setEmotionFunction))
       .toList();
 
+  /// Only the setConversationState calls.
+  List<String> get stateCalls => scripts
+      .where(
+        (s) => s.contains(AvatarViewController.setConversationStateFunction),
+      )
+      .toList();
+
   Uri? get lastUrl => switch (loads.lastOrNull) {
     AvatarUrlTarget(:final url) => url,
     _ => null,

@@ -177,7 +177,8 @@ class _AvatarPanel extends StatelessWidget {
 
   static const double minCard = 120;
   static const double _padY = 16 + 16, _gap = 12; // padding, gap-3
-  static const double _imageAspect = 491 / 525; // assets/images/Male.png
+  // assets/images/Male.png and Female.png are both 491×525.
+  static const double _imageAspect = 491 / 525;
 
   @override
   Widget build(BuildContext context) {
@@ -223,7 +224,7 @@ class _AvatarPanel extends StatelessWidget {
                           ),
                           child: AspectRatio(
                             aspectRatio: _imageAspect,
-                            // public/Male.png (female: same image for now)
+                            // public/Male.png or public/Female.png
                             child: AvatarImage(avatar),
                           ),
                         ),

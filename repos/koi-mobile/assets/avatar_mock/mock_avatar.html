@@ -4,8 +4,8 @@
   it imitates the avatar host contract from feat/avatar-webview-host
   (WEBVIEW_HOST.md) so the Flutter WebView bridge can be tried on a phone.
   - posts "AVATAR_READY" on window.KoiBridge after a short delay
-  - defines window.AvatarController.setEmotion(emotion, intensity) and shows
-    the last call it received
+  - defines window.AvatarController.setEmotion(emotion, intensity) and
+    setConversationState(state), and shows the last call of each
   - "Simulate failure" reloads the page without ever posting AVATAR_READY,
     so the app falls back after its 20 s ready timeout
   No network requests, no fonts or images from anywhere.
@@ -46,6 +46,8 @@
     <div class="big" id="emotion">–</div>
     <div id="intensity">intensity –</div>
     <div id="calls">0 setEmotion calls</div>
+    <div id="state">state –</div>
+    <div id="stateCalls">0 setConversationState calls</div>
   </div>
   <button id="fail" type="button">Simulate failure</button>
 <script>
@@ -57,6 +59,7 @@
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
   }
   var calls = 0;
+  var stateCalls = 0;
   var ready = false;
   function show(id, text) { document.getElementById(id).textContent = text; }
 
@@ -69,6 +72,12 @@
       show('intensity', 'intensity ' + Number(intensity).toFixed(2));
       show('calls', calls + ' setEmotion call' + (calls === 1 ? '' : 's'));
       return true;
+    },
+    setConversationState: function (state) {
+      stateCalls++;
+      show('state', 'state ' + String(state));
+      show('stateCalls', stateCalls + ' setConversationState call' +
+        (stateCalls === 1 ? '' : 's'));
     }
   });
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/avatar/avatar_source.dart';
 import 'package:koi_mobile/avatar/avatar_view.dart';
@@ -50,13 +51,15 @@ void main() {
       expect(sent, [
         'window.AvatarController && '
             'window.AvatarController.setEmotion("angry", 0.3);',
+        'window.AvatarController && '
+            'window.AvatarController.setConversationState("idle");',
       ]);
       c.handleBridgeMessage('AVATAR_READY'); // duplicate: nothing more
-      expect(sent, hasLength(1));
+      expect(sent, hasLength(2));
 
       c.setEmotion(AvatarEmotion.fun, 1);
       expect(argsOf(sent.last), ['fun', 1.0]);
-      expect(sent, hasLength(2));
+      expect(sent, hasLength(3));
     });
 
     test('after a reload the current emotion is sent again once ready', () {
@@ -72,7 +75,65 @@ void main() {
       c.handleBridgeMessage('AVATAR_READY');
       expect(sent.map(argsOf), [
         ['joy', 0.7],
+        ['idle'],
       ]);
+    });
+
+    test('conversation state: nothing before AVATAR_READY, only the latest '
+        'is sent once ready, then each change is sent', () {
+      c.beginLoad();
+      c.setConversationState(AvatarConversationState.listening);
+      c.setConversationState(AvatarConversationState.thinking);
+      expect(sent, isEmpty);
+      expect(c.conversationState, AvatarConversationState.thinking);
+
+      c.handleBridgeMessage('AVATAR_READY');
+      final states = sent
+          .where(
+            (s) =>
+                s.contains(AvatarViewController.setConversationStateFunction),
+          )
+          .toList();
+      expect(states, [
+        'window.AvatarController && '
+            'window.AvatarController.setConversationState("thinking");',
+      ]);
+
+      sent.clear();
+      c.setConversationState(AvatarConversationState.speaking);
+      c.setConversationState(AvatarConversationState.speaking); // unchanged
+      expect(sent, [
+        'window.AvatarController && '
+            'window.AvatarController.setConversationState("speaking");',
+      ]);
+      expect(argsOf(sent.single), ['speaking']);
+    });
+
+    test('after a reload the conversation state is sent again with the '
+        'emotion once ready', () {
+      c.beginLoad();
+      c.handleBridgeMessage('AVATAR_READY');
+      c.setEmotion(AvatarEmotion.sorrow, 0.4);
+      c.setConversationState(AvatarConversationState.listening);
+      sent.clear();
+
+      c.beginLoad(); // page reloaded (onPageStarted) or Reconnect
+      c.setConversationState(AvatarConversationState.speaking); // queued
+      expect(sent, isEmpty);
+      c.handleBridgeMessage('AVATAR_READY');
+      expect(sent.map(argsOf), [
+        ['sorrow', 0.4],
+        ['speaking'],
+      ]);
+    });
+
+    test('a detached page gets no conversation state', () {
+      c.beginLoad();
+      c.handleBridgeMessage('AVATAR_READY');
+      c.detachPage(token);
+      sent.clear();
+      c.setConversationState(AvatarConversationState.thinking);
+      expect(sent, isEmpty);
     });
 
     test('reconnect asks the view to load the page again', () {
@@ -114,15 +175,13 @@ void main() {
       t.dispose();
     });
 
-    test('avatar, conversation state and mouth cues are Dart state only', () {
+    test('avatar and mouth cues are Dart state only', () {
       c.beginLoad();
       c.handleBridgeMessage('AVATAR_READY');
       sent.clear();
       c.setAvatar(AvatarType.female);
-      c.setConversationState(AvatarConversationState.thinking);
       c.setMouthCues(const [MouthCue(start: 0, end: 0.2, value: 'D')]);
       expect(c.avatar, AvatarType.female);
-      expect(c.conversationState, AvatarConversationState.thinking);
       expect(c.mouthCues.single.value, 'D');
       expect(sent, isEmpty);
     });
@@ -148,6 +207,17 @@ void main() {
         expect(js, startsWith('window.AvatarController && '));
         // Exactly the JSON string literal: the value cannot end it early.
         expect(js, contains("(${jsonEncode(value)}, 0.5)"));
+
+        final stateJs = AvatarViewController.jsCall(
+          AvatarViewController.setConversationStateFunction,
+          [value],
+        );
+        expect(argsOf(stateJs), [value], reason: value);
+        expect(
+          stateJs,
+          'window.AvatarController && '
+          'window.AvatarController.setConversationState(${jsonEncode(value)});',
+        );
       }
     });
 
@@ -156,12 +226,24 @@ void main() {
         () => AvatarViewController.jsCall('alert', ['x']),
         throwsArgumentError,
       );
+      for (final notAllowed in [
+        'AvatarController.reset',
+        'AvatarController.getSnapshot',
+        'KoiBridge.postMessage',
+      ]) {
+        expect(
+          () => AvatarViewController.jsCall(notAllowed, const []),
+          throwsArgumentError,
+          reason: notAllowed,
+        );
+      }
       expect(
-        () => AvatarViewController.jsCall(
-          'AvatarController.setConversationState',
+        AvatarViewController.jsCall(
+          AvatarViewController.setConversationStateFunction,
           ['idle'],
         ),
-        throwsArgumentError,
+        'window.AvatarController && '
+        'window.AvatarController.setConversationState("idle");',
       );
     });
 
@@ -344,5 +426,24 @@ void main() {
     expect(AvatarType.fromStored(null), AvatarType.male);
     expect(AvatarType.female.stored, 'female_human');
     expect(AvatarType.female.model, 'female');
+  });
+
+  test('AvatarType: each avatar has its own bundled image', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    expect(AvatarType.male.imageAsset, 'assets/images/Male.png');
+    expect(AvatarType.female.imageAsset, 'assets/images/Female.png');
+    for (final avatar in AvatarType.values) {
+      // Declared in pubspec.yaml and present: the bundle can load it.
+      final data = await rootBundle.load(avatar.imageAsset);
+      final bytes = data.buffer.asUint8List();
+      expect(bytes.sublist(1, 4), 'PNG'.codeUnits, reason: avatar.name);
+      // IHDR width/height (big-endian) at bytes 16–23: 491×525.
+      final header = ByteData.sublistView(bytes, 16, 24);
+      expect(
+        (header.getUint32(0), header.getUint32(4)),
+        (491, 525),
+        reason: avatar.name,
+      );
+    }
   });
 }

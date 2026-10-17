@@ -31,9 +31,12 @@ enum AvatarType {
   static AvatarType fromStored(String? value) =>
       value == female.stored ? female : male;
 
-  // TODO(assets): there is no female image yet (only public/Male.png on
-  // web). Point female at its own image once one exists.
-  String get imageAsset => 'assets/images/Male.png'; // public/Male.png
+  /// The still image (feat/avatar-webview-host public/Male.png and
+  /// public/Female.png: renderer screenshots of each VRM, both 491×525).
+  String get imageAsset => switch (this) {
+    male => 'assets/images/Male.png',
+    female => 'assets/images/Female.png',
+  };
 }
 
 /// One Rhubarb mouth cue, as in the web branch's lib/speech/mouthCues.ts

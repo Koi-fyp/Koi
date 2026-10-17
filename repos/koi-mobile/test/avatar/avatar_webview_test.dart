@@ -128,6 +128,88 @@ void main() {
     await endCall(tester);
   });
 
+  testWidgets('conversation state: sent after AVATAR_READY and re-sent with '
+      'the emotion after Reconnect', (tester) async {
+    await pumpShell(tester, source: remote, simulate: true);
+    await openCall(tester);
+    final page = pages.last;
+    final s = sim.startSession();
+    sim.emit(
+      AvatarStateUpdate(
+        s,
+        emotion: AvatarEmotion.joy,
+        intensity: 0.5,
+        conversationState: AvatarConversationState.listening,
+      ),
+    );
+    await tester.pump();
+    expect(page.scripts, isEmpty); // queued until ready
+
+    page.sendReady();
+    await tester.pump();
+    expect(page.emotionCalls.last, contains('setEmotion("joy", 0.5)'));
+    expect(page.stateCalls, [
+      'window.AvatarController && '
+          'window.AvatarController.setConversationState("listening");',
+    ]);
+
+    page.handlers.onMainFrameError();
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('avatar-reconnect')));
+    await tester.pump();
+    sim.emit(
+      AvatarStateUpdate(s, conversationState: AvatarConversationState.thinking),
+    );
+    await tester.pump();
+    expect(page.stateCalls, hasLength(1)); // not ready: queued
+    page.sendReady();
+    await tester.pump();
+    expect(page.emotionCalls, hasLength(2));
+    expect(page.emotionCalls.last, contains('setEmotion("joy", 0.5)'));
+    expect(page.stateCalls, hasLength(2));
+    expect(page.stateCalls.last, contains('setConversationState("thinking")'));
+    await endCall(tester);
+  });
+
+  for (final avatar in AvatarType.values) {
+    testWidgets('${avatar.name}: Chat card, call placeholder and fallback '
+        'show ${avatar.imageAsset}', (tester) async {
+      await pumpShell(tester, stored: avatar);
+      String assetIn(Finder area) =>
+          (tester
+                      .widget<Image>(
+                        find
+                            .descendant(of: area, matching: find.byType(Image))
+                            .first,
+                      )
+                      .image
+                  as AssetImage)
+              .assetName;
+
+      // Chat card (no call screen yet).
+      final card = find.byKey(ValueKey('avatar-image-${avatar.name}'));
+      expect(card, findsOneWidget);
+      expect(assetIn(card), avatar.imageAsset);
+
+      await openCall(tester);
+      final placeholder = find.byKey(const Key('avatar-placeholder'));
+      expect(placeholder, findsOneWidget);
+      expect(
+        (tester.widget<Image>(placeholder).image as AssetImage).assetName,
+        avatar.imageAsset,
+      );
+
+      final avatarCtl = tester
+          .widget<AvatarView>(find.byType(AvatarView))
+          .controller;
+      avatarCtl.markFailed();
+      await tester.pump();
+      expect(fallback, findsOneWidget);
+      expect(assetIn(fallback), avatar.imageAsset);
+      await endCall(tester);
+    });
+  }
+
   testWidgets('remote: the WebView may not leave the avatar origin', (
     tester,
   ) async {
