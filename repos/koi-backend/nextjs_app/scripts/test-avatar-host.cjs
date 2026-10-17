@@ -36,6 +36,8 @@ test('renderer-only route is allowlisted and has no auth/chat/media/service impo
   assert.match(host, /'\/models\/koi-male\.vrm'/);
   assert.match(host, /'\/models\/koi-female\.vrm'/);
   assert.match(host, /<VRMAvatarRenderer/);
+  assert.match(host, /showStatus=\{false\}/);
+  assert.doesNotMatch(host, /Companion model|Avatar ready|Loading avatar|<select|<option/);
   assert.doesNotMatch(`${page}\n${host}`, /firebase|useChat|conversationService|crisis|MicrophoneCapture|voice-api|SpeechPlayback|getUserMedia/i);
   assert.match(layout, /pathname === '\/avatar-host'/);
   assert.match(rootLayout, /AppAuthBoundary/);
@@ -48,6 +50,7 @@ test('only avatar-host skips Firebase; ordinary authenticated routes retain the 
   const authenticatedLayout = read('src/app/(authenticated)/layout.tsx');
   assert.match(boundary, /pathname === '\/avatar-host' \|\| pathname === '\/avatar-host\/'/);
   assert.doesNotMatch(boundary, /pathname\.startsWith|pathname\.includes/);
+  assert.match(boundary, /if \(isPresentationOnlyHost\) return/);
   assert.match(boundary, /isPresentationOnlyHost\s*\?\s*<>\{children\}<\/ >|isPresentationOnlyHost\s*\?\s*<>\{children\}<\/>/);
   assert.match(boundary, /: <AuthenticatedApplication>\{children\}<\/AuthenticatedApplication>/);
   assert.match(authApplication, /import \{ AuthProvider \} from '@\/contexts\/AuthContext'/);
@@ -64,6 +67,8 @@ test('native readiness is sent once per active ready generation; stale generatio
   const unregister = registerAvatarCommands(bridge, target, { notifyKoiBridgeOnReady: true });
   const facade = target.AvatarController;
   assert.equal(facade.ready, false);
+  assert.deepEqual(Object.keys(facade).sort(), ['getSnapshot', 'lifecycle', 'ready', 'reset', 'setConversationState', 'setEmotion'].sort());
+  assert.equal('setMouthCue' in facade, false);
   assert.equal(facade.setEmotion('joy', 0.7), true); // Queued before a model exists.
   facade.setConversationState('listening');
   const first = controller();
@@ -112,9 +117,16 @@ test('repeated bridge registration clears the facade and emits one ready token p
 test('short viewport host and existing renderer retain one animation loop', () => {
   const css = read('src/components/avatar/AvatarWebViewHost.module.css');
   const renderer = read('src/components/avatar/VRMAvatarRenderer.tsx');
+  const globalCss = read('src/app/globals.css');
+  const fontsBoundary = read('src/components/providers/AppAuthBoundary.tsx');
   assert.match(css, /height:\s*100dvh/);
   assert.match(css, /min-height:\s*0/);
   assert.match(css, /env\(safe-area-inset-top\)/);
+  assert.match(css, /font-family:\s*system-ui/);
+  assert.doesNotMatch(globalCss, /fonts\.googleapis\.com/);
+  assert.match(fontsBoundary, /APP_FONT_STYLESHEET/);
+  assert.match(renderer, /showStatus = true/);
+  assert.match(renderer, /showStatus && state !== 'ready'/);
   assert.equal((renderer.match(/requestAnimationFrame\(tick\)/g) ?? []).length, 1);
   assert.match(renderer, /forceContextLoss\(\)/);
   assert.match(renderer, /cancelAnimationFrame\(frame\)/);

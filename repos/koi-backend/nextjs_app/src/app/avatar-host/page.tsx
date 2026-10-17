@@ -8,6 +8,6 @@ export const metadata: Metadata = {
 
 /** This route accepts only an allowlisted local model choice and no user data. */
 export default function AvatarHostPage({ searchParams }: { searchParams?: { model?: string } }) {
-  const initialModel: AvatarHostModel = searchParams?.model === 'female' ? 'female' : 'male';
-  return <AvatarWebViewHost initialModel={initialModel} />;
+  const model: AvatarHostModel = searchParams?.model === 'female' ? 'female' : 'male';
+  return <AvatarWebViewHost model={model} />;
 }

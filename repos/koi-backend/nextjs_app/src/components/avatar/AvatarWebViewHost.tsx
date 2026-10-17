@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import VRMAvatarRenderer from './VRMAvatarRenderer';
 import styles from './AvatarWebViewHost.module.css';
 
@@ -11,10 +10,7 @@ const MODEL_URLS = {
 
 export type AvatarHostModel = keyof typeof MODEL_URLS;
 
-export default function AvatarWebViewHost({ initialModel = 'male' }: { initialModel?: AvatarHostModel }) {
-  const [model, setModel] = useState<AvatarHostModel>(initialModel);
-  const [ready, setReady] = useState(false);
-
+export default function AvatarWebViewHost({ model = 'male' }: { model?: AvatarHostModel }) {
   return (
     <main className={styles.host} data-testid="avatar-host" data-model={model}>
       <section className={styles.stage} aria-label="KOI companion avatar">
@@ -24,29 +20,9 @@ export default function AvatarWebViewHost({ initialModel = 'male' }: { initialMo
           maxPixelRatio={1.25}
           exposeController
           notifyKoiBridgeOnReady
-          onReady={() => setReady(true)}
-          onLoadError={() => setReady(false)}
+          showStatus={false}
         />
       </section>
-      <div className={styles.toolbar}>
-        <label className={styles.modelPicker}>
-          <span>Companion</span>
-          <select
-            aria-label="Companion model"
-            value={model}
-            onChange={(event) => {
-              setReady(false);
-              setModel(event.target.value as AvatarHostModel);
-            }}
-          >
-            <option value="male">Raza</option>
-            <option value="female">Aisha</option>
-          </select>
-        </label>
-        <span className={styles.status} role="status" aria-live="polite" data-ready={ready}>
-          {ready ? 'Avatar ready' : 'Loading avatar'}
-        </span>
-      </div>
     </main>
   );
 }

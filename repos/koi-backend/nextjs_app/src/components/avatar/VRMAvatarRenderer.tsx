@@ -17,6 +17,7 @@ export interface VRMAvatarRendererProps {
   conversationState?: ConversationState;
   exposeController?: boolean;
   notifyKoiBridgeOnReady?: boolean;
+  showStatus?: boolean;
   animationSeed?: number;
   onLoadError?: () => void;
   speechSource?: SpeechTimeline;
@@ -42,7 +43,7 @@ function disposeModel(model: THREE.Object3D) {
   bitmaps.forEach((bitmap) => bitmap.close());
 }
 
-export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2, emotion = 'neutral', emotionIntensity = 0, conversationState = 'idle', exposeController = false, notifyKoiBridgeOnReady = false, animationSeed = 0x4b4f49, onLoadError, speechSource, onReady }: VRMAvatarRendererProps) {
+export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', minHeight = 240, maxPixelRatio = 2, emotion = 'neutral', emotionIntensity = 0, conversationState = 'idle', exposeController = false, notifyKoiBridgeOnReady = false, showStatus = true, animationSeed = 0x4b4f49, onLoadError, speechSource, onReady }: VRMAvatarRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState('');
@@ -234,7 +235,7 @@ export default function VRMAvatarRenderer({ modelUrl = '/models/koi-male.vrm', m
     <div data-avatar-state={state} style={{ position: 'relative', width: '100%', height: '100%', minHeight,
       background: 'radial-gradient(ellipse at 50% 40%, #fff7ed 0%, #ffe5d9 65%, #ffd9bb 100%)' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-      {state !== 'ready' && (
+      {showStatus && state !== 'ready' && (
         <div role={state === 'error' ? 'alert' : 'status'} aria-live="polite"
           style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center', gap: 12,
