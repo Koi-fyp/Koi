@@ -60,7 +60,7 @@ class ChatServer:
 
         def sampling(schema=None, **kwargs):
             values = dict(max_tokens=kwargs.pop("max_tokens", MAX_REPLY_TOKENS),
-                          temperature=kwargs.pop("temperature", 0.7),
+                          temperature=kwargs.pop("temperature", 0.4),
                           top_p=kwargs.pop("top_p", 0.8), top_k=kwargs.pop("top_k", 20),
                           repetition_penalty=kwargs.pop("repetition_penalty", 1.15))
             if schema is not None:
