@@ -1,6 +1,7 @@
 """Testable FastAPI chat application; deliberately has no Modal or vLLM imports."""
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
@@ -19,6 +20,10 @@ try:
     from .crisis_client import CrisisClient
 except ImportError:
     from crisis_client import CrisisClient
+try:
+    from . import reply_api
+except ImportError:
+    import reply_api
 
 MAX_MODEL_LEN = 8192
 MAX_REPLY_TOKENS = 512
@@ -178,6 +183,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
     max_reply = _setting(settings, "MAX_REPLY_TOKENS", MAX_REPLY_TOKENS)
     risk_cap = float(_setting(settings, "POST_REPLY_RISK_CAP_S", POST_REPLY_RISK_CAP_S))
     crisis_client = _setting(settings, "crisis_client", None) or CrisisClient()
+    reply_fetch = _setting(settings, "reply_fetch", None)  # tests inject a stub; None = real HTTP
     app = FastAPI()
     origins = os.environ.get("KOI_CORS_ORIGINS", "*").split(",")
     app.add_middleware(CORSMiddleware, allow_origins=[x.strip() for x in origins],
@@ -221,7 +227,7 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
         return [{"role": "system", "content": SYSTEM_PROMPT}, *history,
                 {"role": "user", "content": message if message is not None else req.message}], trimmed
 
-    async def normal_events(req: ChatRequest, uid: str, t0: float, message: str | None = None):
+    async def normal_events(req: ChatRequest, uid: str, t0: float, message: str | None = None, use_api: bool = False):
         msg, trimmed = messages(req, message)
         prompt = tokenizer.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
         params = sampling_factory(CHAT_JSON_SCHEMA, max_tokens=max_reply)
@@ -247,7 +253,34 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 reply = value
                 yield "delta", {"text": value}
 
-        for attempt in range(2):  # empty reply -> retry once, then the fixed fallback line
+        # Optional hosted reply (KOI_REPLY_BACKEND=api): one non-streaming call, emitted through handle() as one
+        # companion_state + one delta. Any failure -> the local generation below. Only system + history + message are sent.
+        backend, fallback = "local", None
+        if use_api:
+            cfg = reply_api.config()
+            if cfg is None:
+                fallback = "not_configured"
+            else:
+                try:
+                    api_state, api_reply = await asyncio.wait_for(asyncio.to_thread(
+                        reply_api.generate, cfg, SYSTEM_PROMPT, msg[1:-1], msg[-1]["content"],
+                        CHAT_JSON_SCHEMA, _clamp_state, reply_fetch), timeout=cfg["timeout"] + 5)
+                    if looks_like_json(api_reply):
+                        fallback = "invalid_json"
+                    else:
+                        for event in handle([("companion_state", api_state), ("reply", api_reply)]):
+                            yield event
+                        backend = "api"
+                except asyncio.TimeoutError:
+                    fallback = "timeout"
+                except reply_api.ReplyAPIError as exc:
+                    fallback = exc.reason   # already logged (reason only) by reply_api
+                except Exception:
+                    fallback = "internal_error"
+                if fallback in ("invalid_json", "timeout", "internal_error") and backend == "local":
+                    logging.getLogger("koi.chat").warning("reply api fallback: %s", fallback)
+
+        for attempt in range(0 if backend == "api" else 2):  # empty reply -> retry once, then the fixed fallback line
             extractor = StreamExtractor()
             try:
                 # vLLM returns cumulative text that is not always prefix-stable for
@@ -276,7 +309,8 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 yield event
         if state is None:
             state = _clamp_state(None)
-        yield "_complete", {"reply": reply, "state": state, "trimmed": trimmed}
+        yield "_complete", {"reply": reply, "state": state, "trimmed": trimmed,
+                            "backend": backend, "fallback": fallback}
 
     @app.post("/api/v1/chat")
     async def chat(request: Request, authorization: str | None = Header(default=None)):
@@ -383,11 +417,14 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             crisis = next((e for e in director_events if e.get("type") == "handoff" and e.get("to") == "crisis"), None)
             has_director_state = any(e.get("type") == "companion_state" for e in director_events)
             has_director_reply = any(e.get("type") == "sentence" for e in director_events)
-            complete = {"reply": "", "state": _clamp_state(None), "trimmed": 0}
+            complete = {"reply": "", "state": _clamp_state(None), "trimmed": 0, "backend": "local", "fallback": None}
             transcript = stream_risk.get("transcript") if isinstance(stream_risk, dict) else None
             if transcript:
                 yield frame("transcript", {"text": transcript, "language": stream_risk.get("language") or req.language})
-            async for name, value in normal_events(req, uid, t0, transcript):
+            # Hosted reply only on ordinary chat turns: no director text/actions/state and no crisis handoff.
+            use_api = (os.environ.get("KOI_REPLY_BACKEND") == "api" and not crisis
+                       and not any(e.get("type") in ("sentence", "ui_action", "companion_state") for e in director_events))
+            async for name, value in normal_events(req, uid, t0, transcript, use_api):
                 if name == "_trace":
                     trace.append(value)
                 elif name == "_complete":
@@ -445,7 +482,8 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                                  "ui_actions": [e for e in director_events if e.get("type") == "ui_action"],
                                  "handoff": {"to": "crisis", "reason": handoff.get("reason", "")} if handoff else None,
                                  "total_generation_s": round(time.monotonic()-t0, 3),
-                                 "history_trimmed": complete["trimmed"]}
+                                 "history_trimmed": complete["trimmed"],
+                                 "reply_backend": complete["backend"], "reply_fallback_reason": complete["fallback"]}
             payload["risk"] = stream_risk
             # Same precedence as the transcript event: ASR-detected language, else the request's; no detection here.
             payload["language"] = (stream_risk.get("language") if isinstance(stream_risk, dict) else None) or req.language
