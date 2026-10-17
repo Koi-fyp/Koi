@@ -16,15 +16,28 @@ final avatarWebPageFactoryProvider = Provider<AvatarWebPageFactory>(
   (ref) => WebViewAvatarPage.new,
 );
 
+/// Whether the call screen uses the emotion simulator instead of the chat
+/// stream: only for the mock page in a debug build when there is no chat
+/// service to drive it (KOI_API_BASE empty or invalid).
+bool useSimulatedAvatar({
+  required bool mock,
+  required bool chatConfigured,
+  bool debug = kDebugMode,
+}) => mock && debug && !chatConfigured;
+
 /// Makes the call screen's conversation-state source (the screen disposes
 /// it): the signed-in chat's stream (companion_state + thinking / speaking /
-/// idle), or with the mock page in a debug build, the simulator stepping
-/// through the emotions.
+/// idle), or the simulator stepping through the emotions (see
+/// [useSimulatedAvatar]).
 final avatarStateSourceFactoryProvider = Provider<AvatarStateSource Function()>(
   (ref) {
     final mock = ref.watch(avatarSourceProvider) == AvatarSource.mock;
     return () {
-      if (mock && kDebugMode) return SimulatedAvatarStateSource.cycling();
+      final simulated = useSimulatedAvatar(
+        mock: mock,
+        chatConfigured: ref.read(chatApiProvider).isConfigured,
+      );
+      if (simulated) return SimulatedAvatarStateSource.cycling();
       final uid = ref.read(authServiceProvider).user?.uid;
       if (uid == null) return NoAvatarStateSource();
       final chat = ref.read(chatControllerProvider(uid));

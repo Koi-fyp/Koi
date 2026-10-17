@@ -57,8 +57,10 @@ void main() {
   useRealFonts();
 
   Future<(_HeldAdapter, BackendWarmup, ProviderContainer)> pump(
-    WidgetTester tester,
-  ) async {
+    WidgetTester tester, {
+    AvatarSource avatar = AvatarSource.placeholder,
+    String chatBase = 'http://127.0.0.1:9',
+  }) async {
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = const Size(1080, 2400);
     addTearDown(tester.view.reset);
@@ -75,12 +77,12 @@ void main() {
           ),
           ...chatOverrides(
             api: ChatApiClient(
-              baseUrl: 'http://127.0.0.1:9',
+              baseUrl: chatBase,
               dio: Dio()..httpClientAdapter = adapter,
             ),
           ),
           backendWarmupProvider.overrideWith((ref) => warmup),
-          avatarSourceProvider.overrideWithValue(AvatarSource.placeholder),
+          avatarSourceProvider.overrideWithValue(avatar),
         ],
         child: const MaterialApp(home: AppShell()),
       ),
@@ -151,6 +153,47 @@ void main() {
         (null, AvatarConversationState.idle),
       ]),
     );
+  });
+
+  test('simulator only for mock + debug + no chat service', () {
+    for (final (mock, configured, debug, expected) in [
+      (true, false, true, true),
+      (true, true, true, false), // mock follows the live chat
+      (false, false, true, false),
+      (true, false, false, false), // never in release
+    ]) {
+      expect(
+        useSimulatedAvatar(
+          mock: mock,
+          chatConfigured: configured,
+          debug: debug,
+        ),
+        expected,
+        reason: 'mock=$mock configured=$configured debug=$debug',
+      );
+    }
+  });
+
+  testWidgets('mock page + KOI_API_BASE set → the chat stream drives it', (
+    tester,
+  ) async {
+    final (_, _, container) = await pump(tester, avatar: AvatarSource.mock);
+    final source = container.read(avatarStateSourceFactoryProvider)();
+    expect(source, isA<StreamAvatarStateSource>());
+    expect((source as StreamAvatarStateSource).sessionId, 'u1');
+  });
+
+  testWidgets('mock page + KOI_API_BASE empty → the 4 s simulator', (
+    tester,
+  ) async {
+    final (_, _, container) = await pump(
+      tester,
+      avatar: AvatarSource.mock,
+      chatBase: '',
+    );
+    final source = container.read(avatarStateSourceFactoryProvider)();
+    expect(source, isA<SimulatedAvatarStateSource>());
+    source.dispose(); // stops its timer
   });
 
   testWidgets('SafetyController callbacks feed the chat session', (
