@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
 import '../chat/widgets/chat_widgets.dart' show StrokeIcon;
+import '../checkins/checkin_providers.dart';
+import '../checkins/checkin_stats.dart' show averageMood7;
+import '../checkins/mood_dashboard.dart';
 import '../safety/safety_debug_menu.dart';
 import '../settings/widgets/settings_widgets.dart'
     show
@@ -16,22 +19,16 @@ import '../theme/koi_motion.dart';
 import 'progress_icons.dart';
 import 'progress_stats.dart';
 
-/// One mood bar (web `moodData` entry).
-@immutable
-class MoodPoint {
-  const MoodPoint(this.day, this.mood, this.color);
-  final String day;
-  final double mood;
-  final Color color;
-}
-
 /// Mirrors src/app/(authenticated)/progress/page.tsx with real local data
 /// (decisions 2026-10-14):
 /// - Days streak, Total Sessions, days active and the heatmap come from the
 ///   user's own messages in the local chat history ([ProgressStats]).
-/// - Jigsaw pieces, Avg Mood and the mood chart have no data source on web
-///   or mobile yet, so they show 0 / empty states. Web's numbers are all
-///   hard-coded (see WEB_BUGS_FOUND_DURING_MOBILE.md).
+/// - Jigsaw pieces have no data source on web or mobile yet (0). Web's
+///   numbers are all hard-coded (see WEB_BUGS_FOUND_DURING_MOBILE.md).
+/// - Prompt 28 (SDS M7 / M11, mobile-only: web's mood section is a
+///   preview): the daily check-in card, the mood dashboard right after the
+///   jigsaw (MLT-3), the check-in calendar, and Avg Mood from the last 7
+///   days of real, encrypted, local check-ins.
 /// - No third-party images (web loads api.dicebear.com into unlocked
 ///   jigsaw pieces); unlocked pieces are plain colour.
 ///
@@ -39,10 +36,13 @@ class MoodPoint {
 /// 800 renders as 700 (DM Sans is loaded 300–700). Hover-only effects are
 /// not mirrored.
 class ProgressScreen extends ConsumerStatefulWidget {
-  const ProgressScreen({super.key, this.now = DateTime.now});
+  const ProgressScreen({super.key, this.now = DateTime.now, this.onOpenChat});
 
   /// Injectable clock for tests.
   final DateTime Function() now;
+
+  /// The mood dashboard's "Talk with KOI" (the shell's Chat tab).
+  final VoidCallback? onOpenChat;
 
   /// Mobile-only toast texts (decision 2026-10-14: "coming soon" like the
   /// Export page's PDF button).
@@ -57,15 +57,12 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
   ProgressStats _stats = ProgressStats.empty;
   bool _jigsawExpanded = false;
   int? _selectedMilestone;
-  int? _selectedMoodDay;
   ToastMessage? _toast;
   int _toastSeq = 0;
 
-  // TODO(product): no code on web or mobile writes jigsaw progress or mood
-  // entries yet (web db.ts jigsawProgress / moodEntries are never written).
-  // When they exist, read them here; mood entries must be CSE-encrypted.
+  // TODO(product): no code on web or mobile writes jigsaw progress yet
+  // (web db.ts jigsawProgress is never written).
   static const int _totalPieces = 0;
-  static const List<MoodPoint> _moodData = [];
 
   @override
   void initState() {
@@ -117,9 +114,17 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                         onToggle: (v) => setState(() => _jigsawExpanded = v),
                       ),
                       const SizedBox(height: 20),
-                      _statsGrid(),
+                      // MLT-3: the mood dashboard next to the jigsaw.
+                      MoodDashboard(
+                        now: widget.now,
+                        onOpenChat: widget.onOpenChat,
+                      ),
                       const SizedBox(height: 20),
-                      _moodCard(),
+                      DailyCheckInCard(now: widget.now),
+                      const SizedBox(height: 20),
+                      CheckInCalendar(now: widget.now),
+                      const SizedBox(height: 20),
+                      _statsGrid(),
                       const SizedBox(height: 20),
                       _milestones(),
                       const SizedBox(height: 24),
@@ -196,6 +201,16 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     ],
   );
 
+  String _avgMood() {
+    final uid = ref.watch(authServiceProvider.select((a) => a.user?.uid));
+    if (uid == null) return '–';
+    final avg = averageMood7(
+      ref.watch(checkInControllerProvider(uid)).history.mornings,
+      widget.now(),
+    );
+    return avg == null ? '–' : avg.toStringAsFixed(1);
+  }
+
   // STATS (page.tsx:4-8) with real values.
   Widget _statsGrid() {
     final tiles = [
@@ -218,8 +233,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
       _StatTile(
         key: const Key('stat-mood'),
         label: 'Avg Mood',
-        value: '–', // approved empty state (no mood data yet)
-        unit: '/ 10',
+        // Last 7 days of check-ins (mood 1–5); "–" without any.
+        value: _avgMood(),
+        unit: '/5',
         color: KoiColors.neoBlue,
         icon: ProgressIcons.smile,
       ),
@@ -233,65 +249,6 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             if (i > 0) const SizedBox(width: 10),
             Expanded(child: tiles[i]),
           ],
-        ],
-      ),
-    );
-  }
-
-  /// Last 7 days ending today, as web's 'Mon'…'Sun' labels.
-  List<String> get _last7Days {
-    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final today = widget.now();
-    return [
-      for (var i = 6; i >= 0; i--)
-        names[DateTime(today.year, today.month, today.day - i).weekday - 1],
-    ];
-  }
-
-  Widget _moodCard() {
-    final hasData = _moodData.isNotEmpty;
-    return _WhiteCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _CardHeader(
-            title: 'Mood Trends',
-            icon: ProgressIcons.trendingUp,
-            iconColor: const Color(0xFF2DD36F),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 120,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (var i = 0; i < 7; i++) ...[
-                  if (i > 0) const SizedBox(width: 8), // gap 0.5rem
-                  Expanded(
-                    child: _MoodColumn(
-                      label: hasData ? _moodData[i].day : _last7Days[i],
-                      point: hasData ? _moodData[i] : null,
-                      selected: _selectedMoodDay == i,
-                      onTap: () => setState(
-                        () =>
-                            _selectedMoodDay = _selectedMoodDay == i ? null : i,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            hasData
-                ? 'Your emotional journey over the past week shows growth '
-                      'and resilience'
-                : 'No mood check-ins yet', // approved empty state
-            key: const Key('mood-caption'),
-            textAlign: TextAlign.center,
-            style: settingsText(12, color: const Color(0xFF666666)),
-          ),
         ],
       ),
     );
@@ -989,91 +946,6 @@ class _StatTile extends StatelessWidget {
       ],
     ),
   );
-}
-
-/// One mood column: bar + day label, gap 0.375rem. Bar height is
-/// value/10 of the space above the label (web intends `height: N%`, which
-/// browsers resolve to 0 here; see WEB_BUGS). Tap shows the value (web:
-/// hover).
-class _MoodColumn extends StatelessWidget {
-  const _MoodColumn({
-    required this.label,
-    required this.point,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final MoodPoint? point;
-  final bool selected;
-  final VoidCallback onTap;
-
-  static const double _gap = 6;
-
-  @override
-  Widget build(BuildContext context) {
-    final labelStyle = settingsText(
-      11.2,
-      weight: selected ? FontWeight.w700 : FontWeight.w500,
-      color: selected ? KoiColors.neoBlack : const Color(0xFF999999),
-    );
-    final p = point;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: p == null ? null : onTap,
-      child: LayoutBuilder(
-        builder: (context, c) {
-          final labelH =
-              (labelStyle.fontSize! * labelStyle.height!) *
-              MediaQuery.textScalerOf(context).scale(1);
-          final room = (c.maxHeight - labelH - _gap).clamp(0.0, 120.0);
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (p != null) ...[
-                if (selected)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 4),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 4,
-                      horizontal: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: KoiColors.neoBlack,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      p.mood.toStringAsFixed(1),
-                      style: settingsText(
-                        11.2,
-                        weight: FontWeight.w600,
-                        color: KoiColors.neoWhite,
-                      ),
-                    ),
-                  ),
-                Container(
-                  height: (p.mood / 10).clamp(0.0, 1.0) * room,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [p.color, p.color.withAlpha(0xAA)],
-                    ),
-                    border: Border.all(width: 2),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(6),
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: _gap),
-              Text(label, maxLines: 1, style: labelStyle),
-            ],
-          );
-        },
-      ),
-    );
-  }
 }
 
 @immutable

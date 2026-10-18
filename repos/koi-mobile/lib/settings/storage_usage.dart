@@ -6,6 +6,7 @@ import 'package:hive/hive.dart';
 import 'package:koi_flutter_lib/storage/hive_manager.dart';
 
 import '../chat/message_record.dart';
+import '../checkins/checkin_store.dart' show HiveCheckInBox;
 import '../core/auth/debug_local_auth_service.dart';
 import '../core/onboarding_store.dart';
 import '../core/sync_queue.dart';
@@ -13,6 +14,7 @@ import '../core/sync_queue.dart';
 /// The app's own Hive boxes, all opened as `Box<String>`.
 const List<String> _appBoxNames = [
   HiveMessageStore.boxName,
+  HiveCheckInBox.boxName,
   OnboardingStore.boxName,
   DebugLocalAuthService.boxName,
   PersistentSyncQueue.boxName,

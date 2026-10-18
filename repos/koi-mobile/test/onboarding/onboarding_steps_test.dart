@@ -63,10 +63,15 @@ void main() {
       for (final s in [...PrivacyStep.stored, ...PrivacyStep.beforeYouShare]) {
         expect(find.text(s), findsOneWidget);
       }
-      // web 223e97c PrivacyStep.tsx:11; old claims gone.
+      // Changed in Prompt 28: mobile stores daily check-ins (encrypted),
+      // so web's PrivacyStep.tsx:11 line is replaced; old claims gone.
+      expect(
+        find.text('Your daily check-ins, stored encrypted on this device'),
+        findsOneWidget,
+      );
       expect(
         find.text('Local reminder preferences (not completed mood check-ins)'),
-        findsOneWidget,
+        findsNothing,
       );
       expect(find.text('Check-in mood responses'), findsNothing);
       expect(find.text('What we never store'), findsNothing);

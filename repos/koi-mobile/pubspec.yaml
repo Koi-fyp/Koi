@@ -59,6 +59,9 @@ dependencies:
   # Call screen camera view (approved Prompt 29): local front-camera preview
   # only. 0.12.1 resolves with the Firebase 4.x pins (web stays 0.5.1).
   camera: 0.12.1
+  # Mood dashboard charts (approved Prompt 28); resolves with the Firebase
+  # 4.x pins, adds no other package.
+  fl_chart: 1.2.0
 
 dev_dependencies:
   flutter_test:

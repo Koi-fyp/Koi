@@ -151,13 +151,27 @@ void main() {
     expect(textIn(tester, 'share-pieces'), '0');
     expect(textIn(tester, 'share-days'), '0');
     expect(textIn(tester, 'share-streak'), '0');
-    // Mood chart: the last 7 days ending today (Wednesday).
-    for (final d in ['Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed']) {
-      expect(find.text(d), findsOneWidget, reason: d);
-    }
-    // Web's fake values never appear.
+    // Changed in Prompt 28: the 7 day-label mood bars are replaced by the
+    // mood dashboard (empty state above) and the check-in calendar.
+    expect(find.byKey(const Key('mood-dashboard')), findsOneWidget);
+    // Web's fake values never appear (outside the calendar's day numbers).
     for (final fake in ['247', '12', '47', '7.2', '2/4 Complete']) {
-      expect(find.text(fake), findsNothing, reason: fake);
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is Text &&
+              w.data == fake &&
+              find
+                  .ancestor(
+                    of: find.byWidget(w),
+                    matching: find.byKey(const Key('checkin-calendar')),
+                  )
+                  .evaluate()
+                  .isEmpty,
+        ),
+        findsNothing,
+        reason: fake,
+      );
     }
     expect(heatColor(tester, 0, 0), const Color(0xFFF0F0F0));
     await scrollThrough(tester);

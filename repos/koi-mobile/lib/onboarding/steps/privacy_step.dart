@@ -14,7 +14,10 @@ class PrivacyStep extends StatelessWidget {
   static const List<String> stored = [
     'Anonymous session ID (no name required)',
     'Your conversations (encrypted, on your device)',
-    'Local reminder preferences (not completed mood check-ins)',
+    // Mobile-only (Prompt 28): mobile stores daily check-ins, encrypted;
+    // web still says 'Local reminder preferences (not completed mood
+    // check-ins)'.
+    'Your daily check-ins, stored encrypted on this device',
     'Your avatar and language preference',
   ];
 

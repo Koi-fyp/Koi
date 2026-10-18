@@ -74,7 +74,9 @@ class _AppShellState extends State<AppShell> {
           Expanded(
             child: switch (_tab) {
               KoiTab.chat => const ChatScreen(),
-              KoiTab.progress => const ProgressScreen(),
+              KoiTab.progress => ProgressScreen(
+                onOpenChat: () => _select(KoiTab.chat),
+              ),
               KoiTab.settings => SettingsTab(navigatorKey: _settingsNav),
             },
           ),

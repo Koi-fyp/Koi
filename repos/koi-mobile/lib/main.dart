@@ -25,6 +25,8 @@ import 'core/koi_cryptography.dart';
 import 'core/key_value_store.dart';
 import 'core/onboarding_store.dart';
 import 'core/sync_queue.dart';
+import 'checkins/checkin_providers.dart';
+import 'checkins/checkin_store.dart';
 import 'dev/design_gallery.dart';
 import 'modes/input_mode.dart';
 import 'onboarding/onboarding_service.dart';
@@ -83,6 +85,7 @@ Future<void> main() async {
         .get(DebugLocalAuthService.uidKey),
   );
   final messages = await HiveMessageStore.open();
+  final checkIns = await HiveCheckInBox.open();
   final online = ConnectivityOnlineStatus();
 
   final auth = firestore != null
@@ -140,6 +143,7 @@ Future<void> main() async {
         authServiceProvider.overrideWith((ref) => auth),
         onboardingStoreProvider.overrideWith((ref) => onboarding),
         modePrefsProvider.overrideWithValue(ModePrefs(localPrefs)),
+        checkInBoxProvider.overrideWithValue(checkIns),
         micPrefsProvider.overrideWithValue(MicPrefs(localPrefs)),
         onboardingUserWriterProvider.overrideWithValue(
           HiveUserOnboardingWriter(UserRepository()),
