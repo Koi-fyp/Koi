@@ -1,0 +1,18 @@
+<!doctype html>
+<!-- Mobile stand-in for nextjs_app/src/app/avatar-host/layout.tsx (viewport) and
+     page.tsx metadata (feat/avatar-webview-host 223e97c). The CSP keeps every
+     request on the app's own local origin. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>KOI Avatar</title>
+<meta name="description" content="Presentation-only KOI companion avatar.">
+<link rel="stylesheet" href="avatar.css">
+</head>
+<body>
+<div id="root"></div>
+<script src="avatar.js"></script>
+</body>
+</html>

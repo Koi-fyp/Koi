@@ -83,6 +83,14 @@ flutter:
     # Debug-only mock avatar page (KOI_AVATAR_URL=mock; ignored in release
     # builds by AvatarSource.parse, but still bundled).
     - assets/avatar_mock/mock_avatar.html
+    # Fatima's real VRM avatar host page (KOI_AVATAR_URL=local), built from
+    # avatar_bundle/ (see its README.md) and served on 127.0.0.1 only by
+    # lib/avatar/local_avatar_server.dart.
+    - assets/avatar_local/
+    # Byte-for-byte copies of repos/koi-backend/nextjs_app/public/models/
+    # koi-male.vrm (git blob 07c30ad8) and koi-female.vrm (git blob 0999b8e3)
+    # from origin/feat/avatar-webview-host commit 223e97c.
+    - assets/avatar_local/models/
     # Bricolage Grotesque + DM Sans (SIL OFL 1.1), bundled so google_fonts
     # works offline. Exact files google_fonts 6.3.3 fetches (hash-verified).
     - assets/google_fonts/

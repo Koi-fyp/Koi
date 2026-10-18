@@ -163,6 +163,9 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
                                 pageFactory: ref.watch(
                                   avatarWebPageFactoryProvider,
                                 ),
+                                localHostFactory: ref.watch(
+                                  avatarLocalHostFactoryProvider,
+                                ),
                                 // Chat never depends on the avatar: typing
                                 // and sending work while it loads, fails or
                                 // is ready.

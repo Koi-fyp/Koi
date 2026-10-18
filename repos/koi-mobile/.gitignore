@@ -46,3 +46,7 @@ ios/Runner/GoogleService-Info.plist
 lib/firebase_options.dart
 firebase.json
 firebase.local.json
+
+# Avatar bundle build (Prompt 20): dependencies are local only.
+avatar_bundle/node_modules/
+avatar_bundle/.npm-cache/

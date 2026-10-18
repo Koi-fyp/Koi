@@ -27,6 +27,7 @@ void main() {
   final fallback = find.byKey(const Key('avatar-fallback'));
 
   late FakeAvatarPages pages;
+  late FakeLocalHosts hosts;
   late MemorySettingsPrefsStore store;
   late SimulatedAvatarStateSource sim;
 
@@ -35,11 +36,13 @@ void main() {
     AvatarSource? source,
     String companion = 'raza',
     bool simulate = false,
+    bool localStartFails = false,
   }) async {
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = const Size(360, 800) * 3;
     addTearDown(tester.view.reset);
     pages = FakeAvatarPages();
+    hosts = FakeLocalHosts(failStart: localStartFails);
     store = MemorySettingsPrefsStore({
       'u1': SettingsPrefs(companion: companion),
     });
@@ -55,6 +58,7 @@ void main() {
         ),
         if (source != null) avatarSourceProvider.overrideWithValue(source),
         avatarWebPageFactoryProvider.overrideWithValue(pages.create),
+        avatarLocalHostFactoryProvider.overrideWithValue(hosts.create),
         if (simulate)
           avatarStateSourceFactoryProvider.overrideWithValue(() => sim),
       ],
@@ -665,6 +669,134 @@ void main() {
         await endCall(tester);
       });
     }
+  });
+
+  group('local (bundled VRM page on 127.0.0.1)', () {
+    for (final (companion, model) in [('aisha', 'female'), ('raza', 'male')]) {
+      testWidgets('$companion: starts the server, loads ?model=$model, waits '
+          'for AVATAR_READY; End call closes the server', (tester) async {
+        await pumpShell(
+          tester,
+          source: AvatarSource.local,
+          companion: companion,
+        );
+        await openCall(tester);
+        expect(hosts.all, hasLength(1));
+        final page = pages.last;
+        expect(
+          page.lastUrl.toString(),
+          'http://127.0.0.1:40123/index.html?model=$model',
+        );
+        expect(loading, findsOneWidget);
+        expect(page.scripts, isEmpty, reason: 'nothing before AVATAR_READY');
+
+        page.sendReady();
+        await tester.pump();
+        expect(loading, findsNothing);
+        expect(page.emotionCalls, [
+          'window.AvatarController && '
+              'window.AvatarController.setEmotion("neutral", 0.0);',
+        ]);
+        expect(page.stateCalls, hasLength(1));
+
+        await endCall(tester);
+        expect(hosts.last.closed, isTrue);
+        expect(page.disposed, isTrue);
+      });
+    }
+
+    testWidgets('Koi: no server, no page, fox notice', (tester) async {
+      await pumpShell(tester, source: AvatarSource.local, companion: 'koi');
+      await openCall(tester);
+      expect(hosts.all, isEmpty);
+      expect(pages.all, isEmpty);
+      expect(find.byKey(const Key('call-no-avatar')), findsOneWidget);
+      await endCall(tester);
+    });
+
+    testWidgets('the WebView may not leave the local page', (tester) async {
+      await pumpShell(tester, source: AvatarSource.local);
+      await openCall(tester);
+      final allow = pages.last.handlers.allowNavigation;
+      expect(allow('http://127.0.0.1:40123/index.html?model=female'), isTrue);
+      expect(allow('http://127.0.0.1:40124/index.html?model=male'), isFalse);
+      expect(allow('http://127.0.0.1:40123/models/koi-male.vrm'), isFalse);
+      expect(allow('https://koi.example.com/avatar-host?model=male'), isFalse);
+      expect(allow('intent://scan#Intent;end'), isFalse);
+      await endCall(tester);
+      expect(
+        allow('http://127.0.0.1:40123/index.html?model=female'),
+        isFalse,
+        reason: 'closed page',
+      );
+    });
+
+    testWidgets('server can\'t start → fallback image + Reconnect; text '
+        'input still works', (tester) async {
+      await pumpShell(
+        tester,
+        source: AvatarSource.local,
+        companion: 'aisha',
+        localStartFails: true,
+      );
+      await openCall(tester);
+      expect(fallback, findsOneWidget);
+      expect(pages.last.loads, isEmpty);
+      expect(inputEnabled(tester), isTrue);
+
+      await tester.tap(find.byKey(const Key('avatar-reconnect')));
+      await tester.pump();
+      expect(hosts.last.starts, 2);
+      expect(fallback, findsOneWidget);
+      await endCall(tester);
+      expect(hosts.last.closed, isTrue);
+    });
+
+    testWidgets('20 s without AVATAR_READY → fallback; Reconnect reloads the '
+        'same page and re-sends the latest emotion on ready', (tester) async {
+      await pumpShell(tester, source: AvatarSource.local, companion: 'raza');
+      await openCall(tester);
+      final page = pages.last;
+      await tester.pump(AvatarViewController.defaultReadyTimeout);
+      expect(fallback, findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('avatar-reconnect')));
+      await tester.pump();
+      expect(page.loads, hasLength(2));
+      expect(page.lastUrl.toString(), endsWith('/index.html?model=male'));
+      expect(hosts.all, hasLength(1), reason: 'same server');
+      page.sendReady();
+      await tester.pump();
+      expect(page.emotionCalls, hasLength(1));
+      await endCall(tester);
+    });
+
+    testWidgets('changing the companion during a call reloads with the new '
+        '?model= on the same server', (tester) async {
+      final container = await pumpShell(
+        tester,
+        source: AvatarSource.local,
+        companion: 'aisha',
+      );
+      await openCall(tester);
+      final page = pages.last;
+      page.sendReady();
+      await tester.pump();
+
+      container
+          .read(selectedAvatarProvider.notifier)
+          .select(CompanionAvatar.raza);
+      await tester.pump();
+      expect(page.loads, hasLength(2));
+      expect(page.lastUrl!.queryParameters['model'], 'male');
+      expect(loading, findsOneWidget);
+      expect(hosts.all, hasLength(1));
+      expect(hosts.last.closed, isFalse);
+      page.sendReady();
+      await tester.pump();
+      expect(page.emotionCalls, hasLength(2));
+      await endCall(tester);
+    });
   });
 
   test('the real page uses the KoiBridge channel name', () {

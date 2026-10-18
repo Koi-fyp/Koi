@@ -1,0 +1,20 @@
+/* Copied from repos/koi-backend/nextjs_app/src/components/avatar/AvatarWebViewHost.module.css (branch feat/avatar-webview-host, commit 223e97c).
+   Copied, do not edit here: change upstream and re-copy. */
+.host {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: #fff4ec;
+  font-family: system-ui, sans-serif;
+}
+
+.stage {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}

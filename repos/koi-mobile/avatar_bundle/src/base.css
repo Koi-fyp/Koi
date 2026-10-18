@@ -1,0 +1,4 @@
+/* Mobile stand-in for what the Next.js root layout gives /avatar-host:
+   globals.css html/body (background #ffe5d9, height 100%) and the Tailwind
+   preflight body margin 0 (feat/avatar-webview-host 223e97c). */
+html, body, #root { margin: 0; height: 100%; background-color: #ffe5d9; }

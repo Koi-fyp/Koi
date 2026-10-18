@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/widgets.dart';
 import 'package:koi_mobile/avatar/avatar_view.dart';
 import 'package:koi_mobile/avatar/avatar_web_page.dart';
+import 'package:koi_mobile/avatar/local_avatar_server.dart';
 
 /// Stands in for the WebView (which can't run in widget tests). Records
 /// what the app asks of the page; the test plays the page's part.
@@ -69,4 +72,39 @@ class FakeAvatarPages {
 
   List<FakeAvatarPage> get live => all.where((p) => !p.disposed).toList();
   FakeAvatarPage get last => all.last;
+}
+
+/// Stands in for the loopback server (KOI_AVATAR_URL=local): no socket,
+/// just the origin it would have and whether it was closed.
+class FakeLocalHost implements LocalAvatarHost {
+  FakeLocalHost(this.port, {this.failStart = false});
+  final int port;
+  final bool failStart;
+  int starts = 0;
+  bool closed = false;
+
+  @override
+  Future<Uri> start() async {
+    starts++;
+    if (failStart) throw const SocketException('bind failed');
+    return LocalAvatarServer.originFor(port);
+  }
+
+  @override
+  Future<void> close() async => closed = true;
+}
+
+/// The host factory: keeps every host it made.
+class FakeLocalHosts {
+  FakeLocalHosts({this.failStart = false});
+  final bool failStart;
+  final all = <FakeLocalHost>[];
+
+  LocalAvatarHost create() {
+    final host = FakeLocalHost(40123 + all.length, failStart: failStart);
+    all.add(host);
+    return host;
+  }
+
+  FakeLocalHost get last => all.last;
 }

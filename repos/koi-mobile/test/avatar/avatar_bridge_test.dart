@@ -395,6 +395,69 @@ void main() {
       }
     });
 
+    test('local: KOI_AVATAR_URL=local works in debug and release', () {
+      expect(AvatarSource.parse('local', debug: true), AvatarSource.local);
+      expect(AvatarSource.parse('local', debug: false), AvatarSource.local);
+      expect(AvatarSource.parse(' local '), AvatarSource.local);
+      expect(AvatarSource.parse('LOCAL'), AvatarSource.placeholder);
+      expect(AvatarSource.local.usesWebView, isTrue);
+      expect(AvatarSource.local.url, isNull);
+    });
+
+    test('local page URL: the bundled host page with ?model=male|female', () {
+      final origin = Uri.parse('http://127.0.0.1:40123');
+      expect(
+        AvatarSource.localPageUrl(origin, AvatarType.male).toString(),
+        'http://127.0.0.1:40123/index.html?model=male',
+      );
+      expect(
+        AvatarSource.localPageUrl(origin, AvatarType.female).toString(),
+        'http://127.0.0.1:40123/index.html?model=female',
+      );
+    });
+
+    test('local navigation: only the host page on our own loopback port', () {
+      final origin = Uri.parse('http://127.0.0.1:40123');
+      const s = AvatarSource.local;
+      for (final ok in [
+        'http://127.0.0.1:40123/index.html?model=male',
+        'http://127.0.0.1:40123/index.html?model=female',
+        'http://127.0.0.1:40123/?model=female',
+      ]) {
+        expect(s.allowsNavigation(ok, localOrigin: origin), isTrue, reason: ok);
+      }
+      for (final blocked in [
+        'http://127.0.0.1:40124/index.html?model=male',
+        'http://localhost:40123/index.html?model=male',
+        'http://127.0.0.2:40123/index.html?model=male',
+        'https://127.0.0.1:40123/index.html?model=male',
+        'http://127.0.0.1:40123/index.html',
+        'http://127.0.0.1:40123/index.html?model=fox',
+        'http://127.0.0.1:40123/index.html?model=male&x=1',
+        'http://127.0.0.1:40123/index.html?model=male&model=female',
+        'http://127.0.0.1:40123/index.html?model=male#x',
+        'http://u:p@127.0.0.1:40123/index.html?model=male',
+        'http://127.0.0.1:40123/avatar.js?model=male',
+        'http://127.0.0.1:40123/models/koi-male.vrm?model=male',
+        'https://koi.example.com/avatar-host?model=male',
+        'file:///android_asset/flutter_assets/${AvatarSource.mockAsset}',
+        'javascript:alert(1)',
+        'intent://x#Intent;end',
+        'about:blank',
+      ]) {
+        expect(
+          s.allowsNavigation(blocked, localOrigin: origin),
+          isFalse,
+          reason: blocked,
+        );
+      }
+      // Server not up yet: nothing.
+      expect(
+        s.allowsNavigation('http://127.0.0.1:40123/index.html?model=male'),
+        isFalse,
+      );
+    });
+
     test('mock may only show its own asset; placeholder nothing', () {
       expect(
         AvatarSource.mock.allowsNavigation(

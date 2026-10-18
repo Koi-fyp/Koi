@@ -6,6 +6,7 @@ import '../settings/settings_prefs.dart';
 import 'avatar_source.dart';
 import 'avatar_state.dart';
 import 'avatar_web_page.dart';
+import 'local_avatar_server.dart';
 
 /// From KOI_AVATAR_URL. Overridden in tests.
 final avatarSourceProvider = Provider<AvatarSource>(
@@ -15,6 +16,11 @@ final avatarSourceProvider = Provider<AvatarSource>(
 /// Makes the avatar WebView page. Overridden in tests with a fake.
 final avatarWebPageFactoryProvider = Provider<AvatarWebPageFactory>(
   (ref) => WebViewAvatarPage.new,
+);
+
+/// Makes the loopback server for KOI_AVATAR_URL=local. Overridden in tests.
+final avatarLocalHostFactoryProvider = Provider<LocalAvatarHostFactory>(
+  (ref) => LocalAvatarServer.new,
 );
 
 /// Whether the call screen uses the emotion simulator instead of the chat

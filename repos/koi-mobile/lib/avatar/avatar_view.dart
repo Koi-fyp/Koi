@@ -9,6 +9,7 @@ import '../widgets/neo_button.dart';
 import 'avatar_source.dart';
 import 'avatar_state.dart';
 import 'avatar_web_page.dart';
+import 'local_avatar_server.dart';
 
 export 'avatar_state.dart';
 
@@ -267,6 +268,7 @@ class AvatarView extends StatefulWidget {
     this.onFailed,
     this.source = AvatarSource.placeholder,
     this.pageFactory = WebViewAvatarPage.new,
+    this.localHostFactory = LocalAvatarServer.new,
   });
 
   final AvatarViewController controller;
@@ -282,6 +284,9 @@ class AvatarView extends StatefulWidget {
   /// Makes the WebView page (tests pass a fake).
   final AvatarWebPageFactory pageFactory;
 
+  /// Serves the bundled page for [AvatarSource.local] (tests pass a fake).
+  final LocalAvatarHostFactory localHostFactory;
+
   static const String reconnectLabel = 'Reconnect';
   static const String unavailableText = 'Avatar couldn’t load';
   static const String loadingText = 'Loading avatar…';
@@ -295,6 +300,14 @@ class _AvatarViewState extends State<AvatarView> with WidgetsBindingObserver {
   AvatarWebPage? _page;
   Object? _pageToken;
   AvatarType? _loadedAvatar;
+
+  /// The local server and its origin, for [AvatarSource.local] only; lives
+  /// as long as the page.
+  LocalAvatarHost? _host;
+  Uri? _localOrigin;
+
+  /// Counts page loads, so a slow server start can't load a stale page.
+  int _loads = 0;
 
   AvatarViewController get _c => widget.controller;
   bool get _web => widget.source.usesWebView;
@@ -352,11 +365,16 @@ class _AvatarViewState extends State<AvatarView> with WidgetsBindingObserver {
         onMainFrameError: () {
           if (current()) _c.markFailed();
         },
-        allowNavigation: widget.source.allowsNavigation,
+        allowNavigation: (url) =>
+            current() &&
+            widget.source.allowsNavigation(url, localOrigin: _localOrigin),
       ),
     );
     _page = page;
     _pageToken = token;
+    if (widget.source.kind == AvatarSourceKind.local) {
+      _host = widget.localHostFactory();
+    }
     _c.attachPage(token, run: page.runJavaScript, reload: _loadPage);
     // After this frame: loading notifies listeners, which must not happen
     // while the tree is building.
@@ -371,19 +389,50 @@ class _AvatarViewState extends State<AvatarView> with WidgetsBindingObserver {
     _page?.dispose();
     _page = null;
     _pageToken = null;
+    final host = _host;
+    _host = null;
+    _localOrigin = null;
+    host?.close().catchError((Object e) {
+      debugPrint('KOI: avatar server not closed: ${e.runtimeType}');
+    });
   }
 
   void _loadPage() {
     final page = _page;
     if (page == null) return;
-    _loadedAvatar = _c.avatar;
+    final avatar = _loadedAvatar = _c.avatar;
+    _loads++;
     _c.beginLoad();
-    page.load(switch (widget.source.kind) {
-      AvatarSourceKind.remote => AvatarUrlTarget(
-        widget.source.pageUrl(_c.avatar),
-      ),
-      _ => const AvatarAssetTarget(AvatarSource.mockAsset),
-    });
+    switch (widget.source.kind) {
+      case AvatarSourceKind.remote:
+        page.load(AvatarUrlTarget(widget.source.pageUrl(avatar)));
+      case AvatarSourceKind.local:
+        _loadLocal(page, avatar);
+      case _:
+        page.load(const AvatarAssetTarget(AvatarSource.mockAsset));
+    }
+  }
+
+  /// Starts the local server (once per page), then loads the bundled page
+  /// for [avatar]. A server that can't start shows the fallback.
+  Future<void> _loadLocal(AvatarWebPage page, AvatarType avatar) async {
+    final token = _pageToken;
+    final load = _loads;
+    final host = _host;
+    if (host == null) return;
+    bool current() => mounted && _pageToken == token && _loads == load;
+    final Uri origin;
+    try {
+      origin = await host.start();
+    } catch (e) {
+      debugPrint('KOI: avatar server not started: ${e.runtimeType}');
+      if (current()) _c.markFailed();
+      return;
+    }
+    // A newer load (other model, Reconnect) or End call got here first.
+    if (!current()) return;
+    _localOrigin = origin;
+    await page.load(AvatarUrlTarget(AvatarSource.localPageUrl(origin, avatar)));
   }
 
   /// Back from the background: if the page was lost, load it again (the
@@ -426,7 +475,8 @@ class _AvatarViewState extends State<AvatarView> with WidgetsBindingObserver {
       }
     }
     // The host picks the model from its URL only.
-    if (widget.source.kind == AvatarSourceKind.remote &&
+    if ((widget.source.kind == AvatarSourceKind.remote ||
+            widget.source.kind == AvatarSourceKind.local) &&
         _page != null &&
         _loadedAvatar != _c.avatar) {
       _loadPage();

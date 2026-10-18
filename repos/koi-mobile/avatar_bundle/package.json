@@ -1,0 +1,18 @@
+{
+  "name": "koi-avatar-bundle",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Builds Fatima's /avatar-host page into assets/avatar_local/ for the mobile WebView (see README.md).",
+  "scripts": {
+    "build": "bash build.sh"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "3.5.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
