@@ -122,7 +122,7 @@ async function item1(browser, signIn) {
     record('1', `${vp} theme stylesheet applied (CTA is a pill)`, stylesheetApplied);
     record('1', `${vp} no console errors / page errors`, errors.length === 0, errors.join(' | '));
     const beforeClick = errors.length;
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await page.getByRole('button', { name: /Start Talking/ }).click();
     await page.waitForTimeout(2500);
     record('1', `${vp} CTA click issues the anonymous sign-in request`, signUpRequested);
@@ -243,7 +243,7 @@ async function checkControls(page, item, label, vp, size, controls) {
   for (const { name, locator } of controls) {
     const el = locator.first();
     if (!await el.count()) { record(item, `${vp} ${label} "${name}" present`, false, 'not found'); continue; }
-    await el.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+    await el.evaluate((node) => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
     await page.waitForTimeout(150);
     const look = await el.evaluate((node) => {
       const cs = getComputedStyle(node);
@@ -356,6 +356,114 @@ ITEM_RUNNERS['3'] = async (browser) => {
     record('3', `${vp} chart/calendar colours come from the theme palette (${palette.fills.length ? palette.fills.join(',') : 'no data drawn yet'})`, palette.ok);
     record('3', `${vp} /progress no horizontal scroll`, await noHorizontalScroll(page));
     record('3', `${vp} /progress no console errors / page errors`, errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+};
+
+// Reads pixels of a PNG screenshot through a canvas in the page (no image dependency).
+async function samplePixels(page, png, points) {
+  return page.evaluate(async ([data, pts]) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${data}`;
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width; canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    return pts.map(([x, y]) => [...ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data].slice(0, 3));
+  }, [png.toString('base64'), points]);
+}
+const near = (rgb, target, tol = 8) => rgb.every((v, i) => Math.abs(v - target[i]) <= tol);
+
+async function checkPaper(page, item, label, vp, size, paperSelector) {
+  const paper = page.locator(paperSelector).first();
+  if (!await paper.count()) { record(item, `${vp} ${label} paper container present`, false); return; }
+  record(item, `${vp} ${label} paper container carries .koi-paper`, await paper.evaluate((el) => el.classList.contains('koi-paper')));
+  const bg = await paper.evaluate((paperEl) => {
+    const white = 'rgb(255, 255, 255)';
+    const bad = [];
+    const walker = document.createTreeWalker(paperEl, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent.trim()) continue;
+      let el = node.parentElement, seen = null;
+      // First painted background between the text and the paper (inclusive) must be white.
+      while (el) {
+        const b = getComputedStyle(el).backgroundColor;
+        if (b !== 'rgba(0, 0, 0, 0)' && b !== 'transparent') { seen = b; break; }
+        if (el === paperEl) break;
+        el = el.parentElement;
+      }
+      if (seen !== white) bad.push(`${node.parentElement.tagName}:${seen}`);
+    }
+    return { paper: getComputedStyle(paperEl).backgroundColor, bad };
+  });
+  record(item, `${vp} ${label} paper background is white and every text run inside sits on white`, bg.paper === 'rgb(255, 255, 255)' && bg.bad.length === 0,
+    `${bg.paper}${bg.bad.length ? ` bad: ${bg.bad.slice(0, 3).join(', ')}` : ''}`);
+  await paper.evaluate((el) => el.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  await page.evaluate(() => window.scrollBy({ top: -100, behavior: 'instant' }));
+  await page.waitForTimeout(300);
+  const box = await paper.boundingBox();
+  const top = Math.max(box.y, await navBottom(page));
+  const bottom = Math.min(box.y + box.height, size.height);
+  const midY = (top + bottom) / 2;
+  const insidePts = [[box.x + 12, midY], [box.x + box.width - 14, midY], [box.x + box.width / 2, Math.max(box.y + 10, top + 2)]];
+  if (box.y + box.height < size.height - 12) insidePts.push([box.x + box.width / 2, box.y + box.height - 12]);
+  const outside = [Math.max(2, box.x - 8), midY];
+  const png = await page.screenshot();
+  const px = await samplePixels(page, png, [...insidePts, outside]);
+  const inside = px.slice(0, -1);
+  record(item, `${vp} ${label} sampled pixels inside the capsule are white`, inside.every((p) => near(p, [255, 255, 255], 3)), JSON.stringify(inside));
+  const pageColour = await page.evaluate(() => getComputedStyle(document.body).backgroundColor.match(/\d+/g).map(Number));
+  record(item, `${vp} ${label} sampled pixel outside the capsule is the page colour`, box.x >= 10 && near(px[px.length - 1], pageColour), `${JSON.stringify(px[px.length - 1])} vs ${JSON.stringify(pageColour)}`);
+
+  await page.emulateMedia({ media: 'print' });
+  await page.waitForTimeout(300);
+  const print = await page.evaluate(() => ({
+    nav: [...document.querySelectorAll('nav')].every((n) => getComputedStyle(n).display === 'none'),
+    controls: [...document.querySelectorAll('.no-print')].every((n) => getComputedStyle(n).display === 'none') && document.querySelectorAll('.no-print').length > 0,
+    buttons: [...document.querySelectorAll('button')].filter((b) => b.offsetParent !== null).map((b) => b.textContent.trim()),
+    body: getComputedStyle(document.body).backgroundColor,
+  }));
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  const printPng = await page.screenshot({ path: path.join(OUT, `4-${label.replace(/\//g, '').replace(/[^a-z-]/gi, '-')}-print-${vp}.png`), fullPage: true });
+  const corner = await samplePixels(page, printPng, [[3, 3], [size.width - 4, 40]]);
+  record(item, `${vp} ${label} print: nav hidden`, print.nav);
+  record(item, `${vp} ${label} print: controls hidden`, print.controls && print.buttons.length === 0, print.buttons.join(', '));
+  record(item, `${vp} ${label} print: page background white`, print.body === 'rgb(255, 255, 255)' && corner.every((p) => near(p, [255, 255, 255], 3)), `${print.body} ${JSON.stringify(corner)}`);
+  await page.emulateMedia({ media: 'screen' });
+}
+
+ITEM_RUNNERS['4'] = async (browser) => {
+  for (const [vp, size] of Object.entries(VIEWPORTS)) {
+    const ctx = await browser.newContext({ viewport: size, storageState: STATE, acceptDownloads: false });
+    const page = await ctx.newPage();
+    const errors = watchErrors(page);
+    await page.goto(`${BASE}/settings/report`, { waitUntil: 'load', timeout: 120000 });
+    await page.locator('article[aria-label^="Report for"]').waitFor({ timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    await checkPaper(page, '4', '/settings/report', vp, size, '[data-testid="report-paper"]');
+    const optionsAbove = await page.evaluate(() => {
+      const form = document.querySelector('form[aria-label="Report options"]');
+      const paper = document.querySelector('[data-testid="report-paper"]');
+      return !!form && !!paper && form.classList.contains('neo-card') && form.getBoundingClientRect().bottom <= paper.getBoundingClientRect().top;
+    });
+    record('4', `${vp} /settings/report controls card (range, titles, print) sits above the paper`, optionsAbove);
+    record('4', `${vp} /settings/report no horizontal scroll`, await noHorizontalScroll(page));
+
+    await page.goto(`${BASE}/settings/export`, { waitUntil: 'load' });
+    await page.getByRole('checkbox', { name: /I understand the metadata/ }).check();
+    await page.getByRole('button', { name: 'Prepare data export' }).click();
+    await page.locator('[data-testid="export-preview-paper"]').waitFor({ timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(800);
+    await checkPaper(page, '4', '/settings/export', vp, size, '[data-testid="export-preview-paper"]');
+    const exportAbove = await page.evaluate(() => {
+      const card = document.querySelector('section[aria-labelledby="ciphertext-export-title"]');
+      const paper = document.querySelector('[data-testid="export-preview-paper"]');
+      return !!card && !!paper && card.getBoundingClientRect().bottom <= paper.getBoundingClientRect().top;
+    });
+    record('4', `${vp} /settings/export controls card (consent, prepare, download) sits above the preview paper`, exportAbove);
+    record('4', `${vp} /settings/export no horizontal scroll`, await noHorizontalScroll(page));
+    record('4', `${vp} export/report no console errors / page errors`, errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 };

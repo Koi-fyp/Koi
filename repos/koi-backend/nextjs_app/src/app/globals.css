@@ -695,8 +695,20 @@ select.neo-input {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 999px; }
 
+/* ── Paper capsule (report / export preview) ─────────────── */
+.koi-paper {
+  background: #fff;
+  color: #111;
+  border: 2.5px solid #000;
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-lg);
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
 /* ── Print (Wellness Report) ───────────────────────────── */
 @media print {
+  html, body { background: #fff !important; }
+  .koi-paper { border: none; box-shadow: none; border-radius: 0; padding: 0; }
   nav, .no-print { display: none !important; }
   div:has(> main .report-page) { padding-top: 0 !important; }
   .report-page { max-width: none !important; padding: 0 !important; min-height: 0 !important; }

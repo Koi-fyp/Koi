@@ -5,7 +5,7 @@ import CiphertextExport from '@/components/data-portability/CiphertextExport';
 
 export default function ExportPage() {
   return <div style={{ padding: '1.5rem', maxWidth: '480px', margin: '0 auto', minHeight: '100vh' }}>
-    <BackButton />
+    <div className="no-print"><BackButton /></div>
     <h1 style={{ fontWeight: 900, fontSize: '2rem', letterSpacing: '-0.03em', marginBottom: '0.5rem' }}>Export My Data</h1>
     <p className="text-sm text-gray-600 mb-6">Choose a data copy separately from a readable report. Neither is currently an encrypted, restorable backup.</p>
     <CiphertextExport />

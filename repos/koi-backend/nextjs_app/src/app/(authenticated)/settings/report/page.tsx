@@ -66,7 +66,6 @@ export default function WellnessReportPage() {
   return <div className="report-page" style={{ padding: '1.5rem', maxWidth: '640px', margin: '0 auto', minHeight: '100vh' }}>
     <div className="no-print"><BackButton /></div>
     <h1 style={{ fontWeight: 900, fontSize: '2rem', letterSpacing: '-0.03em', marginBottom: '0.5rem' }}>Wellness Report</h1>
-    <p role="note" className="font-bold border-2 border-black rounded-lg p-3 my-3">{REPORT_DISCLAIMER}</p>
     <form className="no-print neo-card p-4 my-4" onSubmit={event => event.preventDefault()} aria-label="Report options">
       <div className="flex flex-wrap gap-4">
         <label className="block text-sm">From (Asia/Karachi)<input className="neo-input block mt-1" type="date" value={from} max={to || today} onChange={event => setFrom(event.target.value)} /></label>
@@ -75,6 +74,9 @@ export default function WellnessReportPage() {
       <label className="block text-sm mt-3"><input type="checkbox" checked={includeTitles} onChange={event => setIncludeTitles(event.target.checked)} /> Include my message titles (the first message of each conversation). Anyone who sees the printout can read them.</label>
       <button type="button" className="neo-btn-primary mt-4" disabled={!report} onClick={() => window.print()}>Print / Save as PDF</button>
     </form>
+    {/* The report itself is a white "paper" document under the controls card; it prints as a plain page. */}
+    <div className="koi-paper" data-testid="report-paper">
+    <p role="note" className="font-bold border-2 border-black rounded-lg p-3 mb-4">{REPORT_DISCLAIMER}</p>
     {!uid ? <p role="status">Sign in to build a report.</p>
       : data.status === 'error' ? <p role="alert">Saved activity could not be read. No report was built.</p>
       : !report ? <p role="status">{from > to ? 'Choose a start date on or before the end date.' : 'Loading saved data…'}</p>
@@ -107,5 +109,6 @@ export default function WellnessReportPage() {
         </section>
         <p className="text-sm mt-6">This report contains no conversation content{includeTitles ? ' other than the titles you chose to include' : ''}, crisis information or risk scores. {REPORT_DISCLAIMER}</p>
       </article>}
+    </div>
   </div>;
 }

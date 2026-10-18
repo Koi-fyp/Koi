@@ -15,6 +15,10 @@ it('requires consent before preparing and never claims a report or restorable ba
   fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(screen.getByRole('button',{name:'Prepare data export'}));
   await screen.findByRole('button',{name:'Download ciphertext data JSON'});expect(screen.getByText(/No wellness report was generated/)).toBeInTheDocument();
   expect(mockRead).toHaveBeenCalledTimes(1);
+  // The prepared preview is a white paper capsule; the Download control stays in the card above it.
+  const paper=screen.getByTestId('export-preview-paper');expect(paper).toHaveClass('koi-paper');
+  expect(paper).toContainElement(screen.getByText(/No wellness report was generated/));
+  expect(paper).not.toContainElement(screen.getByRole('button',{name:'Download ciphertext data JSON'}));
 });
 it('blocks a streaming preparation before reading and offers truthful failure state',async()=>{
   mockCurrent.pending=true;render(<Export/>);fireEvent.click(screen.getByRole('checkbox'));fireEvent.click(screen.getByRole('button',{name:'Prepare data export'}));

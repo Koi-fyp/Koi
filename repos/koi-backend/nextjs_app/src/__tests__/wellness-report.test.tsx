@@ -49,6 +49,12 @@ it('the page shows the fixed disclaimer and "No data yet" for an empty range', a
   await screen.findByRole('article');
   expect(screen.getByText('No data yet.')).toBeInTheDocument();
   expect(screen.getByText('Pieces earned in this period').nextElementSibling).toHaveTextContent('0');
+  // The report renders on a white paper capsule (disclaimer and article inside), below the options card.
+  const paper = screen.getByTestId('report-paper');
+  expect(paper).toHaveClass('koi-paper');
+  expect(paper).toContainElement(screen.getByRole('article'));
+  expect(paper).toContainElement(screen.getByRole('note'));
+  expect(screen.getByRole('form', { name: 'Report options' })).not.toContainElement(paper);
 });
 it('a populated range shows real counts and chart; titles appear only when ticked; print uses window.print', async () => {
   mockData = populated();
