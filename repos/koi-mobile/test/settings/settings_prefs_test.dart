@@ -51,12 +51,13 @@ void main() {
     ),
   );
 
-  test('no user record → web defaults (koi, "", en, enabled)', () async {
+  test('no user record → nothing saved (koi, no language/check-in)', () async {
     final p = await HiveUserSettingsStore(repo).load('u1');
     expect(p.companion, 'koi');
-    expect(p.name, '');
-    expect(p.language, 'en');
-    expect(p.notificationsEnabled, isTrue);
+    expect(p.displayName, '');
+    expect(p.language, isNull);
+    expect(p.notificationsEnabled, isNull);
+    expect(p.notificationTime, isNull);
   });
 
   test('reads what onboarding wrote', () async {
@@ -65,6 +66,7 @@ void main() {
     expect(p.companion, 'raza');
     expect(p.language, 'ur');
     expect(p.notificationsEnabled, isFalse);
+    expect(p.notificationTime, '21:15'); // the real saved time (G13)
   });
 
   test('save updates the same fields and keeps other settings keys', () async {
@@ -74,22 +76,24 @@ void main() {
       'u1',
       const SettingsPrefs(
         companion: 'aisha',
-        name: 'Sara',
+        displayName: ' Sara ',
         language: 'en',
         notificationsEnabled: true,
+        notificationTime: '07:30',
       ),
     );
     final user = (await repo.getUser('u1'))!;
     expect(user.language, 'en');
     expect(user.avatarType, 'female_human');
-    expect(user.notificationTime, '21:15'); // untouched
+    expect(user.notificationTime, '07:30');
     final s = jsonDecode(user.settings) as Map<String, dynamic>;
     expect(s['companion'], 'aisha');
     expect(s['notificationsEnabled'], isTrue);
-    expect(s['name'], 'Sara');
+    expect(s['displayName'], 'Sara'); // trimmed, web key
+    expect(s.containsKey('name'), isFalse);
     expect(s['onboardingComplete'], isTrue); // kept
     final back = await store.load('u1');
-    expect(back.name, 'Sara');
+    expect(back.displayName, 'Sara');
     expect(back.companion, 'aisha');
   });
 
@@ -212,8 +216,106 @@ void main() {
     });
   });
 
-  test('save without a user record writes nothing', () async {
-    await HiveUserSettingsStore(repo).save('u1', const SettingsPrefs());
+  test('save without a user record throws and writes nothing', () async {
+    await expectLater(
+      HiveUserSettingsStore(repo).save('u1', const SettingsPrefs()),
+      throwsStateError,
+    );
     expect(await repo.getUser('u1'), isNull);
+  });
+
+  test('old "Your Name" value is not shown as a nickname and is removed '
+      'on save (decision 2026-10-18)', () async {
+    await onboard();
+    final user = (await repo.getUser('u1'))!;
+    user.settings = jsonEncode({
+      ...jsonDecode(user.settings) as Map<String, dynamic>,
+      'name': 'Irsa',
+    });
+    await repo.saveUser(user);
+    final store = HiveUserSettingsStore(repo);
+    final p = await store.load('u1');
+    expect(p.displayName, '');
+    await store.save('u1', p);
+    final s = jsonDecode((await repo.getUser('u1'))!.settings) as Map;
+    expect(s.containsKey('name'), isFalse);
+    expect(s['displayName'], '');
+  });
+
+  test(
+    'nothing saved stays unsaved: null fields keep the record values',
+    () async {
+      await onboard();
+      final store = HiveUserSettingsStore(repo);
+      await store.save('u1', const SettingsPrefs(companion: 'koi'));
+      final user = (await repo.getUser('u1'))!;
+      expect(user.language, 'ur');
+      expect(user.notificationTime, '21:15');
+      final s = jsonDecode(user.settings) as Map;
+      expect(s['notificationsEnabled'], isFalse);
+    },
+  );
+
+  group('validation (userPreferences.ts:22-37)', () {
+    Future<void> save(SettingsPrefs p) async {
+      await onboard();
+      await HiveUserSettingsStore(repo).save('u1', p);
+    }
+
+    test(
+      'rejects unsupported language, bad time, long or control nickname',
+      () async {
+        for (final bad in [
+          const SettingsPrefs(language: 'fr'),
+          const SettingsPrefs(notificationTime: '24:00'),
+          const SettingsPrefs(notificationTime: '7:30'),
+          SettingsPrefs(displayName: 'x' * 65),
+          const SettingsPrefs(displayName: 'a\u0007b'),
+        ]) {
+          await expectLater(save(bad), throwsArgumentError);
+        }
+        expect((await repo.getUser('u1'))!.language, 'ur'); // unchanged
+      },
+    );
+
+    test(
+      '64 characters (code points) and surrounding spaces are fine',
+      () async {
+        await save(SettingsPrefs(displayName: '  ${'🦊' * 64}  '));
+        final s = jsonDecode((await repo.getUser('u1'))!.settings) as Map;
+        expect(s['displayName'], '🦊' * 64);
+      },
+    );
+  });
+
+  test('validTime and reminderStatus match web', () {
+    expect(validTime('00:00'), isTrue);
+    expect(validTime('23:59'), isTrue);
+    for (final bad in ['24:00', '7:05', '07:60', '', null, 705]) {
+      expect(validTime(bad), isFalse, reason: '$bad');
+    }
+    final noon = DateTime(2026, 1, 1, 12);
+    expect(reminderStatus(null, noon), 'No check-in preference saved.');
+    expect(
+      reminderStatus(const SettingsPrefs(notificationsEnabled: false), noon),
+      'Preference off; no notifications scheduled.',
+    );
+    expect(
+      reminderStatus(const SettingsPrefs(notificationsEnabled: true), noon),
+      'Choose a preferred time. Message delivery is unavailable.',
+    );
+    const at = SettingsPrefs(
+      notificationsEnabled: true,
+      notificationTime: '12:00',
+    );
+    expect(
+      reminderStatus(at, noon),
+      'Preferred time reached (12:00, device time). No message is scheduled.',
+    );
+    expect(
+      reminderStatus(at, DateTime(2026, 1, 1, 11, 59)),
+      'Preferred time later today (12:00, device time). No message is '
+      'scheduled.',
+    );
   });
 }

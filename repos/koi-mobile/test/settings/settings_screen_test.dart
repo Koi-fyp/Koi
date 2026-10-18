@@ -1,14 +1,18 @@
+import 'dart:async';
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:koi_mobile/avatar/avatar_providers.dart';
+import 'package:koi_mobile/avatar/avatar_source.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
 import 'package:koi_mobile/settings/export_screen.dart';
 import 'package:koi_mobile/settings/import_screen.dart';
 import 'package:koi_mobile/settings/privacy_screen.dart';
 import 'package:koi_mobile/settings/settings_prefs.dart';
 import 'package:koi_mobile/settings/settings_screen.dart';
+import 'package:koi_mobile/settings/storage_usage.dart';
 import 'package:koi_mobile/settings/widgets/avatar_picker.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
 import 'package:koi_mobile/shell/top_nav.dart';
@@ -16,33 +20,69 @@ import 'package:koi_mobile/shell/top_nav.dart';
 import '../support/fake_auth.dart';
 import '../support/real_fonts.dart';
 
+/// A store whose load and save wait for [loadGate] / [saveGate].
+class _GatedStore extends MemorySettingsPrefsStore {
+  _GatedStore([super.initial]);
+  Completer<void>? loadGate;
+  Completer<void>? saveGate;
+
+  @override
+  Future<SettingsPrefs> load(String uid) async {
+    await loadGate?.future;
+    return super.load(uid);
+  }
+
+  @override
+  Future<void> save(String uid, SettingsPrefs prefs) async {
+    await saveGate?.future;
+    return super.save(uid, prefs);
+  }
+}
+
+const String _languageNote =
+    ' Language is a saved preference; replies and interface translation are '
+    'not guaranteed.';
+
 void main() {
   useRealFonts();
 
-  late MemorySettingsPrefsStore store;
+  late _GatedStore store;
   late List<Uri> dialled;
 
   Future<void> pumpSettings(
     WidgetTester tester, {
     SettingsPrefs? stored,
+    _GatedStore? custom,
+    DateTime? now,
+    int? storageBytes,
+    AvatarSource avatar = AvatarSource.placeholder,
   }) async {
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = const Size(1080, 2400); // 360x800dp
     addTearDown(tester.view.reset);
-    store = MemorySettingsPrefsStore({'u1': ?stored});
+    store = custom ?? _GatedStore({'u1': ?stored});
     dialled = [];
+    // A fresh page each time (a second call must not reuse the old state).
+    await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(
       ProviderScope(
-        overrides: overridesFor(
-          FakeAuthService(
-            fakeUser: const KoiUser(uid: 'u1', isAnonymous: true),
+        overrides: [
+          ...overridesFor(
+            FakeAuthService(
+              fakeUser: const KoiUser(uid: 'u1', isAnonymous: true),
+            ),
+            onboardingStore(complete: true),
+            settings: store,
           ),
-          onboardingStore(complete: true),
-          settings: store,
-        ),
+          koiStorageBytesProvider.overrideWith((ref) async => storageBytes),
+          avatarSourceProvider.overrideWithValue(avatar),
+        ],
         child: MaterialApp(
           home: Scaffold(
-            body: SettingsTab(openTel: (uri) async => dialled.add(uri)),
+            body: SettingsTab(
+              openTel: (uri) async => dialled.add(uri),
+              now: () => now ?? DateTime(2026, 10, 18, 7, 5),
+            ),
           ),
         ),
       ),
@@ -86,6 +126,9 @@ void main() {
     return texts.last!;
   }
 
+  String status(WidgetTester tester) =>
+      tester.widget<Text>(find.byKey(const Key('settings-status'))).data!;
+
   group('Settings page at 360dp', () {
     testWidgets('all web sections and rows; no overflow', (tester) async {
       await pumpSettings(tester);
@@ -100,108 +143,318 @@ void main() {
         await tester.ensureVisible(find.text(label));
         expect(find.text(label), findsOneWidget);
       }
+      // Web 223e97c settings/page.tsx, nothing saved yet.
       for (final t in [
         'Avatar & Name',
-        'Koi 🦊', // page.tsx default useState('koi')
+        'Koi 🦊',
         'Language',
-        'English',
+        'No language preference saved', // :136
         'Clear History',
-        'Delete all conversations',
+        'Unavailable until deletion scope is approved', // :143
         'Daily Check-in',
-        'Every day at 8:00 PM',
+        'No preference saved', // :183
         'Reminder Time',
-        'Tap to change',
+        'Choose a local preferred time', // :192
         'Encryption',
         'AES-256, on-device',
         'Data Collection',
-        'Anonymous only',
+        'Storage and inference privacy', // :243
         'Export My Data',
-        'Download a copy',
+        'Wellness export currently unavailable', // :250
         'Import Data',
-        'Restore from backup',
-        'Local Storage',
-        '42 KB of 5 MB used',
-        '1%',
+        'Coming soon; import unavailable', // :257
+        'Device Storage Estimate', // :336 "Browser …"
+        'Device storage estimate unavailable.', // useStorageEstimate.ts:4
+        '—', // :330
         'Version Info',
-        'KOI v1.0.0',
+        'KOI Mobile preview', // :429 "KOI Web preview"
         "What's New",
         'Latest updates & features',
         'Crisis Resources',
-        '24/7 helplines (Pakistan)',
+        'Support contacts (hours not verified)', // :588
+        'Mobile preview', // :674 "Web preview"
         'Made with care · Private by design',
       ]) {
         expect(find.text(t), findsOneWidget, reason: t);
       }
+      for (final gone in [
+        'Delete all conversations',
+        'Every day at 8:00 PM',
+        'Tap to change',
+        'Anonymous only',
+        'Download a copy',
+        'Restore from backup',
+        'Local Storage',
+        '42 KB of 5 MB used',
+        '1%',
+        'KOI v1.0.0',
+        'v1.0.0',
+        '24/7 helplines (Pakistan)',
+      ]) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+      expect(status(tester), 'No check-in preference saved.$_languageNote');
       await scrollThrough(tester, const Key('settings-scroll'));
     });
 
-    testWidgets('loads stored prefs instead of the web defaults', (
-      tester,
-    ) async {
+    testWidgets('shows the saved values', (tester) async {
       await pumpSettings(
         tester,
         stored: const SettingsPrefs(
           companion: 'raza',
+          displayName: 'Rafi',
           language: 'ur',
           notificationsEnabled: false,
+          notificationTime: '21:15',
         ),
       );
-      expect(find.text('Raza 👨'), findsOneWidget);
-      expect(find.text('Urdu'), findsOneWidget);
-      expect(find.text('Disabled'), findsOneWidget);
+      expect(find.text('Raza 👨 · Rafi'), findsOneWidget); // page.tsx:78
+      expect(descOf(tester, 'row-language', 'Language'), 'Urdu (preference)');
+      expect(descOf(tester, 'row-checkin', 'Daily Check-in'), 'Preference off');
+      expect(descOf(tester, 'row-reminder', 'Reminder Time'), '21:15');
+      expect(
+        status(tester),
+        'Preference off; no notifications scheduled.$_languageNote',
+      );
     });
 
-    testWidgets('language toggle: toast uses the old value; saved', (
+    testWidgets('check-in on: real saved time in desc and status line', (
+      tester,
+    ) async {
+      const on = SettingsPrefs(
+        language: 'en',
+        notificationsEnabled: true,
+        notificationTime: '21:15',
+      );
+      await pumpSettings(tester, stored: on, now: DateTime(2026, 1, 1, 20));
+      expect(
+        descOf(tester, 'row-language', 'Language'),
+        'English (preference)',
+      );
+      expect(
+        descOf(tester, 'row-checkin', 'Daily Check-in'),
+        'Preferred time: 21:15',
+      );
+      expect(
+        status(tester),
+        'Preferred time later today (21:15, device time). No message is '
+        'scheduled.$_languageNote',
+      );
+      await pumpSettings(tester, stored: on, now: DateTime(2026, 1, 1, 21, 15));
+      expect(
+        status(tester),
+        'Preferred time reached (21:15, device time). No message is '
+        'scheduled.$_languageNote',
+      );
+      await pumpSettings(
+        tester,
+        stored: const SettingsPrefs(notificationsEnabled: true),
+      );
+      expect(
+        descOf(tester, 'row-checkin', 'Daily Check-in'),
+        'Preferred time: not set',
+      );
+      expect(
+        status(tester),
+        'Choose a preferred time. Message delivery is '
+        'unavailable.$_languageNote',
+      );
+    });
+
+    testWidgets('the status line re-reads the clock every minute', (
+      tester,
+    ) async {
+      var now = DateTime(2026, 1, 1, 21, 14);
+      tester.view.devicePixelRatio = 3;
+      tester.view.physicalSize = const Size(1080, 2400);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...overridesFor(
+              FakeAuthService(
+                fakeUser: const KoiUser(uid: 'u1', isAnonymous: true),
+              ),
+              onboardingStore(complete: true),
+              settings: MemorySettingsPrefsStore({
+                'u1': const SettingsPrefs(
+                  notificationsEnabled: true,
+                  notificationTime: '21:15',
+                ),
+              }),
+            ),
+            koiStorageBytesProvider.overrideWith((ref) async => null),
+          ],
+          child: MaterialApp(
+            home: Scaffold(body: SettingsTab(now: () => now)),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(status(tester), startsWith('Preferred time later today'));
+      now = DateTime(2026, 1, 1, 21, 15);
+      await tester.pump(const Duration(minutes: 1));
+      expect(status(tester), startsWith('Preferred time reached'));
+    });
+
+    testWidgets('language toggle saves, then says so (web toasts)', (
       tester,
     ) async {
       await pumpSettings(tester);
+      // page.tsx:64: anything but 'en' becomes 'en'.
       await tapVisible(tester, find.byKey(const Key('row-language')));
-      expect(find.text('Language changed to Urdu'), findsOneWidget);
-      expect(descOf(tester, 'row-language', 'Language'), 'Urdu');
-      expect(store.values['u1']!.language, 'ur');
+      expect(find.text('Preference saved on this device.'), findsOneWidget);
+      expect(
+        descOf(tester, 'row-language', 'Language'),
+        'English (preference)',
+      );
+      expect(store.values['u1']!.language, 'en');
 
       await tapVisible(tester, find.byKey(const Key('row-language')));
-      expect(find.text('Language changed to English'), findsOneWidget);
-      expect(store.values['u1']!.language, 'en');
+      expect(descOf(tester, 'row-language', 'Language'), 'Urdu (preference)');
+      expect(store.values['u1']!.language, 'ur');
+      expect(find.text('Language changed to Urdu'), findsNothing);
       await drain(tester);
       expect(find.byKey(const Key('settings-toast')), findsNothing);
     });
 
-    testWidgets('daily check-in toggle: desc, toast and save', (tester) async {
+    testWidgets('daily check-in toggle: desc, status and save', (tester) async {
       await pumpSettings(tester);
       await tapVisible(tester, find.byKey(const Key('row-checkin')));
-      expect(find.text('Daily check-in disabled'), findsOneWidget);
-      expect(descOf(tester, 'row-checkin', 'Daily Check-in'), 'Disabled');
-      expect(store.values['u1']!.notificationsEnabled, isFalse);
-      await tapVisible(tester, find.byKey(const Key('row-checkin')));
-      expect(find.text('Daily check-in enabled'), findsOneWidget);
+      expect(find.text('Preference saved on this device.'), findsOneWidget);
+      expect(
+        descOf(tester, 'row-checkin', 'Daily Check-in'),
+        'Preferred time: not set',
+      );
       expect(store.values['u1']!.notificationsEnabled, isTrue);
+      await tapVisible(tester, find.byKey(const Key('row-checkin')));
+      expect(descOf(tester, 'row-checkin', 'Daily Check-in'), 'Preference off');
+      expect(store.values['u1']!.notificationsEnabled, isFalse);
+      expect(status(tester), startsWith('Preference off;'));
       await drain(tester);
     });
 
-    testWidgets('clear history and reminder time only show toasts (as web)', (
+    testWidgets('a failed save keeps the old value and says so', (
+      tester,
+    ) async {
+      await pumpSettings(tester, stored: const SettingsPrefs(language: 'ur'));
+      store.saveError = StateError('disk full');
+      await tapVisible(tester, find.byKey(const Key('row-language')));
+      expect(
+        find.text('Preference could not be saved. Please retry.'),
+        findsOneWidget,
+      );
+      expect(find.text('Preference saved on this device.'), findsNothing);
+      expect(descOf(tester, 'row-language', 'Language'), 'Urdu (preference)');
+      await drain(tester);
+    });
+
+    testWidgets('preference rows do nothing while loading or saving', (
+      tester,
+    ) async {
+      final slow = _GatedStore()..loadGate = Completer<void>();
+      await pumpSettings(tester, custom: slow);
+      await tapVisible(tester, find.byKey(const Key('row-language')));
+      await tapVisible(tester, find.byKey(const Key('row-checkin')));
+      expect(slow.values, isEmpty); // not loaded yet: disabled
+      expect(find.byKey(const Key('settings-toast')), findsNothing);
+
+      slow.loadGate!.complete();
+      await tester.pump();
+      slow.saveGate = Completer<void>();
+      await tapVisible(tester, find.byKey(const Key('row-language')));
+      await tapVisible(tester, find.byKey(const Key('row-checkin')));
+      slow.saveGate!.complete();
+      await tester.pump();
+      // Only the first tap saved; the second came while it was saving.
+      expect(slow.values['u1']!.language, 'en');
+      expect(slow.values['u1']!.notificationsEnabled, isNull);
+      await drain(tester);
+    });
+
+    testWidgets('Clear History is disabled: no toast, nothing changes', (
       tester,
     ) async {
       await pumpSettings(tester);
-      await tapVisible(tester, find.byKey(const Key('row-clear')));
-      expect(find.text('All conversations cleared'), findsOneWidget);
-      expect(store.values, isEmpty); // nothing saved or cleared
-      await tapVisible(tester, find.byKey(const Key('row-reminder')));
-      expect(find.text('Time picker coming soon!'), findsOneWidget);
+      final row = find.byKey(const Key('row-clear'));
+      await tapVisible(tester, row);
       expect(find.text('All conversations cleared'), findsNothing);
-      expect(tester.takeException(), isNull);
+      expect(
+        find.text(
+          'History deletion is unavailable until its scope is '
+          'approved.',
+        ),
+        findsNothing, // web's handler can't run on a disabled button
+      );
+      expect(find.byKey(const Key('settings-toast')), findsNothing);
+      expect(store.values, isEmpty);
+      final semantics = tester.getSemantics(row);
+      expect(semantics.flagsCollection.isEnabled, Tristate.isFalse);
+    });
+
+    testWidgets('Reminder Time: system time picker saves HH:mm', (
+      tester,
+    ) async {
+      await pumpSettings(tester, now: DateTime(2026, 10, 18, 7, 5));
+      await tapVisible(tester, find.byKey(const Key('row-reminder')));
+      await tester.pumpAndSettle();
+      expect(find.text('Preferred time (device timezone)'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(store.values, isEmpty);
+
+      await tapVisible(tester, find.byKey(const Key('row-reminder')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK')); // initial = device time 07:05
+      await tester.pumpAndSettle();
+      expect(store.values['u1']!.notificationTime, '07:05');
+      expect(descOf(tester, 'row-reminder', 'Reminder Time'), '07:05');
+      expect(find.text('Preference saved on this device.'), findsOneWidget);
+      await drain(tester);
+    });
+
+    testWidgets('Reminder Time picker opens on the saved time', (tester) async {
+      await pumpSettings(
+        tester,
+        stored: const SettingsPrefs(notificationTime: '21:15'),
+      );
+      await tapVisible(tester, find.byKey(const Key('row-reminder')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(store.values['u1']!.notificationTime, '21:15');
       await drain(tester);
     });
 
     testWidgets('a new toast restarts the 3s timer', (tester) async {
       await pumpSettings(tester);
-      await tapVisible(tester, find.byKey(const Key('row-clear')));
+      await tapVisible(tester, find.byKey(const Key('row-language')));
       await tester.pump(const Duration(milliseconds: 2500));
-      await tapVisible(tester, find.byKey(const Key('row-reminder')));
+      store.saveError = StateError('disk full');
+      await tapVisible(tester, find.byKey(const Key('row-language')));
       await tester.pump(const Duration(milliseconds: 2500));
-      expect(find.text('Time picker coming soon!'), findsOneWidget);
+      expect(
+        find.text('Preference could not be saved. Please retry.'),
+        findsOneWidget,
+      );
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.byKey(const Key('settings-toast')), findsNothing);
+    });
+
+    testWidgets('Storage: real KOI data size, never a quota or percent', (
+      tester,
+    ) async {
+      await pumpSettings(tester, storageBytes: 1572864); // 1.5 MiB
+      await tester.pump();
+      expect(
+        find.text(
+          'Approximately 1.50 MB of KOI data on this device (saved records '
+          'only; app files and caches are not counted).',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('—'), findsOneWidget);
+      expect(find.textContaining('%'), findsNothing);
     });
 
     testWidgets('crisis helplines expand and dial the exact tel: links', (
@@ -236,15 +489,16 @@ void main() {
       await tapVisible(tester, find.byKey(const Key('help-version')));
       await tester.pump(const Duration(milliseconds: 400));
       expect(h('version'), greaterThan(0));
-      expect(
-        find.text('Release Date: January 2025', findRichText: true),
-        findsOneWidget,
-      );
-      // web: "Web App" (settings/page.tsx:439); mobile decision 2026-10-13
-      expect(
-        find.text('Platform: Mobile App', findRichText: true),
-        findsOneWidget,
-      );
+      for (final line in [
+        'Version: 0.0.1', // pubspec.yaml
+        'Release Date: Not published', // page.tsx:460
+        'Runtime: Debug build', // tests run in debug mode
+        'Platform: Mobile App', // page.tsx:466 "Web App"
+      ]) {
+        expect(find.text(line, findRichText: true), findsOneWidget);
+      }
+      expect(find.textContaining('Production'), findsNothing);
+      expect(find.textContaining('January 2025'), findsNothing);
       await tapVisible(tester, find.byKey(const Key('help-whatsnew')));
       await tester.pump(const Duration(milliseconds: 400));
       expect(h('version'), 0);
@@ -253,10 +507,33 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(h('whatsnew'), 0);
     });
+
+    testWidgets("What's New: web's list, avatar line only when animated", (
+      tester,
+    ) async {
+      const web = [
+        'Encrypted local history recovery',
+        'Local companion and reminder preferences',
+        'Audio and camera remain unavailable',
+      ];
+      await pumpSettings(tester);
+      expect(find.text('Current implemented features'), findsOneWidget);
+      for (final t in web) {
+        expect(find.textContaining(t), findsOneWidget, reason: t);
+      }
+      expect(find.textContaining('Enhanced avatar animations'), findsNothing);
+      expect(find.textContaining('v1.0.0'), findsNothing);
+      expect(find.textContaining('offline support'), findsNothing);
+
+      await pumpSettings(tester, avatar: AvatarSource.local);
+      expect(find.textContaining('Enhanced avatar animations'), findsOneWidget);
+    });
   });
 
   group('AvatarPicker (companions, web parity)', () {
-    testWidgets('opens, fits 360dp, saves companion + name', (tester) async {
+    testWidgets('opens, fits 360dp, saves companion + nickname', (
+      tester,
+    ) async {
       await pumpSettings(tester);
       await tapVisible(tester, find.byKey(const Key('row-avatar')));
       await tester.pump(const Duration(milliseconds: 400));
@@ -266,7 +543,14 @@ void main() {
         find.text('Pick the personality that resonates with you'),
         findsOneWidget,
       );
-      for (final t in ['AISHA', 'RAZA', 'KOI', '🦊', 'Your Name (Optional)']) {
+      for (final t in [
+        'AISHA',
+        'RAZA',
+        'KOI',
+        '🦊',
+        'Companion nickname (optional, stored locally)', // AvatarPicker:187
+        'Leave blank for the companion name', // :195
+      ]) {
         expect(
           find.descendant(
             of: find.byType(AvatarPicker),
@@ -276,22 +560,69 @@ void main() {
           reason: t,
         );
       }
+      expect(find.text('Your Name (Optional)'), findsNothing);
       expect(tester.takeException(), isNull);
 
       await tapVisible(tester, find.byKey(const Key('picker-aisha')));
       await tester.enterText(
         find.byKey(const Key('avatar-picker-name')),
-        'Sara',
+        '  Sara ',
       );
       await tapVisible(tester, find.byKey(const Key('avatar-picker-save')));
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.byType(AvatarPicker), findsNothing);
-      expect(find.text('Aisha 👩'), findsOneWidget);
-      expect(find.text('Companion updated successfully!'), findsOneWidget);
+      expect(find.text('Aisha 👩 · Sara'), findsOneWidget);
+      expect(find.text('Companion saved on this device.'), findsOneWidget);
+      expect(find.text('Companion updated successfully!'), findsNothing);
       expect(store.values['u1']!.companion, 'aisha');
-      expect(store.values['u1']!.name, 'Sara');
+      expect(store.values['u1']!.displayName, 'Sara'); // trimmed
       await drain(tester);
+    });
+
+    testWidgets('nickname is limited to 64 characters', (tester) async {
+      await pumpSettings(tester);
+      await tapVisible(tester, find.byKey(const Key('row-avatar')));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.enterText(
+        find.byKey(const Key('avatar-picker-name')),
+        'x' * 70,
+      );
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('avatar-picker-name')),
+      );
+      expect(field.controller!.text.length, 64);
+    });
+
+    testWidgets('"Saving..." while saving; a failed save stays open', (
+      tester,
+    ) async {
+      await pumpSettings(tester);
+      await tapVisible(tester, find.byKey(const Key('row-avatar')));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tapVisible(tester, find.byKey(const Key('picker-raza')));
+      store
+        ..saveGate = Completer<void>()
+        ..saveError = StateError('disk full');
+      await tapVisible(tester, find.byKey(const Key('avatar-picker-save')));
+      expect(find.text('Saving...'), findsOneWidget); // AvatarPicker.tsx:233
+      store.saveGate!.complete();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(AvatarPicker), findsOneWidget); // still open
+      expect(
+        find.descendant(
+          of: find.byType(AvatarPicker),
+          matching: find.text('Companion could not be saved. Please retry.'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Save Changes ✓'), findsOneWidget);
+      expect(store.values, isEmpty);
+      await drain(tester);
+      await tapVisible(tester, find.byKey(const Key('avatar-picker-cancel')));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Koi 🦊'), findsOneWidget); // unchanged
     });
 
     testWidgets('Cancel, ✕ and the backdrop close without saving', (
@@ -319,10 +650,10 @@ void main() {
       expect(store.values, isEmpty);
     });
 
-    testWidgets('opens on the current companion', (tester) async {
+    testWidgets('opens on the current companion and nickname', (tester) async {
       await pumpSettings(
         tester,
-        stored: const SettingsPrefs(companion: 'raza', name: 'Ali'),
+        stored: const SettingsPrefs(companion: 'raza', displayName: 'Ali'),
       );
       await tapVisible(tester, find.byKey(const Key('row-avatar')));
       await tester.pump(const Duration(milliseconds: 400));

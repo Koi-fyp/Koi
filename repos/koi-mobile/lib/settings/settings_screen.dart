@@ -1,11 +1,13 @@
-import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/app_version.dart';
 import '../app/providers.dart';
 import '../avatar/avatar_providers.dart';
+import '../avatar/avatar_source.dart';
 import '../onboarding/steps/ai_disclosure_step.dart' show AIDisclosureStep;
 import '../safety/safety_debug_menu.dart';
 import '../theme/koi_colors.dart';
@@ -15,6 +17,7 @@ import 'export_screen.dart';
 import 'import_screen.dart';
 import 'privacy_screen.dart';
 import 'settings_prefs.dart';
+import 'storage_usage.dart';
 import 'widgets/avatar_picker.dart';
 import 'widgets/settings_widgets.dart';
 
@@ -29,8 +32,12 @@ class SettingsTab extends StatefulWidget {
     super.key,
     this.openTel = AIDisclosureStep.defaultOpen,
     this.navigatorKey,
+    this.now = DateTime.now,
   });
   final TelOpener openTel;
+
+  /// Device clock for the reminder status line. Injectable for tests.
+  final DateTime Function() now;
 
   /// When the shell passes a key, the shell's own back handler pops this
   /// nested navigator first (so back from Privacy goes to Settings, not to
@@ -50,8 +57,9 @@ class _SettingsTabState extends State<SettingsTab> {
   Widget build(BuildContext context) {
     final navigator = Navigator(
       key: _nav,
-      onGenerateRoute: (settings) =>
-          settingsRoute(SettingsScreen(openTel: widget.openTel)),
+      onGenerateRoute: (settings) => settingsRoute(
+        SettingsScreen(openTel: widget.openTel, now: widget.now),
+      ),
     );
     if (widget.navigatorKey != null) return navigator;
     return NavigatorPopHandler(
@@ -73,8 +81,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({
     super.key,
     this.openTel = AIDisclosureStep.defaultOpen,
+    this.now = DateTime.now,
   });
   final TelOpener openTel;
+  final DateTime Function() now;
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -82,16 +92,36 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   SettingsPrefs _prefs = const SettingsPrefs();
+
+  /// Web avatarPreference.status === 'ready': the saved prefs are loaded.
+  bool _loaded = false;
+  bool _saving = false;
+  late DateTime _now = widget.now();
+  Timer? _clock;
   ToastMessage? _toast;
   int _toastSeq = 0;
   String? _expandedHelp;
 
   String? get _uid => ref.read(authServiceProvider).user?.uid;
 
+  /// settings/page.tsx:33 preferenceDisabled.
+  bool get _preferenceDisabled => !_loaded || _saving;
+
   @override
   void initState() {
     super.initState();
     _load();
+    // page.tsx:32: the status line re-reads the clock every minute.
+    _clock = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => setState(() => _now = widget.now()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -99,70 +129,110 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (uid == null) return;
     try {
       final prefs = await ref.read(settingsPrefsStoreProvider).load(uid);
-      if (mounted) setState(() => _prefs = prefs);
+      if (mounted) {
+        setState(() {
+          _prefs = prefs;
+          _loaded = true;
+        });
+      }
     } catch (e) {
-      debugPrint('KOI: settings load failed: $e');
+      // Stays not loaded, so the preference rows stay disabled (web status
+      // 'error').
+      debugPrint('KOI: settings load failed: ${e.runtimeType}');
     }
   }
 
-  /// Web only updates React state; mobile also saves (decision 2026-10-13).
-  void _update(SettingsPrefs next) {
-    setState(() => _prefs = next);
+  /// page.tsx:34-40 updatePreference(): saves, then reports the result. The
+  /// page only shows the new value once it is saved.
+  Future<void> _update(SettingsPrefs next) async {
     final uid = _uid;
-    if (uid == null) return;
-    ref.read(settingsPrefsStoreProvider).save(uid, next).catchError((Object e) {
-      debugPrint('KOI: settings save failed: $e');
-    });
+    if (uid == null || _preferenceDisabled) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(settingsPrefsStoreProvider).save(uid, next);
+      if (!mounted) return;
+      setState(() => _prefs = next);
+      _showToast('Preference saved on this device.', ToastType.success);
+    } catch (e) {
+      debugPrint('KOI: settings save failed: ${e.runtimeType}');
+      if (mounted) {
+        _showToast(
+          'Preference could not be saved. Please retry.',
+          ToastType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   void _showToast(String message, ToastType type) =>
       setState(() => _toast = ToastMessage(message, type, ++_toastSeq));
 
-  Future<void> _openAvatarPicker() async {
-    final choice = await showAvatarPicker(
-      context,
-      currentAvatar: _prefs.companion,
-      currentName: _prefs.name,
-    );
-    if (choice == null || !mounted) return;
-    // handleAvatarSave: the companion and its avatar are saved as a pair
-    // (223e97c settings/page.tsx:46-62, avatarPreference.ts:41-46), so the
-    // Chat card and call screen follow at once.
+  Future<void> _openAvatarPicker() => showAvatarPicker(
+    context,
+    currentAvatar: _prefs.companion,
+    currentName: _prefs.displayName,
+    onSave: _saveCompanion,
+  );
+
+  /// page.tsx:46-62 handleAvatarSave: the companion and its avatar are saved
+  /// as a pair (avatarPreference.ts:41-46), so the Chat card and call screen
+  /// follow once saved. Returns the picker's error toast, or null when saved.
+  Future<String?> _saveCompanion(CompanionChoice choice) async {
+    final uid = _uid;
+    if (uid == null || !_loaded) {
+      return 'Wait for your saved companion to load before saving.';
+    }
     final next = _prefs.copyWith(
       companion: choice.companion,
-      name: choice.name,
+      displayName: choice.displayName.trim(),
     );
-    _update(next);
+    try {
+      await ref.read(settingsPrefsStoreProvider).save(uid, next);
+    } catch (e) {
+      debugPrint('KOI: companion not saved: ${e.runtimeType}');
+      return 'Companion could not be saved. Please retry.';
+    }
+    if (!mounted) return null;
+    setState(() => _prefs = next);
     ref.read(selectedAvatarProvider.notifier).select(next.avatar);
-    _showToast('Companion updated successfully!', ToastType.success);
+    _showToast('Companion saved on this device.', ToastType.success);
+    return null;
   }
 
-  void _toggleLanguage() {
-    // handleLanguageToggle: the toast reads the language from BEFORE the
-    // toggle.
-    final wasEn = _prefs.language == 'en';
-    _update(_prefs.copyWith(language: wasEn ? 'ur' : 'en'));
-    _showToast(
-      wasEn ? 'Language changed to Urdu' : 'Language changed to English',
-      ToastType.info,
+  // page.tsx:64 handleLanguageToggle.
+  void _toggleLanguage() =>
+      _update(_prefs.copyWith(language: _prefs.language == 'en' ? 'ur' : 'en'));
+
+  // page.tsx:66 handleNotificationToggle.
+  void _toggleNotifications() => _update(
+    _prefs.copyWith(notificationsEnabled: _prefs.notificationsEnabled != true),
+  );
+
+  /// page.tsx:193-200: web opens an inline `<input type="time">` labelled
+  /// "Preferred time (device timezone)" and saves on blur; mobile opens the
+  /// system time picker and saves the chosen 'HH:mm' (decision 2026-10-18).
+  Future<void> _pickReminderTime() async {
+    if (_preferenceDisabled) return;
+    final saved = _prefs.notificationTime;
+    final initial = saved != null && validTime(saved)
+        ? TimeOfDay(
+            hour: int.parse(saved.substring(0, 2)),
+            minute: int.parse(saved.substring(3)),
+          )
+        : TimeOfDay.fromDateTime(widget.now());
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      helpText: 'Preferred time (device timezone)',
     );
-  }
-
-  void _clearHistory() {
-    // handleClearHistory: web only shows the toast and deletes nothing.
-    // Mirrored as-is (decision 2026-10-13); see WEB_BUGS_FOUND_DURING_MOBILE.md.
-    // TODO(product): clear the local koi_messages box (and Firestore once
-    // connected) when the web behaviour is defined.
-    _showToast('All conversations cleared', ToastType.success);
-  }
-
-  void _toggleNotifications() {
-    // handleNotificationToggle: toast reads the value from BEFORE the toggle.
-    final wasOn = _prefs.notificationsEnabled;
-    _update(_prefs.copyWith(notificationsEnabled: !wasOn));
-    _showToast(
-      wasOn ? 'Daily check-in disabled' : 'Daily check-in enabled',
-      ToastType.info,
+    if (picked == null || !mounted) return;
+    String two(int v) => v.toString().padLeft(2, '0');
+    await _update(
+      _prefs.copyWith(
+        notificationTime: '${two(picked.hour)}:${two(picked.minute)}',
+      ),
     );
   }
 
@@ -171,10 +241,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _toggleHelp(String section) =>
       setState(() => _expandedHelp = _expandedHelp == section ? null : section);
 
-  // getAvatarDisplay()
-  static String avatarDisplay(String id) =>
-      const {'aisha': 'Aisha 👩', 'raza': 'Raza 👨', 'koi': 'Koi 🦊'}[id] ??
-      'Koi 🦊';
+  /// getAvatarDisplay() (page.tsx:72-79): the companion, then the nickname.
+  static String avatarDisplay(String id, [String displayName = '']) {
+    final companion =
+        const {'aisha': 'Aisha 👩', 'raza': 'Raza 👨', 'koi': 'Koi 🦊'}[id] ??
+        'Koi 🦊';
+    return displayName.isEmpty ? companion : '$companion · $displayName';
+  }
+
+  // page.tsx:136
+  String get _languageDesc => switch (_prefs.language) {
+    'en' => 'English (preference)',
+    'ur' => 'Urdu (preference)',
+    _ => 'No language preference saved',
+  };
+
+  // page.tsx:183
+  String get _checkInDesc {
+    final time = _prefs.notificationTime;
+    return switch (_prefs.notificationsEnabled) {
+      true =>
+        'Preferred time: ${time != null && validTime(time) ? time : 'not set'}',
+      false => 'Preference off',
+      null => 'No preference saved',
+    };
+  }
+
+  // page.tsx:192
+  String get _reminderDesc {
+    final time = _prefs.notificationTime;
+    return time != null && validTime(time)
+        ? time
+        : 'Choose a local preferred time';
+  }
+
+  static String _buildMode() => kReleaseMode
+      ? 'Release build'
+      : kProfileMode
+      ? 'Profile build'
+      : 'Debug build';
 
   @override
   Widget build(BuildContext context) => ColoredBox(
@@ -230,7 +335,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               key: const Key('row-avatar'),
               icon: '👤',
               label: 'Avatar & Name',
-              desc: avatarDisplay(_prefs.companion),
+              desc: avatarDisplay(_prefs.companion, _prefs.displayName),
               onTap: _openAvatarPicker,
             ),
             const SettingsDivider(),
@@ -238,17 +343,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               key: const Key('row-language'),
               icon: '🌐',
               label: 'Language',
-              desc: _prefs.language == 'en' ? 'English' : 'Urdu',
+              desc: _languageDesc,
+              disabled: _preferenceDisabled,
               onTap: _toggleLanguage,
             ),
             const SettingsDivider(),
-            SettingsRow(
-              key: const Key('row-clear'),
+            // page.tsx:140-147: disabled, so its handleClearHistory toast
+            // (page.tsx:65) never shows. Nothing is deleted.
+            const SettingsRow(
+              key: Key('row-clear'),
               icon: '🗑',
               label: 'Clear History',
-              desc: 'Delete all conversations',
+              desc: 'Unavailable until deletion scope is approved',
+              disabled: true,
               danger: true,
-              onTap: _clearHistory,
             ),
           ],
         ),
@@ -263,12 +371,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               key: const Key('row-checkin'),
               icon: '🔔',
               label: 'Daily Check-in',
-              // Web shows this fixed text, not the stored notificationTime.
-              desc: _prefs.notificationsEnabled
-                  ? 'Every day at 8:00 PM'
-                  : 'Disabled',
+              desc: _checkInDesc,
+              disabled: _preferenceDisabled,
               toggle: true,
-              on: _prefs.notificationsEnabled,
+              on: _prefs.notificationsEnabled == true,
               onTap: _toggleNotifications,
             ),
             const SettingsDivider(),
@@ -276,11 +382,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               key: const Key('row-reminder'),
               icon: '⏰',
               label: 'Reminder Time',
-              desc: 'Tap to change',
-              onTap: () =>
-                  _showToast('Time picker coming soon!', ToastType.info),
+              desc: _reminderDesc,
+              disabled: _preferenceDisabled,
+              onTap: _pickReminderTime,
             ),
           ],
+        ),
+      ),
+      // page.tsx:201 <p role="status" className="text-xs mb-4">: 0.75rem,
+      // line-height 1rem, margin-bottom 1rem.
+      Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Semantics(
+          liveRegion: true,
+          child: Text(
+            '${reminderStatus(_loaded ? _prefs : null, _now)} Language is a '
+            'saved preference; replies and interface translation are not '
+            'guaranteed.',
+            key: const Key('settings-status'),
+            style: settingsText(12, height: 16 / 12),
+          ),
         ),
       ),
 
@@ -300,7 +421,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               key: const Key('row-data'),
               icon: '👁',
               label: 'Data Collection',
-              desc: 'Anonymous only',
+              desc: 'Storage and inference privacy', // page.tsx:243
               onTap: () => _push(const PrivacyScreen()),
             ),
             const SettingsDivider(),
@@ -308,7 +429,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               key: const Key('row-export'),
               icon: '📤',
               label: 'Export My Data',
-              desc: 'Download a copy',
+              desc: 'Wellness export currently unavailable', // page.tsx:250
               onTap: () => _push(const ExportScreen()),
             ),
             const SettingsDivider(),
@@ -316,7 +437,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               key: const Key('row-import'),
               icon: '📥',
               label: 'Import Data',
-              desc: 'Restore from backup',
+              desc: 'Coming soon; import unavailable', // page.tsx:257
               onTap: () => _push(const ImportScreen()),
             ),
           ],
@@ -324,9 +445,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
 
       const SettingsSectionLabel('Storage'),
-      const SettingsCard(
-        padding: EdgeInsets.all(20), // 1.25rem
-        child: _StorageCard(),
+      SettingsCard(
+        padding: const EdgeInsets.all(20), // 1.25rem
+        child: _StorageCard(bytes: ref.watch(koiStorageBytesProvider)),
       ),
 
       const SettingsSectionLabel('About & Help'),
@@ -339,16 +460,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               icon: 'ℹ️',
               iconColor: KoiColors.neoGray,
               label: 'Version Info',
-              desc: 'KOI v1.0.0',
+              desc: 'KOI Mobile preview', // page.tsx:429 "KOI Web preview"
               expanded: _expandedHelp == 'version',
               onTap: _toggleHelp,
-              body: const _HelpBody(
+              body: _HelpBody(
                 children: [
-                  _LabelledLine('Release Date:', ' January 2025', bottom: 8),
-                  _LabelledLine('Build:', ' Production', bottom: 8),
-                  // settings/page.tsx:439 says "Web App"; mobile says
-                  // "Mobile App" (decision 2026-10-13).
-                  _LabelledLine('Platform:', ' Mobile App'),
+                  // Mobile-only line: the version from pubspec.yaml.
+                  const _LabelledLine('Version:', ' $koiAppVersion', bottom: 8),
+                  // page.tsx:460
+                  const _LabelledLine(
+                    'Release Date:',
+                    ' Not published',
+                    bottom: 8,
+                  ),
+                  // page.tsx:463 shows NODE_ENV as "Production/Development
+                  // mode"; mobile names the Flutter build mode instead.
+                  _LabelledLine('Runtime:', ' ${_buildMode()}', bottom: 8),
+                  // page.tsx:466 says "Web App"; mobile says "Mobile App"
+                  // (decision 2026-10-13).
+                  const _LabelledLine('Platform:', ' Mobile App'),
                 ],
               ),
             ),
@@ -366,21 +496,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
-                      '🎉 v1.0.0 Release',
+                      'Current implemented features', // page.tsx:539
                       style: _HelpBody.style.copyWith(
                         fontWeight: FontWeight.w600,
                         color: KoiColors.neoBlack,
                       ),
                     ),
                   ),
+                  // page.tsx:542-545. "Enhanced avatar animations" only when
+                  // this build has an animated avatar (KOI_AVATAR_URL set);
+                  // otherwise the avatar is a still image.
                   SettingsPlainList(
                     itemGap: 8,
                     style: _HelpBody.style,
-                    items: const [
-                      'Enhanced avatar animations',
-                      'Improved offline support',
-                      'New privacy controls',
-                      'Performance optimizations',
+                    items: [
+                      if (ref.watch(avatarSourceProvider).kind !=
+                          AvatarSourceKind.placeholder)
+                        'Enhanced avatar animations',
+                      'Encrypted local history recovery',
+                      'Local companion and reminder preferences',
+                      'Audio and camera remain unavailable',
                     ],
                   ),
                 ],
@@ -392,7 +527,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               icon: '🆘',
               iconColor: const Color(0xFFFF4A60),
               label: 'Crisis Resources',
-              desc: '24/7 helplines (Pakistan)',
+              desc: 'Support contacts (hours not verified)', // page.tsx:588
               expanded: _expandedHelp == 'crisis',
               onTap: _toggleHelp,
               body: _HelpBody(
@@ -464,10 +599,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   );
 }
 
-/// page.tsx Storage card. Values are hardcoded on web ("1%", "42 KB of 5 MB
-/// used") and mirrored as-is (decision 2026-10-13).
+/// page.tsx:262-362 Storage card. Web shows navigator.storage.estimate()
+/// (hooks/useStorageEstimate.ts). Mobile has no quota to compare with, so
+/// the ring shows web's "—" (percent null) and the text gives the size of
+/// KOI's own saved records ([koiHiveBytes]), or web's unavailable text.
 class _StorageCard extends StatelessWidget {
-  const _StorageCard();
+  const _StorageCard({required this.bytes});
+  final AsyncValue<int?> bytes;
+
+  /// useStorageEstimate.ts:16 mb(): bytes / 1048576, 2 decimals.
+  static String mb(int bytes) => '${(bytes / 1048576).toStringAsFixed(2)} MB';
+
+  String get _label {
+    final b = bytes.valueOrNull;
+    if (b == null) return 'Device storage estimate unavailable.';
+    return 'Approximately ${mb(b)} of KOI data on this device (saved '
+        'records only; app files and caches are not counted).';
+  }
 
   @override
   Widget build(BuildContext context) => Row(
@@ -479,7 +627,7 @@ class _StorageCard extends StatelessWidget {
           painter: const _StorageRingPainter(),
           child: Center(
             child: Text(
-              '1%',
+              '—', // storage.percent === null
               style: settingsText(20, weight: FontWeight.w900, height: 1),
             ),
           ),
@@ -493,12 +641,13 @@ class _StorageCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                'Local Storage',
+                'Device Storage Estimate', // page.tsx:336 "Browser …"
                 style: settingsText(15.2, weight: FontWeight.w700),
               ),
             ),
             Text(
-              '42 KB of 5 MB used',
+              _label,
+              key: const Key('storage-label'),
               style: settingsText(12.8, color: const Color(0xFF666666)),
             ),
             const SizedBox(height: 12), // marginTop 0.75rem
@@ -510,17 +659,7 @@ class _StorageCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(3),
                 border: Border.all(width: 1, color: const Color(0xFFDDDDDD)),
               ),
-              child: const FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: 0.01, // width: 1%
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF2D63EB), Color(0xFF06B6D4)],
-                    ),
-                  ),
-                ),
-              ),
+              // Fill width (storage.percent ?? 0)%: always empty here.
             ),
           ],
         ),
@@ -529,33 +668,23 @@ class _StorageCard extends StatelessWidget {
   );
 }
 
-/// The SVG ring: r=32, stroke 8, track #F0F0F0, arc #2D63EB with round caps,
-/// rotated -90deg. Web's strokeDasharray is "2.01π·32 200.96π·32"; the dash
-/// (≈202.1) is longer than the circumference (2π·32 ≈ 201.1), so the browser
-/// draws a FULL blue ring despite the "1%" label. Mirrored as rendered.
+/// The SVG ring: r=32, stroke 8, track #F0F0F0. Web's #2D63EB arc has
+/// strokeDasharray "(percent ?? 0)/100·2π·32 2π·32" (page.tsx:313), so with
+/// no percent it has zero length; only the track is drawn.
 class _StorageRingPainter extends CustomPainter {
   const _StorageRingPainter();
 
   static const double r = 32;
-  static const double dash = 2.01 * math.pi * r;
-  static const double circumference = 2 * math.pi * r;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final c = Offset(size.width / 2, size.height / 2);
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 8;
-    canvas.drawCircle(c, r, stroke..color = const Color(0xFFF0F0F0));
-    final sweep = math.min(dash, circumference) / r;
-    canvas.drawArc(
-      Rect.fromCircle(center: c, radius: r),
-      -math.pi / 2,
-      sweep,
-      false,
-      stroke
-        ..color = const Color(0xFF2D63EB)
-        ..strokeCap = StrokeCap.round,
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height / 2),
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 8
+        ..color = const Color(0xFFF0F0F0),
     );
   }
 
@@ -724,7 +853,7 @@ class _AppInfo extends StatelessWidget {
               Text('KOI', style: settingsText(12.8, weight: FontWeight.w700)),
               const SizedBox(width: 8),
               Text(
-                'v1.0.0',
+                'Mobile preview', // page.tsx:674 "Web preview"
                 style: settingsText(12.48, color: const Color(0xFFBBBBBB)),
               ),
             ],

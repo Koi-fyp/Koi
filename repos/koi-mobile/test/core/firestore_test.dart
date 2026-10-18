@@ -249,7 +249,7 @@ void main() {
             _uid,
             const SettingsPrefs(
               companion: 'aisha',
-              name: 'Private Name',
+              displayName: 'Private Name',
               language: 'ur',
               notificationsEnabled: false,
               storedAvatar: 'male_human', // ignored: avatar follows companion
@@ -280,18 +280,36 @@ void main() {
       final local = MemorySettingsPrefsStore();
       final queue = _Queue();
       final s = SyncingSettingsPrefsStore(local, queue);
-      const prefs = SettingsPrefs(companion: 'raza', name: 'N');
+      const prefs = SettingsPrefs(companion: 'raza', displayName: 'N');
       await s.save(_uid, prefs);
       expect(local.values[_uid], prefs);
       final item = queue.items.single;
       expect(item.collection, 'users');
       expect(item.docId, _uid);
       expect(item.priority, 4);
-      expect(item.data.toString(), isNot(contains('name')));
+      expect(item.data.toString(), isNot(contains('displayName')));
+      expect(item.data.toString(), isNot(contains(': N')));
       expect((item.data['profile'] as Map)['avatar'], 'male_human');
       expect(await s.load(_uid), prefs);
     },
   );
+
+  test('settingsProfileItem: unsaved fields are left out, saved ones sent', () {
+    final empty = settingsProfileItem(_uid, const SettingsPrefs()).data;
+    expect(empty['profile'], {'avatar': 'fox', 'companion': 'koi'});
+    expect(empty.containsKey('settings'), isFalse);
+    final full = settingsProfileItem(
+      _uid,
+      const SettingsPrefs(
+        language: 'en',
+        notificationsEnabled: true,
+        notificationTime: '07:30',
+      ),
+    ).data;
+    expect((full['profile'] as Map)['notificationTime'], '07:30');
+    expect((full['profile'] as Map)['language'], 'en');
+    expect(full['settings'], {'notifications_enabled': true});
+  });
 
   test('settingsProfileItem: profile.avatar always matches companion', () {
     String avatarFor(String companion) =>

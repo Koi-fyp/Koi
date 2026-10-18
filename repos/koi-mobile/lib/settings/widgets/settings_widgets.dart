@@ -155,6 +155,9 @@ final List<Path> chevronDownPaths = [parseSvgPath('M6 9l6 6 6-6')];
 
 /// Mirrors components/SettingsRow.tsx: full-width button, padding
 /// 0.875rem 0, gap 0.875rem; icon tile, text, then a toggle or a chevron.
+///
+/// [disabled] is the button's `disabled` attribute: taps do nothing. The
+/// look is unchanged, as on web (SettingsRow.tsx has no :disabled style).
 class SettingsRow extends StatelessWidget {
   const SettingsRow({
     super.key,
@@ -162,6 +165,7 @@ class SettingsRow extends StatelessWidget {
     required this.label,
     required this.desc,
     this.danger = false,
+    this.disabled = false,
     this.toggle = false,
     this.on = false,
     this.onTap,
@@ -171,6 +175,7 @@ class SettingsRow extends StatelessWidget {
   final String label;
   final String desc;
   final bool danger;
+  final bool disabled;
   final bool toggle;
   final bool on;
   final VoidCallback? onTap;
@@ -178,10 +183,11 @@ class SettingsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
+    enabled: !disabled,
     toggled: toggle ? on : null,
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTap: disabled ? null : onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(

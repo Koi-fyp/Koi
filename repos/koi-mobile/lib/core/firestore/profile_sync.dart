@@ -6,8 +6,8 @@ import '../sync_queue.dart';
 /// Field names are the ones firestore.rules.proposed allows
 /// (origin/feat/exercise-director-modal): profile.{avatar, companion,
 /// language, notificationTime}, onboarding_complete,
-/// settings.notifications_enabled. The Settings "name" is local only and is
-/// never written.
+/// settings.notifications_enabled. The Settings companion nickname
+/// (displayName) is local only and is never written.
 
 /// onboarding.ts completeOnboarding(): `{ profile: { avatar, companion,
 /// language, notificationTime }, onboarding_complete: true }` (merge), plus
@@ -29,6 +29,7 @@ SyncItem onboardingProfileItem(String uid, OnboardingData d) => SyncItem(
 );
 
 /// Settings changes (mobile-only; web Settings writes nothing to Firestore).
+/// Fields with nothing saved are left out, so a merge never clears them.
 /// avatar always matches companion (aisha → 'female_human', raza →
 /// 'male_human', koi → 'fox'), as web saveAvatarPreference writes the pair
 /// (223e97c lib/avatar/avatarPreference.ts:41-46).
@@ -39,9 +40,11 @@ SyncItem settingsProfileItem(String uid, SettingsPrefs p) => SyncItem(
     'profile': {
       'avatar': p.avatar.avatarId,
       'companion': p.companion,
-      'language': p.language,
+      'language': ?p.language,
+      'notificationTime': ?p.notificationTime,
     },
-    'settings': {'notifications_enabled': p.notificationsEnabled},
+    if (p.notificationsEnabled != null)
+      'settings': {'notifications_enabled': p.notificationsEnabled},
   },
   priority: 4,
 );

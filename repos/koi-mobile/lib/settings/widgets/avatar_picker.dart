@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
@@ -13,15 +14,22 @@ import '../../theme/koi_text.dart';
 import '../../widgets/neo_button.dart';
 import 'settings_widgets.dart';
 
-/// The picker's result (web: onSave(avatar, name)).
-typedef CompanionChoice = ({String companion, String name});
+/// The picker's choice (web: onSave(avatar, name), the name being the
+/// companion nickname).
+typedef CompanionChoice = ({String companion, String displayName});
+
+/// Saves a choice (AvatarPicker.tsx:17 onSave). Returns null when saved, and
+/// the picker closes; otherwise the error message, which the picker shows as
+/// a toast over itself while it stays open (AvatarPicker.tsx:81-86; web's
+/// toast is drawn above the modal, settings/page.tsx:693-699).
+typedef CompanionSaver = Future<String?> Function(CompanionChoice choice);
 
 /// Opens the Settings companion picker. Resolves to the saved choice, or
 /// null when closed via ✕, Cancel or a tap on the backdrop.
 ///
 /// Decision 2026-10-13: mirror web's companions (Aisha / Raza / Koi 🦊) and
-/// name field. Saving the companion also picks its avatar (Prompt 19, web
-/// 223e97c settings/page.tsx:46-62).
+/// nickname field. Saving the companion also picks its avatar (Prompt 19,
+/// web 223e97c settings/page.tsx:46-62).
 ///
 /// Web keeps one AvatarPicker mounted and seeds its useState only once, so an
 /// unsaved selection survives Cancel. Mobile seeds from the current values
@@ -30,6 +38,7 @@ Future<CompanionChoice?> showAvatarPicker(
   BuildContext context, {
   required String currentAvatar,
   required String currentName,
+  required CompanionSaver onSave,
 }) => showGeneralDialog<CompanionChoice>(
   context: context,
   barrierDismissible: false, // the backdrop below handles taps itself
@@ -39,6 +48,7 @@ Future<CompanionChoice?> showAvatarPicker(
     animation: animation,
     currentAvatar: currentAvatar,
     currentName: currentName,
+    onSave: onSave,
   ),
 );
 
@@ -63,19 +73,24 @@ Future<void> reviewCompanionSelection(
     return;
   }
   if (!context.mounted) return;
-  final choice = await showAvatarPicker(
+  await showAvatarPicker(
     context,
     currentAvatar: prefs.companion,
-    currentName: prefs.name,
+    currentName: prefs.displayName,
+    onSave: (choice) async {
+      final next = prefs.copyWith(
+        companion: choice.companion,
+        displayName: choice.displayName,
+      );
+      ref.read(selectedAvatarProvider.notifier).select(next.avatar);
+      try {
+        await store.save(uid, next);
+      } catch (e) {
+        debugPrint('KOI: companion not saved: ${e.runtimeType}');
+      }
+      return null; // closes as before, even when the save failed
+    },
   );
-  if (choice == null) return;
-  final next = prefs.copyWith(companion: choice.companion, name: choice.name);
-  ref.read(selectedAvatarProvider.notifier).select(next.avatar);
-  try {
-    await store.save(uid, next);
-  } catch (e) {
-    debugPrint('KOI: companion not saved: ${e.runtimeType}');
-  }
 }
 
 /// Mirrors settings/components/AvatarPicker.tsx.
@@ -85,11 +100,13 @@ class AvatarPicker extends StatefulWidget {
     required this.animation,
     this.currentAvatar = 'koi', // currentAvatar = 'koi'
     this.currentName = '', // currentName = ''
+    required this.onSave,
   });
 
   final Animation<double> animation;
   final String currentAvatar;
   final String currentName;
+  final CompanionSaver onSave;
 
   // AvatarPicker.tsx:6-10 `companions` (223e97c). Web changed only the
   // onboarding cards to avatar previews; the picker keeps emoji and traits.
@@ -127,6 +144,9 @@ class _AvatarPickerState extends State<AvatarPicker> {
     text: widget.currentName,
   );
   final FocusNode _nameFocus = FocusNode();
+  bool _saving = false;
+  ToastMessage? _toast;
+  int _toastSeq = 0;
 
   // slideUpModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)
   static const Curve _slideCurve = Cubic(0.34, 1.56, 0.64, 1);
@@ -146,9 +166,28 @@ class _AvatarPickerState extends State<AvatarPicker> {
 
   void _close() => Navigator.of(context).pop();
 
-  void _save() =>
-      Navigator.of(context)
-          .pop<CompanionChoice>((companion: _selected, name: _name.text));
+  // handleSave (AvatarPicker.tsx:81-86): one save at a time; close only
+  // when it worked.
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final choice = (companion: _selected, displayName: _name.text);
+    String? error;
+    try {
+      error = await widget.onSave(choice);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+    if (!mounted) return;
+    final message = error;
+    if (message == null) {
+      Navigator.of(context).pop<CompanionChoice>(choice);
+    } else {
+      setState(
+        () => _toast = ToastMessage(message, ToastType.error, ++_toastSeq),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +243,10 @@ class _AvatarPickerState extends State<AvatarPicker> {
                 ),
               ),
             ),
+          ),
+          SettingsToastLayer(
+            toast: _toast,
+            onClose: () => setState(() => _toast = null),
           ),
         ],
       ),
@@ -321,7 +364,7 @@ class _AvatarPickerState extends State<AvatarPicker> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Your Name (Optional)',
+          'Companion nickname (optional, stored locally)',
           style: settingsText(14.4, weight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
@@ -341,6 +384,12 @@ class _AvatarPickerState extends State<AvatarPicker> {
             key: const Key('avatar-picker-name'),
             controller: _name,
             focusNode: _nameFocus,
+            // maxLength={64}; no counter (web shows none).
+            inputFormatters: [
+              LengthLimitingTextInputFormatter(
+                HiveUserSettingsStore.maxDisplayName,
+              ),
+            ],
             style: settingsText(16, weight: FontWeight.w500, height: null),
             cursorColor: KoiColors.neoBlack,
             decoration: InputDecoration(
@@ -350,7 +399,7 @@ class _AvatarPickerState extends State<AvatarPicker> {
                 vertical: 14, // 0.875rem
                 horizontal: 20, // 1.25rem
               ),
-              hintText: 'What should I call you?',
+              hintText: 'Leave blank for the companion name',
               // preflight input::placeholder colour (theme gray-400)
               hintStyle: settingsText(
                 16,
@@ -367,6 +416,7 @@ class _AvatarPickerState extends State<AvatarPicker> {
 
   static const String _cancelLabel = 'Cancel';
   static const String _saveLabel = 'Save Changes ✓';
+  static const String _savingLabel = 'Saving...';
 
   /// Web: `display: flex; gap: 1rem`, both buttons `flex: 1`. When a label
   /// would not fit its half-width button (360dp phones), the buttons stack
@@ -383,8 +433,9 @@ class _AvatarPickerState extends State<AvatarPicker> {
     final save = NeoButton(
       key: const Key('avatar-picker-save'),
       fullWidth: true,
-      onPressed: _save,
-      child: const Text(_saveLabel),
+      // disabled={saving}, label 'Saving...' while saving.
+      onPressed: _saving ? null : _save,
+      child: Text(_saving ? _savingLabel : _saveLabel),
     );
     return LayoutBuilder(
       builder: (context, constraints) {
