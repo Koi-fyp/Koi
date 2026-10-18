@@ -140,6 +140,13 @@ export default function SettingsPage() {
           />
           {DIVIDER}
           <SettingsRow
+            icon="🔁"
+            label="Redo setup"
+            desc="Review your setup choices; saved history and progress are kept"
+            onClick={() => router.push('/onboarding?redo=1')}
+          />
+          {DIVIDER}
+          <SettingsRow
             icon="🗑"
             label="Clear History"
             desc="Unavailable until deletion scope is approved"

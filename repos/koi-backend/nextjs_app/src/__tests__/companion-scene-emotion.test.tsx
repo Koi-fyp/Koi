@@ -77,3 +77,12 @@ describe('CompanionScene emotion props reach the VRM renderer', () => {
     expect(lastProps().emotion).toBe('joy');
   });
 });
+
+it('renders block-level notice content (product controls) without a DOM nesting warning', () => {
+  const errors = jest.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    render(<CompanionScene {...baseProps} modelUrl="/models/koi-female.vrm" notice={<><div data-testid="controls"><button type="button">New Chat</button></div>Notice text</>} />);
+    expect(screen.getByTestId('controls').parentElement!.tagName).toBe('DIV');
+    expect(errors.mock.calls.flat().join(' ')).not.toMatch(/validateDOMNesting|cannot be a descendant|cannot appear as a descendant/);
+  } finally { errors.mockRestore(); }
+});

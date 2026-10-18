@@ -11,7 +11,7 @@ import CompanionSelectionStep from '@/components/onboarding/CompanionSelectionSt
 import AIDisclosureStep from '@/components/onboarding/AIDisclosureStep';
 import LanguageStep from '@/components/onboarding/LanguageStep';
 import NotificationStep from '@/components/onboarding/NotificationStep';
-import { completeOnboarding } from '@/lib/onboarding';
+import { completeOnboarding, isOnboardingComplete, resolveOnboardingComplete } from '@/lib/onboarding';
 import type { CompanionId } from '@/lib/avatar/avatarPreference';
 import { validTime } from '@/lib/preferences/userPreferences';
 
@@ -44,6 +44,21 @@ export default function OnboardingPage(props: Readonly<OnboardingPageProps>) {
   const [locallySavedUid, setLocallySavedUid] = useState<string | null>(null);
   useEffect(() => { setSaving(false); setSaveError(null); setLocallySavedUid(null); }, [user?.uid]);
   const router = useRouter();
+  // An onboarded UID goes to chat; only the explicit Settings "Redo setup" action (?redo=1) reopens setup.
+  const [redirecting, setRedirecting] = useState(false);
+  useEffect(() => {
+    if (authLoading || !user) return;
+    if (new URLSearchParams(globalThis.window?.location.search ?? '').get('redo') === '1') return;
+    const owner = user.uid;
+    let live = true;
+    if (isOnboardingComplete(owner)) setRedirecting(true);
+    void resolveOnboardingComplete(owner).then((complete) => {
+      if (!live || currentUid.current !== owner) return;
+      if (complete) { setRedirecting(true); router.replace('/chat'); } else setRedirecting(false);
+    }, () => { if (live) setRedirecting(false); });
+    return () => { live = false; };
+    // Checked once per signed-in UID; a completed save in this visit navigates on its own.
+  }, [user?.uid, authLoading]);
 
   const advance = useCallback(() => setStep((s) => s + 1), []);
 
@@ -82,6 +97,8 @@ export default function OnboardingPage(props: Readonly<OnboardingPageProps>) {
   const showDisclosure = step === 3;
   const showLanguage = step === 4;
   const showNotification = step === 5;
+
+  if (redirecting) return <p role="status" className="p-6">Setup is already complete. Opening your chat…</p>;
 
   return (
     <div className="flex flex-col min-h-screen">

@@ -6,7 +6,7 @@ const mockAuth = jest.fn();
 jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => mockAuth() }));
 jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: mockReplace }) }));
 jest.mock('@/lib/firebase', () => ({ FirebaseConfigurationError: class extends Error {} }));
-jest.mock('@/lib/onboarding', () => ({ isOnboardingComplete: () => false }));
+jest.mock('@/lib/onboarding', () => ({ isOnboardingComplete: () => false, resolveOnboardingComplete: async () => false }));
 import Landing from '@/app/page';
 import How from '@/app/how-it-works/page';
 import Welcome from '@/components/onboarding/WelcomeStep';

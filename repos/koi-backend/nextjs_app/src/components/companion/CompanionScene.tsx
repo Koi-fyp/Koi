@@ -98,7 +98,7 @@ export default function CompanionScene({ companionName, modelUrl, messages, subt
         micControl={micControl} cameraControl={cameraControl} />
       {serverEvents && onExerciseRequest && onQueueClientEvent && <ExerciseDirector consumeEvent={consumeUiEvent} events={serverEvents} disabled={exerciseControlsDisabled} interruptKey={handoffEventId ?? 0}
         onRequest={onExerciseRequest} onQueueClientEvent={onQueueClientEvent} />}
-      {notice && <p className={styles.notice}>{notice}</p>}
+      {notice && <div className={styles.notice}>{notice}</div>}
     </section>
     <CrisisHandoffDialog open={!!handoff && !isHandoffResolved?.(handoff) && handoffEventId !== dismissedHandoffId && !!onCrisisResolution} content={crisisIntervention ?? riskForContent}
       onChoose={(path) => { if (handoff && handoffEventId !== null && onCrisisResolution) { onCrisisResolution(path, handoff); setDismissedHandoffId(handoffEventId); setCrisisSelectionQueued(true); } }} />

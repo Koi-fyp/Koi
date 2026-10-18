@@ -30,6 +30,8 @@ export async function completeOnboarding(data: OnboardingData, onLocalSaved?: ()
     throw new Error('Your companion choice could not be saved on this device. Please retry before continuing.');
   }
 
+  // The local save is the completion receipt: a later cloud failure must not loop this UID back to setup.
+  if (auth?.currentUser?.uid === uid) markOnboardingComplete(uid);
   notifyAvatarPreferenceChanged(uid);
   onLocalSaved?.();
 
@@ -47,11 +49,35 @@ export async function completeOnboarding(data: OnboardingData, onLocalSaved?: ()
   }
 
   if (auth?.currentUser?.uid !== uid) throw new Error('Your account changed. Review your companion selection for the current account.');
-  localStorage.setItem('koi_onboarding_complete', 'true');
 }
 
-export function isOnboardingComplete(): boolean {
-  const win = globalThis.window;
-  if (!win) return false;
-  return win.localStorage.getItem('koi_onboarding_complete') === 'true';
+/** Pre-UID global flag. Read only to migrate the same signed-in user whose local row is already complete. */
+const LEGACY_ONBOARDING_KEY = 'koi_onboarding_complete';
+export const onboardingStorageKey = (uid: string) => `koi_onboarding_complete_${uid}`;
+function storage(): Storage | null {
+  try { return globalThis.window?.localStorage ?? null; } catch { return null; }
+}
+function markOnboardingComplete(uid: string) {
+  try { storage()?.setItem(onboardingStorageKey(uid), 'true'); } catch { /* Storage blocked: the user row remains the record. */ }
+}
+
+/** Synchronous per-UID check; never consults another identity's flag. */
+export function isOnboardingComplete(uid: string | null | undefined): boolean {
+  if (!uid) return false;
+  try { return storage()?.getItem(onboardingStorageKey(uid)) === 'true'; } catch { return false; }
+}
+
+/** Per-UID flag, or a one-time migration of the legacy global flag for the same signed-in owner. */
+export async function resolveOnboardingComplete(uid: string): Promise<boolean> {
+  if (isOnboardingComplete(uid)) return true;
+  let legacy = false;
+  try { legacy = storage()?.getItem(LEGACY_ONBOARDING_KEY) === 'true'; } catch { legacy = false; }
+  if (!legacy || auth?.currentUser?.uid !== uid) return false;
+  try {
+    const { db } = await import('./db');
+    const row = await db.users.where('uid').equals(uid).first();
+    if (!row?.onboardingComplete || auth?.currentUser?.uid !== uid) return false;
+  } catch { return false; }
+  markOnboardingComplete(uid);
+  return true;
 }

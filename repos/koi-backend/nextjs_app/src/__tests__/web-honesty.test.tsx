@@ -3,7 +3,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ user: null, loading: false, signInAnonymously: jest.fn() }) }));
 jest.mock('@/contexts/ConversationContext', () => ({ useSharedConversation: () => ({ uid: null, session: null }) }));
 jest.mock('@/lib/firebase', () => ({ FirebaseConfigurationError: class extends Error {} }));
-jest.mock('@/lib/onboarding', () => ({ isOnboardingComplete: () => false }));
+jest.mock('@/lib/onboarding', () => ({ isOnboardingComplete: () => false, resolveOnboardingComplete: async () => false }));
 import Landing from '@/app/page';
 import About from '@/app/about/page';
 import How from '@/app/how-it-works/page';

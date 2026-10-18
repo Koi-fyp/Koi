@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { FirebaseConfigurationError } from '@/lib/firebase';
-import { isOnboardingComplete } from '@/lib/onboarding';
+import { resolveOnboardingComplete } from '@/lib/onboarding';
 
 const BLOCKS = [
   { bg: '#2D63EB', text: '#fff',    label: 'Think',   w: 'wide' },
@@ -68,11 +68,12 @@ export default function RootPage() {
 
   useEffect(() => {
     if (loading || !user) return;
-    if (isOnboardingComplete()) {
-      router.replace('/chat');
-    } else {
-      router.replace('/onboarding');
-    }
+    let live = true;
+    void resolveOnboardingComplete(user.uid).then(
+      (complete) => { if (live) router.replace(complete ? '/chat' : '/onboarding'); },
+      () => { if (live) router.replace('/onboarding'); },
+    );
+    return () => { live = false; };
   }, [user, loading, router]);
 
   useEffect(() => {
