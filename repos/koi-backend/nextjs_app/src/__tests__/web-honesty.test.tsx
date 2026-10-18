@@ -24,10 +24,11 @@ it('privacy shows no manufactured successful activity or deletion promise', () =
 });
 it('does not permit a synthetic wellness PDF', () => {
   render(<Export />);
-  expect(screen.getByRole('button', { name: /Generate Wellness Report/ })).toBeDisabled();
+  expect(screen.getByRole('link', { name: 'Open Wellness Report' })).toHaveAttribute('href', '/settings/report');
+  expect(screen.queryByRole('button', { name: /Generate Wellness Report/ })).not.toBeInTheDocument();
   expect(screen.queryByText(/mood has improved|487|2025-04-15/)).not.toBeInTheDocument();
   expect(screen.getByRole('heading', {name:'Export My Data'})).toBeInTheDocument();
-  expect(screen.getByText('No wellness report has been generated.')).toBeInTheDocument();
+  expect(screen.getByText(/not a clinical assessment/)).toBeInTheDocument();
   expect(document.body.textContent).not.toMatch(/Report generated locally|No personal information shared|Download & keep forever/);
 });
 

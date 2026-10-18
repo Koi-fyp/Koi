@@ -1,4 +1,5 @@
-﻿'use client';
+'use client';
+import Link from 'next/link';
 import BackButton from '../components/BackButton';
 import CiphertextExport from '@/components/data-portability/CiphertextExport';
 
@@ -10,12 +11,9 @@ export default function ExportPage() {
     <CiphertextExport />
     <section className="neo-card p-6 mb-6" aria-labelledby="wellness-report-title">
       <h2 id="wellness-report-title" className="font-bold text-xl">Wellness Report</h2>
-      <div className="my-4 p-4 rounded-xl border-2 border-gray-200 bg-gray-50" role="status">
-        <p className="font-bold">No wellness report has been generated.</p>
-        <p className="text-sm mt-2">Verified report data is not connected. Mood trends, loneliness scores, insights and crisis logs are not inferred from your conversations or filled with sample values.</p>
-      </div>
-      <p className="text-sm mb-4">A readable report would expose its included content to anyone who can open the file. It would not restore encrypted conversations.</p>
-      <button type="button" className="neo-btn-primary w-full" style={{whiteSpace:'normal'}} disabled title="Verified report data is not connected">Generate Wellness Report (unavailable)</button>
+      <p className="text-sm my-3">A printable summary for a date range you choose, built only from check-ins, activities and pieces saved on this device. It never includes crisis information, risk scores or message content unless you choose to include message titles. Self-reported and app-activity data only; not a clinical assessment.</p>
+      <p className="text-sm mb-4">A printed or saved PDF can be read by anyone who has it. It does not restore encrypted conversations.</p>
+      <Link href="/settings/report" className="neo-btn-primary w-full inline-block text-center" style={{whiteSpace:'normal'}}>Open Wellness Report</Link>
     </section>
     <section className="neo-card p-5 bg-[var(--neo-yellow)]" aria-labelledby="restorable-backup-title">
       <h2 id="restorable-backup-title" className="font-bold">Restorable backup unavailable</h2>

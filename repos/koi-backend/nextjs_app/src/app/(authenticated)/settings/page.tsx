@@ -256,7 +256,7 @@ export default function SettingsPage() {
           <SettingsRow
             icon="📤"
             label="Export My Data"
-            desc="Wellness export currently unavailable"
+            desc="Encrypted data copy and printable wellness report"
             onClick={() => router.push('/settings/export')}
           />
           {DIVIDER}

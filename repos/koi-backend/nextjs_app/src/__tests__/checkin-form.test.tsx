@@ -35,7 +35,7 @@ it('does not carry plaintext drafts to another UID; no activity is produced by o
 
 it('failed ledger reads show unavailable counters rather than indefinite loading or invented zeroes',async()=>{
  mockActivityStatus='error';render(<Activities/>);
- await waitFor(()=>expect(screen.getAllByText('Unavailable', {selector:'dd'})).toHaveLength(2));
+ await waitFor(()=>expect(screen.getAllByText('Unavailable', {selector:'dd'})).toHaveLength(7));
  expect(screen.getByText('Saved rating history is unavailable.')).toBeInTheDocument();
  expect(screen.queryByText(/Loading earned pieces/)).not.toBeInTheDocument();
 });

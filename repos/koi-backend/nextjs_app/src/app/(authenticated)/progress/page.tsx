@@ -728,7 +728,7 @@ export default function ProgressPage() {
         ))}
       </div>
 
-      <ActivityAvailability legacyTotal={recorded?.jigsaw_pieces} />
+      <ActivityAvailability legacyTotal={recorded?.jigsaw_pieces} totals={{ completedExchanges: progress.summary.completedExchanges, conversations: progress.summary.conversationsWithReplies }} />
       <details className="mt-5"><summary className="font-bold cursor-pointer mb-5">Design previews (sample data, not your activity)</summary>
       <p role="note" className="text-sm mb-5">The puzzle illustration, sample mood chart and sample heatmap are previews. They do not represent your saved activities or mood.</p>
 
