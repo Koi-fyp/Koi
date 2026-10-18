@@ -3,3 +3,6 @@
 
 # Local credential-shaped test env file: never track (kept on disk only).
 .env.local.test
+
+# Dev server output (kept apart from `next build` output in .next).
+.next-dev/
