@@ -6,6 +6,7 @@ const mockUseAuth = jest.fn();
 const mockUseChat = jest.fn();
 jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => mockUseAuth() }));
 jest.mock('@/hooks/useChat', () => ({ useChat: () => mockUseChat() }));
+jest.mock('@/components/companion/CompanionScene.module.css', () => ({}));
 jest.mock('@/components/companion/CompanionScene', () => ({
   __esModule: true,
   default: (props: { companionName: string; modelUrl?: string; avatarEnabled?: boolean; notice?: React.ReactNode; onAvatarFailure?: () => void; emotion?: string; emotionIntensity?: number }) => (

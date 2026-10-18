@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/hooks/useChat';
 import { useAvatarPreference } from '@/hooks/useAvatarPreference';
 import CompanionScene from '@/components/companion/CompanionScene';
+import { companionHeaderTitle } from '@/components/companion/CompanionHeader';
 import ChatComposer from '@/components/companion/ChatComposer';
 export default function AuthenticatedCompanionChat() {
   const { user, loading: authLoading } = useAuth(); const chat = useChat(); const router = useRouter();
@@ -16,7 +17,7 @@ export default function AuthenticatedCompanionChat() {
   const legacyFox = selected?.avatar === 'fox';
   const avatarUnavailable = avatarPreference.status === 'error' || (avatarPreference.status === 'ready' && preference?.status === 'unselected');
   const avatarReady = avatarPreference.status === 'ready' && !!selected && !legacyFox;
-  const companionName = selected?.displayName || selected?.name || 'KOI';
+  const companionName = companionHeaderTitle(selected);
   useEffect(() => { setAvatarEnabled(true); }, [user?.uid, selected?.modelUrl]);
   const leave = () => router.push('/chat');
   const end = () => { chat.cancel(); router.push('/chat'); };
