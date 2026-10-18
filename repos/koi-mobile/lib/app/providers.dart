@@ -7,7 +7,6 @@ import '../chat/chat_api.dart';
 import '../chat/chat_controller.dart';
 import '../chat/chat_session_state.dart';
 import '../chat/conversation_service.dart';
-import '../chat/crisis_api.dart';
 import '../chat/message_record.dart';
 import '../core/crypto_context.dart';
 import '../core/sync_queue.dart';
@@ -93,9 +92,11 @@ final chatApiProvider = Provider<ChatApiClient>(
   (ref) => ChatApiClient(baseUrl: koiApiBase),
 );
 
-/// Not configured (never called) unless KOI_CRISIS_BASE is set (C8 open).
-final crisisApiProvider = Provider<CrisisApiClient>(
-  (ref) => CrisisApiClient(baseUrl: koiCrisisBase),
+/// The crisis service, used ONLY for its `GET /health` warm-up (same
+/// redirect handling as chat). C8 decided 2026-10-18: no client calls
+/// POST /api/v1/crisis. Not configured unless KOI_CRISIS_BASE is set.
+final crisisHealthClientProvider = Provider<ChatApiClient>(
+  (ref) => ChatApiClient(baseUrl: koiCrisisBase),
 );
 
 /// exercise_state / client_event / crisis_path for the signed-in user's
@@ -115,7 +116,7 @@ final chatSessionStateProvider = Provider<ChatSessionState>((ref) {
 /// and again when the app returns after more than 5 minutes away.
 final backendWarmupProvider = ChangeNotifierProvider<BackendWarmup>((ref) {
   final chat = ref.read(chatApiProvider);
-  final crisis = ref.read(crisisApiProvider);
+  final crisis = ref.read(crisisHealthClientProvider);
   final warmup = BackendWarmup(
     chatHealth: chat.isConfigured ? chat.checkHealth : null,
     crisisHealth: crisis.isConfigured ? crisis.checkHealth : null,
@@ -170,7 +171,6 @@ final conversationServiceProvider = Provider<ConversationService>((ref) {
     syncQueue: ref.read(syncQueueProvider),
     api: ref.read(chatApiProvider),
     idToken: auth.getIdToken,
-    crisis: ref.read(crisisApiProvider),
   );
 });
 

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -7,10 +6,8 @@ import 'package:koi_flutter_lib/services/crypto_service.dart';
 import '../core/crypto_context.dart';
 import '../core/emotion.dart';
 import '../core/sync_queue.dart';
-import '../safety/safety_contract.dart' show RiskResult;
 import 'chat_api.dart';
 import 'chat_session_state.dart';
-import 'crisis_api.dart';
 import 'message_record.dart';
 
 /// conversationService.ts `SendMessageResult`.
@@ -93,7 +90,6 @@ class ConversationService {
     required this.syncQueue,
     required this.api,
     required this.idToken,
-    this.crisis,
     DateTime Function()? now,
     String Function()? newId,
   }) : _now = now ?? DateTime.now,
@@ -107,10 +103,6 @@ class ConversationService {
 
   /// Called at send time for every request; the token is never kept.
   final IdTokenGetter idToken;
-
-  /// Only used when KOI_CRISIS_BASE is set (contract C8 open; see
-  /// CrisisApiClient).
-  final CrisisApiClient? crisis;
 
   static bool _loggedNotConfigured = false;
   final DateTime Function() _now;
@@ -172,9 +164,11 @@ class ConversationService {
   ///
   /// [session] supplies exercise_state / client_event / crisis_path and is
   /// updated only after a successful stream; [onResolutionSent] runs when
-  /// that stream carried a crisis path. With KOI_CRISIS_BASE set, the crisis
-  /// service is called in parallel and its result goes to
-  /// [ChatHandlers.onRisk] only.
+  /// that stream carried a crisis path. Risk comes only from the chat
+  /// stream's `risk` event (C8 decided 2026-10-18: no /api/v1/crisis call).
+  ///
+  /// [beforeRequest] runs after the user message is saved and before the
+  /// token is fetched and the request sent (BackendWarmup.holdFirstSend).
   Future<SendMessageResult> sendMessage({
     required String userId,
     required String conversationId,
@@ -183,6 +177,7 @@ class ConversationService {
     ChatHandlers handlers = const ChatHandlers(),
     ChatSessionState? session,
     VoidCallback? onResolutionSent,
+    Future<void> Function()? beforeRequest,
   }) async {
     await saveMessage(
       _record(conversationId, 'user', text, Emotion.neutral),
@@ -198,9 +193,9 @@ class ConversationService {
         }
         throw const ChatApiException(ChatApiException.notConfigured);
       }
+      await beforeRequest?.call();
       final token = await idToken();
       final turn = state.beginTurn();
-      _checkCrisis(text, turn.sequence, state, handlers.onRisk);
       final r = await api.streamChat(
         idToken: token,
         body: state.requestBody(turn, message: text, sessionHistory: context),
@@ -242,22 +237,5 @@ class ConversationService {
         failureCode: code,
       );
     }
-  }
-
-  void _checkCrisis(
-    String text,
-    int sequence,
-    ChatSessionState state,
-    void Function(RiskResult risk)? onRisk,
-  ) {
-    final client = crisis;
-    if (client == null || !client.isConfigured || onRisk == null) return;
-    unawaited(
-      client.check(idToken: idToken, text: text, turnId: '$sequence').then((
-        result,
-      ) {
-        if (result != null && state.acceptsRisk(sequence)) onRisk(result);
-      }),
-    );
   }
 }

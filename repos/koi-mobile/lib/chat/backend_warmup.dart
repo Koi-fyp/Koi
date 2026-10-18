@@ -3,39 +3,78 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 /// Whether the chat service has answered yet (contract C7: after idle a
-/// container takes 60-190 s to start).
+/// container takes 60-190 s to start; Ahmad measured ~100 s on /health and
+/// ~122 s on the first chat, 2026-10-18).
 enum BackendStatus { unknown, waking, ready, unreachable }
 
-/// Warms the chat (and, when set, crisis) service with `GET /health` and
-/// tracks [status] for the "waking up" line.
+/// One `GET /health` with no token, limited to [timeout]. true only on 200.
+typedef HealthCheck = Future<bool> Function(Duration timeout);
+
+/// Warms the chat and crisis services with `GET /health` and tracks
+/// [status] for the "waking up" line (decisions from Ahmad, 2026-10-18).
 ///
 /// - [warmUp] after sign-in and when the app comes back after more than
-///   [resumeAfter] in the background; never awaited by the UI.
+///   [resumeAfter] in the background; never awaited by the UI. Each service
+///   is retried with [retryDelays] backoff until it answers 200 or [limit]
+///   has passed since the warm-up started.
+/// - The crisis service is only warmed (health only, never
+///   /api/v1/crisis); its result never changes [status] or holds chat.
+/// - [holdFirstSend]: the first chat send waits until chat /health
+///   returned 200 or the limit passed. Later sends are not held.
 /// - `waking` once health or a chat request has been pending for
-///   [wakingAfter] while the service has not answered yet.
-/// - `ready` on the first answer (health 2xx, any chat HTTP status, any SSE
-///   event); `unreachable` when the deadline passes or the network fails.
+///   [wakingAfter] while the service has not answered yet, and at once while
+///   the first send is held.
+/// - `ready` on the first answer (health 200, any chat HTTP status, any SSE
+///   event); `unreachable` when the limit passes or a chat request fails on
+///   the network.
 class BackendWarmup extends ChangeNotifier {
   BackendWarmup({
     required this.chatHealth,
     this.crisisHealth,
     this.wakingAfter = const Duration(seconds: 3),
     this.resumeAfter = const Duration(minutes: 5),
+    this.limit = const Duration(seconds: 240),
+    this.retryDelays = defaultRetryDelays,
     DateTime Function()? now,
-  }) : _now = now ?? DateTime.now;
+    Future<void> Function(Duration)? delay,
+  }) : _now = now ?? DateTime.now,
+       _delay = delay ?? Future<void>.delayed;
 
   /// null when the chat service is not configured (nothing is called).
-  final Future<bool> Function()? chatHealth;
-  final Future<bool> Function()? crisisHealth;
+  final HealthCheck? chatHealth;
+
+  /// null when KOI_CRISIS_BASE is not set.
+  final HealthCheck? crisisHealth;
   final Duration wakingAfter;
   final Duration resumeAfter;
+
+  /// Overall limit for one warm-up of one service (240 s).
+  final Duration limit;
+
+  /// Wait after each failed try; the last value repeats.
+  final List<Duration> retryDelays;
   final DateTime Function() _now;
+  final Future<void> Function(Duration) _delay;
+
+  static const List<Duration> defaultRetryDelays = [
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+    Duration(seconds: 8),
+    Duration(seconds: 16),
+    Duration(seconds: 30),
+  ];
 
   BackendStatus _status = BackendStatus.unknown;
   int _pending = 0;
   Timer? _wakingTimer;
   DateTime? _backgroundedAt;
   bool _disposed = false;
+  bool _chatWarming = false;
+  bool _crisisWarming = false;
+  bool _firstSendHeld = false;
+
+  /// Completes when the current chat warm-up ends (200 or limit).
+  Completer<void>? _chatWarm;
 
   BackendStatus get status => _status;
 
@@ -74,19 +113,67 @@ class BackendWarmup extends ChangeNotifier {
     }
   }
 
-  /// Fire-and-forget `GET /health` (no token) on both services.
+  /// Tries [check] until it returns true or [limit] has passed. Each try is
+  /// limited to the time left.
+  Future<bool> _retry(HealthCheck check) async {
+    final start = _now();
+    for (var attempt = 0; !_disposed; attempt++) {
+      final left = limit - _now().difference(start);
+      if (left <= Duration.zero) return false;
+      bool ok;
+      try {
+        ok = await check(left);
+      } catch (_) {
+        ok = false;
+      }
+      if (ok) return true;
+      final remaining = limit - _now().difference(start);
+      if (remaining <= Duration.zero) return false;
+      final wait =
+          retryDelays[attempt < retryDelays.length
+              ? attempt
+              : retryDelays.length - 1];
+      await _delay(wait < remaining ? wait : remaining);
+    }
+    return false;
+  }
+
+  /// Fire-and-forget health warm-up of both services. A service that is
+  /// still warming is not started twice.
   void warmUp() {
     final crisis = crisisHealth;
-    if (crisis != null) unawaited(crisis());
+    if (crisis != null && !_crisisWarming) {
+      _crisisWarming = true;
+      // Failures stay here: chat never waits for or sees the crisis result.
+      unawaited(
+        _retry(crisis)
+            .catchError((Object _) => false)
+            .whenComplete(() => _crisisWarming = false),
+      );
+    }
     final chat = chatHealth;
-    if (chat == null) return;
+    if (chat == null || _chatWarming) return;
+    _chatWarming = true;
+    final warm = _chatWarm = Completer<void>();
     _begin();
     unawaited(
-      chat().then(
-        (ok) => _end(reached: ok),
-        onError: (Object _) => _end(reached: false),
-      ),
+      _retry(chat).then((ok) {
+        _chatWarming = false;
+        _end(reached: ok);
+        warm.complete();
+      }),
     );
+  }
+
+  /// Called before the request of every send; only the first one waits, for
+  /// the chat warm-up that is running (200 or [limit]).
+  Future<void> holdFirstSend() async {
+    if (_firstSendHeld) return;
+    _firstSendHeld = true;
+    final warm = _chatWarm;
+    if (warm == null || warm.isCompleted) return;
+    if (_status != BackendStatus.ready) _set(BackendStatus.waking);
+    await warm.future;
   }
 
   /// A chat request was sent.

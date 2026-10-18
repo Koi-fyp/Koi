@@ -289,6 +289,9 @@ class ChatController extends ChangeNotifier {
           handlers: _handlers(liveId),
           session: session,
           onResolutionSent: () => safety?.crisisResolutionSent(),
+          // Only the first send waits for the chat warm-up (Ahmad,
+          // 2026-10-18); the waking line shows meanwhile, typing stays on.
+          beforeRequest: warmup?.holdFirstSend,
         );
         // A reply or any HTTP status: the service answered. Timeout or
         // network: it did not. Anything else (no token, bad redirect):

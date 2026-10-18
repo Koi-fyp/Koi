@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -334,7 +335,43 @@ void main() {
 
       status = 503;
       expect(await client().checkHealth(), isFalse);
+      status = 204; // only 200 counts (Ahmad, 2026-10-18)
+      expect(await client().checkHealth(), isFalse);
       expect(await ChatApiClient(baseUrl: '').checkHealth(), isFalse);
+    });
+
+    test('follows 303 hops (as chat does), still without a token', () async {
+      server.handler = (req, _) async {
+        if (server.requests.length <= 2) {
+          req.response
+            ..statusCode = 303
+            ..headers.set('location', '/health?__poll=1');
+        } else {
+          req.response.write('ok');
+        }
+        await req.response.close();
+      };
+      expect(await client().checkHealth(), isTrue);
+      expect(server.requests, hasLength(3));
+      for (final r in server.requests) {
+        expect(r.method, 'GET');
+        expect(r.uri.path, '/health');
+        expect(r.header('authorization'), isNull);
+      }
+    });
+
+    test('the timeout limits one try', () async {
+      final never = Completer<void>();
+      server.handler = (req, _) async {
+        await never.future;
+      };
+      final watch = Stopwatch()..start();
+      expect(
+        await client().checkHealth(const Duration(milliseconds: 200)),
+        isFalse,
+      );
+      expect(watch.elapsed, lessThan(const Duration(seconds: 5)));
+      never.complete();
     });
   });
 }

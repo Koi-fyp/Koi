@@ -60,12 +60,13 @@ void main() {
     WidgetTester tester, {
     AvatarSource avatar = AvatarSource.placeholder,
     String chatBase = 'http://127.0.0.1:9',
+    BackendWarmup? backend,
   }) async {
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = const Size(1080, 2400);
     addTearDown(tester.view.reset);
     final adapter = _HeldAdapter();
-    final warmup = BackendWarmup(chatHealth: null);
+    final warmup = backend ?? BackendWarmup(chatHealth: null);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -115,6 +116,37 @@ void main() {
     await tester.pump();
     expect(adapter.streams, hasLength(1));
 
+    adapter.finish(_turn);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('chat-waking')), findsNothing);
+    expect(find.text('Hi'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('first send held while chat warms: waking line at once, '
+      'typing allowed, nothing sent until /health 200', (tester) async {
+    final health = Completer<bool>();
+    final (adapter, _, _) = await pump(
+      tester,
+      backend: BackendWarmup(chatHealth: (_) => health.future)..warmUp(),
+    );
+    await tester.enterText(find.byKey(const Key('chat-input')), 'hello');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('chat-send')));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text(WakingLine.text), findsOneWidget);
+    expect(adapter.streams, isEmpty); // held
+    final field = tester.widget<TextField>(find.byKey(const Key('chat-input')));
+    expect(field.enabled, isTrue);
+    await tester.enterText(find.byKey(const Key('chat-input')), 'typing on');
+    await tester.pump();
+    expect(find.text('typing on'), findsOneWidget);
+
+    health.complete(true);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(adapter.streams, hasLength(1));
     adapter.finish(_turn);
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));

@@ -20,7 +20,9 @@ import '../safety/safety_contract.dart';
 const String koiApiBase = String.fromEnvironment('KOI_API_BASE');
 
 /// Base URL of the crisis (TSD) service, from `--dart-define=KOI_CRISIS_BASE`.
-/// Empty by default, and then the app never calls it (contract C8 is open).
+/// Only its `GET /health` is ever called, to warm it. C8 decided (Ahmad,
+/// 2026-10-18): clients never call POST /api/v1/crisis; the chat server
+/// scores risk every turn and sends the `risk` event. Empty = not warmed.
 const String koiCrisisBase = String.fromEnvironment('KOI_CRISIS_BASE');
 
 /// web chatEndpoint(): http/https only, no user/password/query/fragment, a
@@ -483,11 +485,13 @@ class ChatApiClient {
     return done.future;
   }
 
-  /// `GET {base}/health` with no token (C6). true on a 2xx.
-  Future<bool> checkHealth() async {
+  /// `GET {base}/health` with no token (C6), following Modal's 303 hops like
+  /// chat does. true only on HTTP 200; [timeout] (default [deadline]) limits
+  /// the whole try. One try: BackendWarmup retries.
+  Future<bool> checkHealth([Duration? timeout]) async {
     if (!isConfigured) return false;
     final cancel = CancelToken();
-    final timer = Timer(deadline, cancel.cancel);
+    final timer = Timer(timeout ?? deadline, cancel.cancel);
     try {
       final res = await _request(
         'GET',
@@ -497,8 +501,8 @@ class ChatApiClient {
         cancel: cancel,
         hops: _Hops(),
       );
-      res.data?.stream.listen(null).cancel();
-      return true;
+      _discard(res);
+      return res.statusCode == 200;
     } catch (_) {
       return false;
     } finally {

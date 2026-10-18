@@ -40,6 +40,7 @@ class _ScriptedService extends ConversationService {
     ChatHandlers handlers = const ChatHandlers(),
     ChatSessionState? session,
     VoidCallback? onResolutionSent,
+    Future<void> Function()? beforeRequest,
   }) async {
     contexts.add(context);
     return SendMessageResult(
@@ -414,6 +415,41 @@ void main() {
       gate.complete();
       await sending;
       expect(c.backendStatus, BackendStatus.ready);
+    });
+
+    test('first send held until chat /health 200, then released; later '
+        'sends not held', () async {
+      server.handler = (req, _) => writeSse(req, okTurn());
+      final health = Completer<bool>();
+      final backend = BackendWarmup(chatHealth: (_) => health.future)..warmUp();
+      final c = controller(backend: backend);
+      final first = c.send('hi');
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      expect(server.requests, isEmpty); // held
+      expect(c.isTyping, isTrue);
+      expect(c.messages.single.content, 'hi'); // shown right away
+      expect(c.backendStatus, BackendStatus.waking);
+      health.complete(true);
+      await first;
+      expect(server.requests, hasLength(1));
+      expect(c.backendStatus, BackendStatus.ready);
+
+      await c.send('again'); // not held
+
+      expect(server.requests, hasLength(2));
+    });
+
+    test('first send released when the warm-up gives up', () async {
+      server.handler = (req, _) => writeSse(req, okTurn());
+      var now = DateTime(2026, 10, 18, 12);
+      final backend = BackendWarmup(
+        chatHealth: (_) async => false,
+        now: () => now,
+        delay: (d) async => now = now.add(d),
+      )..warmUp();
+      final c = controller(backend: backend);
+      await c.send('hi');
+      expect(server.requests, hasLength(1));
     });
   });
 }

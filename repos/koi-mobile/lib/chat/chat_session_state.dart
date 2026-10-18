@@ -40,20 +40,15 @@ class ChatSessionState {
   int _turnSeq = 0;
   int _clientEventVersion = 0;
   int _crisisPathVersion = 0;
-  int _minRiskSeq = 0;
 
   void setClientEvent(ClientEvent event) {
     pendingClientEvent = event;
     _clientEventVersion++;
   }
 
-  /// Crisis results from turns started before this point are stale
-  /// (reference client resolveCrisis(): an old HIGH result would reopen
-  /// Flow 4 right away).
   void setCrisisPath(CrisisPath path) {
     pendingCrisisPath = path;
     _crisisPathVersion++;
-    _minRiskSeq = _turnSeq + 1;
   }
 
   /// Takes what the next request sends.
@@ -93,7 +88,4 @@ class ChatSessionState {
     if (result.exerciseStateChanged) exerciseState = result.exerciseState;
     return sentPath;
   }
-
-  /// Whether a crisis-service result for the turn [sequence] still counts.
-  bool acceptsRisk(int sequence) => sequence >= _minRiskSeq;
 }

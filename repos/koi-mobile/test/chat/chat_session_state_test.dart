@@ -83,12 +83,4 @@ void main() {
     s.turnSucceeded(s.beginTurn(), _result(changed: true));
     expect(s.exerciseState, isNull);
   });
-
-  test('crisis results from turns before the resolution are stale', () {
-    final s = ChatSessionState();
-    final before = s.beginTurn();
-    s.setCrisisPath(CrisisPath.reachedOut);
-    expect(s.acceptsRisk(before.sequence), isFalse);
-    expect(s.acceptsRisk(s.beginTurn().sequence), isTrue);
-  });
 }

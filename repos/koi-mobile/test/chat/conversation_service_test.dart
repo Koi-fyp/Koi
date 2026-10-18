@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:dio/dio.dart';
@@ -8,7 +10,6 @@ import 'package:koi_flutter_lib/services/crypto_service.dart';
 import 'package:koi_mobile/chat/chat_api.dart';
 import 'package:koi_mobile/chat/chat_session_state.dart';
 import 'package:koi_mobile/chat/conversation_service.dart';
-import 'package:koi_mobile/chat/crisis_api.dart';
 import 'package:koi_mobile/chat/message_record.dart';
 import 'package:koi_mobile/core/emotion.dart';
 import 'package:koi_mobile/core/koi_cryptography.dart';
@@ -255,7 +256,6 @@ void main() {
 
     ConversationService live({
       MemoryMessageStore? store,
-      CrisisApiClient? crisis,
       Duration deadline = const Duration(seconds: 240),
     }) {
       var n = 0;
@@ -266,7 +266,6 @@ void main() {
         syncQueue: RecordingSyncQueue(),
         api: ChatApiClient(baseUrl: server.base, deadline: deadline),
         idToken: () async => 'fake-test-token',
-        crisis: crisis,
         newId: () => 'id${n++}',
       );
     }
@@ -393,61 +392,74 @@ void main() {
       await expectFallback(s, 'network', offline);
     });
 
-    group('crisis service (C8 open)', () {
-      late FakeChatServer crisisServer;
-      setUp(() async {
-        crisisServer = await FakeChatServer.start();
-        crisisServer.handler = (req, _) async {
-          req.response.write(
-            '{"crisis_score":0.95,"risk_category":"CRITICAL",'
-            '"modalities_used":["text"],"trigger_flags":[]}',
+    group('C8 decided: no /api/v1/crisis (Ahmad, 2026-10-18)', () {
+      test(
+        'turns only call /api/v1/chat; risk comes from the stream',
+        () async {
+          server.handler = (req, _) => writeSse(
+            req,
+            sseFrame('delta', {'text': 'ok'}) +
+                sseFrame('risk', {
+                  'crisis_score': 0.95,
+                  'risk_category': 'CRITICAL',
+                  'modalities_used': ['text'],
+                  'trigger_flags': <String>[],
+                }) +
+                sseFrame('done', {'full_text': 'ok'}),
           );
-          await req.response.close();
-        };
-        server.handler = (req, _) => writeSse(req, okTurn());
-      });
-      tearDown(() => crisisServer.close());
+          final risks = <RiskResult>[];
+          final s = live();
+          await send(s, handlers: ChatHandlers(onRisk: risks.add));
+          await send(s, handlers: ChatHandlers(onRisk: risks.add));
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+          expect(server.requests.map((r) => (r.method, r.uri.path)), [
+            ('POST', '/api/v1/chat'),
+            ('POST', '/api/v1/chat'),
+          ]);
+          expect(risks.map((r) => r.riskCategory), [
+            RiskCategory.critical,
+            RiskCategory.critical,
+          ]);
+        },
+      );
 
-      test('not called when KOI_CRISIS_BASE is empty', () async {
-        final risks = <RiskResult>[];
-        await send(
-          live(crisis: CrisisApiClient(baseUrl: '')),
-          handlers: ChatHandlers(onRisk: risks.add),
-        );
-        await pumpEventQueue();
-        expect(crisisServer.requests, isEmpty);
-        expect(risks, isEmpty);
+      test('no code in lib/ can request /api/v1/crisis', () {
+        final hits = [
+          for (final f in Directory('lib').listSync(recursive: true))
+            if (f is File && f.path.endsWith('.dart'))
+              for (final line in f.readAsLinesSync())
+                if (!line.trimLeft().startsWith('//') &&
+                    line.contains('/api/v1/crisis'))
+                  '${f.path}: $line',
+        ];
+        expect(hits, isEmpty);
       });
+    });
 
-      test('called once per turn when set; result → onRisk only', () async {
-        final risks = <RiskResult>[];
-        final s = live(crisis: CrisisApiClient(baseUrl: crisisServer.base));
-        await send(s, handlers: ChatHandlers(onRisk: risks.add));
-        await send(s, handlers: ChatHandlers(onRisk: risks.add));
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-        expect(crisisServer.requests, hasLength(2));
-        expect(risks.map((r) => r.riskCategory), [
-          RiskCategory.critical,
-          RiskCategory.critical,
-        ]);
-        // Never put into the chat request (C5).
-        expect(server.requests.first.json.containsKey('risk'), isFalse);
-      });
-
-      test('fails closed: an error gives no risk at all', () async {
-        crisisServer.handler = (req, _) async {
-          req.response.statusCode = 500;
-          await req.response.close();
-        };
-        final risks = <RiskResult>[];
-        await send(
-          live(crisis: CrisisApiClient(baseUrl: crisisServer.base)),
-          handlers: ChatHandlers(onRisk: risks.add),
-        );
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-        expect(crisisServer.requests, hasLength(1));
-        expect(risks, isEmpty);
-      });
+    test('beforeRequest holds the request; the user message is saved '
+        'first', () async {
+      server.handler = (req, _) => writeSse(req, okTurn());
+      final store = MemoryMessageStore();
+      final gate = Completer<void>();
+      var held = 0;
+      final sending = live(store: store).sendMessage(
+        userId: 'u1',
+        conversationId: 'u1',
+        text: 'hi',
+        context: const [],
+        beforeRequest: () {
+          held++;
+          return gate.future;
+        },
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(held, 1);
+      expect(server.requests, isEmpty);
+      expect((await store.byConversation('u1')).single.sender, 'user');
+      gate.complete();
+      final r = await sending;
+      expect(r.isFallback, isFalse);
+      expect(server.requests, hasLength(1));
     });
   });
 }
