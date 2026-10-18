@@ -50,7 +50,23 @@ function SettingsIcon({ active }: IconProps) {
   );
 }
 
+function HomeIcon({ active }: IconProps) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"
+        stroke="currentColor"
+        strokeWidth={active ? 2.5 : 2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Home opens the landing page on purpose (/?home=1); a bare / sends signed-in users to chat.
 const TABS = [
+  { href: '/?home=1', label: 'Home',    Icon: HomeIcon     },
   { href: '/chat',     label: 'Chat',     Icon: ChatIcon     },
   { href: '/progress', label: 'Progress', Icon: ProgressIcon },
   { href: '/settings', label: 'Settings', Icon: SettingsIcon },
@@ -64,7 +80,7 @@ export default function BottomNav() {
       <div className="max-w-6xl mx-auto flex items-center justify-between sm:justify-start bg-white border-[3px] border-black rounded-full shadow-[5px_5px_0px_0px_#06b6d4] px-1 sm:px-6 py-1 sm:py-2 gap-0 sm:gap-4">
         {/* Logo - Left (Now Interactive) */}
         <Link
-          href='/' aria-label="KOI home" className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
+          href="/?home=1" aria-label="KOI home" className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
           onClick={() => console.log('Logo clicked!')}>
           <div className="w-8 h-8 rounded-md bg-[var(--neo-blue)] border-[2px] border-black flex items-center justify-center font-bold text-white text-sm">
             K

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { FirebaseConfigurationError } from '@/lib/firebase';
 import { resolveOnboardingComplete } from '@/lib/onboarding';
+import AuthPendingSpinner from '@/components/layout/AuthPendingSpinner';
 
 const BLOCKS = [
   { bg: '#2D63EB', text: '#fff',    label: 'Think',   w: 'wide' },
@@ -65,16 +66,23 @@ export default function RootPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const revealRefs = useRef<(HTMLElement | null)[]>([]);
+  // `/?home=1` is the deliberate way back to the landing page for a signed-in user.
+  const [homeRequested, setHomeRequested] = useState<boolean | null>(null);
+  useEffect(() => {
+    setHomeRequested(new URLSearchParams(window.location.search).get('home') === '1');
+  }, []);
+  // Never paint landing content for a visitor who is about to be redirected.
+  const showLanding = !loading && (!user || homeRequested === true);
 
   useEffect(() => {
-    if (loading || !user) return;
+    if (loading || !user || homeRequested !== false) return;
     let live = true;
     void resolveOnboardingComplete(user.uid).then(
       (complete) => { if (live) router.replace(complete ? '/chat' : '/onboarding'); },
       () => { if (live) router.replace('/onboarding'); },
     );
     return () => { live = false; };
-  }, [user, loading, router]);
+  }, [user, loading, router, homeRequested]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -89,7 +97,7 @@ export default function RootPage() {
     );
     revealRefs.current.forEach((el) => el && observer.observe(el));
     return () => observer.disconnect();
-  }, []);
+  }, [showLanding]);
 
   const addReveal = (el: HTMLElement | null, i: number) => {
     revealRefs.current[i] = el;
@@ -106,10 +114,22 @@ export default function RootPage() {
     }
   }, [signInAnonymously]);
 
+  const openChat = useCallback(() => {
+    if (!user) return;
+    void resolveOnboardingComplete(user.uid).then(
+      (complete) => router.push(complete ? '/chat' : '/onboarding'),
+      () => router.push('/onboarding'),
+    );
+  }, [user, router]);
+  // Signed-in visitors on /?home=1 continue to their chat instead of signing in again.
+  const startAction = user ? openChat : handleGetStarted;
+
   const isLoading = starting || loading;
   const authErrorMessage = error instanceof FirebaseConfigurationError
     ? error.message
     : 'Sign-in could not connect. Check your network and try again.';
+
+  if (!showLanding) return <AuthPendingSpinner />;
 
   return (
     <>
@@ -146,6 +166,15 @@ export default function RootPage() {
               <Link href="/how-it-works" className="hover:text-black transition-colors">How It Works</Link>
             </div>
 
+            {user ? (
+              <button
+                onClick={openChat}
+                className="neo-btn-primary"
+                style={{ fontSize: '0.875rem', padding: '0.5rem 1.25rem' }}
+              >
+                Open chat
+              </button>
+            ) : (
             <button
               onClick={handleGetStarted}
               disabled={isLoading}
@@ -159,6 +188,7 @@ export default function RootPage() {
                 </span>
               ) : <>Get Started →</>}
             </button>
+            )}
           </div>
         </nav>
 
@@ -210,7 +240,7 @@ export default function RootPage() {
                   </div>
                 ) : (
                   <>
-                    <button onClick={handleGetStarted} disabled={isLoading} className="neo-btn-primary text-base">
+                    <button onClick={startAction} disabled={isLoading} className="neo-btn-primary text-base">
                       {isLoading ? (
                         <span className="flex items-center gap-2">
                           <span className="inline-block w-4 h-4 rounded-full border-2 border-white border-t-transparent" style={{ animation: 'spin 0.7s linear infinite' }} />
@@ -336,7 +366,7 @@ export default function RootPage() {
               </div>
               <div className="flex flex-col gap-4 items-start lg:items-end shrink-0">
                 <button
-                  onClick={handleGetStarted}
+                  onClick={startAction}
                   disabled={isLoading}
                   style={{
                     background: '#FFD100',

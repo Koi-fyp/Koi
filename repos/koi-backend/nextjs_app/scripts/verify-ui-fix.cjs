@@ -166,7 +166,7 @@ async function item1b(browser) {
     record('1b', `${vp} "Get Started" absent for signed-in user`, await page.getByRole('button', { name: /Get Started/ }).count() === 0);
     await open.click().catch(() => {});
     record('1b', `${vp} "Open chat" opens /chat`, await page.waitForURL(/\/chat/, { timeout: 30000 }).then(() => true, () => false));
-    const home = page.getByRole('link', { name: 'Home' });
+    const home = page.getByRole('link', { name: 'Home', exact: true });
     record('1b', `${vp} top bar has Home -> /?home=1`, await home.getAttribute('href').catch(() => null) === '/?home=1');
     const logo = page.getByRole('link', { name: 'KOI home' });
     record('1b', `${vp} top bar logo does not bounce (href)`, ['/?home=1'].includes(await logo.getAttribute('href').catch(() => null)));
