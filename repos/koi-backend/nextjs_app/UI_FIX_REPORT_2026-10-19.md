@@ -75,7 +75,241 @@ Items 5 and 6 produced no further source changes, so there is no separate commit
 
 **233/233 PASS.** Raw output: `artifacts/ui-fix/verify-final.txt`.
 
-<!-- TABLE -->
+| Item | Assertion | Result | Detail |
+|---|---|---|---|
+| 1 | 1280x800 header visible inside viewport | PASS | x=0 w=1280 h=64 |
+| 1 | 1280x800 hero heading visible inside viewport | PASS | x=48 w=608 h=259 |
+| 1 | 1280x800 primary CTA visible inside viewport | PASS | x=48 w=175 h=56 |
+| 1 | 1280x800 footer visible inside viewport | PASS | x=0 w=1280 h=236 |
+| 1 | 1280x800 feature cards (4) visible inside viewport | PASS |  |
+| 1 | 1280x800 FAQ items (7) visible inside viewport | PASS |  |
+| 1 | 1280x800 no horizontal scroll | PASS |  |
+| 1 | 1280x800 theme stylesheet applied (CTA is a pill) | PASS |  |
+| 1 | 1280x800 no console errors / page errors | PASS |  |
+| 1 | 1280x800 CTA click issues the anonymous sign-in request | PASS |  |
+| 1 | 1280x800 no errors after CTA click besides the aborted sign-up | PASS |  |
+| 1 | 390x844 header visible inside viewport | PASS | x=0 w=390 h=64 |
+| 1 | 390x844 hero heading visible inside viewport | PASS | x=24 w=342 h=130 |
+| 1 | 390x844 primary CTA visible inside viewport | PASS | x=24 w=175 h=56 |
+| 1 | 390x844 footer visible inside viewport | PASS | x=0 w=390 h=360 |
+| 1 | 390x844 feature cards (4) visible inside viewport | PASS |  |
+| 1 | 390x844 FAQ items (7) visible inside viewport | PASS |  |
+| 1 | 390x844 no horizontal scroll | PASS |  |
+| 1 | 390x844 theme stylesheet applied (CTA is a pill) | PASS |  |
+| 1 | 390x844 no console errors / page errors | PASS |  |
+| 1 | 390x844 CTA click issues the anonymous sign-in request | PASS |  |
+| 1 | 390x844 no errors after CTA click besides the aborted sign-up | PASS |  |
+| 1 | signed-out CTA sign-in ends at /onboarding or /chat (live at state creation 2026-10-18T22:28:57.655Z) | PASS | landed /onboarding |
+| 1b | 1280x800 signed-in + onboarded at / lands on /chat | PASS | http://localhost:3000/chat |
+| 1b | 1280x800 landing hero never in the DOM for signed-in visit | PASS | {"hero":false,"spinner":true,"spinnerFirst":true} |
+| 1b | 1280x800 spinner shown first | PASS |  |
+| 1b | 1280x800 Back from /chat returns to the previous page without bouncing | PASS | /about |
+| 1b | 1280x800 /?home=1 keeps signed-in user on landing (hero, no redirect) | PASS | http://localhost:3000/?home=1 |
+| 1b | 1280x800 "Open chat" button present with primary style | PASS |  |
+| 1b | 1280x800 "Get Started" absent for signed-in user | PASS |  |
+| 1b | 1280x800 "Open chat" opens /chat | PASS |  |
+| 1b | 1280x800 top bar has Home -> /?home=1 | PASS |  |
+| 1b | 1280x800 top bar logo does not bounce (href) | PASS |  |
+| 1b | 1280x800 no console errors / page errors | PASS |  |
+| 1b | 1280x800 signed-in, not onboarded at / goes to /onboarding | PASS | http://localhost:3000/onboarding |
+| 1b | 390x844 signed-in + onboarded at / lands on /chat | PASS | http://localhost:3000/chat |
+| 1b | 390x844 landing hero never in the DOM for signed-in visit | PASS | {"hero":false,"spinner":true,"spinnerFirst":true} |
+| 1b | 390x844 spinner shown first | PASS |  |
+| 1b | 390x844 Back from /chat returns to the previous page without bouncing | PASS | /about |
+| 1b | 390x844 /?home=1 keeps signed-in user on landing (hero, no redirect) | PASS | http://localhost:3000/?home=1 |
+| 1b | 390x844 "Open chat" button present with primary style | PASS |  |
+| 1b | 390x844 "Get Started" absent for signed-in user | PASS |  |
+| 1b | 390x844 "Open chat" opens /chat | PASS |  |
+| 1b | 390x844 top bar has Home -> /?home=1 | PASS |  |
+| 1b | 390x844 top bar logo does not bounce (href) | PASS |  |
+| 1b | 390x844 no console errors / page errors | PASS |  |
+| 1b | 390x844 signed-in, not onboarded at / goes to /onboarding | PASS | http://localhost:3000/onboarding |
+| 2 | 1280x800 /chat "New Chat" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /chat "New Chat" inside viewport, below nav, not covered | PASS | y=86 nav=82 x=16 w=109 covered=false |
+| 2 | 1280x800 /chat "New Chat" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /chat "Complete Conversation" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /chat "Complete Conversation" inside viewport, below nav, not covered | PASS | y=86 nav=82 x=137 w=203 covered=false |
+| 2 | 1280x800 /chat "Complete Conversation" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /chat "Change companion" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /chat "Change companion" inside viewport, below nav, not covered | PASS | y=86 nav=82 x=352 w=174 covered=false |
+| 2 | 1280x800 /chat "Change companion" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /chat "Open avatar conversation" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /chat "Open avatar conversation" inside viewport, below nav, not covered | PASS | y=86 nav=82 x=538 w=244 covered=false |
+| 2 | 1280x800 /chat "Open avatar conversation" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /chat "Browse saved history" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /chat "Browse saved history" inside viewport, below nav, not covered | PASS | y=140 nav=82 x=16 w=190 covered=false |
+| 2 | 1280x800 /chat "Browse saved history" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /chat no horizontal scroll | PASS |  |
+| 2 | 1280x800 /chat details "Save completion" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /chat details "Save completion" inside viewport, below nav, not covered | PASS | y=345 nav=82 x=34 w=156 covered=false |
+| 2 | 1280x800 /chat details "Save completion" disabled state exposed (disabled/aria-disabled) | PASS |  |
+| 2 | 1280x800 /chat details no horizontal scroll | PASS |  |
+| 2 | 1280x800 /history "Back to current chat" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /history "Back to current chat" inside viewport, below nav, not covered | PASS | y=90 nav=82 x=280 w=182 covered=false |
+| 2 | 1280x800 /history "Back to current chat" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /history "New Chat" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /history "New Chat" inside viewport, below nav, not covered | PASS | y=210 nav=82 x=280 w=136 covered=false |
+| 2 | 1280x800 /history "New Chat" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /history "Refresh saved history" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /history "Refresh saved history" inside viewport, below nav, not covered | PASS | y=486 nav=82 x=280 w=192 covered=false |
+| 2 | 1280x800 /history "Refresh saved history" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /history "Read saved conversation" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /history "Read saved conversation" inside viewport, below nav, not covered | PASS | y=664 nav=82 x=302 w=214 covered=false |
+| 2 | 1280x800 /history "Read saved conversation" disabled state exposed (disabled/aria-disabled) | PASS |  |
+| 2 | 1280x800 /history "Continue current conversation" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /history "Continue current conversation" inside viewport, below nav, not covered | PASS | y=664 nav=82 x=528 w=252 covered=false |
+| 2 | 1280x800 /history "Continue current conversation" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /history no horizontal scroll | PASS |  |
+| 2 | 1280x800 /companion-scene "New Chat" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /companion-scene "New Chat" inside viewport, below nav, not covered | PASS | y=136 nav=82 x=28 w=109 covered=false |
+| 2 | 1280x800 /companion-scene "New Chat" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /companion-scene "Complete Conversation" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /companion-scene "Complete Conversation" inside viewport, below nav, not covered | PASS | y=136 nav=82 x=149 w=203 covered=false |
+| 2 | 1280x800 /companion-scene "Complete Conversation" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /companion-scene "Change companion" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 1280x800 /companion-scene "Change companion" inside viewport, below nav, not covered | PASS | y=136 nav=82 x=364 w=174 covered=false |
+| 2 | 1280x800 /companion-scene "Change companion" visible focus outline when tabbed to | PASS |  |
+| 2 | 1280x800 /companion-scene no horizontal scroll | PASS |  |
+| 2 | 1280x800 no console errors / page errors on /chat, /history, /companion-scene | PASS |  |
+| 2 | 390x844 /chat "New Chat" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /chat "New Chat" inside viewport, below nav, not covered | PASS | y=316 nav=74 x=16 w=96 covered=false |
+| 2 | 390x844 /chat "New Chat" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /chat "Complete Conversation" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /chat "Complete Conversation" inside viewport, below nav, not covered | PASS | y=316 nav=74 x=124 w=184 covered=false |
+| 2 | 390x844 /chat "Complete Conversation" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /chat "Change companion" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /chat "Change companion" inside viewport, below nav, not covered | PASS | y=370 nav=74 x=16 w=157 covered=false |
+| 2 | 390x844 /chat "Change companion" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /chat "Open avatar conversation" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /chat "Open avatar conversation" inside viewport, below nav, not covered | PASS | y=424 nav=74 x=16 w=224 covered=false |
+| 2 | 390x844 /chat "Open avatar conversation" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /chat "Browse saved history" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /chat "Browse saved history" inside viewport, below nav, not covered | PASS | y=478 nav=74 x=16 w=172 covered=false |
+| 2 | 390x844 /chat "Browse saved history" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /chat no horizontal scroll | PASS |  |
+| 2 | 390x844 /chat details "Save completion" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /chat details "Save completion" inside viewport, below nav, not covered | PASS | y=494 nav=74 x=34 w=140 covered=false |
+| 2 | 390x844 /chat details "Save completion" disabled state exposed (disabled/aria-disabled) | PASS |  |
+| 2 | 390x844 /chat details no horizontal scroll | PASS |  |
+| 2 | 390x844 /history "Back to current chat" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /history "Back to current chat" inside viewport, below nav, not covered | PASS | y=90 nav=74 x=24 w=164 covered=false |
+| 2 | 390x844 /history "Back to current chat" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /history "New Chat" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /history "New Chat" inside viewport, below nav, not covered | PASS | y=210 nav=74 x=24 w=136 covered=false |
+| 2 | 390x844 /history "New Chat" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /history "Refresh saved history" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /history "Refresh saved history" inside viewport, below nav, not covered | PASS | y=498 nav=74 x=24 w=174 covered=false |
+| 2 | 390x844 /history "Refresh saved history" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /history "Read saved conversation" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /history "Read saved conversation" inside viewport, below nav, not covered | PASS | y=702 nav=74 x=46 w=194 covered=false |
+| 2 | 390x844 /history "Read saved conversation" disabled state exposed (disabled/aria-disabled) | PASS |  |
+| 2 | 390x844 /history "Continue current conversation" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /history "Continue current conversation" inside viewport, below nav, not covered | PASS | y=750 nav=74 x=46 w=229 covered=false |
+| 2 | 390x844 /history "Continue current conversation" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /history no horizontal scroll | PASS |  |
+| 2 | 390x844 /companion-scene "New Chat" uses neo button look | PASS | neo-btn-primary bg=rgb(45, 99, 235) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /companion-scene "New Chat" inside viewport, below nav, not covered | PASS | y=122 nav=74 x=14 w=96 covered=false |
+| 2 | 390x844 /companion-scene "New Chat" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /companion-scene "Complete Conversation" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /companion-scene "Complete Conversation" inside viewport, below nav, not covered | PASS | y=122 nav=74 x=122 w=184 covered=false |
+| 2 | 390x844 /companion-scene "Complete Conversation" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /companion-scene "Change companion" uses neo button look | PASS | neo-btn-secondary bg=rgb(255, 209, 0) shadow=rgb(0, 0, 0) 4px 4px 0px 0px |
+| 2 | 390x844 /companion-scene "Change companion" inside viewport, below nav, not covered | PASS | y=176 nav=74 x=14 w=157 covered=false |
+| 2 | 390x844 /companion-scene "Change companion" visible focus outline when tabbed to | PASS |  |
+| 2 | 390x844 /companion-scene no horizontal scroll | PASS |  |
+| 2 | 390x844 no console errors / page errors on /chat, /history, /companion-scene | PASS |  |
+| 3 | 1280x800 reference Progress card found | PASS | {"radius":"20px","border":"2px solid rgb(0, 0, 0)","shadow":"rgb(0, 0, 0) 6px 6px 0px 0… |
+| 3 | 1280x800 counts card radius/border/shadow/background equal existing card | PASS | 20px \| 2px solid rgb(0, 0, 0) \| rgb(0, 0, 0) 6px 6px 0px 0px \| rgb(255, 255, 255) |
+| 3 | 1280x800 counts heading style equals existing card heading | PASS | 800 17.6px -0.352px vs 800 17.6px -0.352px |
+| 3 | 1280x800 counts font family equals the page's | PASS | "DM Sans", system-ui, sans-serif |
+| 3 | 1280x800 counts no element overflows the card | PASS |  |
+| 3 | 1280x800 counts card inside viewport width | PASS | 424..856 |
+| 3 | 1280x800 recorded board card radius/border/shadow/background equal existing card | PASS | 20px \| 2px solid rgb(0, 0, 0) \| rgb(0, 0, 0) 6px 6px 0px 0px \| rgb(255, 255, 255) |
+| 3 | 1280x800 recorded board heading style equals existing card heading | PASS | 800 17.6px -0.352px vs 800 17.6px -0.352px |
+| 3 | 1280x800 recorded board font family equals the page's | PASS | "DM Sans", system-ui, sans-serif |
+| 3 | 1280x800 recorded board no element overflows the card | PASS |  |
+| 3 | 1280x800 recorded board card inside viewport width | PASS | 424..856 |
+| 3 | 1280x800 check-in (form + chart) card radius/border/shadow/background equal existing card | PASS | 20px \| 2px solid rgb(0, 0, 0) \| rgb(0, 0, 0) 6px 6px 0px 0px \| rgb(255, 255, 255) |
+| 3 | 1280x800 check-in (form + chart) heading style equals existing card heading | PASS | 800 17.6px -0.352px vs 800 17.6px -0.352px |
+| 3 | 1280x800 check-in (form + chart) font family equals the page's | PASS | "DM Sans", system-ui, sans-serif |
+| 3 | 1280x800 check-in (form + chart) no element overflows the card | PASS |  |
+| 3 | 1280x800 check-in (form + chart) card inside viewport width | PASS | 424..856 |
+| 3 | 1280x800 activity calendar card radius/border/shadow/background equal existing card | PASS | 20px \| 2px solid rgb(0, 0, 0) \| rgb(0, 0, 0) 6px 6px 0px 0px \| rgb(255, 255, 255) |
+| 3 | 1280x800 activity calendar heading style equals existing card heading | PASS | 800 17.6px -0.352px vs 800 17.6px -0.352px |
+| 3 | 1280x800 activity calendar font family equals the page's | PASS | "DM Sans", system-ui, sans-serif |
+| 3 | 1280x800 activity calendar no element overflows the card | PASS |  |
+| 3 | 1280x800 activity calendar card inside viewport width | PASS | 424..856 |
+| 3 | 1280x800 order: counts, board, check-in, calendar, previews | PASS | 697 < 1180 < 2253 < 2936 < 3123 |
+| 3 | 1280x800 check-in selects use .neo-input | PASS |  |
+| 3 | 1280x800 Save check-in uses .neo-btn-primary | PASS |  |
+| 3 | 1280x800 chart/calendar colours come from the theme palette (no data drawn yet) | PASS |  |
+| 3 | 1280x800 /progress no horizontal scroll | PASS |  |
+| 3 | 1280x800 /progress no console errors / page errors | PASS |  |
+| 3 | 390x844 reference Progress card found | PASS | {"radius":"20px","border":"2px solid rgb(0, 0, 0)","shadow":"rgb(0, 0, 0) 6px 6px 0px 0… |
+| 3 | 390x844 counts card radius/border/shadow/background equal existing card | PASS | 20px \| 2px solid rgb(0, 0, 0) \| rgb(0, 0, 0) 6px 6px 0px 0px \| rgb(255, 255, 255) |
+| 3 | 390x844 counts heading style equals existing card heading | PASS | 800 17.6px -0.352px vs 800 17.6px -0.352px |
+| 3 | 390x844 counts font family equals the page's | PASS | "DM Sans", system-ui, sans-serif |
+| 3 | 390x844 counts no element overflows the card | PASS |  |
+| 3 | 390x844 counts card inside viewport width | PASS | 24..366 |
+| 3 | 390x844 recorded board card radius/border/shadow/background equal existing card | PASS | 20px \| 2px solid rgb(0, 0, 0) \| rgb(0, 0, 0) 6px 6px 0px 0px \| rgb(255, 255, 255) |
+| 3 | 390x844 recorded board heading style equals existing card heading | PASS | 800 17.6px -0.352px vs 800 17.6px -0.352px |
+| 3 | 390x844 recorded board font family equals the page's | PASS | "DM Sans", system-ui, sans-serif |
+| 3 | 390x844 recorded board no element overflows the card | PASS |  |
+| 3 | 390x844 recorded board card inside viewport width | PASS | 24..366 |
+| 3 | 390x844 check-in (form + chart) card radius/border/shadow/background equal existing card | PASS | 20px \| 2px solid rgb(0, 0, 0) \| rgb(0, 0, 0) 6px 6px 0px 0px \| rgb(255, 255, 255) |
+| 3 | 390x844 check-in (form + chart) heading style equals existing card heading | PASS | 800 17.6px -0.352px vs 800 17.6px -0.352px |
+| 3 | 390x844 check-in (form + chart) font family equals the page's | PASS | "DM Sans", system-ui, sans-serif |
+| 3 | 390x844 check-in (form + chart) no element overflows the card | PASS |  |
+| 3 | 390x844 check-in (form + chart) card inside viewport width | PASS | 24..366 |
+| 3 | 390x844 activity calendar card radius/border/shadow/background equal existing card | PASS | 20px \| 2px solid rgb(0, 0, 0) \| rgb(0, 0, 0) 6px 6px 0px 0px \| rgb(255, 255, 255) |
+| 3 | 390x844 activity calendar heading style equals existing card heading | PASS | 800 17.6px -0.352px vs 800 17.6px -0.352px |
+| 3 | 390x844 activity calendar font family equals the page's | PASS | "DM Sans", system-ui, sans-serif |
+| 3 | 390x844 activity calendar no element overflows the card | PASS |  |
+| 3 | 390x844 activity calendar card inside viewport width | PASS | 24..366 |
+| 3 | 390x844 order: counts, board, check-in, calendar, previews | PASS | 718 < 1221 < 2338 < 3101 < 3308 |
+| 3 | 390x844 check-in selects use .neo-input | PASS |  |
+| 3 | 390x844 Save check-in uses .neo-btn-primary | PASS |  |
+| 3 | 390x844 chart/calendar colours come from the theme palette (no data drawn yet) | PASS |  |
+| 3 | 390x844 /progress no horizontal scroll | PASS |  |
+| 3 | 390x844 /progress no console errors / page errors | PASS |  |
+| 4 | 1280x800 /settings/report paper container carries .koi-paper | PASS |  |
+| 4 | 1280x800 /settings/report paper background is white and every text run inside sits on white | PASS | rgb(255, 255, 255) |
+| 4 | 1280x800 /settings/report sampled pixels inside the capsule are white | PASS | [[255,255,255],[255,255,255],[255,255,255]] |
+| 4 | 1280x800 /settings/report sampled pixel outside the capsule is the page colour | PASS | [255,229,217] vs [255,229,217] |
+| 4 | 1280x800 /settings/report print: nav hidden | PASS |  |
+| 4 | 1280x800 /settings/report print: controls hidden | PASS |  |
+| 4 | 1280x800 /settings/report print: page background white | PASS | rgb(255, 255, 255) [[255,255,255],[255,255,255]] |
+| 4 | 1280x800 /settings/report controls card (range, titles, print) sits above the paper | PASS |  |
+| 4 | 1280x800 /settings/report no horizontal scroll | PASS |  |
+| 4 | 1280x800 /settings/export paper container carries .koi-paper | PASS |  |
+| 4 | 1280x800 /settings/export paper background is white and every text run inside sits on white | PASS | rgb(255, 255, 255) |
+| 4 | 1280x800 /settings/export sampled pixels inside the capsule are white | PASS | [[255,255,255],[255,255,255],[255,255,255],[255,255,255]] |
+| 4 | 1280x800 /settings/export sampled pixel outside the capsule is the page colour | PASS | [255,229,217] vs [255,229,217] |
+| 4 | 1280x800 /settings/export print: nav hidden | PASS |  |
+| 4 | 1280x800 /settings/export print: controls hidden | PASS |  |
+| 4 | 1280x800 /settings/export print: page background white | PASS | rgb(255, 255, 255) [[255,255,255],[255,255,255]] |
+| 4 | 1280x800 /settings/export controls card (consent, prepare, download) sits above the preview paper | PASS |  |
+| 4 | 1280x800 /settings/export no horizontal scroll | PASS |  |
+| 4 | 1280x800 export/report no console errors / page errors | PASS |  |
+| 4 | 390x844 /settings/report paper container carries .koi-paper | PASS |  |
+| 4 | 390x844 /settings/report paper background is white and every text run inside sits on white | PASS | rgb(255, 255, 255) |
+| 4 | 390x844 /settings/report sampled pixels inside the capsule are white | PASS | [[255,255,255],[255,255,255],[255,255,255]] |
+| 4 | 390x844 /settings/report sampled pixel outside the capsule is the page colour | PASS | [255,229,217] vs [255,229,217] |
+| 4 | 390x844 /settings/report print: nav hidden | PASS |  |
+| 4 | 390x844 /settings/report print: controls hidden | PASS |  |
+| 4 | 390x844 /settings/report print: page background white | PASS | rgb(255, 255, 255) [[255,255,255],[255,255,255]] |
+| 4 | 390x844 /settings/report controls card (range, titles, print) sits above the paper | PASS |  |
+| 4 | 390x844 /settings/report no horizontal scroll | PASS |  |
+| 4 | 390x844 /settings/export paper container carries .koi-paper | PASS |  |
+| 4 | 390x844 /settings/export paper background is white and every text run inside sits on white | PASS | rgb(255, 255, 255) |
+| 4 | 390x844 /settings/export sampled pixels inside the capsule are white | PASS | [[255,255,255],[255,255,255],[255,255,255],[255,255,255]] |
+| 4 | 390x844 /settings/export sampled pixel outside the capsule is the page colour | PASS | [255,229,217] vs [255,229,217] |
+| 4 | 390x844 /settings/export print: nav hidden | PASS |  |
+| 4 | 390x844 /settings/export print: controls hidden | PASS |  |
+| 4 | 390x844 /settings/export print: page background white | PASS | rgb(255, 255, 255) [[255,255,255],[255,255,255]] |
+| 4 | 390x844 /settings/export controls card (consent, prepare, download) sits above the preview paper | PASS |  |
+| 4 | 390x844 /settings/export no horizontal scroll | PASS |  |
+| 4 | 390x844 export/report no console errors / page errors | PASS |  |
 
 ## Tests and build
 
