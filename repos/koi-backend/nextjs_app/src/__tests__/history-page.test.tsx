@@ -55,6 +55,10 @@ it('lists the active conversation first, then archived ones with title, date and
   expect(lockedItem.textContent).not.toMatch(/Open conversation/);
   expect(screen.getAllByRole('button', { name: 'Open conversation' })).toHaveLength(1);
   expect(screen.getByText('Continue current conversation')).toHaveAttribute('href', '/chat');
+  // KOI button styling for the integration-era controls.
+  expect(screen.getByRole('button', { name: 'Open conversation' })).toHaveClass('neo-btn-primary');
+  expect(screen.getByText('Continue current conversation')).toHaveClass('neo-btn-primary');
+  expect(screen.getByRole('button', { name: 'New Chat' })).toHaveClass('neo-btn-primary');
 });
 it('opening an archived conversation calls openOwned and routes to /chat; a refusal stays on the page', async () => {
   render(<History />); await screen.findByText('Synthetic archived title');

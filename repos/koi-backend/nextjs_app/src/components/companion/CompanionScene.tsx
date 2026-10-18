@@ -28,6 +28,8 @@ export interface CompanionSceneProps {
   onBack: () => void;
   onEnd: () => void;
   notice?: ReactNode;
+  /** Page actions shown as a row under the header, always in view (not inside the scrolling tools panel). */
+  actions?: ReactNode;
   transcriptNotice?: string;
   settings?: ReactNode;
   composer?: ReactNode;
@@ -53,7 +55,7 @@ export interface CompanionSceneProps {
   cameraOverlay?: ReactNode;
 }
 export default function CompanionScene({ companionName, modelUrl, messages, subtitle, subtitleLanguage,
-  subtitleUpdating, onBack, onEnd, notice, transcriptNotice, settings, emotion, emotionIntensity, conversationState, exposeController, composer, avatarEnabled = true, onAvatarFailure, viewportOffset = 0, backLabel, speechSource, onAvatarReady, serverEvents, onExerciseRequest, onQueueClientEvent, exerciseControlsDisabled, onCrisisResolution, crisisIntervention, consumeUiEvent, isHandoffResolved, voiceControl, micControl, cameraControl, cameraOverlay }: CompanionSceneProps) {
+  subtitleUpdating, onBack, onEnd, notice, actions, transcriptNotice, settings, emotion, emotionIntensity, conversationState, exposeController, composer, avatarEnabled = true, onAvatarFailure, viewportOffset = 0, backLabel, speechSource, onAvatarReady, serverEvents, onExerciseRequest, onQueueClientEvent, exerciseControlsDisabled, onCrisisResolution, crisisIntervention, consumeUiEvent, isHandoffResolved, voiceControl, micControl, cameraControl, cameraOverlay }: CompanionSceneProps) {
   const [textOpen, setTextOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dismissedHandoffId, setDismissedHandoffId] = useState<number | null>(null);
@@ -81,6 +83,7 @@ export default function CompanionScene({ companionName, modelUrl, messages, subt
     {/* The avatar owns ~70% of the height; every other control lives in the scrollable panel below. */}
     <div className={styles.stageArea}>
       <CompanionHeader backLabel={backLabel} name={companionName} onBack={onBack} onSettings={settings ? () => setSettingsOpen((open) => !open) : undefined} settingsOpen={settingsOpen} />
+      {actions && <div className={styles.actions}>{actions}</div>}
       {settingsOpen && <section id="companion-settings" className={styles.settings} aria-label="Development preview settings">{settings}</section>}
       <div className={`${styles.workspace} ${textOpen && avatarEnabled ? styles.withText : ''}`}>
         {avatarEnabled && <section className={styles.stage} aria-label="Companion avatar">

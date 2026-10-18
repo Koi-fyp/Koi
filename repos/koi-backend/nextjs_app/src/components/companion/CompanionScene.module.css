@@ -6,6 +6,8 @@
 .panel { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 10px; padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px;
   background: #fffaf6; border: 2px solid #44392f; border-radius: 22px; box-shadow: 3px 4px 0 #ded0c4; scrollbar-width: thin; }
 .cameraOverlay { position: absolute; z-index: 3; top: 12px; left: 12px; width: clamp(130px, 22%, 240px); }
+/* Page actions under the header; capped so an expanded details card scrolls instead of hiding the avatar. */
+.actions { flex: 0 0 auto; max-height: 45%; overflow-y: auto; margin: 2px 0 10px; font-size: 14px; }
 .identity { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0; }
 .wordmark { font-family: var(--font-display, system-ui); font-size: 24px; font-weight: 900; letter-spacing: -1px; padding-right: 16px; border-right: 1px solid #d7c6ba; }
 .identity h1 { margin: 0; font-family: var(--font-display, system-ui); font-size: 19px; letter-spacing: -.3px; }

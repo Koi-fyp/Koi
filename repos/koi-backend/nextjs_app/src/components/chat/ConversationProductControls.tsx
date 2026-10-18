@@ -1,6 +1,6 @@
 'use client';
 import AccountPreferenceStatus from './AccountPreferenceStatus';
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOwnedConversationActions, useSharedConversation } from '@/contexts/ConversationContext';
 import { ConversationSwitchError } from '@/lib/conversation/PersistentConversation';
@@ -25,7 +25,7 @@ const COMPLETION_MESSAGES: Record<string, string> = {
 const completionMessage = (result: ConversationCompletionResult) => COMPLETION_MESSAGES[result.status === 'saved' ? result.outcome : result.reason];
 
 /** Product actions. Completion is saved only by its explicit button; nothing else here completes or rewards. */
-export default function ConversationProductControls({ preferenceState: state, pending = false }: { preferenceState: AvatarPreferenceState; pending?: boolean }) {
+export default function ConversationProductControls({ preferenceState: state, pending = false, children, style }: { preferenceState: AvatarPreferenceState; pending?: boolean; children?: ReactNode; style?: CSSProperties }) {
   const { user } = useAuth();
   const manager = useSharedConversation();
   const recovery = useSyncExternalStore(manager.subscribe, manager.getSnapshot, manager.getSnapshot);
@@ -63,22 +63,24 @@ export default function ConversationProductControls({ preferenceState: state, pe
   const [failure, setFailure] = useState<string | null>(null);
   const [details, setDetails] = useState(false);
   const selected = state.status === 'ready' && state.preference.status === 'selected' ? state.preference : null;
-  return <div style={{ padding: '4px 16px', fontSize: 14 }}>
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-      <button type="button" disabled={newChatDisabled} onClick={() => void startNewChat()} title={recovery.hasUnresolvedHandoff ? 'Please finish the safety check first.' : pending ? 'Reply in progress' : 'Save this conversation to History and start a new one'} aria-describedby={recovery.hasUnresolvedHandoff ? 'new-chat-safety' : 'session-actions-status'} style={{ minHeight: 44, opacity: newChatDisabled ? 0.5 : 1 }}>{pending ? 'New Chat (reply in progress)' : starting ? 'Starting new chat…' : 'New Chat'}</button>
-      <button type="button" onClick={() => setDetails(!details)} aria-expanded={details} style={{ minHeight: 44 }}>Complete Conversation</button>
-      <button type="button" disabled={!user || state.status !== 'ready'} onClick={() => { setFailure(null); setPicker(user!.uid); }} style={{ minHeight: 44 }}>Change companion</button>
+  // Extra page actions (children) share the wrapping row; the top padding clears the fixed top nav.
+  return <div style={{ padding: '20px 16px 4px', fontSize: 14, ...style }}>
+    <div className="koi-action-row">
+      <button type="button" className="neo-btn-primary neo-btn-sm" disabled={newChatDisabled} onClick={() => void startNewChat()} title={recovery.hasUnresolvedHandoff ? 'Please finish the safety check first.' : pending ? 'Reply in progress' : 'Save this conversation to History and start a new one'} aria-describedby={recovery.hasUnresolvedHandoff ? 'new-chat-safety' : 'session-actions-status'}>{pending ? 'New Chat (reply in progress)' : starting ? 'Starting new chat…' : 'New Chat'}</button>
+      <button type="button" className="neo-btn-secondary neo-btn-sm" onClick={() => setDetails(!details)} aria-expanded={details}>Complete Conversation</button>
+      <button type="button" className="neo-btn-secondary neo-btn-sm" disabled={!user || state.status !== 'ready'} onClick={() => { setFailure(null); setPicker(user!.uid); }}>Change companion</button>
+      {children}
     </div>
-    {recovery.hasUnresolvedHandoff && <p id="new-chat-safety">Please finish the safety check first.</p>}
+    {recovery.hasUnresolvedHandoff && <p id="new-chat-safety" style={{ marginTop: 8, fontWeight: 700 }}>Please finish the safety check first.</p>}
     <p id="session-actions-status" className="sr-only">New Chat saves this conversation to History and starts a separate one. It does not complete the conversation or award a piece.</p>
-    {details && <div role="region" aria-label="Conversation completion requirements">
+    {details && <div role="region" aria-label="Conversation completion requirements" className="neo-card" style={{ marginTop: 12, padding: '14px 16px', display: 'grid', gap: 8, justifyItems: 'start', textAlign: 'left' }}>
       <p>Completion must be explicit and saved, with a successfully saved message and reply. Leaving this screen, Back, End or starting a new chat does not complete it.</p>
       <p>{pending ? 'A reply is still in progress. This conversation cannot be completed now.'
         : recovery.hasUnresolvedHandoff ? 'A crisis support step is still open in this conversation, so it cannot be completed yet.'
         : !recovery.hasQualifyingPair ? 'Send a message and wait for the reply to be saved before completing.'
         : 'This conversation can be saved as complete.'}</p>
       <p>Conversation completions can earn at most one piece per Asia/Karachi day. Open crisis handoffs, failed or cancelled replies do not qualify.</p>
-      <button type="button" disabled={!canComplete} onClick={() => void saveCompletion()}>{saving ? 'Saving completion…' : 'Save completion'}</button>
+      <button type="button" className="neo-btn-primary neo-btn-sm" disabled={!canComplete} onClick={() => void saveCompletion()}>{saving ? 'Saving completion…' : 'Save completion'}</button>
       {completion?.uid === user?.uid && completion && <p role="status">{completion.message}</p>}
     </div>}
     <AccountPreferenceStatus uid={user?.uid} />

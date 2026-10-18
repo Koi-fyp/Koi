@@ -210,4 +210,110 @@ async function main() {
 
 const ITEM_RUNNERS = {};
 
+// Computed look of an existing neo button, measured on the same page with a probe element.
+async function neoReference(page, cls) {
+  return page.evaluate((c) => {
+    const probe = document.createElement('button');
+    probe.className = c; probe.textContent = 'probe'; probe.style.position = 'absolute'; probe.style.left = '-9999px';
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const ref = { bg: cs.backgroundColor, shadow: cs.boxShadow, radius: cs.borderRadius, border: `${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor}` };
+    probe.remove();
+    return ref;
+  }, cls);
+}
+
+async function navBottom(page) {
+  return page.evaluate(() => { const nav = document.querySelector('nav'); return nav ? nav.getBoundingClientRect().bottom : 0; });
+}
+
+async function focusByTab(page, locator) {
+  await page.evaluate(() => { document.activeElement && document.activeElement.blur(); window.scrollTo(0, 0); });
+  await page.locator('body').click({ position: { x: 2, y: 200 }, force: true }).catch(() => {});
+  for (let i = 0; i < 80; i++) {
+    await page.keyboard.press('Tab');
+    if (await locator.evaluate((el) => el === document.activeElement).catch(() => false)) return true;
+  }
+  return false;
+}
+
+async function checkControls(page, item, label, vp, size, controls) {
+  await page.mouse.move(1, size.height - 1);
+  const refs = { 'neo-btn-primary': await neoReference(page, 'neo-btn-primary'), 'neo-btn-secondary': await neoReference(page, 'neo-btn-secondary') };
+  for (const { name, locator } of controls) {
+    const el = locator.first();
+    if (!await el.count()) { record(item, `${vp} ${label} "${name}" present`, false, 'not found'); continue; }
+    await el.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(150);
+    const look = await el.evaluate((node) => {
+      const cs = getComputedStyle(node);
+      const cls = ['neo-btn-primary', 'neo-btn-secondary'].find((c) => node.classList.contains(c)) || null;
+      const disabled = node.matches(':disabled') || node.getAttribute('aria-disabled') === 'true';
+      const r = node.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { cls, bg: cs.backgroundColor, shadow: cs.boxShadow, radius: cs.borderRadius, font: cs.fontFamily, disabled,
+        opacity: Number(cs.opacity), unobstructed: !!hit && (hit === node || node.contains(hit)) };
+    });
+    const ref = look.cls && refs[look.cls];
+    record(item, `${vp} ${label} "${name}" uses neo button look`, !!ref && look.bg === ref.bg && look.shadow === ref.shadow && look.radius === ref.radius,
+      `${look.cls} bg=${look.bg} shadow=${look.shadow}`);
+    const box = await el.boundingBox();
+    const top = await navBottom(page);
+    const inside = !!box && box.x >= 0 && box.x + box.width <= size.width + 0.5 && box.y >= top - 0.5 && box.y + box.height <= size.height + 0.5;
+    record(item, `${vp} ${label} "${name}" inside viewport, below nav, not covered`, inside && look.unobstructed,
+      box ? `y=${box.y.toFixed(0)} nav=${top.toFixed(0)} x=${box.x.toFixed(0)} w=${box.width.toFixed(0)} covered=${!look.unobstructed}` : 'no box');
+    if (look.disabled) {
+      record(item, `${vp} ${label} "${name}" disabled state exposed (disabled/aria-disabled)`, true);
+    } else {
+      if (look.opacity < 0.9) record(item, `${vp} ${label} "${name}" looks disabled but is not exposed`, false, `opacity ${look.opacity}`);
+      const focused = await focusByTab(page, el);
+      const ring = focused && await el.evaluate((node) => { const cs = getComputedStyle(node); return cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2; });
+      record(item, `${vp} ${label} "${name}" visible focus outline when tabbed to`, !!ring, focused ? '' : 'never focused by Tab');
+    }
+  }
+  record(item, `${vp} ${label} no horizontal scroll`, await noHorizontalScroll(page));
+}
+
+ITEM_RUNNERS['2'] = async (browser) => {
+  for (const [vp, size] of Object.entries(VIEWPORTS)) {
+    const ctx = await browser.newContext({ viewport: size, storageState: STATE });
+    const page = await ctx.newPage();
+    const errors = watchErrors(page);
+    const product = [
+      { name: 'New Chat', locator: page.getByRole('button', { name: /^New Chat/ }) },
+      { name: 'Complete Conversation', locator: page.getByRole('button', { name: 'Complete Conversation' }) },
+      { name: 'Change companion', locator: page.getByRole('button', { name: 'Change companion' }) },
+    ];
+    await page.goto(`${BASE}/chat`, { waitUntil: 'load', timeout: 120000 });
+    await page.getByRole('button', { name: 'Change companion' }).waitFor({ timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+    await checkControls(page, '2', '/chat', vp, size, [...product,
+      { name: 'Open avatar conversation', locator: page.getByRole('link', { name: 'Open avatar conversation' }) },
+      { name: 'Browse saved history', locator: page.getByRole('link', { name: 'Browse saved history' }) }]);
+    await page.getByRole('button', { name: 'Complete Conversation' }).click();
+    await checkControls(page, '2', '/chat details', vp, size, [{ name: 'Save completion', locator: page.getByRole('button', { name: /Save completion/ }) }]);
+    await page.screenshot({ path: path.join(OUT, `2-chat-details-${vp}-after.png`) });
+
+    await page.goto(`${BASE}/history`, { waitUntil: 'load' });
+    await page.getByText('Refresh saved history').waitFor({ timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    // "Open conversation" only renders for an archived conversation with messages (none are sent here);
+    // its class is asserted in src/__tests__/history-page.test.tsx.
+    await checkControls(page, '2', '/history', vp, size, [
+      { name: 'Back to current chat', locator: page.getByRole('link', { name: 'Back to current chat' }) },
+      { name: 'New Chat', locator: page.getByRole('button', { name: /^New Chat/ }) },
+      { name: 'Refresh saved history', locator: page.getByRole('button', { name: 'Refresh saved history' }) },
+      { name: 'Read saved conversation', locator: page.getByRole('button', { name: 'Read saved conversation' }) },
+      { name: 'Continue current conversation', locator: page.getByRole('link', { name: 'Continue current conversation' }) }]);
+    await page.screenshot({ path: path.join(OUT, `2-history-state-${vp}-after.png`), fullPage: true });
+
+    await page.goto(`${BASE}/companion-scene`, { waitUntil: 'load' });
+    await page.getByRole('button', { name: 'Change companion' }).waitFor({ timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(4000);
+    await checkControls(page, '2', '/companion-scene', vp, size, product);
+    record('2', `${vp} no console errors / page errors on /chat, /history, /companion-scene`, errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+};
+
 if (require.main === module) main().catch((e) => { console.error('FATAL', e); process.exit(2); });

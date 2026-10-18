@@ -65,9 +65,10 @@ export default function AuthenticatedCompanionChat() {
     speechSource={voice.speechSource}
     voiceControl={<VoiceToggle checked={voiceStored} onChange={setVoiceStored} configured={!!speechBase} companionHasVoice={hasVoice(speechCompanion)} signedIn={!!user} line={voice.line} />}
     subtitle={chat.subtitle || 'Start a text conversation with KOI.'} subtitleUpdating={chat.pending} onBack={leave} onEnd={end}
-    notice={<><ConversationProductControls preferenceState={avatarPreference} pending={chat.pending} />{noticeText}
-      {avatarReady && !avatarEnabled && <> <button type="button" onClick={() => setAvatarEnabled(true)} style={{ minHeight: 44, padding: '8px 16px' }}>Retry avatar</button></>}
-      {(avatarUnavailable || legacyFox) && <> <Link href="/onboarding">Review companion selection</Link></>}</>}
+    actions={<ConversationProductControls preferenceState={avatarPreference} pending={chat.pending} style={{ padding: '0 4px 4px' }} />}
+    notice={<>{noticeText}
+      {avatarReady && !avatarEnabled && <> <button type="button" className="neo-btn-secondary neo-btn-sm" onClick={() => setAvatarEnabled(true)}>Retry avatar</button></>}
+      {(avatarUnavailable || legacyFox) && <> <Link href="/onboarding" className="neo-btn-secondary neo-btn-sm">Review companion selection</Link></>}</>}
     micControl={micOn ? <MicButton key={user?.uid} className={styles.callButton} disabled={chat.pending || chat.blocked}
       onRecorded={(audio) => { voice.stop(); void chat.sendVoice(audio); }} /> : undefined}
     cameraControl={cameraMode ? <><button type="button" className={`${styles.callButton} ${cameraVisible ? styles.active : ''}`} aria-pressed={cameraVisible}

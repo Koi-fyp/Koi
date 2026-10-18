@@ -318,6 +318,34 @@ html, body {
 .neo-btn-danger:not(:disabled):hover  { transform: translateY(-2px); box-shadow: 6px 6px 0 0 #000; }
 .neo-btn-danger:not(:disabled):active { transform: translateY(2px);  box-shadow: 2px 2px 0 0 #000; }
 
+.neo-btn-primary:focus-visible,
+.neo-btn-secondary:focus-visible,
+.neo-btn-ghost:focus-visible,
+.neo-btn-danger:focus-visible {
+  outline: 3px solid var(--neo-blue);
+  outline-offset: 3px;
+}
+
+/* Compact size for in-page action rows (same look as the chat "Open avatar conversation" pill). */
+.neo-btn-sm {
+  font-size: 0.875rem;
+  padding: 0.55rem 1.2rem;
+  min-height: 44px;
+}
+
+@media (max-width: 479px) {
+  .neo-btn-sm { font-size: 0.8125rem; padding: 0.5rem 0.95rem; }
+}
+
+/* A tidy wrapping row of neo buttons; room below for the offset shadows. */
+.koi-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding-bottom: 4px;
+}
+
 /* ── Cards ──────────────────────────────────────────────── */
 .neo-card {
   background: #fff;

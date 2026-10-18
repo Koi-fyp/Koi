@@ -81,15 +81,16 @@ export default function ChatPage() {
         style={{ flex: 1 }}
       >
         <OfflineBanner />
-        <ConversationProductControls preferenceState={avatarPreference} pending={isTyping} />
-        <div style={{ display: 'flex', flexShrink: 0, padding: '14px 16px 6px' }}>
-          <Link href="/companion-scene" className="neo-btn-secondary" style={{ fontSize: '0.875rem', padding: '0.55rem 1.2rem' }}>
+        <div className="chatControls">
+        <ConversationProductControls preferenceState={avatarPreference} pending={isTyping}>
+          <Link href="/companion-scene" className="neo-btn-secondary neo-btn-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
             </svg>
             Open avatar conversation
           </Link>
-          <Link href="/history" style={{ padding: '8px 16px' }}>Browse saved history</Link>
+          <Link href="/history" className="neo-btn-secondary neo-btn-sm">Browse saved history</Link>
+        </ConversationProductControls>
         </div>
         {error && <p role="alert" style={{ padding: '0 16px' }}>{error}</p>}
         <MessageList messages={messages} isTyping={isTyping} />
@@ -262,10 +263,18 @@ export default function ChatPage() {
           min-height: 0;
           overflow: hidden;
         }
+        /* The action row may wrap (and open completion details); it scrolls instead of crowding out messages. */
+        .chatControls {
+          flex: 0 1 auto;
+          min-height: 0;
+          max-height: 55%;
+          overflow-y: auto;
+        }
         .avatarPanel {
           box-sizing: border-box;
           display: flex;
           flex: 0 0 clamp(132px, 29svh, 230px);
+          min-height: 0;
           flex-direction: column;
           gap: 8px;
           width: 100%;

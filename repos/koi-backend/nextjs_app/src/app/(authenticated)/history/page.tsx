@@ -92,9 +92,9 @@ export default function HistoryPage() {
   const filtered = data ? searchHistory(data, query) as Listed[] : [];
   const conversation = data?.conversations.find(c => c.id === selected);
   return <div className="max-w-3xl mx-auto p-6">
-    <Link href="/chat" className="underline">Back to current chat</Link>
+    <Link href="/chat" className="neo-btn-secondary neo-btn-sm">Back to current chat</Link>
     <h1 className="text-3xl font-black my-5">Conversation history</h1>
-    <button type="button" disabled={busy || crisisOpen} onClick={() => void act(createOwned)} className="neo-btn-ghost mb-3" aria-describedby="history-create-status">{pending ? 'New Chat (reply in progress)' : 'New Chat'}</button>
+    <button type="button" disabled={busy || crisisOpen} onClick={() => void act(createOwned)} className="neo-btn-primary mb-3" aria-describedby="history-create-status">{pending ? 'New Chat (reply in progress)' : 'New Chat'}</button>
     {crisisOpen && <p className="text-sm mb-2 font-bold">Please finish the safety check first.</p>}
     <p id="history-create-status" className="text-sm mb-4">New Chat saves the current conversation here and starts a separate one. It does not complete the conversation or award a piece.</p>
     {actionError && <p role="alert" className="mb-4">{actionError}</p>}
@@ -102,12 +102,12 @@ export default function HistoryPage() {
     <p className="text-sm mb-4">Saved conversations unlock only with the key already on this device. Conversations that cannot be unlocked show as locked and stay unchanged. Locked message bodies are not searched.</p>
     {!state || state.status === 'loading' ? <p role="status">Unlocking saved history…</p> : state.status === 'locked' || state.status === 'error' ? <div role="alert">
       <p>{state.status === 'locked' ? 'History could not be unlocked on this device. Linked-account unlocking may require the approved account recovery flow.' : 'Saved history could not be read. Check browser storage access and retry.'} No records were changed.</p>
-      <button className="neo-btn-ghost mt-3" onClick={() => refresh(n => n + 1)}>Retry history</button>
+      <button className="neo-btn-secondary neo-btn-sm mt-3" onClick={() => refresh(n => n + 1)}>Retry history</button>
     </div> : <>
       <details className="mb-4"><summary className="cursor-pointer">Optional message search</summary><label className="block mt-3">Search retained messages
         <input className="neo-input block w-full mt-2" type="search" maxLength={120} value={query} onChange={e => setQuery(e.target.value)} />
       </label><p className="text-sm">Search stays on this device and only covers readable messages.</p></details>
-      <button className="neo-btn-ghost mb-4" onClick={() => refresh(n => n + 1)}>Refresh saved history</button>
+      <button className="neo-btn-secondary neo-btn-sm mb-4" onClick={() => refresh(n => n + 1)}>Refresh saved history</button>
       {data?.truncated && <p role="status">This is a bounded history view. Older conversations or messages outside it were not searched or deleted.</p>}
       {!!data?.unreadable && <p role="status">Some retained records could not be unlocked or validated and are not displayed.</p>}
       {!filtered.length && <p role="status">{query ? 'No matching retained messages.' : 'No saved conversation messages yet.'}</p>}
@@ -116,10 +116,12 @@ export default function HistoryPage() {
         <p className="text-sm font-bold">{c.active ? 'Current conversation' : 'Saved conversation'}{c.locked ? ' · Locked' : ''}</p>
         <p className="text-sm">{c.createdAt ? 'Created' : 'Earliest retained message'}: {(c.createdAt ?? c.earliestRetainedAt).toLocaleString()}</p>
         <p className="text-sm">Last activity: {c.lastActivityAt.toLocaleString()} · {c.locked ? 'message count locked' : `${c.messages.length} messages`}</p>
-        <button className="neo-btn-ghost mt-3" disabled={!c.messages.length} aria-expanded={selected === c.id} onClick={() => setSelected(selected === c.id ? null : c.id)}>Read saved conversation</button>
-        {c.active ? <Link className="underline block mt-3" href="/chat">Continue current conversation</Link>
-          : c.source === 'archived' && !c.locked ? <button type="button" className="neo-btn-ghost mt-3 ml-2" disabled={busy || crisisOpen} onClick={() => void act(() => openOwned(c.id))}>{pending ? 'Open conversation (reply in progress)' : 'Open conversation'}</button>
-          : <p className="text-sm mt-3">{c.locked ? 'This conversation is locked on this device and cannot be opened. It remains unchanged.' : 'This retained conversation is read-only. It remains unchanged.'}</p>}
+        <div className="koi-action-row mt-3">
+        <button className="neo-btn-secondary neo-btn-sm" disabled={!c.messages.length} aria-expanded={selected === c.id} onClick={() => setSelected(selected === c.id ? null : c.id)}>Read saved conversation</button>
+        {c.active ? <Link className="neo-btn-primary neo-btn-sm" href="/chat">Continue current conversation</Link>
+          : c.source === 'archived' && !c.locked ? <button type="button" className="neo-btn-primary neo-btn-sm" disabled={busy || crisisOpen} onClick={() => void act(() => openOwned(c.id))}>{pending ? 'Open conversation (reply in progress)' : 'Open conversation'}</button>
+          : <p className="text-sm">{c.locked ? 'This conversation is locked on this device and cannot be opened. It remains unchanged.' : 'This retained conversation is read-only. It remains unchanged.'}</p>}
+        </div>
       </li>)}</ul>
       {conversation && <section className="neo-card p-5 mt-5" aria-label="Saved conversation transcript">
         <h2 className="font-bold mb-3">Saved transcript</h2>
