@@ -43,3 +43,15 @@ New milestone outputs/results and exact checkpoint identities are appended to `K
 
 
 Approved baseline checkpoint: **49ad94880bdeb66a071add4cb320d0e148d5cf91**, local `feat/web-product-data`, exactly seven reviewed W1 files. Fresh baseline Jest 91/16 and explicit TypeScript passed before checkpoint. Current additive product-batch execution and build identity are in KOI_WEB_IMPLEMENTATION_ACCEPTANCE.md. Reported backend commit 8dac2b6 was not available as a local Git object; no fetch, merge or deployment/version assumption made.
+
+## 2026-10-18 approved UX implementation update
+
+Baseline inspected: feat/web-product-data, b384ce2cef44e83e53db7f50182f3ccfaac32187 (prior product batch is committed). Initial worktree had only excluded .idea/ and repos/koi-mobile/android/. No baseline edits discarded. This update owns ConversationProductControls, its focused spec, route composition in chat/page and companion-scene/page, and appended ADR/handoff/acceptance documentation. Protected auth/crypto/db/session/SSE, Ahmad renderer/controller, backend and Flutter remain untouched. No new persistence store or reward issuance. No commit/push/merge/deploy performed.
+
+## Increment 03 ownership update — 2026-10-18
+
+Initial status matched the preserved Increment 02 dirty worktree at b384ce2 on feat/web-product-data; .idea/ and repos/koi-mobile/android/ were already untracked. No other-owner edits overwritten. New work owns history/list presentation, activity availability, recorded-board dialogs, advisory reward preview, bounded backup error explanations, Import/Export copy and onboarding sync-failure categorization. Full 25-project-file working diff inventory and exact evidence are appended to KOI_WEB_IMPLEMENTATION_ACCEPTANCE.md. Protected storage/session/crypto/auth/transport, Ahmad renderer/backend and Flutter remain untouched. No commit/push/merge/deploy performed.
+
+## History / Export follow-up ownership — 2026-10-18
+
+Preserved the existing dirty feat/web-product-data baseline at b384ce2. New owned modules: read-only ciphertextExport, CiphertextExport UI, unwired sessionTransition consumer scaffold, three test suites; Export page intentionally replaces its dormant report generator/false-claim template. Existing parser predicate is exported unchanged; web-honesty adds context mock/truthfulness assertions. Four root reports updated. No protected DB/session/crypto/auth/API/SSE/renderer/backend/Flutter edit or migration; no commit/deployment. Latest acceptance section has separate data-copy vs restoration vs A/B results. Desktop review packet was not regenerated.

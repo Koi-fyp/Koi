@@ -1,0 +1,134 @@
+[
+  {
+    "source": "artifacts/firebase-preferences/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/firebase-preferences/browser.cjs",
+    "sha256": "b5cdaedd67c73ceef499591b23d9955a79506b4f1f222ef9b6917571ad3c3323",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/history-export/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/history-export/browser.cjs",
+    "sha256": "9e398f8972097b0ecde53334ef49c64c2fcf33ecfa387e5005d5d873c3d59133",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/increment03/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment03/browser.cjs",
+    "sha256": "969bc42a571fceedad6721c6e2c0ce2e4bbad3bb04a11454b38f2fc38890b453",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/increment03/final-review.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment03/final-review.cjs",
+    "sha256": "4d5e453921f220e97799a18101be677b7d3c834ad5531ecdfd1a6ada0c3b523e",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/increment04/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment04/browser.cjs",
+    "sha256": "b838e1e3a34f97b17b68131949d2d9a7cceeb5da4b3615cf2639a62035b4c5d9",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/increment04-breathing-fixture/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment04-breathing-fixture/browser.cjs",
+    "sha256": "ad0f7e0b8c5d9ae9f01bf303963722159a46ef9a841bfefa6510a93138fe523e",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/increment04-final-smoke/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment04-final-smoke/browser.cjs",
+    "sha256": "f8a289935232b7d030b91e717d7cfe83e1cc81c660ac5f76fe16af8c4fc96cc3",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/increment04-followup/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment04-followup/browser.cjs",
+    "sha256": "515667dd3e6c59242b45d315022542ddf5f21d73ca5fbbf133152c07d06e8204",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/pre-defense/browser-check.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/pre-defense/browser-check.cjs",
+    "sha256": "a554a5c07e9f57ece94a0c6af830914fc287d4981220d6eaff502f00cefa68b6",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/pre-defense/browser-controls.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/pre-defense/browser-controls.cjs",
+    "sha256": "c4706d5dde1dee86dbfb2103b53042ead99d07c74f2f3c5db048fab53e573940",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/pre-defense/browser-final.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/pre-defense/browser-final.cjs",
+    "sha256": "863460c6f126578fe1bb64fb31d9c6eff3f8fe9f01d2560d1096c53d79daa736",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/pre-defense/browser-followup.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/pre-defense/browser-followup.cjs",
+    "sha256": "63d15c3032dbd61a0dc3741c3a7812669b5842f55677c5f93042e1c915f2db8e",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/preference-sync-live/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/preference-sync-live/browser.cjs",
+    "sha256": "a22da3ab777ee06324ab26679733f819e7645a9f2098842380b05d00a2281224",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/preference-sync-live-final/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/preference-sync-live-final/browser.cjs",
+    "sha256": "4bed33d37a5e38fea7919fd6213a25e938ba2feb8cd922e786c2e02a27e6f60a",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/product-accessibility/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/product-accessibility/browser.cjs",
+    "sha256": "788150e6a054b7640365ee5f4a70b6ae89155944ee76b09d7763224289090877",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/product-history/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/product-history/browser.cjs",
+    "sha256": "bd26feac0ca70582ef3fe28ffdcfcaf01eb9e93b801af47ef2b85cf25ab813fd",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/product-portability/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/product-portability/browser.cjs",
+    "sha256": "b1b8c443681fb3eea3fde0f9bed880e51bfd80644d15043f92c754586019f48d",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/ux-decisions/browser-no-request.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/ux-decisions/browser-no-request.cjs",
+    "sha256": "f0cc7e78785a9d4ecc07200c8c2bdd5e558cd241cb14a238299bcebf8e711409",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/ux-decisions/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/ux-decisions/browser.cjs",
+    "sha256": "45fead9c85fb6db8ae6dd27506d614f2b7cef578825d30d0b60aa0852bb8eadb",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/w1-final/browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/w1-final/browser.cjs",
+    "sha256": "4849d849323607ac4f6ea6e3c614b61d32a2d3385c1cb9d50dd6e6d2bedd5aac",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/w1-final/final-public-browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/w1-final/final-public-browser.cjs",
+    "sha256": "310985bd23925baf4d2e522d0ce6abf93cf919e6b2732ddecdf46a2d92656226",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  },
+  {
+    "source": "artifacts/w1-final/fix-browser.cjs",
+    "snapshot": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/w1-final/fix-browser.cjs",
+    "sha256": "3d23aed4e034cd2acceb69fc5687495df5a9b674f42b694d0bd0da10a398a5df",
+    "kind": "browser test source; copied verbatim; not rerun during handoff"
+  }
+]

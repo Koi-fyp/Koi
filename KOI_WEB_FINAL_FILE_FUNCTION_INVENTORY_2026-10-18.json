@@ -1,0 +1,1417 @@
+{
+  "head": "b384ce2cef44e83e53db7f50182f3ccfaac32187",
+  "branch": "feat/web-product-data",
+  "files": [
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/account-preference-sync-proposal.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "signal",
+          "line": 6
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/activity-ledger.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "candidate",
+          "line": 10
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/avatar-picker-accessibility.test.tsx",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "Harness",
+          "line": 4
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/backup-draft.test.ts",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "draft",
+          "line": 7
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/backup-errors.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/backup-existing-key.test.ts",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/backup-preview.test.tsx",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/breathing-activity.test.tsx",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "result",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/checkin-form.test.tsx",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "fill",
+          "line": 13
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/checkin-service.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "draft",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/checkin-validation.test.ts",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/ciphertext-export-ui.test.tsx",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/ciphertext-export.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "message",
+          "line": 8
+        },
+        {
+          "name": "access",
+          "line": 9
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/conversation-completion-evidence.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/conversation-product-controls.test.tsx",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "Controls",
+          "line": 11
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/history-page.test.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/history.test.ts",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "row",
+          "line": 4
+        },
+        {
+          "name": "read",
+          "line": 6
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/preference-sync-failure.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/preference-sync-integration.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/progress.test.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "message",
+          "line": 13
+        },
+        {
+          "name": "puzzle",
+          "line": 18
+        },
+        {
+          "name": "Probe",
+          "line": 73
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/public-signin-retry.test.tsx",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "observe",
+          "line": 13
+        },
+        {
+          "name": "unobserve",
+          "line": 13
+        },
+        {
+          "name": "disconnect",
+          "line": 13
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/recorded-board.test.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/reward-preview.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "preview",
+          "line": 4
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/session-transition.test.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "current",
+          "line": 3
+        },
+        {
+          "name": "current",
+          "line": 16
+        },
+        {
+          "name": "current",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/voice-controls.test.tsx",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "adapter",
+          "line": 6
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/web-honesty.test.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "observe",
+          "line": 12
+        },
+        {
+          "name": "unobserve",
+          "line": 12
+        },
+        {
+          "name": "disconnect",
+          "line": 12
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/chat/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "OfflineBanner",
+          "line": 12
+        },
+        {
+          "name": "on",
+          "line": 16
+        },
+        {
+          "name": "off",
+          "line": 17
+        },
+        {
+          "name": "ChatPage",
+          "line": 48
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/companion-scene/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "AuthenticatedCompanionChat",
+          "line": 12
+        },
+        {
+          "name": "leave",
+          "line": 23
+        },
+        {
+          "name": "end",
+          "line": 24
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/history/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "HistoryPage",
+          "line": 10
+        },
+        {
+          "name": "current",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/progress/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "activateWithKeyboard",
+          "line": 9
+        },
+        {
+          "name": "Icon",
+          "line": 56
+        },
+        {
+          "name": "ProgressPage",
+          "line": 158
+        },
+        {
+          "name": "generateHeatmapData",
+          "line": 196
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/settings/components/AvatarPicker.tsx",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "CompanionCard",
+          "line": 27
+        },
+        {
+          "name": "AvatarPicker",
+          "line": 70
+        },
+        {
+          "name": "handleSave",
+          "line": 86
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/settings/export/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "ExportPage",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/settings/import/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "ImportPage",
+          "line": 6
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/settings/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "SettingsPage",
+          "line": 17
+        },
+        {
+          "name": "updatePreference",
+          "line": 35
+        },
+        {
+          "name": "handleAvatarSave",
+          "line": 47
+        },
+        {
+          "name": "handleLanguageToggle",
+          "line": 65
+        },
+        {
+          "name": "handleClearHistory",
+          "line": 66
+        },
+        {
+          "name": "handleNotificationToggle",
+          "line": 67
+        },
+        {
+          "name": "toggleHelp",
+          "line": 69
+        },
+        {
+          "name": "getAvatarDisplay",
+          "line": 73
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/settings/privacy/page.tsx",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "PrivacyPage",
+          "line": 6
+        },
+        {
+          "name": "handleScroll",
+          "line": 10
+        },
+        {
+          "name": "getParallaxStyle",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/auth/anonymous/route.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "POST",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/auth/link-email/route.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "POST",
+          "line": 4
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/how-it-works/page.tsx",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "HowItWorksPage",
+          "line": 66
+        },
+        {
+          "name": "onScroll",
+          "line": 71
+        },
+        {
+          "name": "r",
+          "line": 85
+        },
+        {
+          "name": "StartButton",
+          "line": 244
+        },
+        {
+          "name": "handle",
+          "line": 252
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/onboarding/page.tsx",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "OnboardingPage",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/page.tsx",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "RootPage",
+          "line": 61
+        },
+        {
+          "name": "onScroll",
+          "line": 79
+        },
+        {
+          "name": "addReveal",
+          "line": 93
+        },
+        {
+          "name": "ColorGrid",
+          "line": 414
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/chat/AccountPreferenceStatus.tsx",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "AccountPreferenceStatus",
+          "line": 5
+        },
+        {
+          "name": "listener",
+          "line": 7
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/chat/ConversationProductControls.tsx",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "ConversationProductControls",
+          "line": 11
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/companion/ExerciseDirector.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "PacedBreathingPanel",
+          "line": 13
+        },
+        {
+          "name": "tick",
+          "line": 54
+        },
+        {
+          "name": "pauseNow",
+          "line": 76
+        },
+        {
+          "name": "resume",
+          "line": 82
+        },
+        {
+          "name": "ExerciseDirector",
+          "line": 104
+        },
+        {
+          "name": "report",
+          "line": 118
+        },
+        {
+          "name": "stopBreathing",
+          "line": 205
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/data-portability/BackupPreview.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "BackupPreview",
+          "line": 7
+        },
+        {
+          "name": "read",
+          "line": 13
+        },
+        {
+          "name": "current",
+          "line": 16
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/data-portability/CiphertextExport.tsx",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "CiphertextExport",
+          "line": 8
+        },
+        {
+          "name": "activeOwner",
+          "line": 16
+        },
+        {
+          "name": "prepare",
+          "line": 21
+        },
+        {
+          "name": "download",
+          "line": 32
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/onboarding/WelcomeStep.tsx",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "WelcomeStep",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/progress/ActivityAvailability.tsx",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "ActivityAvailability",
+          "line": 9
+        },
+        {
+          "name": "OwnedActivities",
+          "line": 13
+        },
+        {
+          "name": "checkAccess",
+          "line": 23
+        },
+        {
+          "name": "save",
+          "line": 29
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/progress/BreathingActivityBridge.tsx",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "useBreathingResultCallback",
+          "line": 7
+        },
+        {
+          "name": "BreathingActivityBridge",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/progress/RecordedBoard.tsx",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "RecordedBoard",
+          "line": 6
+        },
+        {
+          "name": "close",
+          "line": 11
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/voice/VoiceCaptureControls.tsx",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "VoiceCaptureControls",
+          "line": 10
+        },
+        {
+          "name": "send",
+          "line": 23
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/contexts/AuthContext.tsx",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "useAuth",
+          "line": 72
+        },
+        {
+          "name": "AuthProvider",
+          "line": 78
+        },
+        {
+          "name": "signInAnonymously",
+          "line": 121
+        },
+        {
+          "name": "linkWithEmail",
+          "line": 158
+        },
+        {
+          "name": "signOut",
+          "line": 188
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/contexts/ConversationContext.tsx",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "useSharedConversation",
+          "line": 9
+        },
+        {
+          "name": "ConversationProvider",
+          "line": 14
+        },
+        {
+          "name": "OwnedConversation",
+          "line": 19
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/hooks/useActivityData.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "useActivityData",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/hooks/useAvatarPreference.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "useAvatarPreference",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/hooks/useChat.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "useChat",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/hooks/useModalFocus.ts",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "useModalFocus",
+          "line": 4
+        },
+        {
+          "name": "items",
+          "line": 10
+        },
+        {
+          "name": "key",
+          "line": 13
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/hooks/useProgress.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "useProgress",
+          "line": 11
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/hooks/useUserPreferences.ts",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "useUserPreferences",
+          "line": 5
+        },
+        {
+          "name": "changed",
+          "line": 19
+        },
+        {
+          "name": "synchronize",
+          "line": 26
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/activityLedger.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "constructor",
+          "line": 11
+        },
+        {
+          "name": "assertOwner",
+          "line": 15
+        },
+        {
+          "name": "receiptKey",
+          "line": 18
+        },
+        {
+          "name": "milestoneKey",
+          "line": 19
+        },
+        {
+          "name": "createActivityLedger",
+          "line": 29
+        },
+        {
+          "name": "record",
+          "line": 30
+        },
+        {
+          "name": "guard",
+          "line": 61
+        },
+        {
+          "name": "read",
+          "line": 105
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/activityTypes.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": []
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/breathingActivity.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "breathingEligible",
+          "line": 10
+        },
+        {
+          "name": "completionHash",
+          "line": 18
+        },
+        {
+          "name": "saveBreathingResult",
+          "line": 22
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/conversationCompletion.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "conversationCompletionEligible",
+          "line": 10
+        },
+        {
+          "name": "conversationCompletionId",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/rewardPreview.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "validDate",
+          "line": 15
+        },
+        {
+          "name": "karachiDay",
+          "line": 16
+        },
+        {
+          "name": "value",
+          "line": 19
+        },
+        {
+          "name": "previewReward",
+          "line": 22
+        },
+        {
+          "name": "result",
+          "line": 23
+        },
+        {
+          "name": "id",
+          "line": 24
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/auth/anonymousSignInMode.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "isLocalTestAnonymousSignInEnabled",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/avatar/avatarPreference.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "resolveRepresentation",
+          "line": 20
+        },
+        {
+          "name": "resolveAvatarPreference",
+          "line": 30
+        },
+        {
+          "name": "loadAvatarPreference",
+          "line": 36
+        },
+        {
+          "name": "saveAvatarPreference",
+          "line": 41
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/checkins/checkInService.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "constructor",
+          "line": 9
+        },
+        {
+          "name": "ownerGuard",
+          "line": 11
+        },
+        {
+          "name": "existingContext",
+          "line": 15
+        },
+        {
+          "name": "checkInAvailable",
+          "line": 24
+        },
+        {
+          "name": "saveCheckIn",
+          "line": 25
+        },
+        {
+          "name": "readCheckIns",
+          "line": 36
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/checkins/validateCheckIn.ts",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "validateCheckIn",
+          "line": 5
+        },
+        {
+          "name": "fail",
+          "line": 6
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/conversation/ConversationSession.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "constructor",
+          "line": 27
+        },
+        {
+          "name": "setReady",
+          "line": 32
+        },
+        {
+          "name": "recoveryState",
+          "line": 38
+        },
+        {
+          "name": "restore",
+          "line": 41
+        },
+        {
+          "name": "patch",
+          "line": 51
+        },
+        {
+          "name": "activate",
+          "line": 52
+        },
+        {
+          "name": "deactivate",
+          "line": 53
+        },
+        {
+          "name": "replaceMessages",
+          "line": 54
+        },
+        {
+          "name": "inputFocused",
+          "line": 62
+        },
+        {
+          "name": "queueClientEvent",
+          "line": 63
+        },
+        {
+          "name": "queueCrisisPath",
+          "line": 66
+        },
+        {
+          "name": "sendClientEvent",
+          "line": 72
+        },
+        {
+          "name": "send",
+          "line": 86
+        },
+        {
+          "name": "dispatch",
+          "line": 109
+        },
+        {
+          "name": "cancel",
+          "line": 166
+        },
+        {
+          "name": "dispose",
+          "line": 170
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/conversation/PersistentConversation.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "constructor",
+          "line": 17
+        },
+        {
+          "name": "notify",
+          "line": 20
+        },
+        {
+          "name": "assertActive",
+          "line": 21
+        },
+        {
+          "name": "initialize",
+          "line": 22
+        },
+        {
+          "name": "checkpoint",
+          "line": 75
+        },
+        {
+          "name": "dispose",
+          "line": 96
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/crypto.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "bufToBase64",
+          "line": 47
+        },
+        {
+          "name": "base64ToBuf",
+          "line": 54
+        },
+        {
+          "name": "copyToArrayBuffer",
+          "line": 62
+        },
+        {
+          "name": "randomBase64",
+          "line": 68
+        },
+        {
+          "name": "generateSalt",
+          "line": 76
+        },
+        {
+          "name": "getOrCreateAnonymousSecret",
+          "line": 82
+        },
+        {
+          "name": "clearAnonymousSecret",
+          "line": 90
+        },
+        {
+          "name": "deriveKey",
+          "line": 96
+        },
+        {
+          "name": "encrypt",
+          "line": 124
+        },
+        {
+          "name": "decrypt",
+          "line": 148
+        },
+        {
+          "name": "reencryptOnLinking",
+          "line": 180
+        },
+        {
+          "name": "constructor",
+          "line": 227
+        },
+        {
+          "name": "getActiveCryptoContext",
+          "line": 255
+        },
+        {
+          "name": "resolveSaltWithRetry",
+          "line": 345
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/data-portability/backupDraft.ts",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "constructor",
+          "line": 24
+        },
+        {
+          "name": "fail",
+          "line": 26
+        },
+        {
+          "name": "object",
+          "line": 27
+        },
+        {
+          "name": "exact",
+          "line": 28
+        },
+        {
+          "name": "date",
+          "line": 31
+        },
+        {
+          "name": "binding",
+          "line": 33
+        },
+        {
+          "name": "source",
+          "line": 34
+        },
+        {
+          "name": "isSupportedCiphertext",
+          "line": 35
+        },
+        {
+          "name": "parseBackupDraft",
+          "line": 47
+        },
+        {
+          "name": "readBackupDraft",
+          "line": 75
+        },
+        {
+          "name": "previewDraftConflicts",
+          "line": 81
+        },
+        {
+          "name": "verifyDraftCiphertexts",
+          "line": 95
+        },
+        {
+          "name": "blocked",
+          "line": 99
+        },
+        {
+          "name": "current",
+          "line": 100
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/data-portability/ciphertextExport.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "constructor",
+          "line": 16
+        },
+        {
+          "name": "assertExportOwner",
+          "line": 27
+        },
+        {
+          "name": "identifier",
+          "line": 31
+        },
+        {
+          "name": "validDate",
+          "line": 32
+        },
+        {
+          "name": "readCiphertextExport",
+          "line": 35
+        },
+        {
+          "name": "serializeCiphertextExport",
+          "line": 68
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/db.ts",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "constructor",
+          "line": 85
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/history/readHistory.ts",
+      "state": "INHERITED LOCAL COMMIT (differs from shared base)",
+      "functions": [
+        {
+          "name": "constructor",
+          "line": 11
+        },
+        {
+          "name": "readOwnedHistory",
+          "line": 14
+        },
+        {
+          "name": "guard",
+          "line": 16
+        },
+        {
+          "name": "searchHistory",
+          "line": 57
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/history/sessionTransition.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "transitionOwnedConversation",
+          "line": 11
+        },
+        {
+          "name": "blocked",
+          "line": 14
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/onboarding.ts",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "completeOnboarding",
+          "line": 13
+        },
+        {
+          "name": "isOnboardingComplete",
+          "line": 53
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/preferences/accountPreferenceSync.proposed.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "constructor",
+          "line": 11
+        },
+        {
+          "name": "guard",
+          "line": 15
+        },
+        {
+          "name": "profileFields",
+          "line": 21
+        },
+        {
+          "name": "invalid",
+          "line": 22
+        },
+        {
+          "name": "safeError",
+          "line": 50
+        },
+        {
+          "name": "readOwnedAccountPreferences",
+          "line": 55
+        },
+        {
+          "name": "writeOwnedAccountPreferences",
+          "line": 66
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/preferences/preferenceSync.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "accountSyncStatus",
+          "line": 10
+        },
+        {
+          "name": "publish",
+          "line": 11
+        },
+        {
+          "name": "owned",
+          "line": 16
+        },
+        {
+          "name": "syncAccountPreferences",
+          "line": 19
+        },
+        {
+          "name": "synchronize",
+          "line": 26
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/preferences/syncFailure.ts",
+      "state": "UNTRACKED IMPLEMENTATION",
+      "functions": [
+        {
+          "name": "preferenceSyncFailure",
+          "line": 2
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/preferences/userPreferences.ts",
+      "state": "TRACKED MODIFIED",
+      "functions": [
+        {
+          "name": "validTime",
+          "line": 7
+        },
+        {
+          "name": "notifyPreferencesChanged",
+          "line": 8
+        },
+        {
+          "name": "loadUserPreferences",
+          "line": 11
+        },
+        {
+          "name": "saveUserPreferences",
+          "line": 16
+        },
+        {
+          "name": "reminderStatus",
+          "line": 57
+        }
+      ]
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/progress/progressReadModel.ts",
+      "state": "INHERITED UNCHANGED BASELINE",
+      "functions": [
+        {
+          "name": "validDate",
+          "line": 10
+        },
+        {
+          "name": "counter",
+          "line": 11
+        },
+        {
+          "name": "encrypted",
+          "line": 12
+        },
+        {
+          "name": "summarizeCompletedExchanges",
+          "line": 15
+        },
+        {
+          "name": "validateRecordedProgress",
+          "line": 36
+        },
+        {
+          "name": "readProgress",
+          "line": 48
+        }
+      ]
+    }
+  ]
+}

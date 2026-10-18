@@ -16,8 +16,16 @@ it('reads a real-source view, searches in memory and never implies an old conver
   expect(screen.queryByText('Continue current conversation')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Read saved conversation' }));
   expect(screen.getByText('<script>synthetic text</script>')).toBeInTheDocument(); expect(document.querySelector('script')).toBeNull();
+  fireEvent.click(screen.getByText('Optional message search'));
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'missing term' } });
   expect(screen.getByText('No matching retained messages.')).toBeInTheDocument(); expect(mockRead).toHaveBeenCalledTimes(1);
+});
+it('prioritizes actual conversation metadata and gates new/resumed sessions without invented completion status', async () => {
+  render(<History />); await screen.findByText('Synthetic retained title');
+  expect(screen.getByRole('button', { name: 'New Chat' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /Continue saved conversation/ })).toBeDisabled();
+  expect(screen.getByText(/Completion status unavailable/)).toBeInTheDocument();
+  expect(screen.getByRole('searchbox').closest('details')).not.toHaveAttribute('open');
 });
 it('hides the previous UID immediately and ignores its late result', async () => {
   const view=render(<History />); await screen.findByText('Synthetic retained title');

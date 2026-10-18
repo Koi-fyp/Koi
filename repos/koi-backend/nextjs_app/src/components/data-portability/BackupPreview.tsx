@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/db';
-import { readBackupDraft, previewDraftConflicts, BACKUP_MAX_RECORDS, type DraftRecord } from '@/lib/data-portability/backupDraft';
+import { readBackupDraft, previewDraftConflicts, BACKUP_MAX_RECORDS, BackupValidationError, type DraftRecord } from '@/lib/data-portability/backupDraft';
 type Preview = { owner: string; count: number; duplicates: number; conflicts: number; newRecords: number };
 export default function BackupPreview() {
   const { user, loading } = useAuth();
@@ -25,18 +25,18 @@ export default function BackupPreview() {
       const rows=await db.messages.filter(row=>row.ownerUid===uid).limit(BACKUP_MAX_RECORDS+1).toArray();
       const header=await db.conversations.get(uid);
       if(!current())return;
-      if(rows.length>BACKUP_MAX_RECORDS)throw new Error('bounded');
+      if(rows.length>BACKUP_MAX_RECORDS)throw new BackupValidationError('record-limit');
       const records:DraftRecord[]=rows.map(row=>({source:'messages',id:row.id,timestamp:new Date(row.timestamp).toISOString(),ciphertext:row.content}));
       if(header?.encryptedState)records.push({source:'conversations',id:uid,timestamp:new Date(header.lastActiveAt).toISOString(),ciphertext:header.encryptedState});
       const result=previewDraftConflicts(parsed,records);
       if(current())setPreview({owner:uid,count:parsed.draft.records.length,duplicates:result.duplicates,conflicts:result.conflicts,newRecords:result.newRecords});
-    } catch {if(current())setError('This backup could not be previewed: unsupported file, owner/schema mismatch, or local storage/size limit. No records were changed.');}
+    } catch (reason) {if(current())setError(reason instanceof BackupValidationError ? reason.message : 'The preview could not access browser storage or validation services. Nothing was imported. Please retry.');}
     finally {if(current())setBusy(false);}
   };
   const shown=preview?.owner===user?.uid?preview:null;
   return <section className="neo-card p-5 my-5" aria-label="Read-only encrypted backup preview">
     <h2 className="font-bold text-xl">Read-only backup preview</h2>
-    <p className="my-3">Draft JSON format only, up to 2 MiB / {BACKUP_MAX_RECORDS} records. Exact Firebase owner metadata must match. UID equality does not prove that your existing key can decrypt this backup. No keys are generated or exported.</p>
+    <p className="my-3">KOI draft backup JSON only, up to 2 MiB / {BACKUP_MAX_RECORDS} records. Ordinary JSON, text, CSV, PDF and document files are not backups. Exact Firebase owner metadata must match. UID equality does not prove that your existing key can decrypt this backup. No keys are generated or exported.</p>
     <label>Choose encrypted backup JSON
       <input className="block w-full min-w-0 max-w-full" type="file" accept=".json,application/json" disabled={!user||loading||busy} onChange={e=>{const file=e.target.files?.[0];if(file)void read(file);e.target.value='';}} />
     </label>

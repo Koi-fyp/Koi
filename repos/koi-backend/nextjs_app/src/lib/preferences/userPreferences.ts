@@ -1,7 +1,7 @@
 import { db, type UserRecord } from '@/lib/db';
 
-/** Additive local field, no table/schema migration and no automatic cloud write. */
-export type UserPreferences = UserRecord & { displayName?: string };
+/** Local preferences and retry metadata in the existing users table; no schema/index migration. */
+export type UserPreferences = UserRecord & { displayName?: string; accountSync?: { pending: Partial<Pick<UserRecord, "avatar" | "companion" | "language">>; revision: number; initialized?: boolean } };
 export type PreferenceChanges = Pick<UserPreferences, 'avatar' | 'companion' | 'language' | 'notificationsEnabled' | 'notificationTime' | 'displayName'>;
 export const PREFERENCES_CHANGED = 'koi-avatar-preference-changed';
 export const validTime = (value: unknown): value is string => typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -41,11 +41,16 @@ export async function saveUserPreferences(uid: string, changes: PreferenceChange
     fields.companion = changes.companion; fields.avatar = changes.avatar;
   }
   await db.transaction('rw', db.users, async () => {
-    const existing = await db.users.where('uid').equals(uid).first();
-    if (existing?.id != null) await db.users.update(existing.id, fields);
-    else await db.users.add({ uid, ...fields });
+    const existing = await db.users.where('uid').equals(uid).first() as UserPreferences | undefined;
+    const patch = Object.fromEntries(Object.entries(fields).filter(([key]) => ['avatar', 'companion', 'language'].includes(key)));
+    const accountSync = Object.keys(patch).length ? { pending: { ...existing?.accountSync?.pending, ...patch }, revision: (existing?.accountSync?.revision ?? 0) + 1, initialized: existing?.accountSync?.initialized } : existing?.accountSync;
+    const update = { ...fields, ...(accountSync ? { accountSync } : {}) };
+    if (existing?.id != null) await db.users.update(existing.id, update);
+    else await db.users.add({ uid, ...update });
   });
   notifyPreferencesChanged(uid);
+  // Local receipt returns immediately; network acknowledgement is reported separately.
+  void import('./preferenceSync').then(module => module.syncAccountPreferences(uid)).catch(() => {});
 }
 
 /** A local clock comparison only. No delivery, completion or scheduler is implied. */

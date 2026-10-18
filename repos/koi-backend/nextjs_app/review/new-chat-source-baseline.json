@@ -1,0 +1,16 @@
+{
+  "purpose": "Review-only New Chat proposal; source baseline before preparation",
+  "branch": "feat/web-product-data",
+  "head": "b384ce2cef44e83e53db7f50182f3ccfaac32187",
+  "files": {
+    "src/lib/db.ts": "b2f51bfee5c64915540c4a63daa268f66076f262eca445f8c12b586a2688b296",
+    "src/lib/conversation/PersistentConversation.ts": "f2665bb41387b8acfc6b40ae6ebd820cdd231239483892df3b416a681085a574",
+    "src/lib/conversation/ConversationSession.ts": "045d7e21a3f2021c1aa72fa3779be87038e3e0a423f9ba467757bec028b27a72",
+    "src/contexts/ConversationContext.tsx": "44f730ceb88a04029ee6cd51f42cce3f612c7310ea466a439fa814b79540d4f5",
+    "src/hooks/useChat.ts": "cd45e999d6437535cacf6c51e5cd73396db250c9ca9da09555c336dd24f78f1d",
+    "src/components/chat/ConversationProductControls.tsx": "c31cdb899a1ec73210f2996c582e682b8059821e63ba0c9b60f6a68cdea40181",
+    "src/app/(authenticated)/history/page.tsx": "5aa56d3800bb6d35ccca81650c248fbacedea1acf91306c915ceb2be26790b63",
+    "src/lib/history/readHistory.ts": "30e6428198dd7624cb0d2e03018d3a29a50ee7ffe036a1d7a8e388d93809d19a",
+    "src/lib/history/sessionTransition.ts": "ed16c1d12da999e0be47dc9a77b47b077a8ae2546a3279565cd6d69da3a0d67f"
+  }
+}

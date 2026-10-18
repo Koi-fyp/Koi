@@ -1,0 +1,35 @@
+{
+  "branch": "feat/web-product-data",
+  "head": "b384ce2cef44e83e53db7f50182f3ccfaac32187",
+  "worktree": "dirty preserved; proposed transfer not staged",
+  "date": "2026-10-18",
+  "jest": {
+    "command": "npm test -- --runInBand --silent",
+    "tests": 286,
+    "suites": 39,
+    "result": "PASS",
+    "seconds": 28.334
+  },
+  "typescript": {
+    "command": "npx tsc --noEmit --incremental false",
+    "result": "PASS",
+    "exit": 0
+  },
+  "build": {
+    "command": "npm run build",
+    "result": "PASS",
+    "entries": 19,
+    "next": "14.2.35",
+    "build_id": "i4JLGTu9EUai8YYGsixEA",
+    "exit": 0
+  },
+  "browser_this_handoff": "NOT RUN; historical sanitized results separate",
+  "ahmad_branch_tested": "NOT RUN; fetched source inspected only",
+  "source_changes_this_handoff": "none; only documentation/evidence copies/audit manifests",
+  "commit_push": "NOT PERFORMED",
+  "diff_check": {
+    "tracked": "PASS",
+    "untracked_preflight": "two verbatim browser source trailing-space lines and three proposed diff context-space notices; preserved, not functional failures",
+    "staged_diff": "NOT RUN - nothing staged"
+  }
+}

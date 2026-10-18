@@ -7,6 +7,7 @@ import MessageList from '@/components/chat/MessageList';
 import InputBar from '@/components/chat/InputBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAvatarPreference } from '@/hooks/useAvatarPreference';
+import ConversationProductControls from '@/components/chat/ConversationProductControls';
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
@@ -71,6 +72,7 @@ export default function ChatPage() {
         style={{ flex: 1 }}
       >
         <OfflineBanner />
+        <ConversationProductControls preferenceState={avatarPreference} pending={isTyping} />
         <Link href="/companion-scene" style={{ padding: '8px 16px' }}>Open avatar conversation</Link>
         <Link href="/history" style={{ padding: '8px 16px' }}>Browse saved history</Link>
         {error && <p role="alert" style={{ padding: '0 16px' }}>{error}</p>}

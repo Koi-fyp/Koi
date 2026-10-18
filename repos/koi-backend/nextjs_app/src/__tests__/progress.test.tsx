@@ -99,12 +99,16 @@ it('renders saved totals and labels retained illustrations/charts as previews', 
   await waitFor(()=>expect(view.getByRole('heading',{name:'Your Progress'})).toBeInTheDocument());
   expect(view.getByText('Completed Exchanges')).toBeInTheDocument();
   expect(view.getByText('Recorded Milestones')).toBeInTheDocument();
+  fireEvent.click(view.getByText('Design previews (sample data, not your activity)'));
   expect(view.getByRole('note')).toHaveTextContent('previews');
   expect(view.getByRole('heading',{name:'Mood Trends (Preview)'})).toBeInTheDocument();
-  expect(view.getByText('New puzzle rewards are not available yet.',{exact:false})).toBeInTheDocument();
+  expect(view.getByText('Eligible saved check-ins can earn a piece',{exact:false})).toBeInTheDocument();
   expect(view.queryByText('247')).not.toBeInTheDocument();
   expect(view.queryByText('Days Streak')).not.toBeInTheDocument();
   expect(view.queryByText('Avg Mood')).not.toBeInTheDocument();
+  expect(view.queryByText('50 Pieces')).not.toBeInTheDocument();
+  expect(view.queryByText('7-Day Streak')).not.toBeInTheDocument();
+  expect(view.getByRole('heading',{name:'Milestones'}).closest('details')).toBeNull();
 });
 it('shows a recoverable read error instead of inventing a zero reward balance', async () => {
   const failure=jest.spyOn(db,'transaction').mockRejectedValueOnce(new Error('unavailable') as never);
@@ -118,8 +122,18 @@ it('shows a recoverable read error instead of inventing a zero reward balance', 
 it('does not imply preview download or sharing works', async () => {
   const view = render(<ProgressPage />);
   await waitFor(() => expect(view.getByText('Recorded Puzzle Pieces')).toBeInTheDocument());
+  fireEvent.click(view.getByText('Design previews (sample data, not your activity)'));
   expect(view.getByRole('button', { name: /Download/ })).toBeDisabled();
   expect(view.getByRole('button', { name: /Share/ })).toBeDisabled();
+});
+it('shows unavailable activities and zero inferred unlocks without inventing ratings or completion counts', async () => {
+  const view = render(<ProgressPage />);
+  await view.findByRole('heading', {name:'Recorded puzzle board'});
+  expect(view.getByRole('button', {name:/Save check-in/})).toBeDisabled();
+  expect(view.getByLabelText(/I consent to saving/)).toBeDisabled();
+  expect(view.getAllByRole('button', {name:/Slot \d+: status unavailable/})).toHaveLength(25);
+  expect(view.queryByRole('button', {name:/recorded unlock/})).toBeNull();
+  expect(view.getByRole('heading', {name:'Mood Trends (Preview)'}).closest('details')).not.toHaveAttribute('open');
 });
 
 it('opens and closes the labelled puzzle preview from the keyboard', async () => {

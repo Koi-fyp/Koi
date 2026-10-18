@@ -1,0 +1,835 @@
+{
+  "status": "PROPOSED ONLY - no files staged, no branch/commit/push created",
+  "branch": "feat/web-product-data",
+  "head": "b384ce2cef44e83e53db7f50182f3ccfaac32187",
+  "destination_branch": "handoff/web-product-data-2026-10-18",
+  "pushed_commit": null,
+  "ahmad_sha": "884a278e0370835e98c07ae192cfa2dc8ba73495",
+  "proposed_files": [
+    {
+      "path": "KOI_FIREBASE_PREFERENCE_SYNC_AUDIT_2026-10-18.md",
+      "state": "NEW FILE",
+      "sha256": "0837332404476651b0df28de1a8c957ed51ad7e4424c042ad54adf1e7cd9fb17",
+      "bytes": 28190,
+      "purpose": "handoff/report/function inventory"
+    },
+    {
+      "path": "KOI_WEB_BASELINE_AND_FILE_OWNERSHIP.md",
+      "state": "TRACKED MODIFIED",
+      "sha256": "6573538b75a5988e2ae8293567eb113d1e4eaafc9d5319c2f275977464632ef9",
+      "bytes": 8076,
+      "purpose": "handoff/report/function inventory"
+    },
+    {
+      "path": "KOI_WEB_FINAL_CONFLICT_REPORT_2026-10-18.md",
+      "state": "NEW FILE",
+      "sha256": "127087d9654391d6ed0d74a62bc121abc78da2fbf76ece1ba689eb35a06c11be",
+      "bytes": 14483,
+      "purpose": "handoff/report/function inventory"
+    },
+    {
+      "path": "KOI_WEB_FINAL_FILE_FUNCTION_INVENTORY_2026-10-18.json",
+      "state": "NEW FILE",
+      "sha256": "052e101e49deca8eb7afe96a61dc926bb700508a32046dce0afcf58c788745d9",
+      "bytes": 31820,
+      "purpose": "handoff/report/function inventory"
+    },
+    {
+      "path": "KOI_WEB_FINAL_HANDOFF_2026-10-18.md",
+      "state": "NEW FILE",
+      "sha256": "6fbe4a4d9c92e37e50946c45282d86b27feb3e74566fc04ceb8c5ff5e7525ae6",
+      "bytes": 28703,
+      "purpose": "handoff/report/function inventory"
+    },
+    {
+      "path": "KOI_WEB_IMPLEMENTATION_ACCEPTANCE.md",
+      "state": "TRACKED MODIFIED",
+      "sha256": "f65abd1cdb1c1bafbe66819f1664770a1a68cd3e8289ae18d75f44b587d099e3",
+      "bytes": 97751,
+      "purpose": "handoff/report/function inventory"
+    },
+    {
+      "path": "KOI_WEB_PRODUCT_ADRS.md",
+      "state": "TRACKED MODIFIED",
+      "sha256": "e19985500a2334ced080080145d9025c5312504439236d37949d314ef784aceb",
+      "bytes": 49660,
+      "purpose": "handoff/report/function inventory"
+    },
+    {
+      "path": "KOI_WEB_TO_AHMAD_HANDOFF.md",
+      "state": "TRACKED MODIFIED",
+      "sha256": "01a6e3cf9fce4cca7f4ab642c543afe8038cebf8ac8226eab65f1b6e4408d8cd",
+      "bytes": 37667,
+      "purpose": "handoff/report/function inventory"
+    },
+    {
+      "path": "KOI_WEB_WIP_STAGING_MANIFEST_2026-10-18.json",
+      "state": "NEW FILE",
+      "sha256": null,
+      "bytes": null,
+      "purpose": "manifest self-file; final contents require review"
+    },
+    {
+      "path": "KOI_WEB_WIP_STAGING_MANIFEST_2026-10-18.md",
+      "state": "NEW FILE",
+      "sha256": null,
+      "bytes": null,
+      "purpose": "manifest self-file; final contents require review"
+    },
+    {
+      "path": "KOI_WEB_WIP_STAGING_PATHS_2026-10-18.txt",
+      "state": "NEW FILE",
+      "sha256": null,
+      "bytes": null,
+      "purpose": "manifest self-file; final contents require review"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/jest.setup.ts",
+      "state": "TRACKED MODIFIED",
+      "sha256": "8c577adcc20709f979bf4a159cdd906692d7395ff4c793ce8dd1d5150739b630",
+      "bytes": 330,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/firebase-preferences.rules.cjs",
+      "state": "NEW FILE",
+      "sha256": "6109a083ad5794da905b90d3824a02f52de2cbd475f9bbf5906b8b6553b0c861",
+      "bytes": 3311,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/firestore.user-preferences.proposed.rules",
+      "state": "NEW FILE",
+      "sha256": "946e562219ac4aae674144bd428c4358e687cd541aba30e80d73d79cabd47e38",
+      "bytes": 2242,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/README.md",
+      "state": "NEW FILE",
+      "sha256": "0527e447229492adcd4352deeab7b580968394456d8d540c2ed7969c49580f25",
+      "bytes": 2039,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-evidence-summary.json",
+      "state": "NEW FILE",
+      "sha256": "5217b61cefc7d58122f7ce28dcc8167e335b878b6e327c8d0db3bb81d2ee2192",
+      "bytes": 6973,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness-provenance.json",
+      "state": "NEW FILE",
+      "sha256": "27f59826c45a23f7cfc56487b2bddc6249b92b563a0ad5493c2a32c8832f555f",
+      "bytes": 7725,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/firebase-preferences/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "b5cdaedd67c73ceef499591b23d9955a79506b4f1f222ef9b6917571ad3c3323",
+      "bytes": 22473,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/history-export/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "9e398f8972097b0ecde53334ef49c64c2fcf33ecfa387e5005d5d873c3d59133",
+      "bytes": 22967,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment03/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "969bc42a571fceedad6721c6e2c0ce2e4bbad3bb04a11454b38f2fc38890b453",
+      "bytes": 26834,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment03/final-review.cjs",
+      "state": "NEW FILE",
+      "sha256": "4d5e453921f220e97799a18101be677b7d3c834ad5531ecdfd1a6ada0c3b523e",
+      "bytes": 23569,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment04-breathing-fixture/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "ad0f7e0b8c5d9ae9f01bf303963722159a46ef9a841bfefa6510a93138fe523e",
+      "bytes": 23616,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment04-final-smoke/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "f8a289935232b7d030b91e717d7cfe83e1cc81c660ac5f76fe16af8c4fc96cc3",
+      "bytes": 25790,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment04-followup/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "515667dd3e6c59242b45d315022542ddf5f21d73ca5fbbf133152c07d06e8204",
+      "bytes": 27684,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/increment04/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "b838e1e3a34f97b17b68131949d2d9a7cceeb5da4b3615cf2639a62035b4c5d9",
+      "bytes": 27504,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/pre-defense/browser-check.cjs",
+      "state": "NEW FILE",
+      "sha256": "a554a5c07e9f57ece94a0c6af830914fc287d4981220d6eaff502f00cefa68b6",
+      "bytes": 6421,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/pre-defense/browser-controls.cjs",
+      "state": "NEW FILE",
+      "sha256": "c4706d5dde1dee86dbfb2103b53042ead99d07c74f2f3c5db048fab53e573940",
+      "bytes": 6505,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/pre-defense/browser-final.cjs",
+      "state": "NEW FILE",
+      "sha256": "863460c6f126578fe1bb64fb31d9c6eff3f8fe9f01d2560d1096c53d79daa736",
+      "bytes": 1402,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/pre-defense/browser-followup.cjs",
+      "state": "NEW FILE",
+      "sha256": "63d15c3032dbd61a0dc3741c3a7812669b5842f55677c5f93042e1c915f2db8e",
+      "bytes": 6474,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/preference-sync-live-final/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "4bed33d37a5e38fea7919fd6213a25e938ba2feb8cd922e786c2e02a27e6f60a",
+      "bytes": 25568,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/preference-sync-live/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "a22da3ab777ee06324ab26679733f819e7645a9f2098842380b05d00a2281224",
+      "bytes": 24361,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/product-accessibility/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "788150e6a054b7640365ee5f4a70b6ae89155944ee76b09d7763224289090877",
+      "bytes": 20310,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/product-history/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "bd26feac0ca70582ef3fe28ffdcfcaf01eb9e93b801af47ef2b85cf25ab813fd",
+      "bytes": 20447,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/product-portability/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "b1b8c443681fb3eea3fde0f9bed880e51bfd80644d15043f92c754586019f48d",
+      "bytes": 20894,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/ux-decisions/browser-no-request.cjs",
+      "state": "NEW FILE",
+      "sha256": "f0cc7e78785a9d4ecc07200c8c2bdd5e558cd241cb14a238299bcebf8e711409",
+      "bytes": 20652,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/ux-decisions/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "45fead9c85fb6db8ae6dd27506d614f2b7cef578825d30d0b60aa0852bb8eadb",
+      "bytes": 20848,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/w1-final/browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "4849d849323607ac4f6ea6e3c614b61d32a2d3385c1cb9d50dd6e6d2bedd5aac",
+      "bytes": 23046,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/w1-final/final-public-browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "310985bd23925baf4d2e522d0ce6abf93cf919e6b2732ddecdf46a2d92656226",
+      "bytes": 18586,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/browser-harness/w1-final/fix-browser.cjs",
+      "state": "NEW FILE",
+      "sha256": "3d23aed4e034cd2acceb69fc5687495df5a9b674f42b694d0bd0da10a398a5df",
+      "bytes": 20464,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/current-verification.json",
+      "state": "NEW FILE",
+      "sha256": "395c6783f477ead95eb74ddb1f14a6eabb082db56692eb9297c8baee746eab0f",
+      "bytes": 1170,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/handoff-evidence/security-scan-summary.json",
+      "state": "NEW FILE",
+      "sha256": "2b9c34da1671dd00b63f44802ae9a4ca303b7bd30ae39605953a222e3d274474",
+      "bytes": 2716,
+      "purpose": "browser evidence source/summary (review copy, no runtime data)"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/increment04-db-migration.diff",
+      "state": "NEW FILE",
+      "sha256": "7f09c802bd67bbb2e76a6cc7e486f0651b89a510b1df9b22152bbef43fefc390",
+      "bytes": 1606,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/increment04-exercise-callback.diff",
+      "state": "NEW FILE",
+      "sha256": "42720f2424f05bf4c3f7ff50962d16ab1836f05b51eac0efc4f401ef2baaca7a",
+      "bytes": 7867,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/new-chat-approval.md",
+      "state": "NEW FILE",
+      "sha256": "1c4374a321cd3044f2b91321b9fb7327d4aa39ac353e970363d881906d6b050f",
+      "bytes": 7161,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/new-chat-consumers.proposed.diff",
+      "state": "NEW FILE",
+      "sha256": "a44af3b0d448fa30c651791d49a7aba0d3aa2b091f2f9744f33d529193519a31",
+      "bytes": 16130,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/new-chat-review.md",
+      "state": "NEW FILE",
+      "sha256": "d822b4c069cb13d609bbdaadc2ac58a76366025cc69c94c9f45a15cf481f1fa3",
+      "bytes": 16935,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/new-chat-session.proposed.diff",
+      "state": "NEW FILE",
+      "sha256": "1d3657451f6efcbb49de4501056b2c815cd3d74a9d4308a4a9c31ccc79daeb80",
+      "bytes": 12417,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/new-chat-source-baseline.json",
+      "state": "NEW FILE",
+      "sha256": "5d492492ff1e9c6c36aacbdf41db1c3d484a1a019e09ae85b6ee11006fec1921",
+      "bytes": 1208,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/new-chat-tests.proposed.diff",
+      "state": "NEW FILE",
+      "sha256": "ae98ef713db99793a0edba899303112e747d6ffe9d7b270b68dc6e69be00c96b",
+      "bytes": 10491,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/validate-new-chat-proposal.cjs",
+      "state": "NEW FILE",
+      "sha256": "7b0ebb6492c9319f20e5d39e68f5b328d4aa97fb1ea1685251dc8e67f850add8",
+      "bytes": 4617,
+      "purpose": "unapplied shared-interface/migration/security proposal"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/account-preference-sync-proposal.test.ts",
+      "state": "NEW FILE",
+      "sha256": "69bfcfe17b3a05c75bb9c8cbfaffe5f3c1fccb827342212a665073f3c2c04c90",
+      "bytes": 4860,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/activity-ledger.test.ts",
+      "state": "NEW FILE",
+      "sha256": "fa5d8cce4e01d3d3b370aae8fe6955a9cb840c635ae38914f3b5454843bcdf54",
+      "bytes": 13133,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/backup-errors.test.ts",
+      "state": "NEW FILE",
+      "sha256": "ece41bab4aff837331e286f484bec2b42cf764506ca325201985bfd0625d3b1a",
+      "bytes": 1982,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/breathing-activity.test.tsx",
+      "state": "NEW FILE",
+      "sha256": "282179f0df653ac69b829051bd2bf7fffecd5d4ae31719877a504830c9ed6b35",
+      "bytes": 7042,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/checkin-form.test.tsx",
+      "state": "NEW FILE",
+      "sha256": "f5b873de4ff2648dc9f2c546a20d9bebc77c52d2cda9b66894ef7c8e42885343",
+      "bytes": 3848,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/checkin-service.test.ts",
+      "state": "NEW FILE",
+      "sha256": "790a247ba24edf16ee97424a3ed7fdf94d2f6ae43d6a4215a9afb17070d27d3f",
+      "bytes": 6060,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/ciphertext-export-ui.test.tsx",
+      "state": "NEW FILE",
+      "sha256": "b8cfd105b0aa9f382745b958b799d8d661e86310d42fde1c9389dee59c295d3f",
+      "bytes": 3143,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/ciphertext-export.test.ts",
+      "state": "NEW FILE",
+      "sha256": "c93dbacdfef5cf87ef97eb01ff97d4630731a17861060e264230b53e5dfb8bb4",
+      "bytes": 5070,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/conversation-completion-evidence.test.ts",
+      "state": "NEW FILE",
+      "sha256": "69bf0faf38a47321fffa880ce0b50ce792149d1b93e295a266cad5ee8707eaed",
+      "bytes": 2267,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/conversation-product-controls.test.tsx",
+      "state": "NEW FILE",
+      "sha256": "d2a0325c7521c7f57be730d766c4ce5305c8265375ebfd0d9f1ac4bb2d8ba2b5",
+      "bytes": 2931,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/history-page.test.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "12dc7135ba5d6ffd66ce77735f725a1a5e3041e29a9a0ca800afd68fb84abf55",
+      "bytes": 3700,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/preference-sync-failure.test.ts",
+      "state": "NEW FILE",
+      "sha256": "efa38ffd109a59ceac5d21bd5924a98e68e75e440bc7a6096c90fa0845eadf07",
+      "bytes": 702,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/preference-sync-integration.test.ts",
+      "state": "NEW FILE",
+      "sha256": "3fdcfb471a06abc4a54e95b7e53f6644bf8913a9002be32dd294200eb77bfb18",
+      "bytes": 4602,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/progress.test.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "9f36bdee4eb1a189ea9b29b3a7684741d2ff15b249549f23935283e982ae1185",
+      "bytes": 9661,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/recorded-board.test.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "626481bdf6188d0f38098e2431601f79a5dbc72874e00cc8e38c26b1f254b313",
+      "bytes": 4014,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/reward-preview.test.ts",
+      "state": "NEW FILE",
+      "sha256": "aec4d55e692cb2edddec4ec7f82c3e1b57a6bbbb75303430ca6cac08c12d163c",
+      "bytes": 2951,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/session-transition.test.ts",
+      "state": "NEW FILE",
+      "sha256": "6aaddd7e4e7614d249d244790c344199797203000a2a7843e787ebabe95819dd",
+      "bytes": 5450,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/web-honesty.test.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "fc3b61d99a617af3068f4633dcfc3952d744a5af5cc45f4e345cc545fa4c9fa5",
+      "bytes": 2993,
+      "purpose": "test/verification source"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/chat/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "24792d8a710f9ec2e1af308ab44e4241e7775d3be57c20d2914ccf6f8dadfe40",
+      "bytes": 12385,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/companion-scene/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "eabc73eb7073ec51802c42b9173d00bf1d20c1d047f73b1c84017c4c21d287ff",
+      "bytes": 4025,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/history/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "5aa56d3800bb6d35ccca81650c248fbacedea1acf91306c915ceb2be26790b63",
+      "bytes": 6739,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/progress/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "72243fbcbdcccbd583c7b1730439f26d90ad0a7eaba9bda0357157bc4f76efa5",
+      "bytes": 48656,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/settings/export/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "be7033a9bfe5d5d87ad8ae2e46aed8eed630e51360c0fb5c3733fd7a86e764f0",
+      "bytes": 2078,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/settings/import/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "b44939c7709c2f4db39888ddbc70dbcbd691c931c6f7c62b7247656871ec88dd",
+      "bytes": 7289,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/(authenticated)/settings/page.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "556ed5c335e7baa2fe3691f38a539c7c68ed9e30bc116664e9611ae2aeec7556",
+      "bytes": 26048,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/chat/AccountPreferenceStatus.tsx",
+      "state": "NEW FILE",
+      "sha256": "55af93e4a97559d3e127287a9b99a3ffa102fe47270160729d05893cc6871b88",
+      "bytes": 1433,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/chat/ConversationProductControls.tsx",
+      "state": "NEW FILE",
+      "sha256": "c31cdb899a1ec73210f2996c582e682b8059821e63ba0c9b60f6a68cdea40181",
+      "bytes": 3527,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/companion/ExerciseDirector.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "d3657a0a8deb3f95e588ac7f525a85fb02437532c4b4389bdc95c67638002e03",
+      "bytes": 10779,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/data-portability/BackupPreview.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "af14fa11c0b81eecf53d209cc009f673b0b24443640a772ea897cc1ed8a641f4",
+      "bytes": 4263,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/data-portability/CiphertextExport.tsx",
+      "state": "NEW FILE",
+      "sha256": "5b52180840f2d330228fbcf6cc9914358d6c414722940e78df515d020a354776",
+      "bytes": 5330,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/progress/ActivityAvailability.tsx",
+      "state": "NEW FILE",
+      "sha256": "933fa2974d5fe0ab0fdfc757ffdc9438ddd2282675da52104408112a23e5ff8c",
+      "bytes": 8767,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/progress/BreathingActivityBridge.tsx",
+      "state": "NEW FILE",
+      "sha256": "02b655685d0a2ee6af3542d779e9f68d0dc4f7a5b2d4242641d0141163479d60",
+      "bytes": 1622,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/progress/RecordedBoard.tsx",
+      "state": "TRACKED MODIFIED",
+      "sha256": "e7810a36ba2db6ac4c6d4319da7ec632095cc582d0911d3ca9246ae96bca65af",
+      "bytes": 10505,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/hooks/useActivityData.ts",
+      "state": "NEW FILE",
+      "sha256": "470cf70450f95fa9c38c778fc219635dfd57212b04e05704bccf8c602613a567",
+      "bytes": 1338,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/hooks/useUserPreferences.ts",
+      "state": "TRACKED MODIFIED",
+      "sha256": "8ce808c7de8bba75115ac7d69295df74cdf2f8e100537e9331f7f5140c83f48d",
+      "bytes": 2271,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/activityLedger.ts",
+      "state": "NEW FILE",
+      "sha256": "0f8a60a2efb1cf33a142a8390f304eb31bedc62727ed1ad3aec74a4b5a06194d",
+      "bytes": 8417,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/activityTypes.ts",
+      "state": "NEW FILE",
+      "sha256": "d640ff1951014d74f0b1fd8f15cecb6738b2015b52d4049af949c5401c1f25a4",
+      "bytes": 829,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/breathingActivity.ts",
+      "state": "NEW FILE",
+      "sha256": "5521aebba2cec040d68a5c8edf14f300c042ab8bf405570dc93ec4ece2646929",
+      "bytes": 2226,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/conversationCompletion.ts",
+      "state": "NEW FILE",
+      "sha256": "f5b7492178823c0d166b3afb344797af8266a5c2c09d460edf1b2c0a0654731b",
+      "bytes": 1376,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/activities/rewardPreview.ts",
+      "state": "NEW FILE",
+      "sha256": "93a6a30798fdbe8efa96713cae260304abebe03e20fec90737b4f1c794db71ed",
+      "bytes": 4137,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/checkins/checkInService.ts",
+      "state": "NEW FILE",
+      "sha256": "c1f66b0610c48d5ed72528bbe8c7f494554f7b7a34e10136ff4a277587407075",
+      "bytes": 3682,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/data-portability/backupDraft.ts",
+      "state": "TRACKED MODIFIED",
+      "sha256": "4822062a4dba286e1e9d989cebe3de69e9cbf5c54f74a9264528e8d9c325e433",
+      "bytes": 7969,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/data-portability/ciphertextExport.ts",
+      "state": "NEW FILE",
+      "sha256": "085c4917775850b62e6f6d29d193fd7279e8901f7df0259044efdd2758a7b85d",
+      "bytes": 5449,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/db.ts",
+      "state": "TRACKED MODIFIED",
+      "sha256": "b2f51bfee5c64915540c4a63daa268f66076f262eca445f8c12b586a2688b296",
+      "bytes": 3483,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/history/sessionTransition.ts",
+      "state": "NEW FILE",
+      "sha256": "ed16c1d12da999e0be47dc9a77b47b077a8ae2546a3279565cd6d69da3a0d67f",
+      "bytes": 2520,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/onboarding.ts",
+      "state": "TRACKED MODIFIED",
+      "sha256": "394f7bc652d699b5cda077f45a8e23f04c12c04bed33829d998a4f9a67876fcd",
+      "bytes": 2569,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/preferences/accountPreferenceSync.proposed.ts",
+      "state": "NEW FILE",
+      "sha256": "66cc00a245695ed977fce749e58d11d6b03dcb5afa0d6d46d5e24d4471e4d2ff",
+      "bytes": 4543,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/preferences/preferenceSync.ts",
+      "state": "NEW FILE",
+      "sha256": "cbe4b25b77cd36aa0d27302b25c0a828fe2ffccb634bdd58e1e67303cbf5f196",
+      "bytes": 4936,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/preferences/syncFailure.ts",
+      "state": "NEW FILE",
+      "sha256": "4135205739871e670cacf9c06056bb4da7654c7f82d0592bf77cda1089627968",
+      "bytes": 953,
+      "purpose": "implemented Web source changes"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/preferences/userPreferences.ts",
+      "state": "TRACKED MODIFIED",
+      "sha256": "e15e9f4044302956177185b05d6d5c4033c709435812550765a0e8e1917e7f85",
+      "bytes": 4781,
+      "purpose": "implemented Web source changes"
+    }
+  ],
+  "excluded_nonignored": [
+    {
+      "path": ".idea/.gitignore",
+      "reason": "unrelated IDE metadata"
+    },
+    {
+      "path": ".idea/Koi.iml",
+      "reason": "unrelated IDE metadata"
+    },
+    {
+      "path": ".idea/misc.xml",
+      "reason": "unrelated IDE metadata"
+    },
+    {
+      "path": ".idea/modules.xml",
+      "reason": "unrelated IDE metadata"
+    },
+    {
+      "path": ".idea/vcs.xml",
+      "reason": "unrelated IDE metadata"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/checksums/checksums.lock",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/checksums/md5-checksums.bin",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/checksums/sha1-checksums.bin",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/executionHistory/executionHistory.bin",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/executionHistory/executionHistory.lock",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/fileChanges/last-build.bin",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/fileHashes/fileHashes.bin",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/fileHashes/fileHashes.lock",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/fileHashes/resourceHashesCache.bin",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/8.12/gc.properties",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/buildOutputCleanup/buildOutputCleanup.lock",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/buildOutputCleanup/cache.properties",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/buildOutputCleanup/outputFiles.bin",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/file-system.probe",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/noVersion/buildLogic.lock",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/.gradle/vcs-1/gc.properties",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/gradle/wrapper/gradle-wrapper.jar",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/gradlew",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/gradlew.bat",
+      "reason": "unrelated/generated Flutter Android files"
+    },
+    {
+      "path": "repos/koi-mobile/android/local.properties",
+      "reason": "unrelated/generated Flutter Android files"
+    }
+  ],
+  "ignored_total_at_final_audit": 51865,
+  "ignored_counts": {
+    "ignored local file outside proposed source snapshot": 17,
+    "local runtime/audit artifacts; reviewed browser source copies and sanitized summaries transferred separately": 150,
+    "local environment configuration; never stage/read .env.local": 1,
+    "build output/cache": 1111,
+    "generated local media fixtures; not approved for publication": 18,
+    "downloaded voice models/toolchain/evaluation outputs, not authored Web product code": 70,
+    "platform/Python/tool cache": 8662,
+    "dependency installation/cache": 41836
+  },
+  "ignored_exact_local_index": "artifacts/web-final-handoff/excluded-ignored-files.jsonl",
+  "security": {
+    "proposed_findings": [],
+    "inherited_credential_gate": "tracked nextjs_app/.env.local.test credential-shaped material requires owner/security assessment before push; excluding it from staging does not remove inherited history"
+  },
+  "staged_files": [],
+  "verification": "repos/koi-backend/nextjs_app/review/handoff-evidence/current-verification.json",
+  "not_represented": "Raw runtime logs/screenshots/browser profiles/downloads and downloaded local media/model tools are excluded and preserved locally. 22 authored browser scripts and sanitized historical assertion summaries are copied into the proposed snapshot. All selected local commits are inherited by the review branch, not restaged."
+}

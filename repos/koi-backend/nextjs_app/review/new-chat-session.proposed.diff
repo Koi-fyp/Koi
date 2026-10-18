@@ -1,0 +1,210 @@
+diff --git a/repos/koi-backend/nextjs_app/src/lib/db.ts b/repos/koi-backend/nextjs_app/src/lib/db.ts
+--- a/repos/koi-backend/nextjs_app/src/lib/db.ts
++++ b/repos/koi-backend/nextjs_app/src/lib/db.ts
+@@ -76,6 +76,7 @@
+   activityEvents!: Table<ActivityEventRecord, string>;
+   rewardReceipts!: Table<RewardReceiptRecord, string>;
+   milestoneReceipts!: Table<MilestoneReceiptRecord, string>;
++  conversationArchives!: Table<ConversationRecord, [string, string]>;
+   conversations!: Table<ConversationRecord, string>;
+   users!: Table<UserRecord, number>;
+   messages!: Table<MessageRecord, string>;
+@@ -97,6 +98,7 @@
+       rewardReceipts: 'id, owner_uid, &[owner_uid+source_type+day_key], &[owner_uid+slot_index]',
+       milestoneReceipts: 'id, owner_uid, &[owner_uid+milestone]',
+     });
++    this.version(4).stores({ conversationArchives: '[uid+conversationId], uid, [uid+lastActiveAt]' });
+   }
+ }
+ export const db = new KoiDatabase();
+diff --git a/repos/koi-backend/nextjs_app/src/lib/conversation/PersistentConversation.ts b/repos/koi-backend/nextjs_app/src/lib/conversation/PersistentConversation.ts
+--- a/repos/koi-backend/nextjs_app/src/lib/conversation/PersistentConversation.ts
++++ b/repos/koi-backend/nextjs_app/src/lib/conversation/PersistentConversation.ts
+@@ -1,10 +1,19 @@
+ import { db, type ConversationRecord } from '../db';
+ import { decrypt, encrypt, getActiveCryptoContext, type AuthState } from '../crypto';
+ import { ConversationSession, type SessionMessage } from './ConversationSession';
++import { auth } from '../firebase';
++import { onAuthStateChanged } from 'firebase/auth';
++import type { Transaction } from 'dexie';
++import type { ApprovedSessionTransitionAdapter, SessionTransitionReceipt } from '../history/sessionTransition';
+ import type { ChatAdapter } from './chatContract';
+ 
+ /** One authenticated owner, independent of route subscribers. No transport duplication. */
+-export class PersistentConversation {
++export interface SavedConversationView {
++  conversationId: string; current: boolean; resumable: boolean;
++  createdAt: Date; lastActiveAt: Date; title: string;
++  messages: SessionMessage[]; truncated: boolean;
++}
++export class PersistentConversation implements ApprovedSessionTransitionAdapter {
+   session: ConversationSession | null = null;
+   private record: ConversationRecord | null = null;
+   private stopped = false;
+@@ -13,7 +22,7 @@
+   private writes: Promise<void> = Promise.resolve();
+   private unsubscribe?: () => void;
+   private listeners = new Set<() => void>();
+-  private state = { loading: true, error: null as string | null };
++  private state = { loading: true, switching: false, error: null as string | null };
+   constructor(readonly uid: string, private adapter: ChatAdapter, private authState: AuthState) {}
+   getSnapshot = () => this.state;
+   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
+@@ -30,6 +39,16 @@
+         await db.conversations.add(record); return record;
+       });
+       this.assertActive();
++      const session = await this.restoreSession(this.record);
++      this.session = session;
++      this.observe(session);
++      session.setReady(true); this.notify({ loading: false });
++    } catch {
++      if (!this.stopped) { this.session?.dispose(); this.session = null; this.notify({ loading: false, error: 'Conversation history could not be unlocked or saved. Reload after unlocking your account or restoring local storage access.' }); }
++    }
++  }
++  private async restoreSession(record: ConversationRecord) {
++    if (record.uid !== this.uid) throw new Error('Foreign conversation');
+       const session = new ConversationSession({ send: async (request, options) => {
+         this.assertActive();
+         // Commit pending user turn before inference. Refresh must never replay a POST.
+@@ -37,10 +56,10 @@
+         const result = await this.adapter.send(request, options);
+         await this.checkpoint(); this.assertActive();
+         return result;
+-      } }, this.record.conversationId);
+-      this.session = session; session.setReady(false);
+-      if (this.record.encryptedState) {
+-        const recovered = JSON.parse(await decrypt(this.record.encryptedState, this.secret));
++      } }, record.conversationId);
++      session.setReady(false);
++      if (record.encryptedState) {
++        const recovered = JSON.parse(await decrypt(record.encryptedState, this.secret));
+         this.assertActive();
+         if (recovered.ownerUid !== this.uid || !recovered.snapshot || !Array.isArray(recovered.snapshot.messages)
+           || recovered.snapshot.messages.some((m: SessionMessage) => m.conversationId !== session.conversationId)) throw new Error('Invalid recovery state');
+@@ -59,6 +78,9 @@
+       }
+       this.assertActive();
+       session.replaceMessages([...messages.values()].sort((a,b) => +a.timestamp - +b.timestamp));
++      return session;
++  }
++  private observe(session: ConversationSession) {
+       this.unsubscribe = session.subscribe(() => {
+         const snapshot = session.getSnapshot();
+         const last = snapshot.serverEvents[snapshot.serverEvents.length - 1]?.event.event;
+@@ -67,10 +89,111 @@
+           void this.checkpoint().catch(() => {});
+         }
+       });
+-      session.setReady(true); this.notify({ loading: false });
+-    } catch {
+-      if (!this.stopped) { this.session?.dispose(); this.session = null; this.notify({ loading: false, error: 'Conversation history could not be unlocked or saved. Reload after unlocking your account or restoring local storage access.' }); }
+-    }
++  }
++  private assertSelectionOwner() {
++    this.assertActive();
++    if (auth?.currentUser?.uid !== this.uid) throw new Error('Conversation owner changed');
++  }
++  /** Review proposal: implements the existing consumer seam; no inference/reward/key lookup. */
++  transition: ApprovedSessionTransitionAdapter['transition'] = async input => {
++    this.assertSelectionOwner(); input.signal.throwIfAborted();
++    const previous = this.session;
++    if (input.ownerUid !== this.uid || !previous || !this.record || input.expectedConversationId !== previous.conversationId
++      || this.state.loading || this.state.switching || this.state.error || previous.getSnapshot().pending) {
++      throw new Error('Wait for a ready, saved conversation with no reply in progress');
++    }
++    if (input.kind === 'resume' && (!input.conversationId || input.conversationId.length > 160 || input.conversationId === previous.conversationId)) {
++      throw new Error('Invalid or unchanged selection');
++    }
++    // One operation takes a lease synchronously, before the first await.
++    this.notify({ switching: true }); previous.setReady(false); this.unsubscribe?.();
++    let candidate: ConversationSession | null = null;
++    let transaction: Transaction | undefined;
++    let ownerChanged = false;
++    const unsubscribeOwner = onAuthStateChanged(auth!, user => {
++      if (user?.uid !== this.uid) { ownerChanged = true; transaction?.abort(); }
++    });
++    const guard = () => {
++      this.assertSelectionOwner(); input.signal.throwIfAborted();
++      if (ownerChanged) throw new Error('Conversation owner changed');
++    };
++    const abort = () => transaction?.abort();
++    input.signal.addEventListener('abort', abort);
++    try {
++      // Flush P0's pending checkpoint queue. Never replace an unsaved active header.
++      await this.checkpoint(); guard();
++      const expected = this.record!;
++      const target: ConversationRecord | undefined = input.kind === 'resume'
++        ? await db.conversationArchives.get([this.uid, input.conversationId])
++        : { uid: this.uid, conversationId: crypto.randomUUID(), createdAt: new Date(), lastActiveAt: new Date(), status: 'active', revision: 0 };
++      guard();
++      if (!target || target.uid !== this.uid || (input.kind === 'resume' && target.conversationId !== input.conversationId)) throw new Error('Saved conversation unavailable');
++      candidate = await this.restoreSession(target); guard();
++      const encryptedState = await encrypt(JSON.stringify({ ownerUid: this.uid, ...candidate.recoveryState() }), this.secret, this.salt);
++      guard();
++      // Active-header revision is monotonic even A -> B -> A (stale-tab ABA protection).
++      const next: ConversationRecord = { ...target, encryptedState, revision: expected.revision + 1 };
++      await db.transaction('rw', db.conversations, db.conversationArchives, async tx => {
++        transaction = tx; guard();
++        const current = await db.conversations.get(this.uid); guard();
++        if (!current || current.conversationId !== expected.conversationId || current.revision !== expected.revision) throw new Error('Conversation changed in another tab; reload');
++        await db.conversationArchives.put(current); guard();
++        await db.conversationArchives.put(next); guard();
++        await db.conversations.put(next); guard();
++      });
++      transaction = undefined;
++      // Commit is the linearization point: late cancellation cannot roll it back.
++      // Publish the committed selection unless the authenticated owner has ended.
++      this.assertSelectionOwner();
++      this.record = next; this.session = candidate;
++      previous.dispose(); this.observe(candidate); candidate.setReady(true);
++      this.notify({ switching: false, error: null });
++      return { ownerUid: this.uid, previousConversationId: previous.conversationId,
++        conversationId: next.conversationId, previousCheckpointed: true } satisfies SessionTransitionReceipt;
++    } catch (error) {
++      candidate?.dispose();
++      if (!this.stopped) {
++        previous.setReady(!this.state.error && !ownerChanged && auth?.currentUser?.uid === this.uid);
++        this.observe(previous); this.notify({ switching: false });
++      }
++      throw error;
++    } finally {
++      unsubscribeOwner(); input.signal.removeEventListener('abort', abort);
++    }
++  };
++  /** Bounded, nonmutating archive reader; never initializes or rotates keys. */
++  async readSavedConversations(signal: AbortSignal): Promise<{ conversations: SavedConversationView[]; truncated: boolean }> {
++    const guard = () => { this.assertSelectionOwner(); signal.throwIfAborted(); };
++    guard();
++    const records = await db.conversationArchives.where('[uid+lastActiveAt]').between([this.uid, new Date(-8640000000000000)], [this.uid, new Date(8640000000000000)], true, true).reverse().limit(101).toArray(); guard();
++    const truncated = records.length > 100;
++    const retained = records.slice(0, 100).filter(row => row.conversationId !== this.session?.conversationId);
++    if (this.record) retained.push(this.record);
++    const conversations: SavedConversationView[] = [];
++    for (const record of retained) {
++      guard();
++      const current = record.conversationId === this.session?.conversationId;
++      let recovered: ConversationSession | null = null;
++      let messages: SessionMessage[] = [], resumable = false;
++      try {
++        if (current) messages = this.session!.getSnapshot().messages;
++        else {
++          if (!record.encryptedState) throw new Error('Locked archive');
++          // Same checked recovery and owner-row reconciliation used by P0, no key creation.
++          recovered = await this.restoreSession(record); guard();
++          messages = recovered.getSnapshot().messages;
++        }
++        resumable = true;
++      } catch { guard(); /* Corrupt archives remain locked and unchanged. */ }
++      finally { recovered?.dispose(); }
++      guard();
++      conversations.push({ conversationId: record.conversationId, current, resumable,
++        createdAt: record.createdAt, lastActiveAt: record.lastActiveAt,
++        title: messages.find(m => m.sender === 'user' && m.content.trim())?.content.trim().slice(0, 80) ?? '',
++        messages: messages.slice(-200), truncated: messages.length > 200 });
++    }
++    guard();
++    return { conversations: conversations.sort((a, b) => +b.lastActiveAt - +a.lastActiveAt), truncated };
+   }
+   checkpoint(): Promise<void> {
+     if (!this.session || !this.record || this.stopped) return Promise.reject(new Error('Session unavailable'));

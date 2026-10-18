@@ -1,0 +1,33 @@
+diff --git a/repos/koi-backend/nextjs_app/src/lib/db.ts b/repos/koi-backend/nextjs_app/src/lib/db.ts
+index 2b299fc..0540f76 100644
+--- a/repos/koi-backend/nextjs_app/src/lib/db.ts
++++ b/repos/koi-backend/nextjs_app/src/lib/db.ts
+@@ -1,5 +1,6 @@
+ "use client";
+ import Dexie, { type Table } from 'dexie';
++import type { ActivityEventRecord, RewardReceiptRecord, MilestoneReceiptRecord } from './activities/activityTypes';
+ export type Emotion = 'happy' | 'sad' | 'anxious' | 'calm' | 'neutral';
+ export interface ConversationMessageRecord {
+   id: string;
+@@ -72,6 +73,9 @@ export interface ConversationRecord {
+   encryptedState?: string;
+ }
+ export class KoiDatabase extends Dexie {
++  activityEvents!: Table<ActivityEventRecord, string>;
++  rewardReceipts!: Table<RewardReceiptRecord, string>;
++  milestoneReceipts!: Table<MilestoneReceiptRecord, string>;
+   conversations!: Table<ConversationRecord, string>;
+   users!: Table<UserRecord, number>;
+   messages!: Table<MessageRecord, string>;
+@@ -88,6 +92,11 @@ export class KoiDatabase extends Dexie {
+       syncQueue: '++id, priority, createdAt',
+     });
+     this.version(2).stores({ conversations: 'uid, conversationId, lastActiveAt' });
++    this.version(3).stores({
++      activityEvents: 'id, owner_uid, &[owner_uid+source_type+completion_id], [owner_uid+source_type+day_key], completed_at',
++      rewardReceipts: 'id, owner_uid, &[owner_uid+source_type+day_key], &[owner_uid+slot_index]',
++      milestoneReceipts: 'id, owner_uid, &[owner_uid+milestone]',
++    });
+   }
+ }
+ export const db = new KoiDatabase();
