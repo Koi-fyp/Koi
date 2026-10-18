@@ -1,8 +1,12 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/providers.dart';
+import '../../avatar/avatar_providers.dart';
 import '../../onboarding/steps/companion_step.dart';
+import '../settings_prefs.dart';
 import '../../theme/koi_colors.dart';
 import '../../theme/koi_shadows.dart';
 import '../../theme/koi_text.dart';
@@ -16,8 +20,8 @@ typedef CompanionChoice = ({String companion, String name});
 /// null when closed via ✕, Cancel or a tap on the backdrop.
 ///
 /// Decision 2026-10-13: mirror web's companions (Aisha / Raza / Koi 🦊) and
-/// name field. Q7 (no fox *user avatar*, male default) does not apply here:
-/// this picker chooses the companion, not the user's avatar.
+/// name field. Saving the companion also picks its avatar (Prompt 19, web
+/// 223e97c settings/page.tsx:46-62).
 ///
 /// Web keeps one AvatarPicker mounted and seeds its useState only once, so an
 /// unsaved selection survives Cancel. Mobile seeds from the current values
@@ -38,6 +42,42 @@ Future<CompanionChoice?> showAvatarPicker(
   ),
 );
 
+/// "Review companion selection" on the Chat card and call screen. Web links
+/// to /onboarding (223e97c chat/page.tsx:146, companion-scene/page.tsx:41);
+/// mobile can't reopen a finished onboarding, so this opens the Settings
+/// picker over the current screen and saves like Settings does (decision
+/// 2026-10-18).
+Future<void> reviewCompanionSelection(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final uid = ref.read(authServiceProvider).user?.uid;
+  if (uid == null) return;
+  final store = ref.read(settingsPrefsStoreProvider);
+  final SettingsPrefs prefs;
+  try {
+    prefs = await store.load(uid);
+  } catch (e) {
+    debugPrint('KOI: companion not loaded: ${e.runtimeType}');
+    ref.invalidate(selectedAvatarProvider); // try loading again
+    return;
+  }
+  if (!context.mounted) return;
+  final choice = await showAvatarPicker(
+    context,
+    currentAvatar: prefs.companion,
+    currentName: prefs.name,
+  );
+  if (choice == null) return;
+  final next = prefs.copyWith(companion: choice.companion, name: choice.name);
+  ref.read(selectedAvatarProvider.notifier).select(next.avatar);
+  try {
+    await store.save(uid, next);
+  } catch (e) {
+    debugPrint('KOI: companion not saved: ${e.runtimeType}');
+  }
+}
+
 /// Mirrors settings/components/AvatarPicker.tsx.
 class AvatarPicker extends StatefulWidget {
   const AvatarPicker({
@@ -51,9 +91,31 @@ class AvatarPicker extends StatefulWidget {
   final String currentAvatar;
   final String currentName;
 
-  // AvatarPicker.tsx `companions`, identical to CompanionSelectionStep.tsx.
-  static const List<KoiCompanion> companions =
-      CompanionSelectionStep.companions;
+  // AvatarPicker.tsx:6-10 `companions` (223e97c). Web changed only the
+  // onboarding cards to avatar previews; the picker keeps emoji and traits.
+  static const List<KoiCompanion> companions = [
+    KoiCompanion(
+      'aisha',
+      'Aisha',
+      'Warm & caring',
+      Color(0xFFFF4A60),
+      icon: '👩',
+    ),
+    KoiCompanion(
+      'raza',
+      'Raza',
+      'Calm & grounded',
+      Color(0xFFFFC224),
+      icon: '👨',
+    ),
+    KoiCompanion(
+      'koi',
+      'Koi',
+      'Playful & curious',
+      Color(0xFF06B6D4),
+      icon: '🦊',
+    ),
+  ];
 
   @override
   State<AvatarPicker> createState() => _AvatarPickerState();

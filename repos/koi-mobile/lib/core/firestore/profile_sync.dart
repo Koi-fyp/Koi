@@ -29,13 +29,15 @@ SyncItem onboardingProfileItem(String uid, OnboardingData d) => SyncItem(
 );
 
 /// Settings changes (mobile-only; web Settings writes nothing to Firestore).
-/// avatar is 'male_human' | 'female_human'.
+/// avatar always matches companion (aisha → 'female_human', raza →
+/// 'male_human', koi → 'fox'), as web saveAvatarPreference writes the pair
+/// (223e97c lib/avatar/avatarPreference.ts:41-46).
 SyncItem settingsProfileItem(String uid, SettingsPrefs p) => SyncItem(
   collection: 'users',
   docId: uid,
   data: {
     'profile': {
-      'avatar': p.avatarType.stored,
+      'avatar': p.avatar.avatarId,
       'companion': p.companion,
       'language': p.language,
     },

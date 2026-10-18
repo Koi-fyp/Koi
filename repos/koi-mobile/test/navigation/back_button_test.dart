@@ -10,7 +10,6 @@ import 'package:koi_mobile/info/how_it_works_screen.dart';
 import 'package:koi_mobile/landing/landing_screen.dart';
 import 'package:koi_mobile/onboarding/onboarding_screen.dart';
 import 'package:koi_mobile/onboarding/steps/ai_disclosure_step.dart';
-import 'package:koi_mobile/onboarding/steps/avatar_step.dart';
 import 'package:koi_mobile/onboarding/steps/companion_step.dart';
 import 'package:koi_mobile/onboarding/steps/language_step.dart';
 import 'package:koi_mobile/onboarding/steps/notification_step.dart';
@@ -221,14 +220,13 @@ void main() {
   });
 
   group('onboarding', () {
-    test('previous step mirrors the forward path (Q8 skip kept)', () {
+    test('previous step mirrors the forward path (6 steps, no skip)', () {
       expect(OnboardingScreen.previousStep(0), isNull); // Welcome
       expect(OnboardingScreen.previousStep(1), 0);
       expect(OnboardingScreen.previousStep(2), 1);
       expect(OnboardingScreen.previousStep(3), 2);
-      expect(OnboardingScreen.previousStep(4), 3); // unreachable Avatar
-      expect(OnboardingScreen.previousStep(5), 3); // Language → AI Disclosure
-      expect(OnboardingScreen.previousStep(6), 5);
+      expect(OnboardingScreen.previousStep(4), 3); // Language → AI Disclosure
+      expect(OnboardingScreen.previousStep(5), 4); // Notification → Language
     });
 
     Future<void> pumpStep(WidgetTester tester, int step) async {
@@ -250,8 +248,8 @@ void main() {
     }
 
     testWidgets('back walks Notification → Language → AI Disclosure → '
-        'Companion → Privacy → Welcome (never Avatar)', (tester) async {
-      await pumpStep(tester, 6);
+        'Companion → Privacy → Welcome', (tester) async {
+      await pumpStep(tester, 5);
       for (final expected in [
         LanguageStep,
         AIDisclosureStep,
@@ -261,7 +259,6 @@ void main() {
       ]) {
         await back(tester);
         expect(find.byType(expected), findsOneWidget, reason: '$expected');
-        expect(find.byType(AvatarStep), findsNothing);
       }
     });
 
@@ -280,7 +277,7 @@ void main() {
     testWidgets('time picker popup: back closes only the picker', (
       tester,
     ) async {
-      await pumpStep(tester, 6);
+      await pumpStep(tester, 5);
       await tap(tester, find.byKey(const Key('notif-time')));
       expect(find.byType(Dialog), findsOneWidget);
       await back(tester);

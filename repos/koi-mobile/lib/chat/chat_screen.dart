@@ -7,10 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/providers.dart';
 import '../avatar/avatar_call_screen.dart';
 import '../avatar/avatar_providers.dart';
-import '../avatar/avatar_view.dart' show AvatarImage, AvatarType;
+import '../avatar/avatar_view.dart' show AvatarImage, CompanionAvatar;
 import '../avatar/call_icons.dart';
 import 'backend_warmup.dart';
 import '../onboarding/step_layout.dart';
+import '../settings/widgets/avatar_picker.dart' show reviewCompanionSelection;
 import '../theme/koi_colors.dart';
 import 'widgets/chat_widgets.dart';
 
@@ -68,6 +69,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     mounted: _mounted,
                     avatar: avatar,
                     onCta: _focusInput,
+                    onReview: () => reviewCompanionSelection(context, ref),
                   ),
           ),
           LayoutId(id: _Slot.banner, child: const _OfflineBannerHost()),
@@ -177,12 +179,28 @@ class _AvatarPanel extends StatelessWidget {
     required this.mounted,
     required this.avatar,
     required this.onCta,
+    required this.onReview,
   });
   final bool mounted;
 
-  /// The selected avatar's image (Settings "Avatar").
-  final AvatarType avatar;
+  /// The saved companion; its avatar image, or a status line (loading,
+  /// load error, Koi's fox).
+  final AsyncValue<CompanionAvatar> avatar;
   final VoidCallback onCta;
+
+  /// "Review companion selection" (opens the companion picker).
+  final VoidCallback onReview;
+
+  /// Web 223e97c chat/page.tsx:142-157.
+  static const String loadingText = 'Loading saved avatar preference…';
+  static const String errorText =
+      'Your saved companion could not be loaded. The avatar preview is '
+      'unavailable.';
+  static const String foxText =
+      'Your saved Koi fox choice is preserved. A fox preview image is not '
+      'available.';
+  static const String reviewLink = 'Review companion selection';
+  static const String callLink = 'Open the 3D avatar conversation';
 
   // transition: opacity/transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)
   static const Curve springy = Cubic(0.34, 1.56, 0.64, 1);
@@ -191,6 +209,55 @@ class _AvatarPanel extends StatelessWidget {
   static const double _padY = 16 + 16, _gap = 12; // padding, gap-3
   // assets/images/Male.png and Female.png are both 491×525.
   static const double _imageAspect = 491 / 525;
+
+  /// chat/page.tsx:141-175: loading / error / fox → a status line with a
+  /// link (.avatarFallback: centred column, gap 8px, padding 16px,
+  /// 0.85rem semibold, black underlined link); otherwise the image
+  /// (public/Female.png or public/Male.png). Scrolls when the card is
+  /// smaller than the text.
+  Widget _cardContent(BuildContext context) {
+    final model = avatar.valueOrNull?.model;
+    if (model != null) return AvatarImage(model);
+    final (String text, String? link, VoidCallback? onLink) = switch (avatar) {
+      AsyncError() => (errorText, reviewLink, onReview),
+      AsyncData() => (foxText, callLink, () => openAvatarCall(context)),
+      _ => (loadingText, null, null),
+    };
+    final style = bodyText(13.6, weight: FontWeight.w600, height: 1.5);
+    return Center(
+      child: SingleChildScrollView(
+        key: const Key('avatar-card-status'),
+        padding: const EdgeInsets.all(16),
+        child: Semantics(
+          liveRegion: true, // role="status"
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(text, textAlign: TextAlign.center, style: style),
+              if (link != null) ...[
+                const SizedBox(height: 8),
+                Semantics(
+                  link: true,
+                  child: GestureDetector(
+                    key: const Key('avatar-card-link'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onLink,
+                    child: Text(
+                      link,
+                      textAlign: TextAlign.center,
+                      style: style.copyWith(
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -236,8 +303,7 @@ class _AvatarPanel extends StatelessWidget {
                           ),
                           child: AspectRatio(
                             aspectRatio: _imageAspect,
-                            // public/Male.png or public/Female.png
-                            child: AvatarImage(avatar),
+                            child: _cardContent(context),
                           ),
                         ),
                       ),
@@ -410,6 +476,10 @@ class _CtaButtonState extends State<_CtaButton> {
   );
 }
 
+/// Pushes the avatar call screen (web: /companion-scene).
+void openAvatarCall(BuildContext context) => Navigator.of(context)
+    .push(MaterialPageRoute<void>(builder: (_) => const AvatarCallScreen()));
+
 /// Mobile-only (Prompt 10): opens the avatar call screen. Round like the
 /// InputBar send button (48dp so it reads as a separate control), white
 /// like the CTA pill.
@@ -424,9 +494,7 @@ class _CallEntryButton extends StatelessWidget {
     child: GestureDetector(
       key: const Key('avatar-call-entry'),
       behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const AvatarCallScreen())),
+      onTap: () => openAvatarCall(context),
       child: Container(
         width: 48,
         height: 48,

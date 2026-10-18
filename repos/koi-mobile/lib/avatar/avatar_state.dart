@@ -12,24 +12,18 @@ enum AvatarEmotion { neutral, joy, angry, sorrow, fun }
 /// host's `ConversationState` (VRMAvatarController.ts).
 enum AvatarConversationState { idle, listening, thinking, speaking }
 
-/// Which 3D avatar is shown. Stored in HiveUser.avatarType with the web
-/// onboarding ids (lib/onboarding.ts); 'fox' is no longer offered (Q7).
+/// Which 3D avatar model the avatar host shows.
 enum AvatarType {
   male('male_human', 'male'),
   female('female_human', 'female');
 
   const AvatarType(this.stored, this.model);
 
-  /// HiveUser.avatarType value.
+  /// HiveUser.avatarType / Firestore profile.avatar value.
   final String stored;
 
   /// The avatar host's `?model=` value (app/avatar-host/page.tsx).
   final String model;
-
-  /// Anything else (null, the dropped 'fox') is the male default, as in
-  /// onboarding (Q8: avatar step skipped, default male).
-  static AvatarType fromStored(String? value) =>
-      value == female.stored ? female : male;
 
   /// The still image (feat/avatar-webview-host public/Male.png and
   /// public/Female.png: renderer screenshots of each VRM, both 491×525).
@@ -37,6 +31,47 @@ enum AvatarType {
     male => 'assets/images/Male.png',
     female => 'assets/images/Female.png',
   };
+}
+
+/// One companion choice selects the matching avatar: Aisha/female,
+/// Raza/male, Koi/fox (web 223e97c lib/avatar/avatarPreference.ts:13-17
+/// `BY_COMPANION`). Koi has no model or image on web either.
+enum CompanionAvatar {
+  aisha('aisha', 'female_human', 'Aisha', AvatarType.female),
+  raza('raza', 'male_human', 'Raza', AvatarType.male),
+  koi('koi', 'fox', 'Koi', null);
+
+  const CompanionAvatar(this.companion, this.avatarId, this.name, this.model);
+
+  /// UserRecord.companion: 'aisha' | 'raza' | 'koi'.
+  final String companion;
+
+  /// UserRecord.avatar / Firestore profile.avatar: 'female_human' |
+  /// 'male_human' | 'fox'.
+  final String avatarId;
+  final String name;
+
+  /// The 3D model and still image; null for Koi's fox.
+  final AvatarType? model;
+
+  static CompanionAvatar? fromCompanion(String? id) {
+    for (final c in values) {
+      if (c.companion == id) return c;
+    }
+    return null;
+  }
+
+  /// avatarPreference.ts:20-28 resolveRepresentation(): the companion is
+  /// canonical; an avatar-only (legacy) record maps back to its companion.
+  /// Null when neither is valid (web: 'unselected').
+  static CompanionAvatar? resolve({String? companion, String? avatar}) {
+    final byCompanion = fromCompanion(companion);
+    if (byCompanion != null) return byCompanion;
+    for (final c in values) {
+      if (c.avatarId == avatar) return c;
+    }
+    return null;
+  }
 }
 
 /// One Rhubarb mouth cue, as in the web branch's lib/speech/mouthCues.ts

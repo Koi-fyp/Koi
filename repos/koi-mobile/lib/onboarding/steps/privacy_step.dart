@@ -5,23 +5,26 @@ import '../../widgets/neo_button.dart';
 import '../../widgets/neo_card.dart';
 import '../step_layout.dart';
 
-/// Mirrors src/components/onboarding/PrivacyStep.tsx.
+/// Mirrors src/components/onboarding/PrivacyStep.tsx (223e97c).
 class PrivacyStep extends StatelessWidget {
   const PrivacyStep({super.key, required this.onNext});
   final VoidCallback onNext;
 
+  /// PrivacyStep.tsx:8-13.
   static const List<String> stored = [
     'Anonymous session ID (no name required)',
     'Your conversations (encrypted, on your device)',
-    'Check-in mood responses',
+    'Local reminder preferences (not completed mood check-ins)',
     'Your avatar and language preference',
   ];
 
-  static const List<String> notStored = [
-    'Your real name or contact details',
-    'Location data',
-    'Conversations shared with third parties',
-    'Any data sold to advertisers',
+  /// PrivacyStep.tsx:15-20. Web's first line goes on "; linking an account
+  /// adds email"; mobile has no account linking, so it stops before that.
+  static const List<String> beforeYouShare = [
+    'Anonymous sign-in needs no email',
+    'Avoid including identifying details in messages',
+    'Inference receives readable messages and recent context',
+    'Encrypted sync may be pending or unavailable',
   ];
 
   @override
@@ -49,10 +52,10 @@ class PrivacyStep extends StatelessWidget {
         ),
         const SizedBox(height: 16), // mb-4
         const _ListCard(
-          title: 'What we never store',
+          title: 'Before you share', // PrivacyStep.tsx:129
           color: KoiColors.neoCoral,
           mark: '✗',
-          items: notStored,
+          items: beforeYouShare,
         ),
       ],
     );

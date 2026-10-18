@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
+import '../settings/settings_prefs.dart';
 import 'avatar_source.dart';
 import 'avatar_state.dart';
 import 'avatar_web_page.dart';
@@ -46,37 +47,54 @@ final avatarStateSourceFactoryProvider = Provider<AvatarStateSource Function()>(
   },
 );
 
-/// The signed-in user's avatar (HiveUser.avatarType), shared live by the
-/// Chat card, the call screen and Settings.
+/// The signed-in user's companion and its avatar, shared live by the Chat
+/// card, the call screen and Settings (web 223e97c
+/// hooks/useAvatarPreference.ts: loading / error / ready). The avatar always
+/// follows the saved companion (lib/avatar/avatarPreference.ts:20-28).
 final selectedAvatarProvider =
-    NotifierProvider<SelectedAvatarNotifier, AvatarType>(
+    NotifierProvider<SelectedAvatarNotifier, AsyncValue<CompanionAvatar>>(
       SelectedAvatarNotifier.new,
     );
 
-class SelectedAvatarNotifier extends Notifier<AvatarType> {
+class SelectedAvatarNotifier extends Notifier<AsyncValue<CompanionAvatar>> {
   bool _chosen = false;
 
   @override
-  AvatarType build() {
+  AsyncValue<CompanionAvatar> build() {
     _chosen = false;
     final uid = ref.watch(authServiceProvider.select((a) => a.user?.uid));
     if (uid != null) _load(uid);
-    return AvatarType.male;
+    return const AsyncLoading();
   }
 
   Future<void> _load(String uid) async {
+    final store = ref.read(settingsPrefsStoreProvider);
+    final SettingsPrefs prefs;
     try {
-      final prefs = await ref.read(settingsPrefsStoreProvider).load(uid);
-      final stillSame = ref.read(authServiceProvider).user?.uid == uid;
-      if (stillSame && !_chosen) state = prefs.avatarType;
-    } catch (e) {
+      prefs = await store.load(uid);
+    } catch (e, st) {
       debugPrint('KOI: avatar choice not loaded: ${e.runtimeType}');
+      if (ref.read(authServiceProvider).user?.uid == uid && !_chosen) {
+        state = AsyncError(e, st);
+      }
+      return;
+    }
+    if (ref.read(authServiceProvider).user?.uid != uid || _chosen) return;
+    state = AsyncData(prefs.avatar);
+    // Records saved before the companion picked the avatar (onboarding
+    // always wrote male_human): store the matching avatar once, locally and
+    // (through SyncingSettingsPrefsStore) as Firestore profile.avatar.
+    if (!prefs.avatarOutOfDate) return;
+    try {
+      await store.save(uid, prefs);
+    } catch (e) {
+      debugPrint('KOI: avatar repair not saved: ${e.runtimeType}');
     }
   }
 
-  /// Settings changed it (Settings saves it with the other prefs).
-  void select(AvatarType avatar) {
+  /// The companion picker saved [companion] (the caller saves the prefs).
+  void select(CompanionAvatar companion) {
     _chosen = true;
-    state = avatar;
+    state = AsyncData(companion);
   }
 }

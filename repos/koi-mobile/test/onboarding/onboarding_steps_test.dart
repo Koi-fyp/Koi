@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/onboarding/progress_indicator.dart';
 import 'package:koi_mobile/onboarding/steps/ai_disclosure_step.dart';
-import 'package:koi_mobile/onboarding/steps/avatar_step.dart';
 import 'package:koi_mobile/onboarding/steps/companion_step.dart';
 import 'package:koi_mobile/onboarding/steps/language_step.dart';
 import 'package:koi_mobile/onboarding/steps/notification_step.dart';
@@ -60,24 +59,31 @@ void main() {
       await pump(tester, PrivacyStep(onNext: () => next++));
       expect(find.text('Privacy Matters'), findsOneWidget);
       expect(find.text('What we store'), findsOneWidget);
-      expect(find.text('What we never store'), findsOneWidget);
-      for (final s in [...PrivacyStep.stored, ...PrivacyStep.notStored]) {
+      expect(find.text('Before you share'), findsOneWidget);
+      for (final s in [...PrivacyStep.stored, ...PrivacyStep.beforeYouShare]) {
         expect(find.text(s), findsOneWidget);
       }
+      // web 223e97c PrivacyStep.tsx:11; old claims gone.
+      expect(
+        find.text('Local reminder preferences (not completed mood check-ins)'),
+        findsOneWidget,
+      );
+      expect(find.text('Check-in mood responses'), findsNothing);
+      expect(find.text('What we never store'), findsNothing);
+      expect(find.text('Any data sold to advertisers'), findsNothing);
       await tester.tap(find.byKey(const Key('privacy-next')));
       expect(next, 1);
     });
   });
 
   group('CompanionSelectionStep', () {
-    testWidgets("defaults to 'koi'; selecting changes the CTA and the id", (
+    testWidgets("defaults to 'raza'; selecting changes the CTA and the id", (
       tester,
     ) async {
       String? chosen;
       await pump(tester, CompanionSelectionStep(onNext: (id) => chosen = id));
       expect(find.text('Choose Your Companion'), findsOneWidget);
-      expect(find.text('Continue with Koi'), findsOneWidget);
-      expect(find.text('🦊'), findsOneWidget); // kept like web (decision)
+      expect(find.text('Continue with Raza'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('companion-aisha')));
       await tester.pump(const Duration(milliseconds: 400));
@@ -88,6 +94,61 @@ void main() {
       await tester.pump();
       await tester.tap(cta);
       expect(chosen, 'aisha');
+    });
+
+    testWidgets('web 223e97c cards: Female/Male previews, fox unavailable, '
+        'new traits and subtitle', (tester) async {
+      await pump(tester, CompanionSelectionStep(onNext: (_) {}));
+      expect(
+        find.text(
+          'Choose your companion and matching avatar. Aisha uses the female '
+          'model, Raza the male model, and Koi keeps the fox choice.',
+        ),
+        findsOneWidget,
+      );
+      String asset(String id) =>
+          ((tester.widget<Image>(find.byKey(Key('companion-preview-$id'))))
+                      .image
+                  as AssetImage)
+              .assetName;
+      expect(asset('aisha'), 'assets/images/Female.png');
+      expect(asset('raza'), 'assets/images/Male.png');
+      expect(find.bySemanticsLabel('Aisha avatar preview'), findsOneWidget);
+      expect(find.bySemanticsLabel('Raza avatar preview'), findsOneWidget);
+
+      final fox = find.byKey(const Key('companion-preview-fox'));
+      await tester.ensureVisible(fox);
+      await tester.pump();
+      expect(
+        find.descendant(
+          of: fox,
+          matching: find.text('Fox preview unavailable'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp('Fox avatar preview unavailable')),
+        findsOneWidget,
+      );
+      for (final trait in [
+        'Warm & caring · Female avatar',
+        'Calm & grounded · Male avatar',
+        'Playful & curious · Fox choice',
+      ]) {
+        expect(find.text(trait), findsOneWidget);
+      }
+      // No emoji avatars any more (only the fox placeholder's 🦊).
+      expect(find.text('👩'), findsNothing);
+      expect(find.text('👨'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('initialSelection seeds the choice', (tester) async {
+      await pump(
+        tester,
+        CompanionSelectionStep(initialSelection: 'koi', onNext: (_) {}),
+      );
+      expect(find.text('Continue with Koi'), findsOneWidget);
     });
   });
 
@@ -106,6 +167,13 @@ void main() {
       );
       expect(find.text('Important Notice'), findsOneWidget);
       expect(find.text('Crisis Helplines (Pakistan)'), findsOneWidget);
+      // web 223e97c AIDisclosureStep.tsx:30; no Privacy Policy / Terms.
+      expect(
+        AIDisclosureStep.privacyCheck,
+        'I understand saved history is encrypted, while inference receives '
+        'readable text',
+      );
+      expect(find.textContaining('Terms of Service'), findsNothing);
       for (final h in AIDisclosureStep.helplines) {
         expect(find.text(h.name), findsOneWidget);
         expect(find.text(h.tel), findsOneWidget);
@@ -128,25 +196,6 @@ void main() {
       await tester.ensureVisible(find.byKey(const Key('tel-tel:03117786264')));
       await tester.tap(find.byKey(const Key('tel-tel:03117786264')));
       expect(opened, [Uri.parse('tel:03117786264')]);
-    });
-  });
-
-  group('AvatarStep (Q7: no fox)', () {
-    testWidgets('only female_human and male_human; Continue needs a pick', (
-      tester,
-    ) async {
-      String? chosen;
-      await pump(tester, AvatarStep(onNext: (id) => chosen = id));
-      expect(find.byKey(const Key('avatar-female_human')), findsOneWidget);
-      expect(find.byKey(const Key('avatar-male_human')), findsOneWidget);
-      expect(find.byKey(const Key('avatar-fox')), findsNothing);
-      expect(find.text('🦊'), findsNothing);
-
-      expect(enabled(tester, const Key('avatar-next')), isFalse);
-      await tester.tap(find.byKey(const Key('avatar-male_human')));
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('avatar-next')));
-      expect(chosen, 'male_human');
     });
   });
 
@@ -180,6 +229,21 @@ void main() {
         ),
       );
       expect(find.text('Daily Check-ins'), findsOneWidget);
+      // web 223e97c NotificationStep.tsx:44, :52, :55 ("Web notifications"
+      // → "Notifications" on mobile).
+      expect(
+        find.text(
+          'Save a preferred check-in time on this device. Notifications and '
+          'scheduled messages are not enabled.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Save daily check-in preference'), findsOneWidget);
+      expect(
+        find.text('Preference only; no notification is scheduled'),
+        findsOneWidget,
+      );
+      expect(find.text('Enable daily reminders'), findsNothing);
       expect(find.text('20:00'), findsOneWidget);
       expect(find.text('Available 6:00 AM – 11:00 PM'), findsOneWidget);
 

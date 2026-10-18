@@ -419,13 +419,46 @@ void main() {
     });
   });
 
-  test('AvatarType: stored ids, fox/unknown → male', () {
-    expect(AvatarType.fromStored('female_human'), AvatarType.female);
-    expect(AvatarType.fromStored('male_human'), AvatarType.male);
-    expect(AvatarType.fromStored('fox'), AvatarType.male);
-    expect(AvatarType.fromStored(null), AvatarType.male);
+  test('AvatarType: stored ids and ?model= values', () {
     expect(AvatarType.female.stored, 'female_human');
     expect(AvatarType.female.model, 'female');
+    expect(AvatarType.male.stored, 'male_human');
+    expect(AvatarType.male.model, 'male');
+  });
+
+  group('CompanionAvatar (web avatarPreference.ts BY_COMPANION)', () {
+    test('aisha → female, raza → male, koi → fox with no model', () {
+      expect(CompanionAvatar.aisha.avatarId, 'female_human');
+      expect(CompanionAvatar.aisha.model, AvatarType.female);
+      expect(CompanionAvatar.raza.avatarId, 'male_human');
+      expect(CompanionAvatar.raza.model, AvatarType.male);
+      expect(CompanionAvatar.koi.avatarId, 'fox');
+      expect(CompanionAvatar.koi.model, isNull);
+    });
+
+    test('resolve: companion wins over a mismatched avatar', () {
+      expect(
+        CompanionAvatar.resolve(companion: 'aisha', avatar: 'male_human'),
+        CompanionAvatar.aisha,
+      );
+      expect(
+        CompanionAvatar.resolve(companion: 'koi', avatar: 'male_human'),
+        CompanionAvatar.koi,
+      );
+    });
+
+    test('resolve: avatar-only (legacy) record maps back', () {
+      expect(
+        CompanionAvatar.resolve(avatar: 'female_human'),
+        CompanionAvatar.aisha,
+      );
+      expect(
+        CompanionAvatar.resolve(companion: 'nope', avatar: 'male_human'),
+        CompanionAvatar.raza,
+      );
+      expect(CompanionAvatar.resolve(avatar: 'fox'), CompanionAvatar.koi);
+      expect(CompanionAvatar.resolve(), isNull);
+    });
   });
 
   test('AvatarType: each avatar has its own bundled image', () async {

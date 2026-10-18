@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:koi_mobile/app/root_router.dart';
 import 'package:koi_mobile/avatar/avatar_call_screen.dart';
 import 'package:koi_mobile/avatar/avatar_providers.dart';
 import 'package:koi_mobile/avatar/avatar_source.dart';
 import 'package:koi_mobile/avatar/avatar_view.dart';
 import 'package:koi_mobile/avatar/avatar_web_page.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
+import 'package:koi_mobile/onboarding/onboarding_service.dart';
 import 'package:koi_mobile/settings/settings_prefs.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
 
@@ -29,14 +33,16 @@ void main() {
   Future<ProviderContainer> pumpShell(
     WidgetTester tester, {
     AvatarSource? source,
-    AvatarType stored = AvatarType.male,
+    String companion = 'raza',
     bool simulate = false,
   }) async {
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = const Size(360, 800) * 3;
     addTearDown(tester.view.reset);
     pages = FakeAvatarPages();
-    store = MemorySettingsPrefsStore({'u1': SettingsPrefs(avatarType: stored)});
+    store = MemorySettingsPrefsStore({
+      'u1': SettingsPrefs(companion: companion),
+    });
     sim = SimulatedAvatarStateSource();
     final scope = ProviderScope(
       overrides: [
@@ -171,10 +177,11 @@ void main() {
     await endCall(tester);
   });
 
-  for (final avatar in AvatarType.values) {
-    testWidgets('${avatar.name}: Chat card, call placeholder and fallback '
+  for (final c in [CompanionAvatar.aisha, CompanionAvatar.raza]) {
+    final avatar = c.model!;
+    testWidgets('${c.name}: Chat card, call placeholder and fallback '
         'show ${avatar.imageAsset}', (tester) async {
-      await pumpShell(tester, stored: avatar);
+      await pumpShell(tester, companion: c.companion);
       String assetIn(Finder area) =>
           (tester
                       .widget<Image>(
@@ -227,7 +234,7 @@ void main() {
       '+ Reconnect; Reconnect reloads and re-sends the emotion', (
     tester,
   ) async {
-    await pumpShell(tester, source: remote, stored: AvatarType.female);
+    await pumpShell(tester, source: remote, companion: 'aisha');
     await openCall(tester);
     final page = pages.last;
 
@@ -382,98 +389,313 @@ void main() {
     await endCall(tester);
   });
 
-  group('avatar selection', () {
-    testWidgets('stored female → Chat card and call placeholder', (
+  group('companion picks the avatar', () {
+    Finder inCard(String image) => find.descendant(
+      of: find.byKey(const Key('avatar-card')),
+      matching: find.byKey(ValueKey('avatar-image-$image')),
+    );
+    Finder inCall(String image) => find.descendant(
+      of: find.byKey(const Key('avatar-view')),
+      matching: find.byKey(ValueKey('avatar-image-$image')),
+    );
+
+    Future<void> pickInPicker(WidgetTester tester, String companion) async {
+      await settle(tester);
+      final card = find.byKey(Key('picker-$companion'));
+      await tester.ensureVisible(card);
+      await tester.pump();
+      await tester.tap(card);
+      await tester.pump();
+      final save = find.byKey(const Key('avatar-picker-save'));
+      await tester.ensureVisible(save);
+      await tester.pump();
+      await tester.tap(save);
+      await settle(tester);
+    }
+
+    testWidgets('Aisha → female on the Chat card and the call screen', (
       tester,
     ) async {
-      await pumpShell(tester, stored: AvatarType.female);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('avatar-card')),
-          matching: find.byKey(const ValueKey('avatar-image-female')),
-        ),
-        findsOneWidget,
-      );
+      await pumpShell(tester, companion: 'aisha');
+      expect(inCard('female'), findsOneWidget);
       await openCall(tester);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('avatar-view')),
-          matching: find.byKey(const ValueKey('avatar-image-female')),
-        ),
-        findsOneWidget,
-      );
+      expect(inCall('female'), findsOneWidget);
+      await endCall(tester);
     });
 
-    testWidgets(
-      'Settings "Avatar" row saves avatarType and updates Chat live',
-      (tester) async {
-        final container = await pumpShell(tester);
-        expect(find.byKey(const ValueKey('avatar-image-male')), findsOneWidget);
+    testWidgets('Raza → male on the Chat card and the call screen', (
+      tester,
+    ) async {
+      await pumpShell(tester, companion: 'raza');
+      expect(inCard('male'), findsOneWidget);
+      await openCall(tester);
+      expect(inCall('male'), findsOneWidget);
+      await endCall(tester);
+    });
 
-        await tester.tap(find.byKey(const Key('nav-tab-settings')));
-        await settle(tester);
-        final row = find.byKey(const Key('row-avatar-type'));
-        await tester.ensureVisible(row);
-        await tester.pump();
-        expect(
-          find.descendant(of: row, matching: find.text('Male')),
-          findsOneWidget,
-        );
-        await tester.tap(row);
-        await tester.pump();
-        expect(
-          find.descendant(of: row, matching: find.text('Female')),
-          findsOneWidget,
-        );
-        expect(find.text('Avatar changed to Female'), findsOneWidget);
-        expect(store.values['u1']!.avatarType, AvatarType.female);
-        expect(container.read(selectedAvatarProvider), AvatarType.female);
-        // Companion choice untouched.
-        expect(store.values['u1']!.companion, SettingsPrefs.defaultCompanion);
+    for (final (companion, model) in [('aisha', 'female'), ('raza', 'male')]) {
+      testWidgets('remote: $companion loads ?model=$model', (tester) async {
+        await pumpShell(tester, source: remote, companion: companion);
+        await openCall(tester);
+        expect(pages.last.lastUrl!.queryParameters['model'], model);
+        await endCall(tester);
+      });
+    }
 
-        await tester.tap(find.byKey(const Key('nav-tab-chat')));
-        await settle(tester);
+    testWidgets('Settings: no separate Avatar row; picking Aisha saves the '
+        'companion + female avatar and Chat follows', (tester) async {
+      final container = await pumpShell(tester);
+      expect(inCard('male'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('nav-tab-settings')));
+      await settle(tester);
+      expect(find.byKey(const Key('row-avatar-type')), findsNothing);
+      await tester.tap(find.byKey(const Key('row-avatar')));
+      await pickInPicker(tester, 'aisha');
+
+      expect(store.values['u1']!.companion, 'aisha');
+      expect(store.values['u1']!.avatar, CompanionAvatar.aisha);
+      expect(
+        container.read(selectedAvatarProvider).valueOrNull,
+        CompanionAvatar.aisha,
+      );
+
+      await tester.tap(find.byKey(const Key('nav-tab-chat')));
+      await settle(tester);
+      expect(inCard('female'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4)); // toast timer
+    });
+
+    testWidgets('Koi: Chat card shows web fox text (no image); its link '
+        'opens the call screen', (tester) async {
+      await pumpShell(tester, companion: 'koi');
+      final card = find.byKey(const Key('avatar-card'));
+      expect(
+        find.descendant(of: card, matching: find.byType(Image)),
+        findsNothing,
+      );
+      expect(
+        find.text(
+          'Your saved Koi fox choice is preserved. A fox preview image is '
+          'not available.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Open the 3D avatar conversation'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(callScreen, findsOneWidget);
+      await endCall(tester);
+    });
+
+    testWidgets('remote Koi: call screen loads no avatar, shows web notice '
+        'and name; text still works; review → Aisha loads ?model=female', (
+      tester,
+    ) async {
+      await pumpShell(tester, source: remote, companion: 'koi');
+      await openCall(tester);
+      expect(find.byType(AvatarView), findsNothing);
+      expect(pages.all, isEmpty);
+      expect(find.byKey(const Key('call-no-avatar')), findsOneWidget);
+      expect(
+        find.text(
+          'Your saved Koi fox choice is preserved. This viewer currently '
+          'supports the male and female VRM models; text conversation '
+          'remains available.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<Text>(find.byKey(const Key('call-status'))).data,
+        'Koi',
+      );
+      expect(inputEnabled(tester), isTrue);
+
+      await tester.tap(find.byKey(const Key('call-review-companion')));
+      await pickInPicker(tester, 'aisha');
+      expect(store.values['u1']!.companion, 'aisha');
+      expect(find.byType(AvatarView), findsOneWidget);
+      expect(pages.last.lastUrl!.queryParameters['model'], 'female');
+      await endCall(tester);
+    });
+
+    testWidgets('remote: changing the companion during a call reloads with '
+        'the new ?model= and re-sends the emotion', (tester) async {
+      final container = await pumpShell(
+        tester,
+        source: remote,
+        companion: 'aisha',
+      );
+      await openCall(tester);
+      final page = pages.last;
+      expect(page.lastUrl!.queryParameters['model'], 'female');
+      page.sendReady();
+      await tester.pump();
+
+      container
+          .read(selectedAvatarProvider.notifier)
+          .select(CompanionAvatar.raza);
+      await tester.pump();
+      expect(page.loads, hasLength(2));
+      expect(page.lastUrl!.queryParameters['model'], 'male');
+      expect(loading, findsOneWidget);
+      page.sendReady();
+      await tester.pump();
+      expect(page.emotionCalls, hasLength(2));
+      await endCall(tester);
+    });
+
+    Future<void> pumpWithStore(
+      WidgetTester tester,
+      SettingsPrefsStore settings,
+    ) async {
+      tester.view.devicePixelRatio = 3;
+      tester.view.physicalSize = const Size(360, 800) * 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: overridesFor(
+            FakeAuthService(
+              fakeUser: const KoiUser(uid: 'u1', isAnonymous: true),
+            ),
+            onboardingStore(complete: true),
+            settings: settings,
+          ),
+          child: const MaterialApp(home: AppShell()),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 2));
+    }
+
+    testWidgets('while the companion loads: web loading text, no male '
+        'default', (tester) async {
+      await pumpWithStore(tester, _SlowStore());
+      expect(find.text('Loading saved avatar preference…'), findsOneWidget);
+      expect(find.byKey(const ValueKey('avatar-image-male')), findsNothing);
+      await openCall(tester);
+      expect(find.text('Loading your saved companion…'), findsOneWidget);
+      expect(find.byType(AvatarView), findsNothing);
+      await endCall(tester);
+    });
+
+    testWidgets('load error: web error text + "Review companion selection"', (
+      tester,
+    ) async {
+      await pumpWithStore(tester, _FailingStore());
+      expect(
+        find.text(
+          'Your saved companion could not be loaded. The avatar preview is '
+          'unavailable.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Review companion selection'), findsOneWidget);
+    });
+  });
+
+  group('onboarding → shell', () {
+    Future<void> onboardAs(WidgetTester tester, String companion) async {
+      tester.view.devicePixelRatio = 3;
+      tester.view.physicalSize = const Size(360, 800) * 3;
+      addTearDown(tester.view.reset);
+      store = MemorySettingsPrefsStore();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: overridesFor(
+            FakeAuthService(
+              fakeUser: const KoiUser(uid: 'u1', isAnonymous: true),
+            ),
+            onboardingStore(),
+            users: _PrefsWriter(store),
+            settings: store,
+          ),
+          child: const MaterialApp(home: RootRouter()),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 2300)); // Welcome
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('privacy-next')));
+      await tester.pump();
+      final card = find.byKey(Key('companion-$companion'));
+      await tester.ensureVisible(card);
+      await tester.pump();
+      await tester.tap(card);
+      await tester.pump(const Duration(milliseconds: 400));
+      final cta = find.byKey(const Key('companion-continue'));
+      await tester.ensureVisible(cta);
+      await tester.pump();
+      await tester.tap(cta);
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const Key('check-ai')));
+      await tester.tap(find.byKey(const Key('check-ai')));
+      await tester.tap(find.byKey(const Key('check-privacy')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('disclosure-next')));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byKey(const Key('language-next')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('notification-complete')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+    }
+
+    for (final (name, companion, model) in [
+      ('Aisha', 'aisha', 'female'),
+      ('Raza', 'raza', 'male'),
+    ]) {
+      testWidgets('pick $name in onboarding → Chat card and call screen '
+          'show $model', (tester) async {
+        await onboardAs(tester, companion);
+        expect(find.byType(AppShell), findsOneWidget);
         expect(
           find.descendant(
             of: find.byKey(const Key('avatar-card')),
-            matching: find.byKey(const ValueKey('avatar-image-female')),
+            matching: find.byKey(ValueKey('avatar-image-$model')),
           ),
           findsOneWidget,
         );
-        await tester.pump(const Duration(seconds: 4)); // toast timer
-      },
-    );
-
-    testWidgets(
-      'remote: changing the avatar during a call reloads with the new '
-      '?model= and re-sends the emotion',
-      (tester) async {
-        final container = await pumpShell(
-          tester,
-          source: remote,
-          stored: AvatarType.female,
-        );
         await openCall(tester);
-        final page = pages.last;
-        expect(page.lastUrl!.queryParameters['model'], 'female');
-        page.sendReady();
-        await tester.pump();
-
-        container.read(selectedAvatarProvider.notifier).select(AvatarType.male);
-        await tester.pump();
-        expect(page.loads, hasLength(2));
-        expect(page.lastUrl!.queryParameters['model'], 'male');
-        expect(loading, findsOneWidget);
-        page.sendReady();
-        await tester.pump();
-        expect(page.emotionCalls, hasLength(2));
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('avatar-view')),
+            matching: find.byKey(ValueKey('avatar-image-$model')),
+          ),
+          findsOneWidget,
+        );
         await endCall(tester);
-      },
-    );
+      });
+    }
   });
 
   test('the real page uses the KoiBridge channel name', () {
     expect(koiBridgeChannel, 'KoiBridge');
     expect(AvatarViewController.readyMessage, 'AVATAR_READY');
   });
+}
+
+/// Never finishes loading.
+class _SlowStore extends MemorySettingsPrefsStore {
+  @override
+  Future<SettingsPrefs> load(String uid) => Completer<SettingsPrefs>().future;
+}
+
+class _FailingStore extends MemorySettingsPrefsStore {
+  @override
+  Future<SettingsPrefs> load(String uid) async => throw StateError('broken');
+}
+
+/// Onboarding writes into the same store Settings and the avatar read, as
+/// the real Hive writer and store share one record.
+class _PrefsWriter implements OnboardingUserWriter {
+  _PrefsWriter(this.store);
+  final MemorySettingsPrefsStore store;
+
+  @override
+  Future<void> save(String uid, OnboardingData data) async =>
+      store.values[uid] = SettingsPrefs(
+        companion: data.companion,
+        language: data.language,
+        notificationsEnabled: data.notificationsEnabled,
+        storedAvatar: data.avatar,
+      );
 }

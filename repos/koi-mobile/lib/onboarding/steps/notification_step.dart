@@ -70,8 +70,11 @@ class _NotificationStepState extends State<NotificationStep> {
       ),
       children: [
         const StepTitle('Daily Check-ins', bottom: 6),
+        // NotificationStep.tsx:44 (223e97c). Web says "Web notifications";
+        // mobile has no notifications either, so just "Notifications".
         const StepSubtitle(
-          "KOI can gently check in with you each day to see how you're feeling.",
+          'Save a preferred check-in time on this device. Notifications and '
+          'scheduled messages are not enabled.',
           bottom: 28,
         ),
         SizedBox(
@@ -85,10 +88,14 @@ class _NotificationStepState extends State<NotificationStep> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Enable daily reminders', style: displayText(14.4)),
+                      // NotificationStep.tsx:52, :55
+                      Text(
+                        'Save daily check-in preference',
+                        style: displayText(14.4),
+                      ),
                       const SizedBox(height: 2),
                       Text(
-                        'A gentle nudge each day',
+                        'Preference only; no notification is scheduled',
                         style: bodyText(12.48, color: const Color(0xFF999999)),
                       ),
                     ],

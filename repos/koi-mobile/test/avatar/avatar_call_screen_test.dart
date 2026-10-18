@@ -7,6 +7,7 @@ import 'package:koi_mobile/chat/chat_screen.dart';
 import 'package:koi_mobile/chat/conversation_service.dart';
 import 'package:koi_mobile/chat/widgets/chat_widgets.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
+import 'package:koi_mobile/settings/settings_prefs.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
 
 import '../support/chat_fakes.dart';
@@ -40,6 +41,10 @@ void main() {
               fakeUser: const KoiUser(uid: 'u1', isAnonymous: true),
             ),
             onboardingStore(complete: true),
+            // Raza → the male avatar (Koi would show no avatar).
+            settings: MemorySettingsPrefsStore({
+              'u1': const SettingsPrefs(companion: 'raza'),
+            }),
           ),
           ...chatOverrides(),
         ],

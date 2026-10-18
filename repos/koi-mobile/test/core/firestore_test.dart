@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:koi_mobile/avatar/avatar_state.dart';
 import 'package:koi_mobile/chat/conversation_service.dart';
 import 'package:koi_mobile/core/crypto_context.dart';
 import 'package:koi_mobile/core/firestore/firestore_remote_writer.dart';
@@ -253,7 +252,7 @@ void main() {
               name: 'Private Name',
               language: 'ur',
               notificationsEnabled: false,
-              avatarType: AvatarType.female,
+              storedAvatar: 'male_human', // ignored: avatar follows companion
             ),
           ),
         );
@@ -289,7 +288,21 @@ void main() {
       expect(item.docId, _uid);
       expect(item.priority, 4);
       expect(item.data.toString(), isNot(contains('name')));
+      expect((item.data['profile'] as Map)['avatar'], 'male_human');
       expect(await s.load(_uid), prefs);
     },
   );
+
+  test('settingsProfileItem: profile.avatar always matches companion', () {
+    String avatarFor(String companion) =>
+        (settingsProfileItem(
+                  _uid,
+                  SettingsPrefs(companion: companion, storedAvatar: 'x'),
+                ).data['profile']
+                as Map)['avatar']
+            as String;
+    expect(avatarFor('aisha'), 'female_human');
+    expect(avatarFor('raza'), 'male_human');
+    expect(avatarFor('koi'), 'fox');
+  });
 }

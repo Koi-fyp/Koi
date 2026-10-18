@@ -8,23 +8,10 @@ import '../core/firestore/profile_sync.dart';
 import '../core/onboarding_store.dart';
 import '../core/sync_queue.dart';
 
-/// Avatar ids, from `AvatarId` in
-/// repos/koi-backend/nextjs_app/src/app/onboarding/page.tsx.
-///
-/// Q7 (2026-10-13): mobile drops 'fox' and defaults to 'male_human', per the
-/// locked docs decision. NOTE: the web still offers 'fox' (AvatarStep.tsx) and
-/// defaults to it (page.tsx `avatar || 'fox'`); the web should be updated.
-abstract final class KoiAvatarId {
-  static const String femaleHuman = 'female_human';
-  static const String maleHuman = 'male_human';
-
-  /// Mobile default (web: 'fox', see class doc).
-  static const String fallback = maleHuman;
-}
-
 /// onboarding.ts `OnboardingData`, same field names and ids as web:
-/// companion 'aisha' | 'raza' | 'koi', language 'en' | 'ur',
-/// notificationTime 'HH:mm', notificationsEnabled.
+/// avatar 'female_human' | 'male_human' | 'fox' (always the companion's,
+/// see CompanionAvatar), companion 'aisha' | 'raza' | 'koi', language
+/// 'en' | 'ur', notificationTime 'HH:mm', notificationsEnabled.
 @immutable
 class OnboardingData {
   const OnboardingData({

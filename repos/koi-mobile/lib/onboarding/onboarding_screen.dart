@@ -2,21 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
+import '../avatar/avatar_state.dart';
 import '../theme/koi_colors.dart';
 import 'onboarding_service.dart';
 import 'progress_indicator.dart';
 import 'steps/ai_disclosure_step.dart';
-import 'steps/avatar_step.dart';
 import 'steps/companion_step.dart';
 import 'steps/language_step.dart';
 import 'steps/notification_step.dart';
 import 'steps/privacy_step.dart';
 import 'steps/welcome_step.dart';
 
-/// Mirrors repos/koi-backend/nextjs_app/src/app/onboarding/page.tsx.
+/// Mirrors repos/koi-backend/nextjs_app/src/app/onboarding/page.tsx
+/// (feat/avatar-webview-host 223e97c).
 ///
-/// Steps: 0=Welcome, 1=Privacy, 2=CompanionSelection, 3=AIDisclosure,
-/// 4=Avatar, 5=Language, 6=Notification.
+/// One companion choice selects the matching avatar: Aisha/female,
+/// Raza/male, Koi/fox (page.tsx:20). Steps: 0=Welcome, 1=Privacy,
+/// 2=CompanionSelection, 3=AIDisclosure, 4=Language, 5=Notification
+/// (page.tsx:21).
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({
     super.key,
@@ -32,21 +35,11 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   final UrlOpener? openUrl;
   final TimePicker? pickTime;
 
-  static const int totalSteps = 7; // TOTAL_STEPS
+  static const int totalSteps = 6; // TOTAL_STEPS (page.tsx:22)
 
-  /// Q8 (2026-10-13): AIDisclosureStep advances with `setStep(5)` on web,
-  /// skipping AvatarStep (4). Mobile mirrors this exactly, as decided. This
-  /// is most likely a web bug; when web fixes it, change this to step + 1.
-  static const int stepAfterDisclosure = 5;
-
-  /// The step Android back returns to from [step] (decision 2026-10-14).
-  /// Mirrors the forward path, so with the Q8 skip, Language (5) goes back
-  /// to AI Disclosure (3), not Avatar (4). Null on Welcome.
-  static int? previousStep(int step) {
-    if (step <= 0) return null;
-    if (step == OnboardingScreen.stepAfterDisclosure) return 3;
-    return step - 1;
-  }
+  /// The step Android back returns to from [step] (decision 2026-10-14):
+  /// the previous one. Null on Welcome.
+  static int? previousStep(int step) => step <= 0 ? null : step - 1;
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -54,9 +47,10 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   late int _step = widget.initialStep;
-  String? _avatar; // useState<AvatarId | null>(null)
   String _language = 'en';
-  String _companion = 'koi';
+
+  /// page.tsx:40 default 'raza'.
+  CompanionAvatar _companion = CompanionAvatar.raza;
 
   void _advance() => setState(() => _step++);
 
@@ -76,14 +70,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _handleComplete(String notifTime, bool notifEnabled) async {
-    // Web: `avatar || 'fox'`. Mobile (Q7): `avatar ?? 'male_human'`.
-    final selectedAvatar = _avatar ?? KoiAvatarId.fallback;
+    // page.tsx:68: aisha → female_human, raza → male_human, koi → fox.
     await ref
         .read(onboardingServiceProvider)
         .complete(
           OnboardingData(
-            avatar: selectedAvatar,
-            companion: _companion,
+            avatar: _companion.avatarId,
+            companion: _companion.companion,
             language: _language,
             notificationTime: notifTime,
             notificationsEnabled: notifEnabled,
@@ -99,29 +92,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       0 => WelcomeStep(onNext: _advance),
       1 => PrivacyStep(onNext: _advance),
       2 => CompanionSelectionStep(
+        initialSelection: _companion.companion,
         onNext: (id) => setState(() {
-          _companion = id;
+          _companion = CompanionAvatar.fromCompanion(id) ?? _companion;
           _step++;
         }),
       ),
       3 => AIDisclosureStep(
-        onNext: () =>
-            setState(() => _step = OnboardingScreen.stepAfterDisclosure),
+        onNext: _advance, // page.tsx:97 setStep(4)
         openUrl: widget.openUrl ?? AIDisclosureStep.defaultOpen,
       ),
-      4 => AvatarStep(
-        onNext: (id) => setState(() {
-          _avatar = id;
-          _step++;
-        }),
-      ),
-      5 => LanguageStep(
+      4 => LanguageStep(
         onNext: (lang) => setState(() {
           _language = lang;
           _step++;
         }),
       ),
-      6 => NotificationStep(
+      5 => NotificationStep(
         onComplete: _handleComplete,
         pickTime: widget.pickTime ?? NotificationStep.defaultPicker,
       ),

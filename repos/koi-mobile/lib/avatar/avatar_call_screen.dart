@@ -8,6 +8,7 @@ import '../chat/chat_controller.dart';
 import '../chat/widgets/chat_widgets.dart';
 import '../onboarding/step_layout.dart';
 import '../safety/safety_providers.dart';
+import '../settings/widgets/avatar_picker.dart' show reviewCompanionSelection;
 import '../settings/widgets/settings_widgets.dart'
     show SettingsToastLayer, ToastMessage, ToastType;
 import '../theme/koi_colors.dart';
@@ -60,7 +61,7 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
   @override
   void initState() {
     super.initState();
-    _avatar.setAvatar(ref.read(selectedAvatarProvider));
+    _setModel(ref.read(selectedAvatarProvider));
     _stateSource = ref.read(avatarStateSourceFactoryProvider)();
     _stateSub = _stateSource.events.listen(_avatar.apply);
   }
@@ -72,6 +73,11 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     if (widget.avatarController == null) _avatar.dispose();
     _input.dispose();
     super.dispose();
+  }
+
+  void _setModel(AsyncValue<CompanionAvatar> selected) {
+    final model = selected.valueOrNull?.model;
+    if (model != null) _avatar.setAvatar(model);
   }
 
   void _soon(String message) => setState(
@@ -108,7 +114,11 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     if (uid == null) return const SizedBox.shrink();
     final chat = ref.watch(chatControllerProvider(uid));
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    ref.listen(selectedAvatarProvider, (_, next) => _avatar.setAvatar(next));
+    final selected = ref.watch(selectedAvatarProvider);
+    ref.listen(selectedAvatarProvider, (_, next) => _setModel(next));
+    // companion-scene/page.tsx:18: the avatar only loads once the saved
+    // companion is known and has a model (not Koi's fox).
+    final showAvatar = selected.valueOrNull?.model != null;
     // Crisis flow opened (contract §3: stop any animation): back to idle,
     // neutral, no mouth movement.
     ref.listen(safetyControllerProvider.select((s) => s.crisisCount), (_, _) {
@@ -128,6 +138,11 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
             children: [
               _TopBar(
                 avatar: _avatar,
+                // companion-scene/page.tsx:19 companionName, shown instead
+                // of the avatar status when there is no avatar.
+                companionName: showAvatar
+                    ? null
+                    : selected.valueOrNull?.name ?? 'KOI',
                 transcriptOpen: _transcriptOpen,
                 onToggleTranscript: () => _setTranscript(!_transcriptOpen),
               ),
@@ -141,14 +156,23 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
                       child: Padding(
                         // room for the 6px hard shadow
                         padding: const EdgeInsets.fromLTRB(16, 4, 22, 14),
-                        child: AvatarView(
-                          controller: _avatar,
-                          source: ref.watch(avatarSourceProvider),
-                          pageFactory: ref.watch(avatarWebPageFactoryProvider),
-                          // Chat never depends on the avatar: typing and
-                          // sending work while it loads, fails or is ready.
-                          onReady: () {},
-                        ),
+                        child: showAvatar
+                            ? AvatarView(
+                                controller: _avatar,
+                                source: ref.watch(avatarSourceProvider),
+                                pageFactory: ref.watch(
+                                  avatarWebPageFactoryProvider,
+                                ),
+                                // Chat never depends on the avatar: typing
+                                // and sending work while it loads, fails or
+                                // is ready.
+                                onReady: () {},
+                              )
+                            : _NoAvatarNotice(
+                                selected: selected,
+                                onReview: () =>
+                                    reviewCompanionSelection(context, ref),
+                              ),
                       ),
                     ),
                     if (_transcriptOpen)
@@ -189,15 +213,99 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
   }
 }
 
+/// In place of the avatar while the saved companion loads, when it can't be
+/// loaded, or for Koi's fox: web's notice (223e97c
+/// companion-scene/page.tsx:33-41) and "Review companion selection".
+class _NoAvatarNotice extends StatelessWidget {
+  const _NoAvatarNotice({required this.selected, required this.onReview});
+
+  final AsyncValue<CompanionAvatar> selected;
+  final VoidCallback onReview;
+
+  static const String loadingText = 'Loading your saved companion…';
+
+  /// Web ends "…review your selection in onboarding."; mobile can't reopen
+  /// onboarding, the link opens the companion picker instead.
+  static const String errorText =
+      'Your saved companion could not be loaded. Text conversation remains '
+      'available; review your selection below.';
+  static const String foxText =
+      'Your saved Koi fox choice is preserved. This viewer currently '
+      'supports the male and female VRM models; text conversation remains '
+      'available.';
+  static const String reviewLink = 'Review companion selection';
+
+  @override
+  Widget build(BuildContext context) {
+    final String text = switch (selected) {
+      AsyncError() => errorText,
+      AsyncData() => foxText,
+      _ => loadingText,
+    };
+    final review = selected is! AsyncLoading;
+    final style = bodyText(14.4, weight: FontWeight.w600, height: 1.5);
+    return Container(
+      key: const Key('call-no-avatar'),
+      decoration: BoxDecoration(
+        color: KoiColors.neoYellow,
+        border: Border.all(width: 3),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [BoxShadow(offset: Offset(6, 6))],
+      ),
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Semantics(
+            liveRegion: true,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(text, textAlign: TextAlign.center, style: style),
+                if (review) ...[
+                  const SizedBox(height: 12),
+                  Semantics(
+                    link: true,
+                    child: GestureDetector(
+                      key: const Key('call-review-companion'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onReview,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 44),
+                        child: Center(
+                          widthFactor: 1,
+                          child: Text(
+                            reviewLink,
+                            style: style.copyWith(
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Status + the transcript toggle.
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.avatar,
+    required this.companionName,
     required this.transcriptOpen,
     required this.onToggleTranscript,
   });
 
   final AvatarViewController avatar;
+
+  /// Shown instead of the avatar status when no avatar is loaded.
+  final String? companionName;
   final bool transcriptOpen;
   final VoidCallback onToggleTranscript;
 
@@ -216,9 +324,8 @@ class _TopBar extends StatelessWidget {
           child: ListenableBuilder(
             listenable: avatar,
             builder: (context, _) {
-              final s = avatar.status;
               return Text(
-                statusText[s]!,
+                companionName ?? statusText[avatar.status]!,
                 key: const Key('call-status'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

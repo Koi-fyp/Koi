@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
 import '../avatar/avatar_providers.dart';
-import '../avatar/avatar_state.dart';
 import '../onboarding/steps/ai_disclosure_step.dart' show AIDisclosureStep;
 import '../safety/safety_debug_menu.dart';
 import '../theme/koi_colors.dart';
@@ -126,24 +125,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       currentName: _prefs.name,
     );
     if (choice == null || !mounted) return;
-    // handleAvatarSave
-    _update(_prefs.copyWith(companion: choice.companion, name: choice.name));
+    // handleAvatarSave: the companion and its avatar are saved as a pair
+    // (223e97c settings/page.tsx:46-62, avatarPreference.ts:41-46), so the
+    // Chat card and call screen follow at once.
+    final next = _prefs.copyWith(
+      companion: choice.companion,
+      name: choice.name,
+    );
+    _update(next);
+    ref.read(selectedAvatarProvider.notifier).select(next.avatar);
     _showToast('Companion updated successfully!', ToastType.success);
   }
-
-  /// Mobile-only row (no web equivalent): switches the 3D avatar between
-  /// male and female, saved to HiveUser.avatarType, live everywhere.
-  void _toggleAvatarType() {
-    final next = _prefs.avatarType == AvatarType.male
-        ? AvatarType.female
-        : AvatarType.male;
-    _update(_prefs.copyWith(avatarType: next));
-    ref.read(selectedAvatarProvider.notifier).select(next);
-    _showToast('Avatar changed to ${avatarTypeLabel(next)}', ToastType.info);
-  }
-
-  static String avatarTypeLabel(AvatarType t) =>
-      t == AvatarType.female ? 'Female' : 'Male';
 
   void _toggleLanguage() {
     // handleLanguageToggle: the toast reads the language from BEFORE the
@@ -240,14 +232,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Avatar & Name',
               desc: avatarDisplay(_prefs.companion),
               onTap: _openAvatarPicker,
-            ),
-            const SettingsDivider(),
-            SettingsRow(
-              key: const Key('row-avatar-type'),
-              icon: '🧍',
-              label: 'Avatar',
-              desc: avatarTypeLabel(_prefs.avatarType),
-              onTap: _toggleAvatarType,
             ),
             const SettingsDivider(),
             SettingsRow(

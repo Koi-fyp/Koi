@@ -3,35 +3,67 @@ import 'package:flutter/material.dart';
 import '../../theme/koi_colors.dart';
 import '../step_layout.dart';
 
-/// One entry of `companions` in CompanionSelectionStep.tsx.
+/// One entry of `companions` in CompanionSelectionStep.tsx (or the Settings
+/// AvatarPicker.tsx). Onboarding cards show [image] (null for Koi: "Fox
+/// preview unavailable"); the Settings picker shows [icon].
 @immutable
 class KoiCompanion {
-  const KoiCompanion(this.id, this.name, this.trait, this.color, this.icon);
+  const KoiCompanion(
+    this.id,
+    this.name,
+    this.trait,
+    this.color, {
+    this.icon,
+    this.image,
+  });
   final String id;
   final String name;
   final String trait;
   final Color color;
-  final String icon;
+  final String? icon;
+  final String? image;
 }
 
-/// Mirrors src/components/onboarding/CompanionSelectionStep.tsx at phone
-/// width (grid-cols-1 below the md breakpoint).
-///
-/// The 'koi' companion keeps the 🦊 icon like web (2026-10-13: Q7 drops only
-/// the fox *avatar*).
+/// Mirrors src/components/onboarding/CompanionSelectionStep.tsx
+/// (feat/avatar-webview-host 223e97c) at phone width (grid-cols-1 below the
+/// md breakpoint).
 ///
 /// Tailwind: 1 unit = 4px; v3.4.19 defaults text-3xl 1.875rem/2.25rem,
 /// text-2xl 1.5rem/2rem, text-lg 1.125rem/1.75rem, text-6xl 3.75rem/1,
-/// gray-600 #4b5563, gray-500 #6b7280. Text without a font class inherits
-/// body DM Sans, whose heaviest loaded weight is 700 (font-black → 700).
+/// text-5xl 3rem/1, text-sm 0.875rem/1.25rem, gray-600 #4b5563,
+/// gray-500 #6b7280. Text without a font class inherits body DM Sans, whose
+/// heaviest loaded weight is 700 (font-black → 700).
 class CompanionSelectionStep extends StatefulWidget {
-  const CompanionSelectionStep({super.key, required this.onNext});
+  const CompanionSelectionStep({
+    super.key,
+    required this.onNext,
+    this.initialSelection = 'raza', // initialSelection = 'raza' (:59)
+  });
   final ValueChanged<String> onNext;
+  final String initialSelection;
 
+  /// CompanionSelectionStep.tsx:7-11.
   static const List<KoiCompanion> companions = [
-    KoiCompanion('aisha', 'Aisha', 'Warm & caring', Color(0xFFFF4A60), '👩'),
-    KoiCompanion('raza', 'Raza', 'Calm & grounded', Color(0xFFFFC224), '👨'),
-    KoiCompanion('koi', 'Koi', 'Playful & curious', Color(0xFF06B6D4), '🦊'),
+    KoiCompanion(
+      'aisha',
+      'Aisha',
+      'Warm & caring · Female avatar',
+      Color(0xFFFF4A60),
+      image: 'assets/images/Female.png',
+    ),
+    KoiCompanion(
+      'raza',
+      'Raza',
+      'Calm & grounded · Male avatar',
+      Color(0xFFFFC224),
+      image: 'assets/images/Male.png',
+    ),
+    KoiCompanion(
+      'koi',
+      'Koi',
+      'Playful & curious · Fox choice',
+      Color(0xFF06B6D4),
+    ),
   ];
 
   @override
@@ -39,7 +71,7 @@ class CompanionSelectionStep extends StatefulWidget {
 }
 
 class _CompanionSelectionStepState extends State<CompanionSelectionStep> {
-  String _selected = 'koi'; // useState('koi')
+  late String _selected = widget.initialSelection;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +91,10 @@ class _CompanionSelectionStepState extends State<CompanionSelectionStep> {
               ),
               const SizedBox(height: 8), // mb-2
               Text(
-                'Pick the personality that resonates with you',
+                // CompanionSelectionStep.tsx:69
+                'Choose your companion and matching avatar. Aisha uses the '
+                'female model, Raza the male model, and Koi keeps the fox '
+                'choice.',
                 style: bodyText(
                   16,
                   color: const Color(0xFF4B5563),
@@ -97,9 +132,10 @@ class _CompanionSelectionStepState extends State<CompanionSelectionStep> {
   }
 }
 
-/// CompanionCard from CompanionSelectionStep.tsx. The Settings AvatarPicker
-/// (settings/components/AvatarPicker.tsx) has its own copy with the same
-/// classes and styles, so both screens use this widget.
+/// CompanionCard from CompanionSelectionStep.tsx:24-57. The Settings
+/// AvatarPicker (settings/components/AvatarPicker.tsx:26-70) has its own
+/// copy with the same classes and styles but an emoji instead of the
+/// preview, so both screens use this widget ([KoiCompanion.icon]).
 class CompanionCard extends StatelessWidget {
   const CompanionCard({
     super.key,
@@ -118,6 +154,64 @@ class CompanionCard extends StatelessWidget {
 
   static const Color cyan = Color(0xFF06B6D4);
   static const Color idleTop = Color(0xFFF0F0F0);
+
+  /// h-[118px] (CompanionSelectionStep.tsx:45-46).
+  static const double previewHeight = 118;
+
+  /// CompanionSelectionStep.tsx:45-48: the avatar image, a status line if
+  /// it fails to load, or the fox placeholder for Koi. The Settings picker
+  /// shows its emoji (AvatarPicker.tsx:55-57, text-6xl).
+  Widget _preview() {
+    final icon = companion.icon;
+    if (icon != null) {
+      return Text(icon, style: const TextStyle(fontSize: 60, height: 1));
+    }
+    final image = companion.image;
+    if (image != null) {
+      return SizedBox(
+        height: previewHeight,
+        child: Image.asset(
+          image,
+          key: Key('companion-preview-${companion.id}'),
+          semanticLabel: '${companion.name} avatar preview',
+          fit: BoxFit.contain,
+          errorBuilder: (context, _, _) => Center(
+            child: Semantics(
+              liveRegion: true, // role="status"
+              child: Text(
+                '${companion.name} preview unavailable. You can still '
+                'select this companion.',
+                textAlign: TextAlign.center,
+                style: bodyText(16, height: 24 / 16),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    // flex h-[118px] flex-col items-center justify-center gap-2 text-5xl,
+    // aria-label "Fox avatar preview unavailable"; the label is text-sm
+    // font-semibold.
+    return Semantics(
+      key: const Key('companion-preview-fox'),
+      label: 'Fox avatar preview unavailable',
+      excludeSemantics: true,
+      child: SizedBox(
+        height: previewHeight,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('🦊', style: TextStyle(fontSize: 48, height: 1)),
+            const SizedBox(height: 8),
+            Text(
+              'Fox preview unavailable',
+              style: bodyText(14, weight: FontWeight.w600, height: 20 / 14),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,10 +256,7 @@ class CompanionCard extends StatelessWidget {
                   border: const Border(bottom: BorderSide(width: 3)),
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  companion.icon,
-                  style: const TextStyle(fontSize: 60, height: 1),
-                ),
+                child: _preview(),
               ),
               Padding(
                 padding: const EdgeInsets.all(24), // p-6

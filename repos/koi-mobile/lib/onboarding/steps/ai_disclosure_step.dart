@@ -46,8 +46,10 @@ class AIDisclosureStep extends StatefulWidget {
   static Future<void> defaultOpen(Uri uri) => _launch(uri);
 
   static const String aiCheck = 'I understand KOI is an AI, not a therapist';
+  // AIDisclosureStep.tsx:30 (223e97c).
   static const String privacyCheck =
-      'I agree to Privacy Policy and Terms of Service';
+      'I understand saved history is encrypted, while inference receives '
+      'readable text';
 
   @override
   State<AIDisclosureStep> createState() => _AIDisclosureStepState();

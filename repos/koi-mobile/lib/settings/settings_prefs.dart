@@ -19,7 +19,7 @@ class SettingsPrefs {
     this.name = '',
     this.language = 'en',
     this.notificationsEnabled = true,
-    this.avatarType = AvatarType.male,
+    this.storedAvatar,
   });
 
   /// page.tsx initial state: useState('koi'), useState(''), useState('en'),
@@ -37,22 +37,33 @@ class SettingsPrefs {
   final String language;
   final bool notificationsEnabled;
 
-  /// Mobile-only "Avatar: Male / Female" row; HiveUser.avatarType, which
-  /// onboarding sets to male_human (Q8). Web Settings has no such row.
-  final AvatarType avatarType;
+  /// HiveUser.avatarType exactly as loaded (null when nothing is stored).
+  /// Only used to spot records saved before the companion picked the
+  /// avatar; what is shown and saved is always [avatar].
+  final String? storedAvatar;
+
+  /// The avatar follows the companion (web 223e97c settings/page.tsx:46-62
+  /// saves the matching pair via saveAvatarPreference,
+  /// lib/avatar/avatarPreference.ts:41-46).
+  CompanionAvatar get avatar =>
+      CompanionAvatar.fromCompanion(companion) ?? CompanionAvatar.koi;
+
+  /// A record whose stored avatar doesn't match its companion (before
+  /// Prompt 19 onboarding always saved male_human).
+  bool get avatarOutOfDate =>
+      storedAvatar != null && storedAvatar != avatar.avatarId;
 
   SettingsPrefs copyWith({
     String? companion,
     String? name,
     String? language,
     bool? notificationsEnabled,
-    AvatarType? avatarType,
   }) => SettingsPrefs(
     companion: companion ?? this.companion,
     name: name ?? this.name,
     language: language ?? this.language,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
-    avatarType: avatarType ?? this.avatarType,
+    storedAvatar: storedAvatar,
   );
 }
 
@@ -79,14 +90,18 @@ class HiveUserSettingsStore implements SettingsPrefsStore {
     final companion = s[HiveUserOnboardingWriter.companionKey];
     final name = s[nameKey];
     final enabled = s[HiveUserOnboardingWriter.notificationsEnabledKey];
+    // avatarPreference.ts:20-28 resolveRepresentation(): companion first,
+    // then the avatar of an avatar-only record.
+    final resolved = CompanionAvatar.resolve(
+      companion: companion is String ? companion : null,
+      avatar: user.avatarType,
+    );
     return SettingsPrefs(
-      companion: companion is String
-          ? companion
-          : SettingsPrefs.defaultCompanion,
+      companion: resolved?.companion ?? SettingsPrefs.defaultCompanion,
       name: name is String ? name : '',
       language: user.language,
       notificationsEnabled: enabled is bool ? enabled : true,
-      avatarType: AvatarType.fromStored(user.avatarType),
+      storedAvatar: user.avatarType,
     );
   }
 
@@ -100,7 +115,7 @@ class HiveUserSettingsStore implements SettingsPrefsStore {
     }
     user
       ..language = prefs.language
-      ..avatarType = prefs.avatarType.stored
+      ..avatarType = prefs.avatar.avatarId
       ..settings = jsonEncode({
         ...HiveUserOnboardingWriter.decodeSettings(user.settings),
         HiveUserOnboardingWriter.companionKey: prefs.companion,
