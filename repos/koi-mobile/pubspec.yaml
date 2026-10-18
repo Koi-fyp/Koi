@@ -49,6 +49,9 @@ dependencies:
   connectivity_plus: ^7.3.1
   url_launcher: ^6.3.3
   cryptography_flutter: 2.3.4
+  # Avatar voice (approved Prompt 25): server WAV playback + device fallback.
+  audioplayers: 6.8.1
+  flutter_tts: 4.2.5
 
 dev_dependencies:
   flutter_test:

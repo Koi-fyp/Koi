@@ -175,15 +175,60 @@ void main() {
       t.dispose();
     });
 
-    test('avatar and mouth cues are Dart state only', () {
+    test('avatar is Dart state only', () {
       c.beginLoad();
       c.handleBridgeMessage('AVATAR_READY');
       sent.clear();
       c.setAvatar(AvatarType.female);
-      c.setMouthCues(const [MouthCue(start: 0, end: 0.2, value: 'D')]);
       expect(c.avatar, AvatarType.female);
-      expect(c.mouthCues.single.value, 'D');
       expect(sent, isEmpty);
+    });
+
+    test('mouth cues: KoiSpeech only after ready, via jsonEncode', () {
+      c.beginLoad();
+      const cues = [
+        MouthCue(start: 0, end: 0.2, value: 'D'),
+        MouthCue(start: 0.2, end: 0.5, value: 'X'),
+      ];
+      c.setMouthCues(cues);
+      c.setMouthCues(const []);
+      expect(sent, isEmpty, reason: 'not ready: dropped, never queued');
+      c.handleBridgeMessage('AVATAR_READY');
+      expect(sent.where((js) => js.contains('KoiSpeech')), isEmpty);
+      sent.clear();
+
+      c.setMouthCues(cues);
+      expect(c.mouthCues, hasLength(2));
+      final js = sent.single;
+      expect(js, startsWith('window.KoiSpeech && window.KoiSpeech.start("'));
+      final open = js.indexOf('(', js.indexOf('window.KoiSpeech.'));
+      final arg = jsonDecode(js.substring(open + 1, js.lastIndexOf(')')));
+      expect(arg, isA<String>(), reason: 'cuesJson is a JS string literal');
+      expect(jsonDecode(arg as String), [
+        {'start': 0.0, 'end': 0.2, 'value': 'D'},
+        {'start': 0.2, 'end': 0.5, 'value': 'X'},
+      ]);
+
+      sent.clear();
+      c.setMouthCues(const []);
+      expect(sent, ['window.KoiSpeech && window.KoiSpeech.stop();']);
+    });
+
+    test('a hostile cue value stays inside the string literal', () {
+      c.beginLoad();
+      c.handleBridgeMessage('AVATAR_READY');
+      sent.clear();
+      c.setMouthCues(const [
+        MouthCue(start: 0, end: 1, value: '");alert(1);("'),
+      ]);
+      final js = sent.single;
+      final open = js.indexOf('(', js.indexOf('window.KoiSpeech.'));
+      final arg = jsonDecode(js.substring(open + 1, js.lastIndexOf(')')));
+      expect(
+        (jsonDecode(arg as String) as List).single['value'],
+        '");alert(1);("',
+      );
+      expect(js, endsWith('");'));
     });
   });
 

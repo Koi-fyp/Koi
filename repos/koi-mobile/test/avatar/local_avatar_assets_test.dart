@@ -104,6 +104,9 @@ void main() {
     expect(js, contains('KoiBridge'));
     expect(js, contains('/models/koi-male.vrm'));
     expect(js, contains('/models/koi-female.vrm'));
+    // Prompt 25 lip-sync hook (our main.tsx), passed to the renderer.
+    expect(js, contains('KoiSpeech'));
+    expect(js, contains('speechSource'));
     expect(
       js,
       contains('Object.hasOwn||Object.defineProperty(Object,"hasOwn"'),

@@ -33,8 +33,10 @@ enum AvatarStatus { loading, ready, failed }
 ///   'idle' | 'listening' | 'thinking' | 'speaking' (approved by Fatima).
 /// - avatar model: no JS method; the host only reads `?model=male|female`
 ///   from its URL (applied through [AvatarSource.pageUrl], with a reload).
-/// - TODO(fatima): lip-sync is a Dart hook only ([setMouthCues]); the
-///   audio/mouth-cue bridge is not finalized, so no JavaScript is run.
+/// - lip-sync (Prompt 25, our avatar_bundle/src/main.tsx, not Fatima's
+///   files): [setMouthCues] runs `KoiSpeech.start(cuesJson)` when audio
+///   starts, or `KoiSpeech.stop()` for no cues. Only while ready; cues are
+///   never queued (their timing starts now) nor re-sent after a reload.
 /// - `AvatarController.reset()` exists on the host; not used.
 class AvatarViewController extends ChangeNotifier {
   AvatarViewController({this.readyTimeout = defaultReadyTimeout});
@@ -47,9 +49,13 @@ class AvatarViewController extends ChangeNotifier {
   static const String setEmotionFunction = 'AvatarController.setEmotion';
   static const String setConversationStateFunction =
       'AvatarController.setConversationState';
+  static const String speechStartFunction = 'KoiSpeech.start';
+  static const String speechStopFunction = 'KoiSpeech.stop';
   static const Set<String> _jsFunctions = {
     setEmotionFunction,
     setConversationStateFunction,
+    speechStartFunction,
+    speechStopFunction,
   };
 
   /// A call to one of the host's fixed functions; every argument goes
@@ -59,7 +65,8 @@ class AvatarViewController extends ChangeNotifier {
       throw ArgumentError.value(function, 'function', 'not an avatar call');
     }
     final encoded = args.map(jsonEncode).join(', ');
-    return 'window.AvatarController && window.$function($encoded);';
+    final object = function.split('.').first;
+    return 'window.$object && window.$function($encoded);';
   }
 
   final Duration readyTimeout;
@@ -123,11 +130,23 @@ class AvatarViewController extends ChangeNotifier {
     _sendConversationState();
   }
 
-  /// Dart state only (see the lip-sync TODO above).
+  /// Mouth cues starting now (seconds), as `KoiSpeech.start(cuesJson)`;
+  /// empty = `KoiSpeech.stop()`. Dropped while not ready.
   void setMouthCues(List<MouthCue> cues) {
     _mouthCues = List.unmodifiable(cues);
     _notify();
+    if (cues.isEmpty) {
+      _send(speechStopFunction, const []);
+    } else {
+      _send(speechStartFunction, [jsonEncode(cues.map(cueJson).toList())]);
+    }
   }
+
+  static Map<String, Object> cueJson(MouthCue c) => {
+    'start': c.start,
+    'end': c.end,
+    'value': c.value,
+  };
 
   /// A new conversation: from now on only updates for [id] apply.
   void beginSession(String id) => _sessionId = id;

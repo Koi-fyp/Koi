@@ -29,6 +29,8 @@ import 'dev/design_gallery.dart';
 import 'onboarding/onboarding_service.dart';
 import 'settings/settings_prefs.dart';
 import 'theme/koi_theme.dart';
+import 'voice/voice_controller.dart';
+import 'voice/voice_providers.dart';
 
 /// Debug-only Design Gallery switch. Never on in profile/release builds.
 /// Run with: flutter run --dart-define=KOI_DESIGN_GALLERY=true
@@ -71,9 +73,8 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('KOI: HiveManager.init failed: $e');
   }
-  final onboarding = OnboardingStore(
-    await HiveKeyValueStore.open(OnboardingStore.boxName),
-  );
+  final localPrefs = await HiveKeyValueStore.open(OnboardingStore.boxName);
+  final onboarding = OnboardingStore(localPrefs);
   // The old per-device onboarding flag belongs to the persisted debug uid,
   // if any; every other uid goes through onboarding.
   await onboarding.migrateDeviceFlag(
@@ -137,6 +138,7 @@ Future<void> main() async {
       overrides: [
         authServiceProvider.overrideWith((ref) => auth),
         onboardingStoreProvider.overrideWith((ref) => onboarding),
+        voicePrefsProvider.overrideWithValue(VoicePrefs(localPrefs)),
         onboardingUserWriterProvider.overrideWithValue(
           HiveUserOnboardingWriter(UserRepository()),
         ),

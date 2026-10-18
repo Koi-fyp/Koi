@@ -12,6 +12,10 @@ import '../settings/widgets/avatar_picker.dart' show reviewCompanionSelection;
 import '../settings/widgets/settings_widgets.dart'
     show SettingsToastLayer, ToastMessage, ToastType;
 import '../theme/koi_colors.dart';
+import '../voice/speech_source.dart' show VoiceKind;
+import '../voice/voice_controller.dart';
+import '../voice/voice_providers.dart';
+import '../voice/voice_text.dart';
 import 'avatar_providers.dart';
 import 'avatar_view.dart';
 import 'call_icons.dart';
@@ -38,6 +42,11 @@ class AvatarCallScreen extends ConsumerStatefulWidget {
   static const String cameraSoon = 'Camera coming soon!';
   static const String emptyTranscript = 'No messages yet.';
 
+  /// Shown while a reply is spoken (Prompt 25).
+  static const String serverVoiceLabel = 'KOI voice · lip-sync';
+  static const String deviceVoiceLabel =
+      'Device voice · approximate mouth movement';
+
   @override
   ConsumerState<AvatarCallScreen> createState() => _AvatarCallScreenState();
 }
@@ -53,6 +62,21 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
   late final AvatarStateSource _stateSource;
   StreamSubscription<AvatarStateEvent>? _stateSub;
 
+  // Voice (Prompt 25): completed replies only, never on the text Chat
+  // screen. On by default, remembered per uid.
+  late final VoiceController _voice;
+  late final AppLifecycleListener _lifecycle;
+  ChatController? _chat;
+  bool _voiceOn = true;
+  String? _uid;
+
+  /// The latest AI message already handled (present when the screen
+  /// opened, spoken, or skipped).
+  String? _lastAiId;
+  bool _turnOpen = false;
+  int _turnCrisisCount = 0;
+  int? _turnBreathingId;
+
   CallInputs _inputs = CallInputs.initial;
   bool _transcriptOpen = false;
   ToastMessage? _toast;
@@ -63,11 +87,29 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     super.initState();
     _setModel(ref.read(selectedAvatarProvider));
     _stateSource = ref.read(avatarStateSourceFactoryProvider)();
-    _stateSub = _stateSource.events.listen(_avatar.apply);
+    _stateSub = _stateSource.events.listen(_applyState);
+    _voice = ref.read(voiceControllerFactoryProvider)(
+      onMouth: _avatar.setMouthCues,
+    )..addListener(_voiceChanged);
+    _lifecycle = AppLifecycleListener(onHide: _stopVoice, onPause: _stopVoice);
+    final uid = _uid = ref.read(authServiceProvider).user?.uid;
+    if (uid != null) {
+      _voiceOn = ref.read(voicePrefsProvider).isEnabled(uid);
+      final chat = ref.read(chatControllerProvider(uid));
+      _chat = chat;
+      _lastAiId = _lastAi(chat)?.id;
+      chat.addListener(_onChat);
+    }
+    unawaited(ref.read(speechWarmupProvider).warmUp());
   }
 
   @override
   void dispose() {
+    _chat?.removeListener(_onChat);
+    _lifecycle.dispose();
+    _voice
+      ..removeListener(_voiceChanged)
+      ..dispose();
     _stateSub?.cancel();
     _stateSource.dispose();
     if (widget.avatarController == null) _avatar.dispose();
@@ -99,7 +141,115 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
 
   void _onCamera() => _soon(AvatarCallScreen.cameraSoon);
 
-  void _endCall() => Navigator.of(context).pop();
+  void _endCall() {
+    _stopVoice();
+    Navigator.of(context).pop();
+  }
+
+  // ── Voice ───────────────────────────────────────────────────────────────
+
+  void _stopVoice() => unawaited(_voice.stop());
+
+  static ChatMessage? _lastAi(ChatController chat) {
+    for (final m in chat.messages.reversed) {
+      if (!m.isUser) return m;
+    }
+    return null;
+  }
+
+  /// While voice is on, the audio owns speaking / idle: text streaming
+  /// shows "thinking", and nothing from the chat changes the state while
+  /// a reply is audible. Emotion always passes.
+  void _applyState(AvatarStateEvent event) {
+    if (event is AvatarStateUpdate && _voiceOn) {
+      var state = event.conversationState;
+      if (_voice.speaking != null) {
+        state = null;
+      } else if (state == AvatarConversationState.speaking) {
+        state = AvatarConversationState.thinking;
+      }
+      event = AvatarStateUpdate(
+        event.sessionId,
+        emotion: event.emotion,
+        intensity: event.intensity,
+        conversationState: state,
+      );
+    }
+    _avatar.apply(event);
+  }
+
+  void _voiceChanged() {
+    if (!mounted) return;
+    _avatar.setConversationState(
+      _voice.speaking != null
+          ? AvatarConversationState.speaking
+          : AvatarConversationState.idle,
+    );
+    setState(() {});
+  }
+
+  /// A send starts a turn (and stops any reply still playing); its end
+  /// with a new AI message is the `done` reply, the only thing spoken.
+  void _onChat() {
+    final chat = _chat;
+    if (chat == null || !mounted) return;
+    if (chat.isTyping && !_turnOpen) {
+      _turnOpen = true;
+      _stopVoice();
+      final safety = ref.read(safetyControllerProvider);
+      _turnCrisisCount = safety.crisisCount;
+      _turnBreathingId = safety.breathing?.id;
+      return;
+    }
+    if (chat.isTyping || !_turnOpen) return;
+    _turnOpen = false;
+    final last = _lastAi(chat);
+    if (last == null || last.id == _lastAiId) return;
+    _lastAiId = last.id;
+    if (!_voiceOn || last.isFallback || _crisisTurn()) return;
+    unawaited(_speakReply(last.content));
+  }
+
+  /// Crisis content is never spoken: the crisis flow or a breathing run
+  /// started during the turn, or is still on screen / pending.
+  bool _crisisTurn() {
+    final safety = ref.read(safetyControllerProvider);
+    return safety.crisisCount != _turnCrisisCount ||
+        safety.crisis != null ||
+        safety.resolutionPending ||
+        safety.breathing != null ||
+        _turnBreathingId != null;
+  }
+
+  Future<void> _speakReply(String text) async {
+    final uid = _uid;
+    final companion = ref.read(selectedAvatarProvider).valueOrNull;
+    // Unknown companion: no voice to pick.
+    if (uid == null || companion == null) return;
+    final aiId = _lastAiId;
+    String? language;
+    try {
+      language = (await ref.read(settingsPrefsStoreProvider).load(uid))
+          .language;
+    } catch (_) {}
+    // A newer reply, a send or a stop trigger got here first.
+    if (!mounted || !_voiceOn || _turnOpen || aiId != _lastAiId) return;
+    await _voice.speak(
+      planSpeech(text, companion: companion, userLanguage: language),
+    );
+  }
+
+  void _toggleVoice() {
+    final on = !_voiceOn;
+    setState(() => _voiceOn = on);
+    if (!on) _stopVoice();
+    final uid = _uid;
+    if (uid != null) {
+      unawaited(
+        ref.read(voicePrefsProvider).setEnabled(uid, on).catchError((_) {}),
+      );
+    }
+  }
 
   void _setTranscript(bool open) => setState(() => _transcriptOpen = open);
 
@@ -115,13 +265,22 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     final chat = ref.watch(chatControllerProvider(uid));
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final selected = ref.watch(selectedAvatarProvider);
-    ref.listen(selectedAvatarProvider, (_, next) => _setModel(next));
+    ref.listen(selectedAvatarProvider, (prev, next) {
+      _setModel(next);
+      if (prev?.valueOrNull != next.valueOrNull) _stopVoice();
+    });
+    // The breathing screen opened or closed.
+    ref.listen(
+      safetyControllerProvider.select((s) => s.breathing != null),
+      (_, _) => _stopVoice(),
+    );
     // companion-scene/page.tsx:18: the avatar only loads once the saved
     // companion is known and has a model (not Koi's fox).
     final showAvatar = selected.valueOrNull?.model != null;
     // Crisis flow opened (contract §3: stop any animation): back to idle,
     // neutral, no mouth movement.
     ref.listen(safetyControllerProvider.select((s) => s.crisisCount), (_, _) {
+      _stopVoice();
       _avatar
         ..setMouthCues(const [])
         ..setConversationState(AvatarConversationState.idle)
@@ -145,6 +304,8 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
                     : selected.valueOrNull?.name ?? 'KOI',
                 transcriptOpen: _transcriptOpen,
                 onToggleTranscript: () => _setTranscript(!_transcriptOpen),
+                voiceOn: _voiceOn,
+                onToggleVoice: _toggleVoice,
               ),
               Expanded(
                 child: Stack(
@@ -178,6 +339,13 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
                               ),
                       ),
                     ),
+                    if (_voice.speaking case final kind?)
+                      Positioned(
+                        top: 14,
+                        left: 28,
+                        right: 34,
+                        child: Center(child: _VoiceLabel(kind: kind)),
+                      ),
                     if (_transcriptOpen)
                       Positioned.fill(
                         child: _TranscriptPanel(
@@ -303,6 +471,8 @@ class _TopBar extends StatelessWidget {
     required this.companionName,
     required this.transcriptOpen,
     required this.onToggleTranscript,
+    required this.voiceOn,
+    required this.onToggleVoice,
   });
 
   final AvatarViewController avatar;
@@ -311,6 +481,8 @@ class _TopBar extends StatelessWidget {
   final String? companionName;
   final bool transcriptOpen;
   final VoidCallback onToggleTranscript;
+  final bool voiceOn;
+  final VoidCallback onToggleVoice;
 
   static const Map<AvatarStatus, String> statusText = {
     AvatarStatus.loading: 'Connecting…',
@@ -339,12 +511,46 @@ class _TopBar extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         _Pill(
+          key: const Key('voice-toggle'),
+          label: voiceOn ? 'Voice on' : 'Voice off',
+          active: voiceOn,
+          onTap: onToggleVoice,
+        ),
+        const SizedBox(width: 8),
+        _Pill(
           key: const Key('transcript-toggle'),
           label: transcriptOpen ? 'Hide transcript' : 'Transcript',
           active: transcriptOpen,
           onTap: onToggleTranscript,
         ),
       ],
+    ),
+  );
+}
+
+/// Which voice is speaking, over the top of the avatar area.
+class _VoiceLabel extends StatelessWidget {
+  const _VoiceLabel({required this.kind});
+  final VoiceKind kind;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    child: Container(
+      key: const Key('voice-label'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: KoiColors.neoWhite,
+        border: Border.all(width: 2),
+        borderRadius: BorderRadius.circular(9999),
+      ),
+      child: Text(
+        kind == VoiceKind.server
+            ? AvatarCallScreen.serverVoiceLabel
+            : AvatarCallScreen.deviceVoiceLabel,
+        textAlign: TextAlign.center,
+        style: bodyText(12.8, weight: FontWeight.w600),
+      ),
     ),
   );
 }
