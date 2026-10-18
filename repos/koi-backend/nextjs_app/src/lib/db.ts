@@ -17,6 +17,9 @@ export interface ConversationMessageRecord {
   synced: boolean;
   ownerUid?: string;
   replyTo?: string;
+  /** Local-only, unindexed turn evidence on AI rows. Never synced or exported. */
+  handoff_open?: boolean;
+  done_seen?: boolean;
 }
 export interface UserRecord {
   id?: number;

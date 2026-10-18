@@ -1,7 +1,9 @@
 import { db, type ConversationRecord } from '../db';
 import { decrypt, encrypt, getActiveCryptoContext, type AuthState } from '../crypto';
 import { ConversationSession, type SessionMessage } from './ConversationSession';
+import { CompletionLeaseError, readPersistedTurnEvidence } from './persistedEvidence';
 import type { ChatAdapter } from './chatContract';
+import type { ConversationCompletionEvidence } from '../activities/conversationCompletion';
 
 /** One authenticated owner, independent of route subscribers. No transport duplication. */
 export class PersistentConversation {
@@ -13,7 +15,9 @@ export class PersistentConversation {
   private writes: Promise<void> = Promise.resolve();
   private unsubscribe?: () => void;
   private listeners = new Set<() => void>();
-  private state = { loading: true, error: null as string | null };
+  private state = { loading: true, error: null as string | null, completing: false,
+    /** Read from saved rows, never from session memory: see persistedEvidence. */
+    hasQualifyingPair: false, hasUnresolvedHandoff: false };
   constructor(readonly uid: string, private adapter: ChatAdapter, private authState: AuthState) {}
   getSnapshot = () => this.state;
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
@@ -34,9 +38,11 @@ export class PersistentConversation {
         this.assertActive();
         // Commit pending user turn before inference. Refresh must never replay a POST.
         await this.checkpoint(); this.assertActive();
-        const result = await this.adapter.send(request, options);
-        await this.checkpoint(); this.assertActive();
-        return result;
+        try {
+          const result = await this.adapter.send(request, options);
+          await this.checkpoint(); this.assertActive();
+          return result;
+        } finally { void this.refreshEvidence(session); }
       } }, this.record.conversationId);
       this.session = session; session.setReady(false);
       if (this.record.encryptedState) {
@@ -67,9 +73,34 @@ export class PersistentConversation {
           void this.checkpoint().catch(() => {});
         }
       });
+      await this.refreshEvidence(session); this.assertActive();
       session.setReady(true); this.notify({ loading: false });
     } catch {
       if (!this.stopped) { this.session?.dispose(); this.session = null; this.notify({ loading: false, error: 'Conversation history could not be unlocked or saved. Reload after unlocking your account or restoring local storage access.' }); }
+    }
+  }
+  private async refreshEvidence(session: ConversationSession) {
+    try {
+      const evidence = await readPersistedTurnEvidence(this.uid, session.conversationId);
+      if (!this.stopped && this.session === session) this.notify({ hasQualifyingPair: !!evidence.pair, hasUnresolvedHandoff: evidence.hasUnresolvedHandoff });
+    } catch { /* Keep the last known state; completion re-reads saved rows under its lease. */ }
+  }
+  /** Holds sends off while one explicit completion reads saved evidence and commits. */
+  async withCompletionLease<T>(run: (evidence: ConversationCompletionEvidence) => Promise<T>): Promise<T> {
+    const session = this.session;
+    if (this.stopped || !session || !this.record || this.state.loading || this.state.error) throw new CompletionLeaseError('unavailable');
+    if (this.state.completing) throw new CompletionLeaseError('busy');
+    if (session.getSnapshot().pending) throw new CompletionLeaseError('pending');
+    this.notify({ completing: true }); session.setReady(false);
+    try {
+      const { pair, hasUnresolvedHandoff } = await readPersistedTurnEvidence(this.uid, session.conversationId);
+      if (this.stopped || this.session !== session) throw new CompletionLeaseError('unavailable');
+      this.notify({ hasQualifyingPair: !!pair, hasUnresolvedHandoff });
+      return await run({ ownerUid: this.uid, conversationId: session.conversationId, pending: session.getSnapshot().pending,
+        lastPersistedMessageId: pair?.lastPersistedMessageId ?? null, persistedExchanges: pair?.persistedExchanges ?? 0,
+        turnState: pair ? 'done-persisted' : 'done-unpersisted', handoffState: hasUnresolvedHandoff ? 'unresolved' : 'resolved-or-absent' });
+    } finally {
+      if (!this.stopped) { if (this.session === session) session.setReady(!this.state.error); this.notify({ completing: false }); }
     }
   }
   checkpoint(): Promise<void> {

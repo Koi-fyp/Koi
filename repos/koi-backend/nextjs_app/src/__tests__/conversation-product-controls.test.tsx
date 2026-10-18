@@ -7,13 +7,47 @@ jest.mock('@/lib/firebase', () => ({ auth: { get currentUser() { return { uid: m
 jest.mock('@/hooks/useAvatarPreference', () => ({ useAvatarPreference: () => ({ status: 'ready', preference: { status: 'selected', companion: 'koi', name: 'Koi' } }) }));
 jest.mock('@/lib/avatar/avatarPreference', () => ({ saveAvatarPreference: (...args: unknown[]) => mockSave(...args) }));
 jest.mock('@/app/(authenticated)/settings/components/AvatarPicker', () => ({ __esModule: true, default: ({ onSave, currentAvatar }: { onSave: (id: string, name: string) => Promise<boolean>; currentAvatar: string }) => <button onClick={() => void onSave('raza', 'Raza')}>Save {currentAvatar} as Raza</button> }));
+const mockComplete = jest.fn();
+let mockRecovery = { loading: false, error: null as string | null, completing: false, hasQualifyingPair: false, hasUnresolvedHandoff: false };
+const mockManager = { uid: 'synthetic-owner', subscribe: () => () => {}, getSnapshot: () => mockRecovery };
+jest.mock('@/contexts/ConversationContext', () => ({ useSharedConversation: () => mockManager }));
+jest.mock('@/lib/activities/conversationCompletion', () => ({ saveConversationCompletion: (...args: unknown[]) => mockComplete(...args) }));
 import ProductControls from '@/components/chat/ConversationProductControls';
-function Controls() { return <ProductControls preferenceState={{ status: 'ready', uid: mockUid, profile: null, preference: { status: 'selected', companion: 'koi', avatar: 'fox', name: 'Koi', imageSrc: null, modelUrl: null } }} />; }
-beforeEach(() => { mockUid = 'synthetic-owner'; mockSave.mockReset().mockResolvedValue(undefined); });
-it('exposes New Chat without pretending protected switching or completion works', () => {
-  render(<Controls />); expect(screen.getByRole('button', { name: 'New Chat' })).toBeDisabled();
+function Controls({ pending = false }: { pending?: boolean }) { return <ProductControls pending={pending} preferenceState={{ status: 'ready', uid: mockUid, profile: null, preference: { status: 'selected', companion: 'koi', avatar: 'fox', name: 'Koi', imageSrc: null, modelUrl: null } }} />; }
+beforeEach(() => {
+  mockUid = 'synthetic-owner'; mockSave.mockReset().mockResolvedValue(undefined);
+  mockComplete.mockReset().mockResolvedValue({ status: 'saved', outcome: 'awarded', completionId: 'c' });
+  mockRecovery = { loading: false, error: null, completing: false, hasQualifyingPair: false, hasUnresolvedHandoff: false };
+});
+it('keeps Save completion disabled without a saved pair, while pending, or with an open handoff', () => {
+  const view = render(<Controls />);
   fireEvent.click(screen.getByRole('button', { name: 'Complete Conversation' }));
-  expect(screen.getByRole('button', { name: /Save completion/ })).toBeDisabled(); expect(mockSave).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: /Save completion/ })).toBeDisabled();
+  mockRecovery = { ...mockRecovery, hasQualifyingPair: true, hasUnresolvedHandoff: true }; view.rerender(<Controls />);
+  expect(screen.getByRole('button', { name: /Save completion/ })).toBeDisabled();
+  expect(screen.getByRole('region')).toHaveTextContent(/crisis support step is still open/);
+  mockRecovery = { ...mockRecovery, hasUnresolvedHandoff: false };
+  view.rerender(<Controls pending />);
+  expect(screen.getByRole('button', { name: /Save completion/ })).toBeDisabled();
+  expect(mockComplete).not.toHaveBeenCalled(); expect(mockSave).not.toHaveBeenCalled();
+});
+it('saves completion only on the explicit click and reports the real ledger outcome', async () => {
+  mockRecovery = { ...mockRecovery, hasQualifyingPair: true };
+  render(<Controls />);
+  expect(mockComplete).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Complete Conversation' }));
+  expect(mockComplete).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Save completion' }));
+  expect(await screen.findByRole('status')).toHaveTextContent('One piece was added');
+  expect(mockComplete).toHaveBeenCalledTimes(1); expect(mockComplete).toHaveBeenCalledWith(mockManager, 'synthetic-owner');
+  mockComplete.mockResolvedValue({ status: 'saved', outcome: 'daily-cap', completionId: 'd' });
+  fireEvent.click(screen.getByRole('button', { name: 'Save completion' }));
+  expect(await screen.findByText(/already earned, so no new piece/)).toBeInTheDocument();
+});
+it('New Chat stays disabled and never completes the conversation', () => {
+  mockRecovery = { ...mockRecovery, hasQualifyingPair: true };
+  render(<Controls />); expect(screen.getByRole('button', { name: 'New Chat' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'New Chat' })); expect(mockComplete).not.toHaveBeenCalled();
 });
 it('preserves fox until explicit selection and saves only through existing UID preference writer', async () => {
   render(<Controls />); expect(mockSave).not.toHaveBeenCalled();

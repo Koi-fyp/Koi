@@ -22,8 +22,10 @@ async function saveMessage(record: MessageRecord, secret: string, saltB64: strin
   signal.throwIfAborted();
   await db.messages.put(encrypted);
   // Once a local write commits, queue the same ciphertext for consistency even if cancellation races it.
+  // Turn evidence (handoff_open, done_seen) stays on the local row only.
+  const { handoff_open: _handoffOpen, done_seen: _doneSeen, ...synced } = encrypted;
   syncQueue.enqueue({ collection: `conversations/${record.conversationId}/messages`, docId: record.id,
-    data: encrypted as unknown as Record<string, unknown>, priority: 3 });
+    data: synced as unknown as Record<string, unknown>, priority: 3 });
 }
 export async function sendMessage(uid: string, conversationId: string, text: string, context: ChatTurn[], authState: AuthState, options: ChatSendOptions,
   requestFields: Pick<ChatRequest, 'exercise_state' | 'client_event' | 'policy_event' | 'crisis_path' | 'audio'> = {}): Promise<ChatResponse> {
@@ -45,6 +47,8 @@ export async function sendMessage(uid: string, conversationId: string, text: str
   // A voice turn has no text until the server's transcript event; only that transcript is stored, never the audio.
   const voice = !!requestFields.audio;
   let userSaved: Promise<void> | null = null;
+  // Local turn evidence: an AI row exists only after a terminal done; a handoff in this turn keeps it open.
+  let doneSeen = false, handoffOpen = false;
   if (!voice) { userSaved = saveUser(text); await userSaved; }
   options.signal.throwIfAborted(); ensureOwner();
   const response = await postJsonChat({ message: text, session_history: context, ...requestFields }, {
@@ -53,13 +57,17 @@ export async function sendMessage(uid: string, conversationId: string, text: str
       options.signal.throwIfAborted();
       ensureOwner();
       if (voice && event.event === 'transcript' && !userSaved) { userSaved = saveUser(event.data.text); userSaved.catch(() => {}); }
+      if (event.event === 'handoff') handoffOpen = true;
+      if (event.event === 'done') { doneSeen = true; if (event.data.handoff != null) handoffOpen = true; }
       options.onEvent?.(event);
     },
   });
   options.signal.throwIfAborted(); ensureOwner();
   if (!userSaved) throw new ChatError('invalid-response', 'Your voice message could not be transcribed. Please try again.');
   await userSaved;
+  if (!doneSeen) throw new ChatError('invalid-response', 'The companion stream ended before the turn completed.');
   await saveMessage({ id: options.assistantMessageId, conversationId, sender: 'ai', ownerUid: uid, replyTo: options.userMessageId, content: response.reply,
-    timestamp: new Date(), emotion: storedEmotion(response.companion_state.emotion), companion_state: response.companion_state, synced: false }, secret, saltB64, options.signal);
+    timestamp: new Date(), emotion: storedEmotion(response.companion_state.emotion), companion_state: response.companion_state, synced: false,
+    handoff_open: handoffOpen, done_seen: true }, secret, saltB64, options.signal);
   return response;
 }
