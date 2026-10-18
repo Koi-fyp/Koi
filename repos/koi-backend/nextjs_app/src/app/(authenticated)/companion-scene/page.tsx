@@ -11,6 +11,15 @@ import ChatComposer from '@/components/companion/ChatComposer';
 import VoiceToggle from '@/components/companion/VoiceToggle';
 import { hasVoice, speechBaseUrl, useVoiceEnabled, voiceCompanion } from '@/lib/speech/replyVoicePolicy';
 import { useSpokenReplies } from '@/lib/speech/useSpokenReplies';
+import { modeUsesCamera, modeUsesMic, useInputMode } from '@/contexts/InputModeContext';
+import MicButton from '@/components/voice/MicButton';
+import CameraPip from '@/components/camera/CameraPip';
+import CallIcon from '@/components/companion/CallIcon';
+import styles from '@/components/companion/CompanionScene.module.css';
+import type { ChatServerEvent } from '@/lib/conversation/chatContract';
+/** A crisis handoff or a high-risk result pauses the camera until the turn is resolved. */
+const crisisActive = (events: ReadonlyArray<{ event: ChatServerEvent }>) => events.some(({ event }) => event.event === 'handoff'
+  || (event.event === 'risk' && event.data.status === 'ok' && (event.data.risk_category === 'HIGH' || event.data.risk_category === 'CRITICAL')));
 export default function AuthenticatedCompanionChat() {
   const { user, loading: authLoading } = useAuth(); const chat = useChat(); const router = useRouter();
   const avatarPreference = useAvatarPreference(user?.uid, authLoading);
@@ -26,8 +35,22 @@ export default function AuthenticatedCompanionChat() {
   const [voiceStored, setVoiceStored] = useVoiceEnabled(user?.uid);
   const voice = useSpokenReplies({ enabled: voiceStored, uid: user?.uid, companion: speechCompanion, messages: chat.messages, pending: chat.pending,
     serverEvents: chat.serverEvents, baseUrl: speechBase, getToken: () => user ? user.getIdToken() : Promise.reject(new Error('Signed out')) });
+  const { mode } = useInputMode();
+  const micOn = modeUsesMic(mode), cameraMode = modeUsesCamera(mode);
+  // Choosing a video mode opens the camera; the control row (or the view itself) can turn it off again.
+  const [cameraVisible, setCameraVisible] = useState(true);
+  useEffect(() => { setCameraVisible(true); }, [mode]);
   const leave = () => router.push('/chat');
   const end = () => { voice.stop(); chat.cancel(); router.push('/chat'); };
+  const noticeText = avatarPreference.status === 'loading'
+    ? 'Loading your saved companion…'
+    : avatarUnavailable
+      ? 'Your saved companion could not be loaded. Text conversation remains available; review your selection in onboarding.'
+      : legacyFox
+        ? 'Your saved Koi fox choice is preserved. This viewer currently supports the male and female VRM models; text conversation remains available.'
+        : !avatarEnabled ? 'Text-only mode: the avatar is unavailable.'
+          : cameraMode ? 'Your camera view stays on this device: KOI does not record, send or analyse it.' : '';
+  const inputHint = micOn ? 'Tap the mic to talk, or type. Your recording is sent to KOI for transcription and is not stored.' : 'Typing mode. Choose Audio in Mode to talk with your microphone.';
   return <CompanionScene companionName={companionName} modelUrl={avatarReady ? selected?.modelUrl ?? undefined : undefined}
     backLabel="Back to chat" avatarEnabled={avatarReady && avatarEnabled} onAvatarFailure={() => setAvatarEnabled(false)} viewportOffset={66}
     emotion={chat.currentEmotion} emotionIntensity={chat.currentIntensity} conversationState={chat.conversationState}
@@ -40,14 +63,14 @@ export default function AuthenticatedCompanionChat() {
     speechSource={voice.speechSource}
     voiceControl={<VoiceToggle checked={voiceStored} onChange={setVoiceStored} configured={!!speechBase} companionHasVoice={hasVoice(speechCompanion)} signedIn={!!user} line={voice.line} />}
     subtitle={chat.subtitle || 'Start a text conversation with KOI.'} subtitleUpdating={chat.pending} onBack={leave} onEnd={end}
-    notice={<>{avatarPreference.status === 'loading'
-      ? 'Loading your saved companion…'
-      : avatarUnavailable
-        ? 'Your saved companion could not be loaded. Text conversation remains available; review your selection in onboarding.'
-        : legacyFox
-          ? 'Your saved Koi fox choice is preserved. This viewer currently supports the male and female VRM models; text conversation remains available.'
-          : avatarEnabled ? voice.audioPlaying ? 'Text is the only available input mode. A spoken reply is playing; the text is unchanged.' : 'Text is the only available input mode. Audio and video modes are not enabled yet; avatar speaking movements do not play audio.' : 'Text-only mode: the avatar is unavailable.'}
+    notice={noticeText || (avatarReady && !avatarEnabled) || avatarUnavailable || legacyFox ? <>{noticeText}
       {avatarReady && !avatarEnabled && <> <button type="button" onClick={() => setAvatarEnabled(true)} style={{ minHeight: 44, padding: '8px 16px' }}>Retry avatar</button></>}
-      {(avatarUnavailable || legacyFox) && <> <Link href="/onboarding">Review companion selection</Link></>}</>}
-    composer={<ChatComposer onSend={(text) => { voice.stop(); return chat.send(text); }} audioPlaying={voice.audioPlaying} onCancel={chat.cancel} pending={chat.pending} error={chat.error} disabled={chat.blocked} onFocusChange={(focused) => chat.session.inputFocused(focused)} />} />;
+      {(avatarUnavailable || legacyFox) && <> <Link href="/onboarding">Review companion selection</Link></>}</> : undefined}
+    micControl={micOn ? <MicButton key={user?.uid} className={styles.callButton} disabled={chat.pending || chat.blocked}
+      onRecorded={(audio) => { voice.stop(); void chat.sendVoice(audio); }} /> : undefined}
+    cameraControl={cameraMode ? <><button type="button" className={`${styles.callButton} ${cameraVisible ? styles.active : ''}`} aria-pressed={cameraVisible}
+      aria-label={cameraVisible ? 'Turn camera off' : 'Turn camera on'} onClick={() => setCameraVisible((visible) => !visible)}><CallIcon name="camera" /></button>
+      <span>{cameraVisible ? 'Camera on' : 'Camera off'}</span></> : undefined}
+    cameraOverlay={cameraMode && cameraVisible ? <CameraPip enabled ownerUid={user?.uid ?? null} suspended={crisisActive(chat.serverEvents)} onClose={() => setCameraVisible(false)} /> : undefined}
+    composer={<ChatComposer onSend={(text) => { voice.stop(); return chat.send(text); }} audioPlaying={voice.audioPlaying} onCancel={chat.cancel} pending={chat.pending} error={chat.error} disabled={chat.blocked} onFocusChange={(focused) => chat.session.inputFocused(focused)} idleHint={inputHint} />} />;
 }

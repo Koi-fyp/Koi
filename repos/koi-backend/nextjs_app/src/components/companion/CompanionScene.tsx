@@ -46,9 +46,14 @@ export interface CompanionSceneProps {
   onCrisisResolution?: (path: import('@/lib/conversation/chatContract').CrisisPath, handoff: { to: 'crisis'; reason: string }) => void;
   crisisIntervention?: CrisisInterventionDisplay;
   voiceControl?: ReactNode;
+  /** Working mic / camera controls for the control row; omitted ones show as off for the current mode. */
+  micControl?: ReactNode;
+  cameraControl?: ReactNode;
+  /** Local camera self-view, shown over a corner of the avatar stage. */
+  cameraOverlay?: ReactNode;
 }
 export default function CompanionScene({ companionName, modelUrl, messages, subtitle, subtitleLanguage,
-  subtitleUpdating, onBack, onEnd, notice, transcriptNotice, settings, emotion, emotionIntensity, conversationState, exposeController, composer, avatarEnabled = true, onAvatarFailure, viewportOffset = 0, backLabel, speechSource, onAvatarReady, serverEvents, onExerciseRequest, onQueueClientEvent, exerciseControlsDisabled, onCrisisResolution, crisisIntervention, consumeUiEvent, isHandoffResolved, voiceControl }: CompanionSceneProps) {
+  subtitleUpdating, onBack, onEnd, notice, transcriptNotice, settings, emotion, emotionIntensity, conversationState, exposeController, composer, avatarEnabled = true, onAvatarFailure, viewportOffset = 0, backLabel, speechSource, onAvatarReady, serverEvents, onExerciseRequest, onQueueClientEvent, exerciseControlsDisabled, onCrisisResolution, crisisIntervention, consumeUiEvent, isHandoffResolved, voiceControl, micControl, cameraControl, cameraOverlay }: CompanionSceneProps) {
   const [textOpen, setTextOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dismissedHandoffId, setDismissedHandoffId] = useState<number | null>(null);
@@ -73,22 +78,29 @@ export default function CompanionScene({ companionName, modelUrl, messages, subt
   return <main className={styles.scene} style={viewportOffset ? { height: `calc(100dvh - ${viewportOffset}px)` } : undefined} onKeyDown={(event) => {
     if (event.key === 'Escape') { if (textOpen) closeText(); setSettingsOpen(false); }
   }}>
-    <CompanionHeader backLabel={backLabel} name={companionName} onBack={onBack} onSettings={settings ? () => setSettingsOpen((open) => !open) : undefined} settingsOpen={settingsOpen} />
-    {notice && <p className={styles.notice}>{notice}</p>}
-    {crisisSelectionQueued && <p className={styles.notice} role="status">Your selection is saved for your next message.</p>}
-    {settingsOpen && <section id="companion-settings" className={styles.settings} aria-label="Development preview settings">{settings}</section>}
-    <div className={`${styles.workspace} ${textOpen && avatarEnabled ? styles.withText : ''}`}>
-      {avatarEnabled && <section className={styles.stage} aria-label="Companion avatar">
-        <div className={styles.renderer}><VRMAvatarRenderer modelUrl={modelUrl} emotion={emotion} emotionIntensity={emotionIntensity} conversationState={conversationState} exposeController={exposeController} speechSource={speechSource} onReady={onAvatarReady} onLoadError={onAvatarFailure} minHeight={0} maxPixelRatio={1.5} /></div>
-        <ConversationSubtitles text={subtitle} language={subtitleLanguage} updating={subtitleUpdating} />
-      </section>}
-      {(textOpen || !avatarEnabled) && <ConversationTextPanel messages={messages} companionName={companionName} notice={transcriptNotice} allowClose={avatarEnabled} onClose={closeText} />}
+    {/* The avatar owns ~70% of the height; every other control lives in the scrollable panel below. */}
+    <div className={styles.stageArea}>
+      <CompanionHeader backLabel={backLabel} name={companionName} onBack={onBack} onSettings={settings ? () => setSettingsOpen((open) => !open) : undefined} settingsOpen={settingsOpen} />
+      {settingsOpen && <section id="companion-settings" className={styles.settings} aria-label="Development preview settings">{settings}</section>}
+      <div className={`${styles.workspace} ${textOpen && avatarEnabled ? styles.withText : ''}`}>
+        {avatarEnabled && <section className={styles.stage} aria-label="Companion avatar">
+          <div className={styles.renderer}><VRMAvatarRenderer modelUrl={modelUrl} emotion={emotion} emotionIntensity={emotionIntensity} conversationState={conversationState} exposeController={exposeController} speechSource={speechSource} onReady={onAvatarReady} onLoadError={onAvatarFailure} minHeight={0} maxPixelRatio={1.5} /></div>
+          <ConversationSubtitles text={subtitle} language={subtitleLanguage} updating={subtitleUpdating} />
+        </section>}
+        {(textOpen || !avatarEnabled) && <ConversationTextPanel messages={messages} companionName={companionName} notice={transcriptNotice} allowClose={avatarEnabled} onClose={closeText} />}
+        {cameraOverlay && <div className={styles.cameraOverlay}>{cameraOverlay}</div>}
+      </div>
     </div>
-    {serverEvents && onExerciseRequest && onQueueClientEvent && <ExerciseDirector consumeEvent={consumeUiEvent} events={serverEvents} disabled={exerciseControlsDisabled} interruptKey={handoffEventId ?? 0}
-      onRequest={onExerciseRequest} onQueueClientEvent={onQueueClientEvent} />}
+    <section className={styles.panel} aria-label="Conversation tools">
+      {crisisSelectionQueued && <p className={styles.notice} role="status">Your selection is saved for your next message.</p>}
+      {composer}
+      <ConversationControls textOpen={textOpen || !avatarEnabled} textLocked={!avatarEnabled} toggleRef={toggleRef} onToggleText={() => setTextOpen((open) => !open)} onEnd={onEnd} voiceControl={voiceControl}
+        micControl={micControl} cameraControl={cameraControl} />
+      {serverEvents && onExerciseRequest && onQueueClientEvent && <ExerciseDirector consumeEvent={consumeUiEvent} events={serverEvents} disabled={exerciseControlsDisabled} interruptKey={handoffEventId ?? 0}
+        onRequest={onExerciseRequest} onQueueClientEvent={onQueueClientEvent} />}
+      {notice && <p className={styles.notice}>{notice}</p>}
+    </section>
     <CrisisHandoffDialog open={!!handoff && !isHandoffResolved?.(handoff) && handoffEventId !== dismissedHandoffId && !!onCrisisResolution} content={crisisIntervention ?? riskForContent}
       onChoose={(path) => { if (handoff && handoffEventId !== null && onCrisisResolution) { onCrisisResolution(path, handoff); setDismissedHandoffId(handoffEventId); setCrisisSelectionQueued(true); } }} />
-    {composer && <div style={{ flexShrink: 0, paddingTop: 10 }}>{composer}</div>}
-    <ConversationControls textOpen={textOpen || !avatarEnabled} textLocked={!avatarEnabled} toggleRef={toggleRef} onToggleText={() => setTextOpen((open) => !open)} onEnd={onEnd} voiceControl={voiceControl} />
   </main>;
 }

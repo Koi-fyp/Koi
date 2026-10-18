@@ -5,9 +5,11 @@ interface InputBarProps {
   onSend: (text: string) => void;
   disabled?: boolean;
   inputRef?: React.RefObject<HTMLTextAreaElement>;
+  /** Extra control placed before the send button (the microphone in Audio modes). */
+  extra?: React.ReactNode;
 }
 
-export default function InputBar({ onSend, disabled = false, inputRef }: InputBarProps) {
+export default function InputBar({ onSend, disabled = false, inputRef, extra }: InputBarProps) {
   const [value, setValue] = useState('');
   const internalRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = inputRef ?? internalRef;
@@ -82,6 +84,7 @@ export default function InputBar({ onSend, disabled = false, inputRef }: InputBa
             padding: '4px 0',
           }}
         />
+        {extra}
         <button
           aria-label="Send message"
           onClick={submit}

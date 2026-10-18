@@ -21,7 +21,7 @@ function OwnedConversation({ uid, isLinked, children }: { uid: string; isLinked:
     const adapter: ChatAdapter = { send: (request, options) => sendMessage(uid, manager.session!.conversationId,
       request.message, request.session_history, { isLinked }, options, {
         exercise_state: request.exercise_state, client_event: request.client_event,
-        policy_event: request.policy_event, crisis_path: request.crisis_path,
+        policy_event: request.policy_event, crisis_path: request.crisis_path, audio: request.audio,
       }) };
     return new PersistentConversation(uid, adapter, { isLinked });
   });

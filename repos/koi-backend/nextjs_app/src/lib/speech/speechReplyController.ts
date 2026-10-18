@@ -16,18 +16,35 @@ export interface SpeechReplyOptions {
   mouth?: ReplyMouth;
   onStatus?: (status: ReplyStatus) => void;
   chunkTimeoutMs?: number;
-  /** English cue extraction is slow (~18 s for 163 chars), so chunks are kept near 100 chars, never over 450. */
+  /** Sentence chunks are split at this size (never over 450); the first chunk stays this small so audio starts quickly. */
   chunkMaxChars?: number;
+  /** After the first chunk, consecutive same-script chunks are packed up to this size: fewer requests (10/min limit). 0 disables packing. */
+  chunkPackChars?: number;
+  /** Chunk requests kept in flight ahead of playback, so the next sentence is ready when the current one ends. */
+  prefetch?: number;
   newRequestId?: () => string;
 }
 type Planned = { text: string; voice: SpeechVoiceId | null };
 type ActiveTurn = { turn: Readonly<ReplyTurn>; abort: AbortController; promise: Promise<ReplyOutcome> };
 type ChunkResult = { ok: true; speech: AdaptedSpeech } | { ok: false; reason: ReplyStatusReason };
+type PendingChunk = { settled: boolean; promise: Promise<ChunkResult> };
 // Unauthenticated/rate-limited would fail every later chunk too, so they end the turn instead of skipping.
 const TERMINAL: ReadonlySet<ReplyStatusReason> = new Set(['unauthenticated', 'rate-limited']);
 const IDLE_FRAME: SpeechFrame = Object.freeze({ active: false, time: 0, cues: Object.freeze([]) });
+/** Keeps chunk 0 alone (fast first audio) and greedily joins later same-script chunks up to `packChars`. */
+export function packChunks(chunks: readonly string[], packChars: number): string[] {
+  if (!(packChars > 0)) return [...chunks];
+  const out: string[] = [];
+  chunks.forEach((chunk, index) => {
+    const previous = out[out.length - 1];
+    if (index > 1 && previous !== undefined && previous.length + 1 + chunk.length <= packChars && classifyChunk(previous) === classifyChunk(chunk)) {
+      out[out.length - 1] = `${previous} ${chunk}`;
+    } else out.push(chunk);
+  });
+  return out;
+}
 /**
- * Speaks one finished reply chunk by chunk: at most one request in flight, chunk n+1 fetched while n plays.
+ * Speaks one finished reply chunk by chunk, playing in order while up to `prefetch` later chunks are requested.
  * Reads the reply text once and never writes it; a failed or slow chunk is skipped, the text is unaffected.
  */
 export class SpeechReplyController implements SpeechTimeline {
@@ -37,15 +54,19 @@ export class SpeechReplyController implements SpeechTimeline {
   private readonly onStatus?: SpeechReplyOptions['onStatus'];
   private readonly timeoutMs: number;
   private readonly maxChars: number;
+  private readonly packChars: number;
+  private readonly prefetch: number;
   private readonly newRequestId: () => string;
   private generation = 0;
   private active?: ActiveTurn;
   private playing = false;
   private disposed = false;
   private status: ReplyStatus = { state: 'idle', generationId: null, chunk: null, total: 0, reason: null };
-  constructor({ client, playback, mouth, onStatus, chunkTimeoutMs = 12_000, chunkMaxChars = 100, newRequestId }: SpeechReplyOptions) {
+  constructor({ client, playback, mouth, onStatus, chunkTimeoutMs = 12_000, chunkMaxChars = 100, chunkPackChars = 220, prefetch = 2, newRequestId }: SpeechReplyOptions) {
     this.client = client; this.playback = playback; this.mouth = mouth; this.onStatus = onStatus;
     this.timeoutMs = chunkTimeoutMs; this.maxChars = chunkMaxChars;
+    this.packChars = Math.min(Math.max(0, Math.floor(chunkPackChars) || 0), 450);
+    this.prefetch = Math.min(Math.max(1, Math.floor(prefetch) || 1), 3);
     this.newRequestId = newRequestId ?? (() => globalThis.crypto.randomUUID());
   }
   getStatus = () => this.status;
@@ -93,23 +114,33 @@ export class SpeechReplyController implements SpeechTimeline {
     this.publish({ chunk: null, ...final });
   }
   private async run(turn: Readonly<ReplyTurn>, generation: number, signal: AbortSignal): Promise<ReplyOutcome> {
-    const plan: Planned[] = chunkReply(turn.text, { maxChars: this.maxChars })
+    const plan: Planned[] = packChunks(chunkReply(turn.text, { maxChars: this.maxChars }), this.packChars)
       .map(text => ({ text, voice: speakable(text, turn.languageHint) ? chooseVoice(turn.companion, classifyChunk(text)) : null }));
     const total = plan.length;
     this.publish({ state: 'idle', generationId: turn.generationId, chunk: null, total, reason: null });
     if (!plan.some(chunk => chunk.voice)) { this.finish(generation, { state: 'idle' }); return 'silent'; }
     this.mouth?.setSource(this);
-    const nextVoiced = (from: number) => { for (let i = from; i < total; i++) if (plan[i].voice) return i; return -1; };
-    let pending = this.request(plan[nextVoiced(0)], signal);
+    // Voiced chunks are requested in order, up to `prefetch` ahead of the one being played.
+    const voiced = plan.flatMap((chunk, index) => chunk.voice ? [index] : []);
+    const requests = new Map<number, PendingChunk>();
+    let nextRequest = 0;
+    const fill = () => {
+      while (nextRequest < voiced.length && requests.size < this.prefetch) {
+        const index = voiced[nextRequest++];
+        requests.set(index, this.request(plan[index], signal));
+      }
+    };
+    fill();
     for (let i = 0; i < total; i++) {
       if (this.stale(generation)) return 'cancelled';
       if (!plan[i].voice) { this.publish({ state: 'skipped', chunk: i, reason: 'unspeakable' }); continue; }
+      const pending = requests.get(i) ?? this.request(plan[i], signal);
       if (!pending.settled) this.publish({ state: 'requesting', chunk: i, reason: null });
       const result = await pending.promise;
+      requests.delete(i);
       if (this.stale(generation)) return 'cancelled';
-      const next = nextVoiced(i + 1);
       if ('reason' in result && TERMINAL.has(result.reason)) { this.finish(generation, { state: 'error', reason: result.reason }); return 'error'; }
-      if (next >= 0) pending = this.request(plan[next], signal);
+      fill();
       if ('reason' in result) { this.publish({ state: 'skipped', chunk: i, reason: result.reason }); continue; }
       const played = await this.play(result.speech, generation, i);
       if (this.stale(generation)) return 'cancelled';
@@ -119,7 +150,7 @@ export class SpeechReplyController implements SpeechTimeline {
     return 'completed';
   }
   /** Never rejects; a turn abort or the per-chunk timeout settles it even if the client ignores its signal. */
-  private request(chunk: Planned, turnSignal: AbortSignal) {
+  private request(chunk: Planned, turnSignal: AbortSignal): PendingChunk {
     const abort = new AbortController(), voice = chunk.voice!;
     const tracker = { settled: false, promise: undefined as Promise<ChunkResult> | undefined };
     let timer: ReturnType<typeof setTimeout> | undefined, onAbort: (() => void) | undefined;
@@ -134,7 +165,7 @@ export class SpeechReplyController implements SpeechTimeline {
     tracker.promise = Promise.race([guard, call]).then(result => {
       clearTimeout(timer); turnSignal.removeEventListener('abort', onAbort!); tracker.settled = true; return result;
     });
-    return tracker as { settled: boolean; promise: Promise<ChunkResult> };
+    return tracker as PendingChunk;
   }
   private async play(speech: AdaptedSpeech, generation: number, chunk: number): Promise<boolean> {
     try { this.playback.load({ audioBlob: speech.audio, mouthCues: speech.cues }); } catch { return false; }

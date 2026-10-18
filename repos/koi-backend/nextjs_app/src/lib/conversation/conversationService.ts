@@ -26,7 +26,7 @@ async function saveMessage(record: MessageRecord, secret: string, saltB64: strin
     data: encrypted as unknown as Record<string, unknown>, priority: 3 });
 }
 export async function sendMessage(uid: string, conversationId: string, text: string, context: ChatTurn[], authState: AuthState, options: ChatSendOptions,
-  requestFields: Pick<ChatRequest, 'exercise_state' | 'client_event' | 'policy_event' | 'crisis_path'> = {}): Promise<ChatResponse> {
+  requestFields: Pick<ChatRequest, 'exercise_state' | 'client_event' | 'policy_event' | 'crisis_path' | 'audio'> = {}): Promise<ChatResponse> {
   options.signal.throwIfAborted();
   const user = auth?.currentUser as User | undefined;
   if (!user || user.uid !== uid) throw new ChatError('authentication', 'An authenticated KOI session is required.');
@@ -41,17 +41,24 @@ export async function sendMessage(uid: string, conversationId: string, text: str
   ensureOwner();
   const { secret, saltB64 } = await (linked ? getActiveCryptoContext(uid, authState) : anonymousCryptoContext(uid));
   ensureOwner(); options.signal.throwIfAborted();
-  await saveMessage({ id: options.userMessageId, conversationId, sender: 'user', ownerUid: uid, content: text, timestamp: new Date(), emotion: 'neutral', synced: false }, secret, saltB64, options.signal);
+  const saveUser = (content: string) => saveMessage({ id: options.userMessageId, conversationId, sender: 'user', ownerUid: uid, content, timestamp: new Date(), emotion: 'neutral', synced: false }, secret, saltB64, options.signal);
+  // A voice turn has no text until the server's transcript event; only that transcript is stored, never the audio.
+  const voice = !!requestFields.audio;
+  let userSaved: Promise<void> | null = null;
+  if (!voice) { userSaved = saveUser(text); await userSaved; }
   options.signal.throwIfAborted(); ensureOwner();
   const response = await postJsonChat({ message: text, session_history: context, ...requestFields }, {
     apiBase: process.env.NEXT_PUBLIC_KOI_API_BASE, headers: new Headers({ Authorization: `Bearer ${token}` }), signal: options.signal,
     onEvent: (event) => {
       options.signal.throwIfAborted();
       ensureOwner();
+      if (voice && event.event === 'transcript' && !userSaved) { userSaved = saveUser(event.data.text); userSaved.catch(() => {}); }
       options.onEvent?.(event);
     },
   });
   options.signal.throwIfAborted(); ensureOwner();
+  if (!userSaved) throw new ChatError('invalid-response', 'Your voice message could not be transcribed. Please try again.');
+  await userSaved;
   await saveMessage({ id: options.assistantMessageId, conversationId, sender: 'ai', ownerUid: uid, replyTo: options.userMessageId, content: response.reply,
     timestamp: new Date(), emotion: storedEmotion(response.companion_state.emotion), companion_state: response.companion_state, synced: false }, secret, saltB64, options.signal);
   return response;

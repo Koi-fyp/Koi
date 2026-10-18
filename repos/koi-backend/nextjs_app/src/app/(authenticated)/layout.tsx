@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import BottomNav from '@/components/layout/BottomNav';
 import ConversationProvider from '@/contexts/ConversationContext';
+import { InputModeProvider } from '@/contexts/InputModeContext';
 
 export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -56,9 +57,11 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100svh', paddingTop: '66px' }}>
-      <BottomNav />
-      <main style={{ flex: 1 }}><ConversationProvider>{children}</ConversationProvider></main>
-    </div>
+    <InputModeProvider>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100svh', paddingTop: '66px' }}>
+        <BottomNav />
+        <main style={{ flex: 1 }}><ConversationProvider>{children}</ConversationProvider></main>
+      </div>
+    </InputModeProvider>
   );
 }

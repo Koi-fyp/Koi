@@ -1,6 +1,11 @@
  .scene { --ink: #25231f; --blue: var(--neo-blue, #2d63eb); --warm: #ffe5d9; box-sizing: border-box; height: 100dvh; min-height: 0; display: flex; flex-direction: column; padding: max(16px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); color: var(--ink); background: #fff4ec; font-family: var(--font-body, system-ui, sans-serif); position: relative; }
 .scene * { box-sizing: border-box; }
-.header { flex: 0 0 62px; display: flex; align-items: center; gap: 18px; }
+.header { flex: 0 0 52px; display: flex; align-items: center; gap: 18px; }
+/* Avatar first: the stage area takes ~70% of the scene, the tools panel below scrolls on its own. */
+.stageArea { flex: 0 0 70%; min-height: 0; display: flex; flex-direction: column; }
+.panel { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 10px; padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px;
+  background: #fffaf6; border: 2px solid #44392f; border-radius: 22px; box-shadow: 3px 4px 0 #ded0c4; scrollbar-width: thin; }
+.cameraOverlay { position: absolute; z-index: 3; top: 12px; left: 12px; width: clamp(130px, 22%, 240px); }
 .identity { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0; }
 .wordmark { font-family: var(--font-display, system-ui); font-size: 24px; font-weight: 900; letter-spacing: -1px; padding-right: 16px; border-right: 1px solid #d7c6ba; }
 .identity h1 { margin: 0; font-family: var(--font-display, system-ui); font-size: 19px; letter-spacing: -.3px; }
@@ -8,18 +13,19 @@
 .iconButton { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid #d8c8bc; border-radius: 50%; background: #fffaf6; color: var(--ink); cursor: pointer; }
 .iconButton:hover { background: #f3e3d7; }
 .scene button:focus-visible, .scene select:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
-.notice { flex-shrink: 0; text-align: center; margin: 0 0 10px; color: #736154; font-size: 12px; line-height: 1.5; }
-.workspace { min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.notice { flex-shrink: 0; text-align: center; margin: 0; color: #736154; font-size: 12px; line-height: 1.5; }
+.workspace { position: relative; min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .withText { grid-template-columns: minmax(0, 1fr) 320px; }
-.stage { min-width: 0; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; border: 2px solid #44392f; border-radius: 28px; overflow: hidden; box-shadow: 3px 4px 0 #ded0c4; background: var(--warm); }
-.renderer { min-height: 0; overflow: hidden; }
-.subtitles { background: #fff9f3; padding: 14px 24px 18px; border-top: 1px solid #e8d8ca; text-align: center; }
+.stage { position: relative; min-width: 0; min-height: 0; border: 2px solid #44392f; border-radius: 28px; overflow: hidden; box-shadow: 3px 4px 0 #ded0c4; background: var(--warm); }
+.renderer { position: absolute; inset: 0; overflow: hidden; }
+/* Captions sit over the lower edge of the avatar instead of taking height from it. */
+.subtitles { position: absolute; z-index: 2; left: 16px; right: 16px; bottom: 14px; background: #fff9f3e8; padding: 8px 20px 10px; border: 1px solid #e8d8ca; border-radius: 18px; text-align: center; }
 .subtitleLabel { color: #80694f; font-size: 10px; font-weight: 800; letter-spacing: 2px; }
-.subtitles p { margin: 5px auto 0; max-width: 650px; max-height: 100px; overflow-y: auto; font-size: clamp(15px, 1.6vw, 19px); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.subtitles p { margin: 3px auto 0; max-width: 650px; max-height: 76px; overflow-y: auto; font-size: clamp(15px, 1.6vw, 19px); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .subtitles p[lang=ur] { line-height: 1.9; font-family: 'Noto Nastaliq Urdu', 'Urdu Typesetting', serif; }
-.footer { flex-shrink: 0; padding-top: 18px; }
-.controls { display: flex; justify-content: center; gap: 26px; }
-.control { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.footer { flex-shrink: 0; padding-top: 4px; }
+.controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 26px; }
+.control { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 120px; }
 .control > span { font-size: 11px; color: #71665d; text-align: center; }
 .callButton { width: 54px; height: 54px; display: grid; place-items: center; padding: 0; background: #fffaf6; border: 2px solid #44392f; border-radius: 50%; color: var(--ink); box-shadow: 2px 3px 0 #ded0c4; cursor: pointer; }
 .callButton:disabled { cursor: not-allowed; background: #eee5dd; color: #887b70; border-color: #cec0b3; box-shadow: none; }
@@ -49,14 +55,18 @@
   .header { flex-basis: 56px; gap: 12px; }
   .wordmark { font-size: 20px; padding-right: 12px; }
   .identity { gap: 12px; }.identity h1 { font-size: 17px; }.identity p { font-size: 10px; }
-  .notice { font-size: 10px; margin: 4px 0 8px; }
+  .notice { font-size: 10px; }
+  .header { flex-basis: 46px; }
+  .stageArea { flex-basis: 68%; }
+  .panel { margin-top: 8px; padding: 10px; border-radius: 18px; }
+  .cameraOverlay { top: 8px; left: 8px; width: 112px; }
   .workspace { gap: 10px; }.withText { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(100px, 28%); }
-  .stage { border-radius: 22px; }.subtitles { padding: 8px 14px 12px; }.subtitles p { font-size: 14px; max-height: 80px; }
-  .footer { padding-top: 12px; }.controls { gap: clamp(12px, 5vw, 24px); }.callButton { width: 48px; height: 48px; }.control > span { font-size: 9px; }
+  .stage { border-radius: 22px; }.subtitles { left: 8px; right: 8px; bottom: 8px; padding: 6px 12px 8px; }.subtitles p { font-size: 14px; max-height: 58px; }
+  .footer { padding-top: 4px; }.controls { gap: clamp(12px, 5vw, 24px); }.callButton { width: 48px; height: 48px; }.control > span { font-size: 9px; }
   .panelHeader { padding: 6px 12px; }.panelHeader h2 { font-size: 14px; }.messages { padding: 10px 12px; gap: 8px; }.message p { padding: 8px 10px; font-size: 12px; }.panelNotice { padding: 6px 12px; font-size: 9px; }
   .settings { top: 68px; right: 10px; }
 }
-@media (max-height: 600px) { .header { flex-basis: 48px; }.footer { padding-top: 8px; }.subtitles p { max-height: 60px; }.control { gap: 4px; } }
+@media (max-height: 600px) { .header { flex-basis: 44px; }.subtitles p { max-height: 44px; }.control { gap: 4px; } }
 
 @media (max-width: 700px) and (max-height: 600px) { .withText { grid-template-rows: minmax(0, 1fr) 140px; }.panelNotice { display: none; }.panelHeader { padding: 4px 12px; }.subtitles p { max-height: 60px; } }
 

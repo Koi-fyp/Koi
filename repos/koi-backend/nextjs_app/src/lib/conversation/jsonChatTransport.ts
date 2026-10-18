@@ -104,6 +104,9 @@ export async function probeChatHealth(apiBase: string | undefined, options: {
     options.signal?.removeEventListener('abort', onAbort);
   }
 }
+function audioFileName(type: string): string {
+  return type.includes('ogg') ? 'voice.ogg' : type.includes('mp4') ? 'voice.m4a' : 'voice.webm';
+}
 /** Transport only. Authentication is enforced by conversationService before calling this function. */
 export async function postJsonChat(request: ChatRequest, options: {
   apiBase: string | undefined; headers: Headers; signal: AbortSignal; timeoutMs?: number; fetchImpl?: typeof fetch;
@@ -116,16 +119,25 @@ export async function postJsonChat(request: ChatRequest, options: {
   options.signal.throwIfAborted(); options.signal.addEventListener('abort', onAbort, { once: true });
   const timer = setTimeout(() => { timedOut = true; abort.abort(); }, options.timeoutMs ?? DEFAULT_CHAT_TIMEOUT_MS);
   try {
-    const headers = new Headers(options.headers); headers.set('Content-Type', 'application/json'); headers.set('Accept', 'text/event-stream');
+    const headers = new Headers(options.headers); headers.set('Accept', 'text/event-stream');
+    const payload = JSON.stringify(createChatRequest(request.message, request.session_history, {
+      exercise_state: request.exercise_state,
+      client_event: request.client_event,
+      policy_event: request.policy_event,
+      crisis_path: request.crisis_path,
+    }, { voice: !!request.audio }));
+    // A voice turn is multipart: the JSON payload plus the recorded clip. The browser sets the boundary header.
+    let body: BodyInit = payload;
+    if (request.audio) {
+      const form = new FormData();
+      form.append('payload', payload);
+      form.append('audio', request.audio, audioFileName(request.audio.type));
+      body = form;
+      headers.delete('Content-Type');
+    } else headers.set('Content-Type', 'application/json');
     // Authentication is scoped to the configured API origin; the helper only
     // reuses it after validating a same-origin, same-path Modal result URL.
-    const response = await fetchWithModalResultRedirects(url, { method: 'POST', headers, signal: abort.signal,
-      body: JSON.stringify(createChatRequest(request.message, request.session_history, {
-        exercise_state: request.exercise_state,
-        client_event: request.client_event,
-        policy_event: request.policy_event,
-        crisis_path: request.crisis_path,
-      })) }, options.fetchImpl ?? fetch);
+    const response = await fetchWithModalResultRedirects(url, { method: 'POST', headers, signal: abort.signal, body }, options.fetchImpl ?? fetch);
     abort.signal.throwIfAborted();
     if (response.status >= 300 && response.status < 400) throw new ChatError('redirect', 'The chat service returned an unsupported redirect.', response.status);
     if (!response.ok) {

@@ -9,6 +9,8 @@ export interface ChatRequest {
   client_event?: ExerciseClientEvent;
   policy_event?: 'crisis_resolved';
   crisis_path?: CrisisPath;
+  /** A recorded voice clip sent instead of `message` (the server transcribes it). Never serialized into the JSON payload. */
+  audio?: Blob;
 }
 export interface CompanionState { emotion: KoiEmotion; intensity: number; }
 export type RiskCategory = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
@@ -65,8 +67,10 @@ export function createChatRequest(
   message: string,
   history: ReadonlyArray<{ role: string; content: string }>,
   additions: Pick<ChatRequest, 'exercise_state' | 'client_event' | 'policy_event' | 'crisis_path'> = {},
+  { voice = false }: { voice?: boolean } = {},
 ): ChatRequest {
-  if (!message.trim()) throw new ChatError('invalid-response', 'Enter a message first.');
+  // The server accepts text or audio, never both: a voice turn carries an empty message.
+  if (voice ? message.trim() : !message.trim()) throw new ChatError('invalid-response', voice ? 'Send either text or a voice message.' : 'Enter a message first.');
   if (additions.exercise_state !== undefined && additions.exercise_state !== null
     && (typeof additions.exercise_state !== 'string' || additions.exercise_state.length === 0)) {
     throw new ChatError('invalid-response', 'The exercise state is invalid.');

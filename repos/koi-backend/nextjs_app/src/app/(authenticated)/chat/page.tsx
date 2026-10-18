@@ -7,6 +7,9 @@ import MessageList from '@/components/chat/MessageList';
 import InputBar from '@/components/chat/InputBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAvatarPreference } from '@/hooks/useAvatarPreference';
+import { modeUsesCamera, modeUsesMic, useInputMode } from '@/contexts/InputModeContext';
+import MicButton from '@/components/voice/MicButton';
+import CameraPip from '@/components/camera/CameraPip';
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
@@ -45,8 +48,14 @@ function OfflineBanner() {
 }
 
 export default function ChatPage() {
-  const { messages, isTyping, send, error, blocked } = useChat();
+  const { messages, isTyping, send, sendVoice, error, blocked, serverEvents = [] } = useChat();
   const { user, loading: authLoading } = useAuth();
+  const { mode } = useInputMode();
+  const micOn = modeUsesMic(mode), cameraMode = modeUsesCamera(mode);
+  const [cameraVisible, setCameraVisible] = useState(true);
+  useEffect(() => { setCameraVisible(true); }, [mode]);
+  const crisis = serverEvents.some(({ event }) => event.event === 'handoff'
+    || (event.event === 'risk' && event.data.status === 'ok' && (event.data.risk_category === 'HIGH' || event.data.risk_category === 'CRITICAL')));
   const avatarPreference = useAvatarPreference(user?.uid, authLoading);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const hasMessages = messages.length > 0;
@@ -71,10 +80,18 @@ export default function ChatPage() {
         style={{ flex: 1 }}
       >
         <OfflineBanner />
-        <Link href="/companion-scene" style={{ padding: '8px 16px' }}>Open avatar conversation</Link>
+        <div style={{ display: 'flex', flexShrink: 0, padding: '14px 16px 6px' }}>
+          <Link href="/companion-scene" className="neo-btn-secondary" style={{ fontSize: '0.875rem', padding: '0.55rem 1.2rem' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+            </svg>
+            Open avatar conversation
+          </Link>
+        </div>
         {error && <p role="alert" style={{ padding: '0 16px' }}>{error}</p>}
         <MessageList messages={messages} isTyping={isTyping} />
-        <InputBar onSend={send} disabled={isTyping || blocked} inputRef={inputRef} />
+        <InputBar onSend={send} disabled={isTyping || blocked} inputRef={inputRef}
+          extra={micOn ? <MicButton key={user?.uid} variant="inline" disabled={isTyping || blocked} onRecorded={(audio) => { void sendVoice(audio); }} /> : undefined} />
       </div>
 
       {/* ── Avatar panel (right on desktop, top on mobile) ── */}
@@ -93,6 +110,11 @@ export default function ChatPage() {
           }}
         >
           <div className="avatarCard">
+            {cameraMode && cameraVisible && (
+              <div className="cameraPip">
+                <CameraPip enabled ownerUid={user?.uid ?? null} suspended={crisis} onClose={() => setCameraVisible(false)} />
+              </div>
+            )}
             {/* Thinking bubbles - show when typing */}
             {isTyping && (
               <>
@@ -291,6 +313,7 @@ export default function ChatPage() {
           font-weight: 600;
         }
         .avatarFallback a { color: #000; text-decoration: underline; }
+        .cameraPip { position: absolute; z-index: 2; top: 8px; left: 8px; width: 42%; min-width: 96px; }
         .avatarCta { display: none !important; }
         @media (min-width: 640px) {
           .chatLayout { flex-direction: row; }

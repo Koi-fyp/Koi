@@ -3,6 +3,8 @@ import type { ConversationState } from '../../components/avatar/VRMAvatarControl
 export interface SessionMessage {
   id: string; conversationId: string; sender: 'user' | 'ai'; content: string; timestamp: Date;
   status: 'completed' | 'pending' | 'failed' | 'cancelled'; companion_state?: CompanionState;
+  /** 'voice': sent as a recording; `content` is empty until the server's transcript arrives. */
+  input?: 'voice';
 }
 export interface SessionSnapshot {
   messages: SessionMessage[]; pending: boolean; error: string | null; companion: CompanionState;
@@ -83,22 +85,25 @@ export class ConversationSession {
     }
     return this.send(messages[event], event);
   }
-  async send(text: string, explicitClientEvent?: ExerciseClientEvent): Promise<void> {
-    if (this.disposed || !this.active || !this.ready || !text.trim()) return;
+  send(text: string, explicitClientEvent?: ExerciseClientEvent): Promise<void> { return this.sendTurn(text, explicitClientEvent); }
+  /** Sends a recorded clip; the server transcribes it and the transcript becomes the user message. */
+  sendVoice(audio: Blob): Promise<void> { return audio.size ? this.sendTurn('', undefined, audio) : Promise.resolve(); }
+  private async sendTurn(text: string, explicitClientEvent?: ExerciseClientEvent, audio?: Blob): Promise<void> {
+    if (this.disposed || !this.active || !this.ready || (!audio && !text.trim())) return;
     this.cancel();
     const clientEvent = explicitClientEvent ?? this.snapshot.clientEventPending ?? undefined;
     const policyPath = this.snapshot.policyPathPending ?? undefined;
-    const request = createChatRequest(text, this.snapshot.messages.filter((message) => message.status === 'completed').slice(-5)
+    const request = { ...createChatRequest(text, this.snapshot.messages.filter((message) => message.status === 'completed').slice(-5)
       .map((message) => ({ role: message.sender === 'user' ? 'user' : 'assistant', content: message.content })), {
         exercise_state: this.snapshot.exerciseState,
         ...(clientEvent ? { client_event: clientEvent } : {}),
         ...(policyPath ? { policy_event: 'crisis_resolved' as const, crisis_path: policyPath } : {}),
-      });
+      }, { voice: !!audio }), ...(audio ? { audio } : {}) };
     this.patch({ clientEventPending: null, policyPathPending: null, serverEvents: [] });
     this.seenUiActionKeys.clear(); this.seenHandoffKeys.clear();
     const version = ++this.version; const abort = new AbortController(); this.abort = abort;
     const userMessageId = crypto.randomUUID(), assistantMessageId = crypto.randomUUID();
-    const user: SessionMessage = { id: userMessageId, conversationId: this.conversationId, sender: 'user', content: request.message, timestamp: new Date(), status: 'pending' };
+    const user: SessionMessage = { id: userMessageId, conversationId: this.conversationId, sender: 'user', content: request.message, timestamp: new Date(), status: 'pending', ...(audio ? { input: 'voice' as const } : {}) };
     const assistant: SessionMessage = { id: assistantMessageId, conversationId: this.conversationId, sender: 'ai', content: '', timestamp: new Date(), status: 'pending' };
     this.patch({ messages: [...this.snapshot.messages, user, assistant], pending: true, error: null, subtitle: 'Connecting to KOI…', conversationState: 'thinking' });
     try {
@@ -107,6 +112,9 @@ export class ConversationSession {
         onEvent: (event) => {
           if (abort.signal.aborted || version !== this.version || !this.active || this.disposed) return;
           const dispatch = (next: ChatServerEvent) => {
+            if (next.event === 'transcript' && audio) this.patch({
+              messages: this.snapshot.messages.map((message) => message.id === userMessageId ? { ...message, content: next.data.text } : message),
+            });
             if (next.event === 'state') this.patch({ exerciseState: next.data.exercise_state });
             if (next.event === 'ui_action') {
               const key = JSON.stringify([next.data.name, next.data.args]);

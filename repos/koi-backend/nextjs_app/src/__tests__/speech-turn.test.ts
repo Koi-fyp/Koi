@@ -1,4 +1,4 @@
-import { SpeechReplyController, type ReplyStatus, type ReplyTurn } from '@/lib/speech/speechReplyController';
+import { SpeechReplyController, packChunks, type ReplyStatus, type ReplyTurn, type SpeechReplyOptions } from '@/lib/speech/speechReplyController';
 import type { SpeakResult, SpeechApiRequest } from '@/lib/speech/speechClient';
 import { SpeechClientError } from '@/lib/speech/speechClient';
 import type { TurnPlayback } from '@/lib/speech/SpeechTurnController';
@@ -47,10 +47,11 @@ function fakeClient() {
 }
 const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
 let ids = 0;
-function setup(playback: TurnPlayback = fakePlayback() as unknown as TurnPlayback) {
+// Most tests pin one sentence per request and one request in flight; the defaults are covered in 'prefetch and packing'.
+function setup(playback: TurnPlayback = fakePlayback() as unknown as TurnPlayback, options: Partial<SpeechReplyOptions> = { prefetch: 1, chunkPackChars: 0 }) {
   const client = fakeClient(), statuses: ReplyStatus[] = [], mouth = { setSource: jest.fn() };
   const controller = new SpeechReplyController({ client, playback, mouth, onStatus: status => statuses.push(status),
-    newRequestId: () => `123e4567-e89b-42d3-a456-${String(++ids).padStart(12, '0')}` });
+    newRequestId: () => `123e4567-e89b-42d3-a456-${String(++ids).padStart(12, '0')}`, ...options });
   return { client, playback: playback as unknown as ReturnType<typeof fakePlayback>, controller, statuses, mouth };
 }
 const turn = (overrides: Partial<ReplyTurn> = {}): ReplyTurn => ({ text: REPLY, companion: 'aisha', ownerUid: 'user-1', generationId: 'gen-1', languageHint: 'en', ...overrides });
@@ -97,6 +98,51 @@ describe('SpeechReplyController ordering', () => {
     expect(await done).toBe('completed');
     expect(client.calls).toHaveLength(1);
     expect(statuses).toContainEqual(expect.objectContaining({ state: 'skipped', chunk: 1, reason: 'unspeakable' }));
+  });
+});
+
+describe('SpeechReplyController prefetch and packing (defaults)', () => {
+  const S4 = 'There is no rush at all here.', S5 = 'I am listening whenever you are ready.';
+  it('keeps the first sentence alone and packs later same-script sentences up to the limit', () => {
+    expect(packChunks([S1, S2, S3, S4], 220)).toEqual([S1, `${S2} ${S3} ${S4}`]);
+    expect(packChunks([S1, S2, S3], 60)).toEqual([S1, S2, S3]);
+    expect(packChunks([S1, S2, URDU, S3], 220)).toEqual([S1, S2, URDU, S3]);
+    expect(packChunks([S1, S2, S3], 0)).toEqual([S1, S2, S3]);
+  });
+  it('requests up to two chunks ahead while playing strictly in order', async () => {
+    const { client, playback, controller } = setup(undefined, { chunkPackChars: 0 });
+    const done = controller.speakReply(turn({ text: `${S1} ${S2} ${S3} ${S4} ${S5}` }));
+    await flush();
+    expect(client.calls.map(call => call.request.text)).toEqual([S1, S2]);
+    client.calls[1].resolve(speech('c2')); await flush();
+    expect(playback.loaded).toEqual([]);
+    client.calls[0].resolve(speech('c1')); await flush();
+    expect(playback.loaded).toEqual(['c1']);
+    expect(client.calls.map(call => call.request.text)).toEqual([S1, S2, S3]);
+    playback.end(); await flush();
+    expect(playback.loaded).toEqual(['c1', 'c2']);
+    expect(client.calls.map(call => call.request.text)).toEqual([S1, S2, S3, S4]);
+    // Fetched-but-unplayed chunks still count toward the two-ahead limit, bounding buffered audio.
+    client.calls[2].resolve(speech('c3')); client.calls[3].resolve(speech('c4')); await flush();
+    expect(client.calls).toHaveLength(4);
+    playback.end(); await flush();
+    expect(playback.loaded).toEqual(['c1', 'c2', 'c3']);
+    expect(client.calls).toHaveLength(5);
+    playback.end(); await flush();
+    client.calls[4].resolve(speech('c5')); await flush(); playback.end(); await flush(); playback.end(); await flush();
+    expect(await done).toBe('completed');
+    expect(playback.loaded).toEqual(['c1', 'c2', 'c3', 'c4', 'c5']);
+    expect(client.maxInFlight).toBe(2);
+  });
+  it('sends the first sentence alone, then the packed rest, by default', async () => {
+    const { client, playback, controller } = setup(undefined, {});
+    const done = controller.speakReply(turn());
+    await flush();
+    expect(client.calls.map(call => call.request.text)).toEqual([S1, `${S2} ${S3}`]);
+    client.calls[0].resolve(speech('c1')); client.calls[1].resolve(speech('c2')); await flush();
+    playback.end(); await flush(); playback.end(); await flush();
+    expect(await done).toBe('completed');
+    expect(playback.loaded).toEqual(['c1', 'c2']);
   });
 });
 
