@@ -84,7 +84,7 @@ export default function WellnessReportPage() {
           {ready?.locked ? <p>Saved check-in ratings are locked on this device and are not included.</p>
             : !report.ratings ? <p>No data yet.</p> : <>
               <p>{report.checkIns.length} saved check-in{report.checkIns.length === 1 ? '' : 's'} (self-reported, 1 to 5).</p>
-              <table className="w-full text-sm my-2" aria-label="Check-in summary"><thead><tr><th>Rating</th><th>Lowest</th><th>Average</th><th>Highest</th></tr></thead><tbody>
+              <table className="w-full text-sm my-2" aria-label="Check-in summary"><thead className="text-left"><tr><th>Rating</th><th>Lowest</th><th>Average</th><th>Highest</th></tr></thead><tbody>
                 {(['mood', 'connection', 'energy'] as const).map(key => <tr key={key}><td>{key[0].toUpperCase() + key.slice(1)}</td><td>{report.ratings![key].min}</td><td>{report.ratings![key].average}</td><td>{report.ratings![key].max}</td></tr>)}
               </tbody></table>
               <CheckInChart entries={report.checkIns} from={Date.parse(`${report.from}T00:00:00+05:00`)} to={Date.parse(`${report.to}T23:59:59+05:00`)} title="Check-in ratings in this period" />

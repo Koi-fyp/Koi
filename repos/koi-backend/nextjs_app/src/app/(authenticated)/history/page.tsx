@@ -68,7 +68,9 @@ export default function HistoryPage() {
           retainedRecords: c.messageCount ?? 0, messages: c.messages });
         const known = new Set(listed.map(c => c.id));
         for (const c of retained.conversations) if (!known.has(c.id)) listed.push({ ...c, source: 'retained', locked: !c.messages.length });
-        setView({ owner, status: 'ready', data: { ...retained, truncated: retained.truncated || archive.truncated,
+        // Rows of the active or archived conversations are listed from their headers, not counted as unreadable.
+        const listedUnreadable = retained.conversations.filter(c => known.has(c.id)).reduce((sum, c) => sum + c.retainedRecords - c.messages.length, 0);
+        setView({ owner, status: 'ready', data: { ...retained, unreadable: Math.max(0, retained.unreadable - listedUnreadable), truncated: retained.truncated || archive.truncated,
           conversations: [listed[0], ...listed.slice(1).sort((a, b) => +b.lastActivityAt - +a.lastActivityAt)] } });
       } catch (error) { if (isCurrent()) setView({ owner, status: error instanceof HistoryReadError ? 'locked' : 'error' }); }
     })();

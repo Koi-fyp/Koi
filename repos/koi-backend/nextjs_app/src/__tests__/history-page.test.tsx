@@ -85,3 +85,12 @@ it('distinguishes storage error from empty data and offers explicit retry', asyn
   render(<History />);await screen.findByRole('alert');expect(screen.queryByText('Empty conversation')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'Retry history'}));await screen.findByText('Empty conversation');
 });
+it('does not report rows of listed archived conversations as unreadable', async () => {
+  mockRead.mockResolvedValue({ truncated: false, unreadable: 2, conversations: [
+    { id: 'archived-a', title: '', createdAt: null, earliestRetainedAt: new Date(), lastActivityAt: new Date(), active: false, retainedRecords: 2, messages: [] }] });
+  render(<History />); await screen.findByText('Synthetic archived title');
+  expect(screen.queryByText(/could not be unlocked or validated/)).not.toBeInTheDocument();
+  mockRead.mockResolvedValue({ ...retained, unreadable: 1 });
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh saved history' }));
+  expect(await screen.findByText(/could not be unlocked or validated/)).toBeInTheDocument();
+});

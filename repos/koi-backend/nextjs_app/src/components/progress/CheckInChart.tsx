@@ -69,7 +69,7 @@ export default function CheckInChart({ entries, from, to, title = 'Check-in rati
     </div>
     <p className="text-sm">Self-reported ratings, 1 (low) to 5 (high). Latest saved values are labelled; the table lists every value.</p>
     <details className="mt-2"><summary className="cursor-pointer text-sm">Table view</summary>
-      <div className="overflow-x-auto"><table className="w-full text-sm" aria-label="Saved check-in ratings"><thead><tr><th>Saved time</th><th>Mood</th><th>Connection</th><th>Energy</th></tr></thead>
+      <div className="overflow-x-auto"><table className="w-full text-sm" aria-label="Saved check-in ratings"><thead className="text-left"><tr><th>Saved time</th><th>Mood</th><th>Connection</th><th>Energy</th></tr></thead>
         <tbody>{entries.map(entry => <tr key={entry.id}><td>{formatTime(entry.completedAt)}</td><td>{entry.mood}</td><td>{entry.connection}</td><td>{entry.energy}</td></tr>)}</tbody></table></div>
     </details>
   </figure>;
