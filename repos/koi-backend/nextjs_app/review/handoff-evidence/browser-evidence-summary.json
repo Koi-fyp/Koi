@@ -1,0 +1,218 @@
+[
+  {
+    "source": "artifacts/increment04-followup/browser-result.json",
+    "source_sha256": "8d85b97920240937ffe5a5142be206f5752e25914532fb22af6dffab1b655059",
+    "evidence_class": "genuine Firebase anonymous/local encrypted activity browser",
+    "checks": [
+      {
+        "name": "Authenticated initialization creates zero activity/reward rows",
+        "result": "PASS"
+      },
+      {
+        "name": "Real consented encrypted check-in atomically earns exactly one piece despite double click",
+        "result": "PASS"
+      },
+      {
+        "name": "Keyboard-accessible piece details show persisted check-in provenance",
+        "result": "PASS"
+      },
+      {
+        "name": "Encrypted saved rating history, chart and earned piece survive refresh",
+        "result": "PASS"
+      },
+      {
+        "name": "Second genuinely saved daily check-in records an event without another piece",
+        "result": "PASS"
+      },
+      {
+        "name": "Two real browser tabs racing the same completion produce one event and no duplicate slot",
+        "result": "PASS"
+      },
+      {
+        "name": "Missing existing key blocks safely without generating a replacement",
+        "result": "PASS"
+      },
+      {
+        "name": "Final save timestamps and day keys use current actual Karachi save day",
+        "result": "PASS"
+      },
+      {
+        "name": "Final mobile form and board remain within viewport",
+        "result": "PASS"
+      },
+      {
+        "name": "Frontend-only smoke made no Modal requests",
+        "result": "PASS"
+      },
+      {
+        "name": "Milestone timeline has five locked real thresholds and no fabricated achievements",
+        "result": "PASS"
+      },
+      {
+        "name": "Milestone timeline keyboard opens honest locked receipt detail",
+        "result": "PASS"
+      },
+      {
+        "name": "Explicitly labelled sample chart bars have nonzero height",
+        "result": "PASS"
+      },
+      {
+        "name": "A separate genuine Firebase anonymous UID sees zero foreign activities or rewards",
+        "result": "PASS"
+      }
+    ],
+    "pass": 14,
+    "fail": 0,
+    "exception_count": 0,
+    "firebase_http_statuses": [
+      200
+    ],
+    "modal_http_statuses": [],
+    "page_error_count": 0,
+    "note": "Historical artifact inspected, not rerun in final handoff; no raw identity, messages, ciphertext, headers or keys copied"
+  },
+  {
+    "source": "artifacts/preference-sync-live-final/browser-result.json",
+    "source_sha256": "bfd91ba62a715f299e8b001292026c93df1333c7f0c16e501126e62b92c38401",
+    "evidence_class": "genuine Firebase and Firestore preference browser",
+    "checks": [
+      {
+        "name": "Anonymous Firebase owner server read and onboarding write",
+        "result": "PASS"
+      },
+      {
+        "name": "Settings language saved to owner server document",
+        "result": "PASS"
+      },
+      {
+        "name": "Settings Raza owner merge preserves unrelated fields",
+        "result": "PASS"
+      },
+      {
+        "name": "Inline companion switch reaches Firestore",
+        "result": "PASS"
+      },
+      {
+        "name": "Refresh preserves selection and account language",
+        "result": "PASS"
+      },
+      {
+        "name": "Scene inline switch syncs and preserves conversation identity",
+        "result": "PASS"
+      },
+      {
+        "name": "Offline local save remains usable",
+        "result": "PASS"
+      },
+      {
+        "name": "Reconnect flushes pending local language",
+        "result": "PASS"
+      },
+      {
+        "name": "Server preferences hydrate absent local profile",
+        "result": "PASS"
+      },
+      {
+        "name": "Account switch isolates account preferences and denies foreign owner reads",
+        "result": "PASS"
+      }
+    ],
+    "pass": 10,
+    "fail": 0,
+    "exception_count": 0,
+    "firebase_http_statuses": [
+      200
+    ],
+    "modal_http_statuses": [],
+    "page_error_count": 0,
+    "note": "Historical artifact inspected, not rerun in final handoff; no raw identity, messages, ciphertext, headers or keys copied"
+  },
+  {
+    "source": "artifacts/history-export/browser-result.json",
+    "source_sha256": "a96ecd90825a1a8c44de1209e1e89daae28881dbb7ecfbf73d94b87d2c54428f",
+    "evidence_class": "browser data-export path; synthetic adapter content, not hosted inference",
+    "checks": [
+      {
+        "name": "History current navigation available",
+        "result": "PASS"
+      },
+      {
+        "name": "Wellness honest empty state",
+        "result": "PASS"
+      },
+      {
+        "name": "Unsupported claims absent",
+        "result": "PASS"
+      },
+      {
+        "name": "Export requires consent",
+        "result": "PASS"
+      },
+      {
+        "name": "Real downloadable JSON with nonrestorable flags",
+        "result": "PASS"
+      },
+      {
+        "name": "Downloaded ciphertext equals stored owner snapshot",
+        "result": "PASS"
+      },
+      {
+        "name": "No plaintext fixture or key fields in file",
+        "result": "PASS"
+      },
+      {
+        "name": "Export mobile fits",
+        "result": "PASS"
+      },
+      {
+        "name": "Synthetic current session survives export and refresh",
+        "result": "PASS"
+      },
+      {
+        "name": "New owner cannot see previous prepared export",
+        "result": "PASS"
+      }
+    ],
+    "pass": 10,
+    "fail": 0,
+    "exception_count": 0,
+    "firebase_http_statuses": [
+      200
+    ],
+    "modal_http_statuses": [],
+    "page_error_count": 0,
+    "note": "Historical artifact inspected, not rerun in final handoff; no raw identity, messages, ciphertext, headers or keys copied"
+  },
+  {
+    "source": "artifacts/increment04-breathing-fixture/browser-result.json",
+    "source_sha256": "8d8bf43a0686cad50858700883a91b4f4b1e192d269237d85642477afaa296f0",
+    "evidence_class": "LOCAL FIXTURE ONLY, real browser elapsed time, no hosted exercise",
+    "checks": [
+      {
+        "name": "FIXTURE ONLY: real 60-second callback creates one client-measured activity and reward",
+        "result": "PASS"
+      },
+      {
+        "name": "FIXTURE ONLY: client-measured breathing receipt and piece survive refresh",
+        "result": "PASS"
+      },
+      {
+        "name": "FIXTURE ONLY: user-stop interruption creates no new event or piece",
+        "result": "PASS"
+      },
+      {
+        "name": "Fixture did not send a Modal request",
+        "result": "PASS"
+      }
+    ],
+    "pass": 4,
+    "fail": 0,
+    "exception_count": 0,
+    "firebase_http_statuses": [
+      200
+    ],
+    "modal_http_statuses": [],
+    "page_error_count": 0,
+    "note": "Historical artifact inspected, not rerun in final handoff; no raw identity, messages, ciphertext, headers or keys copied"
+  }
+]

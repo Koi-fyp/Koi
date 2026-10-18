@@ -21,6 +21,14 @@ export function useUserPreferences(uid: string | undefined, authLoading = false)
     window.addEventListener('focus', retry); // Refresh after another tab's preference write.
     return () => { window.removeEventListener(PREFERENCES_CHANGED, changed); window.removeEventListener('focus', retry); };
   }, [uid, retry]);
+  useEffect(() => {
+    if (!uid || authLoading) return;
+    const synchronize = () => { void import('@/lib/preferences/preferenceSync').then(module => module.syncAccountPreferences(uid)).catch(() => {}); };
+    synchronize();
+    window.addEventListener('focus', synchronize);
+    window.addEventListener('online', synchronize);
+    return () => { window.removeEventListener('focus', synchronize); window.removeEventListener('online', synchronize); };
+  }, [uid, authLoading]);
   const current: State = authLoading || (state.status !== 'loading' && state.uid !== (uid ?? null)) ? { status: 'loading' } : state;
   return { state: current, retry };
 }

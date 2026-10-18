@@ -17,6 +17,8 @@ import CameraPip from '@/components/camera/CameraPip';
 import CallIcon from '@/components/companion/CallIcon';
 import styles from '@/components/companion/CompanionScene.module.css';
 import type { ChatServerEvent } from '@/lib/conversation/chatContract';
+import BreathingActivityBridge from '@/components/progress/BreathingActivityBridge';
+import ConversationProductControls from '@/components/chat/ConversationProductControls';
 /** A crisis handoff or a high-risk result pauses the camera until the turn is resolved. */
 const crisisActive = (events: ReadonlyArray<{ event: ChatServerEvent }>) => events.some(({ event }) => event.event === 'handoff'
   || (event.event === 'risk' && event.data.status === 'ok' && (event.data.risk_category === 'HIGH' || event.data.risk_category === 'CRITICAL')));
@@ -51,7 +53,7 @@ export default function AuthenticatedCompanionChat() {
         : !avatarEnabled ? 'Text-only mode: the avatar is unavailable.'
           : cameraMode ? 'Your camera view stays on this device: KOI does not record, send or analyse it.' : '';
   const inputHint = micOn ? 'Tap the mic to talk, or type. Your recording is sent to KOI for transcription and is not stored.' : 'Typing mode. Choose Audio in Mode to talk with your microphone.';
-  return <CompanionScene companionName={companionName} modelUrl={avatarReady ? selected?.modelUrl ?? undefined : undefined}
+  return <BreathingActivityBridge><CompanionScene companionName={companionName} modelUrl={avatarReady ? selected?.modelUrl ?? undefined : undefined}
     backLabel="Back to chat" avatarEnabled={avatarReady && avatarEnabled} onAvatarFailure={() => setAvatarEnabled(false)} viewportOffset={66}
     emotion={chat.currentEmotion} emotionIntensity={chat.currentIntensity} conversationState={chat.conversationState}
     consumeUiEvent={chat.session.consumeUiEvent} isHandoffResolved={chat.session.isHandoffResolved}
@@ -63,14 +65,14 @@ export default function AuthenticatedCompanionChat() {
     speechSource={voice.speechSource}
     voiceControl={<VoiceToggle checked={voiceStored} onChange={setVoiceStored} configured={!!speechBase} companionHasVoice={hasVoice(speechCompanion)} signedIn={!!user} line={voice.line} />}
     subtitle={chat.subtitle || 'Start a text conversation with KOI.'} subtitleUpdating={chat.pending} onBack={leave} onEnd={end}
-    notice={noticeText || (avatarReady && !avatarEnabled) || avatarUnavailable || legacyFox ? <>{noticeText}
+    notice={<><ConversationProductControls preferenceState={avatarPreference} pending={chat.pending} />{noticeText}
       {avatarReady && !avatarEnabled && <> <button type="button" onClick={() => setAvatarEnabled(true)} style={{ minHeight: 44, padding: '8px 16px' }}>Retry avatar</button></>}
-      {(avatarUnavailable || legacyFox) && <> <Link href="/onboarding">Review companion selection</Link></>}</> : undefined}
+      {(avatarUnavailable || legacyFox) && <> <Link href="/onboarding">Review companion selection</Link></>}</>}
     micControl={micOn ? <MicButton key={user?.uid} className={styles.callButton} disabled={chat.pending || chat.blocked}
       onRecorded={(audio) => { voice.stop(); void chat.sendVoice(audio); }} /> : undefined}
     cameraControl={cameraMode ? <><button type="button" className={`${styles.callButton} ${cameraVisible ? styles.active : ''}`} aria-pressed={cameraVisible}
       aria-label={cameraVisible ? 'Turn camera off' : 'Turn camera on'} onClick={() => setCameraVisible((visible) => !visible)}><CallIcon name="camera" /></button>
       <span>{cameraVisible ? 'Camera on' : 'Camera off'}</span></> : undefined}
     cameraOverlay={cameraMode && cameraVisible ? <CameraPip enabled ownerUid={user?.uid ?? null} suspended={crisisActive(chat.serverEvents)} onClose={() => setCameraVisible(false)} /> : undefined}
-    composer={<ChatComposer onSend={(text) => { voice.stop(); return chat.send(text); }} audioPlaying={voice.audioPlaying} onCancel={chat.cancel} pending={chat.pending} error={chat.error} disabled={chat.blocked} onFocusChange={(focused) => chat.session.inputFocused(focused)} idleHint={inputHint} />} />;
+    composer={<ChatComposer onSend={(text) => { voice.stop(); return chat.send(text); }} audioPlaying={voice.audioPlaying} onCancel={chat.cancel} pending={chat.pending} error={chat.error} disabled={chat.blocked} onFocusChange={(focused) => chat.session.inputFocused(focused)} idleHint={inputHint} />} /></BreathingActivityBridge>;
 }

@@ -1,0 +1,66 @@
+{
+  "scope": "all tracked text files and proposed untracked files; .env.local never read; no matched values recorded",
+  "scanned_text_files": 408,
+  "proposed_initial_findings": [],
+  "inherited_baseline_findings": [
+    {
+      "path": "repos/koi-ai-engine/.env.template",
+      "line": 12,
+      "category": "private-key-material",
+      "scope": "inherited-tracked-baseline",
+      "test_or_documentation": true
+    },
+    {
+      "path": "repos/koi-ai-engine/.env.template",
+      "line": 12,
+      "category": "service-account-json",
+      "scope": "inherited-tracked-baseline",
+      "test_or_documentation": true
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/.env.local.test",
+      "line": 1,
+      "category": "private-key-material",
+      "scope": "inherited-tracked-baseline",
+      "test_or_documentation": false
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/.env.local.test",
+      "line": 1,
+      "category": "service-account-json",
+      "scope": "inherited-tracked-baseline",
+      "test_or_documentation": false
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/setup.env.ts",
+      "line": 11,
+      "category": "private-key-material",
+      "scope": "inherited-tracked-baseline",
+      "test_or_documentation": true
+    }
+  ],
+  "tracked_env_paths": [
+    "repos/.env.template",
+    "repos/koi-ai-engine/.env.template",
+    "repos/koi-backend/functions/.env.example",
+    "repos/koi-backend/nextjs_app/.env.local.test"
+  ],
+  "triage": [
+    {
+      "path": "repos/koi-ai-engine/.env.template",
+      "result": "explicit placeholder; nonparseable key marker"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/.env.local.test",
+      "result": "service-account-shaped configuration and private-key material; not parseable as PEM/DER in local non-disclosing scan; not proven synthetic or live; security owner review required before push"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/setup.env.ts",
+      "result": "test fixture key marker; nonparseable short body; inherited unchanged"
+    }
+  ],
+  "limitations": "Pattern scan is not a proof of no secrets. All .env paths excluded from proposed commit delta; baseline tracked files remain in branch/history. .env.local contents never read. No matched values are retained. Review needed before push; no automatic deletion/history rewrite/rotation.",
+  "proposed_current_file_count": 100,
+  "proposed_current_findings": [],
+  "proposed_scan_note": "All proposed existing content scanned before approval; manifest self-files list paths/hashes only and are checked after generation. No staging performed."
+}

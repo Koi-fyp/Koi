@@ -9,6 +9,7 @@ import { saveAvatarPreference, type CompanionId } from '@/lib/avatar/avatarPrefe
 import { saveUserPreferences, validTime, reminderStatus } from '@/lib/preferences/userPreferences';
 import SettingsRow from './components/SettingsRow';
 import AvatarPicker from './components/AvatarPicker';
+import AccountPreferenceStatus from '@/components/chat/AccountPreferenceStatus';
 import Toast from './components/Toast';
 
 const DIVIDER = <div style={{ height: '1px', background: '#f0f0f0' }} />;
@@ -93,6 +94,7 @@ export default function SettingsPage() {
           Settings
         </h1>
 
+        <AccountPreferenceStatus uid={user?.uid} />
         {/* Account */}
         <p style={{
           fontWeight: 800,

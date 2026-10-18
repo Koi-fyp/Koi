@@ -1,16 +1,19 @@
 'use client';
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProgress } from '@/hooks/useProgress';
 import NeoCard from '@/components/ui/NeoCard';
 import NeoButton from '@/components/ui/NeoButton';
+import ActivityAvailability from '@/components/progress/ActivityAvailability';
 
-const MILESTONES = [
-  { id: 1, title: 'First Conversation', desc: 'You opened up for the first time.', done: true, color: '#2DD36F', reward: '+5 pieces' },
-  { id: 2, title: '7-Day Streak', desc: 'A week of showing up for yourself.', done: true, color: '#2D63EB', reward: '+10 pieces' },
-  { id: 3, title: '50 Pieces', desc: 'Halfway to your first milestone.', done: false, color: '#FFD100', reward: '+15 pieces' },
-  { id: 4, title: 'Deep Diver', desc: 'Explored something truly personal.', done: false, color: '#845EC2', reward: '+20 pieces' },
-];
+function activateWithKeyboard(event: KeyboardEvent<HTMLElement>) {
+  if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+    event.preventDefault();
+    event.currentTarget.click();
+  }
+}
+
+
 
 const EMOTION_COLORS = {
   calm: '#A5D6A7',
@@ -155,7 +158,6 @@ const Icon = ({ type, color = '#000', size = 16 }: { type: string; color?: strin
 export default function ProgressPage() {
   const { user, loading } = useAuth();
   const { state: progress, retry } = useProgress(loading ? undefined : user?.uid);
-  const [selectedMilestone, setSelectedMilestone] = useState<number | null>(null);
   const [jigsawExpanded, setJigsawExpanded] = useState(false);
   const [hoveredStat, setHoveredStat] = useState<string | null>(null);
   const [hoveredPiece, setHoveredPiece] = useState<number | null>(null);
@@ -255,7 +257,7 @@ export default function ProgressPage() {
       </div>
 
       <NeoCard className="p-4 mb-5">
-        <p className="text-sm">{recorded ? 'Your recorded puzzle totals are shown below.' : 'No puzzle progress has been recorded on this device yet.'} New puzzle rewards are not available yet.</p>
+        <p className="text-sm">{recorded ? 'Your legacy recorded puzzle totals are shown below.' : 'No legacy puzzle totals are recorded on this device.'} Eligible saved check-ins can earn a piece in the recorded board below.</p>
         <details className="mt-3">
           <summary className="font-bold cursor-pointer">Recorded pieces by activity</summary>
           <dl className="mt-2">{([
@@ -268,7 +270,7 @@ export default function ProgressPage() {
       </NeoCard>
 
       {/* Recorded total; expanded puzzle illustration remains an explicitly labelled preview. */}
-      <div
+      <div role="button" tabIndex={0} aria-label="Puzzle preview" aria-expanded={jigsawExpanded} onKeyDown={activateWithKeyboard}
         style={{
           background: jigsawExpanded ? '#1a54b8' : '#2D63EB',
           border: '2.5px solid #000',
@@ -409,6 +411,7 @@ export default function ProgressPage() {
                   transform: 'rotate(180deg)',
                   cursor: 'pointer',
                 }}
+                role="button" tabIndex={0} aria-label="Close puzzle preview" onKeyDown={activateWithKeyboard}
                 onClick={(e) => {
                   e.stopPropagation();
                   setJigsawExpanded(false);
@@ -725,7 +728,9 @@ export default function ProgressPage() {
         ))}
       </div>
 
-      <p role="note" className="text-sm mb-5">The puzzle illustration, mood chart, milestone timeline and heatmap are previews. They do not represent your saved activities or mood.</p>
+      <ActivityAvailability legacyTotal={recorded?.jigsaw_pieces} />
+      <details className="mt-5"><summary className="font-bold cursor-pointer mb-5">Design previews (sample data, not your activity)</summary>
+      <p role="note" className="text-sm mb-5">The puzzle illustration, sample mood chart and sample heatmap are previews. They do not represent your saved activities or mood.</p>
 
       {/* Sample mood data is not read from sensitive check-in ratings. */}
       <div
@@ -746,7 +751,7 @@ export default function ProgressPage() {
         </div>
 
         {/* Simple bar chart */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: '120px', marginBottom: '0.75rem' }}>
+        <div role="img" aria-label="Sample mood chart (preview only)" style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: '120px', marginBottom: '0.75rem' }}>
           {moodData.map((data, i) => (
             <div
               key={i}
@@ -764,7 +769,7 @@ export default function ProgressPage() {
               <div
                 style={{
                   width: '100%',
-                  height: `${(data.mood / maxMood) * 100}%`,
+                  height: `${(data.mood / maxMood) * 96}px`,
                   background: `linear-gradient(180deg, ${data.color} 0%, ${data.color}aa 100%)`,
                   border: '2px solid #000',
                   borderRadius: '6px 6px 0 0',
@@ -812,136 +817,6 @@ export default function ProgressPage() {
         <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: '#666', textAlign: 'center', lineHeight: 1.5 }}>
           Sample mood values for the preview, not your mood history.
         </p>
-      </div>
-
-      {/* Enhanced Milestone timeline with rewards */}
-      <div
-        style={{
-          background: '#fff',
-          border: '2.5px solid #000',
-          borderRadius: '1.25rem',
-          boxShadow: '6px 6px 0 0 #000',
-          padding: '1.25rem',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.1rem' }}>
-          <h2
-            style={{
-              fontFamily: 'var(--font-body)',
-              fontWeight: 800,
-              fontSize: '1.1rem',
-              color: '#000',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Milestones (Preview)
-          </h2>
-          <div
-            style={{
-              background: '#FFD100',
-              border: '2px solid #000',
-              borderRadius: '12px',
-              padding: '0.25rem 0.625rem',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              boxShadow: '2px 2px 0 #000',
-            }}
-          >
-            Sample milestones
-          </div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-          {MILESTONES.map((m, i) => (
-            <div
-              key={m.id}
-              style={{
-                display: 'flex',
-                gap: '0.875rem',
-                alignItems: 'flex-start',
-                opacity: m.done ? 1 : 0.6,
-                cursor: 'pointer',
-                padding: '0.625rem',
-                margin: '-0.625rem',
-                borderRadius: '0.75rem',
-                transition: 'all 0.2s ease',
-                background: selectedMilestone === m.id ? 'rgba(0,0,0,0.04)' : 'transparent',
-                border: selectedMilestone === m.id ? '2px solid rgba(0,0,0,0.06)' : '2px solid transparent',
-              }}
-              onClick={() => setSelectedMilestone(selectedMilestone === m.id ? null : m.id)}
-              onMouseEnter={(e) => {
-                if (selectedMilestone !== m.id) {
-                  e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedMilestone !== m.id) {
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, paddingTop: '2px' }}>
-                <div
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '6px',
-                    background: m.done ? m.color : '#eee',
-                    border: '2px solid #000',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    transition: 'all 0.2s ease',
-                    transform: selectedMilestone === m.id ? 'scale(1.15)' : 'scale(1)',
-                    boxShadow: m.done ? '2px 2px 0 #000' : 'none',
-                  }}
-                >
-                  {m.done ? (
-                    <Icon type="check" color="#000" size={14} />
-                  ) : (
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#bbb' }} />
-                  )}
-                </div>
-                {i < MILESTONES.length - 1 && (
-                  <div
-                    style={{
-                      width: '2px',
-                      flex: '1 0 20px',
-                      background: m.done ? 'rgba(0,0,0,0.15)' : '#eee',
-                      marginTop: '4px',
-                    }}
-                  />
-                )}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '3px' }}>
-                  <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.875rem', color: '#000' }}>
-                    {m.title}
-                  </p>
-                  {m.done && (
-                    <span
-                      style={{
-                        background: m.color,
-                        border: '1.5px solid #000',
-                        borderRadius: '6px',
-                        padding: '0.125rem 0.375rem',
-                        fontSize: '0.625rem',
-                        fontWeight: 700,
-                        color: '#000',
-                      }}
-                    >
-                      {m.reward}
-                    </span>
-                  )}
-                </div>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.78rem', color: '#777', lineHeight: 1.5 }}>
-                  {m.desc}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Activity Heatmap */}
@@ -1231,6 +1106,7 @@ export default function ProgressPage() {
           </p>
         </div>
       </div>
+      </details>
     </div>
   );
 }

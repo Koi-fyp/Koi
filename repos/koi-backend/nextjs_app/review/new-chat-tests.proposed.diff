@@ -1,0 +1,119 @@
+diff --git a/repos/koi-backend/nextjs_app/src/__tests__/new-chat-proposed.test.ts b/repos/koi-backend/nextjs_app/src/__tests__/new-chat-proposed.test.ts
+new file mode 100644
+--- /dev/null
++++ b/repos/koi-backend/nextjs_app/src/__tests__/new-chat-proposed.test.ts
+@@ -0,0 +1,114 @@
++/** @jest-environment jsdom */
++// REVIEW ONLY. Apply/run only after joint approval of the accompanying source patch.
++// Crypto and inference below are fixtures, not live Firebase/Modal or AES-GCM evidence.
++import { webcrypto } from 'crypto';
++import Dexie from 'dexie';
++let mockUid = 'review-owner-a';
++const mockAuthListeners = new Set<(user: {uid: string} | null) => void>();
++jest.mock('dexie', () => jest.requireActual('../../node_modules/dexie/dist/dexie.js'));
++jest.mock('@/lib/firebase', () => ({ auth: { get currentUser() { return { uid: mockUid }; } } }));
++jest.mock('firebase/auth', () => ({ onAuthStateChanged: (_auth: unknown, fn: (user: {uid: string} | null) => void) => { mockAuthListeners.add(fn); return () => mockAuthListeners.delete(fn); } }));
++jest.mock('@/lib/crypto', () => ({
++  getActiveCryptoContext: jest.fn(async (uid: string) => ({ secret: uid, saltB64: 'review-fixture' })),
++  encrypt: async (text: string, secret: string) => 'fixture:' + btoa(secret + ':' + encodeURIComponent(text)),
++  decrypt: async (text: string, secret: string) => { const decoded = atob(text.slice(8)); if (!decoded.startsWith(secret + ':')) throw Error('locked'); return decodeURIComponent(decoded.slice(secret.length + 1)); },
++}));
++import { db } from '@/lib/db';
++import { getActiveCryptoContext } from '@/lib/crypto';
++import { PersistentConversation } from '@/lib/conversation/PersistentConversation';
++const response = { reply: 'Synthetic review reply', companion_state: { emotion: 'neutral' as const, intensity: 0 }, latency_ms: 1 };
++const adapter = { send: jest.fn(async () => response) };
++const managers: PersistentConversation[] = [];
++async function owner() { const m = new PersistentConversation(mockUid, adapter, { isLinked: false }); managers.push(m); await m.initialize(); if (!m.session) throw Error('not ready'); return m; }
++async function move(m: PersistentConversation, conversationId?: string, signal = new AbortController().signal) {
++  return m.transition({ ownerUid: m.uid, expectedConversationId: m.session!.conversationId, signal, ...(conversationId ? { kind: 'resume' as const, conversationId } : { kind: 'new' as const }) });
++}
++beforeAll(() => Object.defineProperty(globalThis, 'crypto', { value: webcrypto }));
++beforeEach(async () => { mockUid = 'review-owner-a'; mockAuthListeners.clear(); adapter.send.mockClear(); jest.mocked(getActiveCryptoContext).mockClear(); for (const table of db.tables) await table.clear(); });
++afterEach(() => { managers.splice(0).forEach(m => m.dispose()); jest.restoreAllMocks(); });
++it('retains A, creates independent B, resumes both and never writes reward/completion rows', async () => {
++  const m = await owner(), a = m.session!.conversationId;
++  await m.session!.send('Synthetic A'); await m.checkpoint();
++  const b = (await move(m)).conversationId;
++  expect(b).not.toBe(a); expect(m.session!.getSnapshot().messages).toEqual([]);
++  await m.session!.send('Synthetic B'); await m.checkpoint();
++  await move(m, a); expect(m.session!.getSnapshot().messages.map(x => x.content)).toEqual(['Synthetic A', response.reply]);
++  await move(m, b); expect(m.session!.getSnapshot().messages.map(x => x.content)).toEqual(['Synthetic B', response.reply]);
++  expect(await db.conversationArchives.where('uid').equals(mockUid).count()).toBe(2);
++  expect(await db.activityEvents.count()).toBe(0); expect(await db.rewardReceipts.count()).toBe(0);
++  expect(JSON.stringify(await db.conversationArchives.toArray())).not.toContain('Synthetic A');
++});
++it('refresh restores the selected ID and lists both even when B has no messages', async () => {
++  const m = await owner(), a = m.session!.conversationId; const b = (await move(m)).conversationId;
++  m.dispose(); const refreshed = await owner(); expect(refreshed.session!.conversationId).toBe(b);
++  expect((await refreshed.readSavedConversations(new AbortController().signal)).conversations.map(c => c.conversationId).sort()).toEqual([a,b].sort());
++  await move(refreshed,a); refreshed.dispose(); expect((await owner()).session!.conversationId).toBe(a);
++});
++it('refuses New Chat while SSE is pending without aborting it or issuing another request', async () => {
++  let finish!: () => void;
++  adapter.send.mockImplementationOnce(async () => { await new Promise<void>(resolve => { finish = resolve; }); return response; });
++  const m = await owner(), id = m.session!.conversationId, sending = m.session!.send('Synthetic pending');
++  while (!finish) await new Promise(resolve => setTimeout(resolve, 0));
++  await expect(move(m)).rejects.toThrow(); expect(m.session!.conversationId).toBe(id);
++  expect(m.session!.getSnapshot().pending).toBe(true); expect(adapter.send).toHaveBeenCalledTimes(1);
++  finish(); await sending; await move(m); expect(adapter.send).toHaveBeenCalledTimes(1);
++});
++it('double click creates one new session; aborted-before-start creates none', async () => {
++  const m = await owner(); const outcomes = await Promise.allSettled([move(m),move(m)]);
++  expect(outcomes.filter(r => r.status === 'fulfilled')).toHaveLength(1);
++  expect(await db.conversationArchives.count()).toBe(2);
++  const cancelled = new AbortController(); cancelled.abort(); await expect(move(m,undefined,cancelled.signal)).rejects.toThrow();
++  expect(await db.conversationArchives.count()).toBe(2);
++});
++it('failure at active-header replacement rolls back archive writes and retains A', async () => {
++  const m = await owner(), id = m.session!.conversationId;
++  const fail = (_mods: unknown, _key: unknown, old: {conversationId: string}) => { if (old.conversationId === id && m.getSnapshot().switching) throw Error('injected header failure'); };
++  // Arm after the mandatory old-session checkpoint: fail only the identity-changing put.
++  const hook = (mods: {conversationId?: string}, key: unknown, old: {conversationId: string}) => { if (mods.conversationId && mods.conversationId !== old.conversationId) fail(mods,key,old); };
++  db.conversations.hook('updating',hook);
++  try { await expect(move(m)).rejects.toThrow(); } finally { db.conversations.hook('updating').unsubscribe(hook); }
++  expect((await db.conversations.get(mockUid))!.conversationId).toBe(id);
++  expect(m.session!.conversationId).toBe(id); expect(await db.conversationArchives.count()).toBe(0);
++});
++it('corrupt or foreign target remains locked and never replaces current selection or creates a key', async () => {
++  const m = await owner(), a = m.session!.conversationId; await move(m); const b = m.session!.conversationId;
++  await db.conversationArchives.update([mockUid,a],{encryptedState:'corrupt'});
++  const before = jest.mocked(getActiveCryptoContext).mock.calls.length;
++  const list = await m.readSavedConversations(new AbortController().signal);
++  expect(list.conversations.find(c => c.conversationId === a)!.resumable).toBe(false);
++  await expect(move(m,a)).rejects.toThrow(); expect(m.session!.conversationId).toBe(b);
++  await expect(move(m,'foreign-session')).rejects.toThrow(); expect(jest.mocked(getActiveCryptoContext).mock.calls.length).toBe(before);
++});
++it('stale tabs including A->B->A cannot overwrite current history', async () => {
++  const first = await owner(), stale = await owner(), a = first.session!.conversationId;
++  await move(first); await move(first,a);
++  await expect(move(stale)).rejects.toThrow();
++  expect((await db.conversations.get(mockUid))!.conversationId).toBe(a);
++});
++it('failed and interrupted user turns remain attached to A, never resent by switching', async () => {
++  adapter.send.mockRejectedValueOnce(Error('synthetic failure'));
++  const m = await owner(), a = m.session!.conversationId;
++  await m.session!.send('Synthetic failed'); await m.checkpoint(); await move(m); await move(m,a);
++  expect(m.session!.getSnapshot().messages).toHaveLength(1);
++  expect(m.session!.getSnapshot().messages[0].status).toBe('failed'); expect(adapter.send).toHaveBeenCalledTimes(1);
++});
++it('account change before commit aborts and never creates rows for the new owner', async () => {
++  const m = await owner(), id = m.session!.conversationId;
++  const switching = move(m); mockUid='review-owner-b'; mockAuthListeners.forEach(fn=>fn({uid:mockUid}));
++  await expect(switching).rejects.toThrow();
++  expect(await db.conversations.get(mockUid)).toBeUndefined(); expect(await db.conversationArchives.where('uid').equals(mockUid).count()).toBe(0);
++  expect((await db.conversations.get('review-owner-a'))!.conversationId).toBe(id);
++});
++it('v3->v4 adds only empty archives and preserves every old store exactly',async()=>{
++  managers.splice(0).forEach(m=>m.dispose());db.close();await Dexie.delete('KoiDB');
++  const old=new Dexie('KoiDB');
++  old.version(1).stores({users:'++id, uid',messages:'id, conversationId, synced, timestamp',moodEntries:'id, userId, synced, timestamp',jigsawProgress:'uid',syncQueue:'++id, priority, createdAt'});
++  old.version(2).stores({conversations:'uid, conversationId, lastActiveAt'});
++  old.version(3).stores({activityEvents:'id, owner_uid, &[owner_uid+source_type+completion_id], [owner_uid+source_type+day_key], completed_at',rewardReceipts:'id, owner_uid, &[owner_uid+source_type+day_key], &[owner_uid+slot_index]',milestoneReceipts:'id, owner_uid, &[owner_uid+milestone]'});
++  await old.open();
++  const records:Record<string,object>={users:{id:1,uid:'synthetic'},messages:{id:'m',conversationId:'a',content:'existing-ciphertext'},conversations:{uid:'synthetic',conversationId:'a',encryptedState:'unchanged-ciphertext'},moodEntries:{id:'mood',userId:'synthetic'},jigsawProgress:{uid:'synthetic',jigsaw_pieces:14},syncQueue:{id:1,collection:'synthetic'},activityEvents:{id:'e',owner_uid:'synthetic'},rewardReceipts:{id:'r',owner_uid:'synthetic'},milestoneReceipts:{id:'z',owner_uid:'synthetic'}};
++  for(const [name,row] of Object.entries(records))await old.table(name).put(row);
++  const prior:Record<string,object[]>={};for(const name of Object.keys(records))prior[name]=await old.table(name).toArray();old.close();
++  await db.open();expect(db.verno).toBe(4);expect(await db.conversationArchives.count()).toBe(0);
++  for(const name of Object.keys(records))expect(await db.table(name).toArray()).toEqual(prior[name]);
++});

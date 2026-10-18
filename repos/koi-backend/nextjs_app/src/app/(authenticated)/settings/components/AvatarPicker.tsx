@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { useModalFocus } from '@/hooks/useModalFocus';
 import type { CompanionId } from '@/lib/avatar/avatarPreference';
 
 const companions = [
@@ -27,6 +28,7 @@ function CompanionCard({ companion, isSelected, onSelect }: CompanionCardProps) 
   return (
     <button
       type="button"
+      aria-pressed={isSelected}
       onClick={onSelect}
       className="group cursor-pointer flex flex-col text-left bg-white border-[3px] border-black rounded-[32px] overflow-hidden transition-all duration-300"
       style={{
@@ -75,6 +77,9 @@ export default function AvatarPicker({
   const [selected, setSelected] = useState(currentAvatar);
   const [name, setName] = useState(currentName);
   const [saving, setSaving] = useState(false);
+  const dialog = useRef<HTMLDivElement>(null);
+  const title = useId();
+  useModalFocus(isOpen, dialog, onClose);
 
   if (!isOpen) return null;
 
@@ -101,7 +106,7 @@ export default function AvatarPicker({
       }}
       onClick={onClose}
     >
-      <div
+      <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={title} tabIndex={-1}
         style={{
           background: '#fff',
           border: '3px solid #000',
@@ -119,10 +124,11 @@ export default function AvatarPicker({
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>
+            <h2 id={title} style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>
               Choose Your Companion
             </h2>
             <button
+              type="button" aria-label="Close companion picker"
               onClick={onClose}
               style={{
                 width: '36px',

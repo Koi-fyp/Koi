@@ -1,12 +1,14 @@
 'use client';
 
 import BackButton from '../components/BackButton';
+import BackupPreview from '@/components/data-portability/BackupPreview';
 
 export default function ImportPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F9F9F9 0%, #FAFAFA 100%)' }}>
       <div style={{ padding: '1.5rem', maxWidth: '480px', margin: '0 auto' }}>
         <BackButton />
+        <BackupPreview />
 
         {/* Coming Soon Hero */}
         <div
@@ -67,7 +69,7 @@ export default function ImportPage() {
               animation: 'fadeUp 0.6s ease 0.3s both',
             }}
           >
-            We're building a beautiful way to restore your conversations from PDF and JSON backups.
+            Only versioned KOI backup JSON is planned for restoration. The preview above does not restore records. PDF reports, ordinary JSON and other documents are not restorable backups.
           </p>
         </div>
 
@@ -76,29 +78,29 @@ export default function ImportPage() {
           {[
             {
               icon: '📄',
-              title: 'PDF Import',
-              desc: 'Upload exported PDFs and extract your conversations',
+              title: 'Unsupported files',
+              desc: 'PDF, text, CSV and document files cannot restore KOI conversations',
               color: '#E3F2FD',
               delay: '0.4s',
             },
             {
               icon: '📊',
-              title: 'JSON Import',
-              desc: 'Restore complete conversation data from JSON backups',
+              title: 'KOI JSON Preview',
+              desc: 'Validate draft backup structure; encrypted restoration is not enabled',
               color: '#F3E5F5',
               delay: '0.5s',
             },
             {
               icon: '🎯',
-              title: 'Smart Conflict Resolution',
-              desc: 'Intelligently merge imported data with existing conversations',
+              title: 'Duplicate and Conflict Preview',
+              desc: 'Compare existing IDs without merging, overwriting or saving records',
               color: '#FFF9C4',
               delay: '0.6s',
             },
             {
               icon: '✓',
-              title: 'Preview Before Import',
-              desc: 'Review and validate data before adding to your library',
+              title: 'Existing Key Required',
+              desc: 'Matching account metadata does not recover a lost encryption key',
               color: '#E8F5E9',
               delay: '0.7s',
             },
@@ -171,10 +173,10 @@ export default function ImportPage() {
         >
           <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔔</div>
           <h3 style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-            Get Notified
+            Restoration Not Available
           </h3>
           <p style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '1rem', lineHeight: 1.6 }}>
-            We'll let you know as soon as import functionality is ready. Stay tuned!
+            No notification subscription is registered here. Restoration stays disabled until encrypted validation and safe atomic writes are approved.
           </p>
           <button
             disabled
@@ -189,7 +191,7 @@ export default function ImportPage() {
               cursor: 'not-allowed',
             }}
           >
-            Notify Me (Coming Soon)
+            Notifications Unavailable
           </button>
         </div>
       </div>

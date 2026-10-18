@@ -10,6 +10,7 @@ import { useAvatarPreference } from '@/hooks/useAvatarPreference';
 import { modeUsesCamera, modeUsesMic, useInputMode } from '@/contexts/InputModeContext';
 import MicButton from '@/components/voice/MicButton';
 import CameraPip from '@/components/camera/CameraPip';
+import ConversationProductControls from '@/components/chat/ConversationProductControls';
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
@@ -80,6 +81,7 @@ export default function ChatPage() {
         style={{ flex: 1 }}
       >
         <OfflineBanner />
+        <ConversationProductControls preferenceState={avatarPreference} pending={isTyping} />
         <div style={{ display: 'flex', flexShrink: 0, padding: '14px 16px 6px' }}>
           <Link href="/companion-scene" className="neo-btn-secondary" style={{ fontSize: '0.875rem', padding: '0.55rem 1.2rem' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -87,6 +89,7 @@ export default function ChatPage() {
             </svg>
             Open avatar conversation
           </Link>
+          <Link href="/history" style={{ padding: '8px 16px' }}>Browse saved history</Link>
         </div>
         {error && <p role="alert" style={{ padding: '0 16px' }}>{error}</p>}
         <MessageList messages={messages} isTyping={isTyping} />

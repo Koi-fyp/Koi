@@ -1,5 +1,6 @@
 import { auth } from './firebase';
 import { notifyAvatarPreferenceChanged } from '@/lib/avatar/avatarPreference';
+import { preferenceSyncFailure } from '@/lib/preferences/syncFailure';
 
 export interface OnboardingData {
   avatar: 'female_human' | 'male_human' | 'fox';
@@ -41,8 +42,8 @@ export async function completeOnboarding(data: OnboardingData, onLocalSaved?: ()
       profile: { avatar: data.avatar, companion: data.companion, language: data.language, notificationTime: data.notificationTime },
       onboarding_complete: true,
     }, { merge: true });
-  } catch {
-    throw new Error('Your choice is saved on this device, but could not sync to your account. Check your connection and retry.');
+  } catch (reason) {
+    throw new Error(`Your choice is saved on this device, but could not sync to your account. ${preferenceSyncFailure(reason)}`);
   }
 
   if (auth?.currentUser?.uid !== uid) throw new Error('Your account changed. Review your companion selection for the current account.');
