@@ -13,6 +13,7 @@ import 'package:koi_mobile/chat/message_record.dart';
 import 'package:koi_mobile/chat/widgets/chat_widgets.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
 import 'package:koi_mobile/core/key_value_store.dart';
+import 'package:koi_mobile/modes/input_mode.dart';
 import 'package:koi_mobile/safety/safety_contract.dart';
 import 'package:koi_mobile/safety/safety_providers.dart';
 import 'package:koi_mobile/settings/settings_prefs.dart';
@@ -39,6 +40,9 @@ class _ScriptedApi extends ChatApiClient {
   final List<String> texts = [];
   Object? fail;
 
+  /// Holds the next audio turn before its transcript.
+  Completer<void>? gate;
+
   @override
   Future<ChatStreamResult> streamChat({
     required String idToken,
@@ -52,6 +56,8 @@ class _ScriptedApi extends ChatApiClient {
       final e = fail;
       fail = null;
       if (e != null) throw e;
+      final g = gate;
+      if (g != null) await g.future;
       handlers.onEvent?.call('transcript');
       handlers.onTranscript?.call('I feel tired');
       reply = 'That sounds hard.';
@@ -101,8 +107,10 @@ void main() {
     WidgetTester tester, {
     BackendWarmup Function()? warmup,
     bool consented = false,
+    KoiInputMode mode = KoiInputMode.voice,
   }) async {
     if (consented) prefs.values[MicPrefs.consentKey('u1')] = 'true';
+    prefs.values[ModePrefs.keyFor('u1')] = mode.id;
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.padding = const FakeViewPadding(top: 108, bottom: 1);
@@ -124,17 +132,14 @@ void main() {
           backendWarmupProvider.overrideWith(
             (ref) => warmup?.call() ?? BackendWarmup(chatHealth: null),
           ),
-          // Speech service not configured: the device voice speaks.
+          // Speech service unavailable (warm-up gave up): device voice.
           speechApiProvider.overrideWithValue(fakeApi(FakeSpeechServer())),
           speechWarmupProvider.overrideWithValue(
-            SpeechWarmup(
-              health: (_) async => false,
-              delay: (_) => Completer<void>().future,
-            ),
+            SpeechWarmup(health: (_) async => false, limit: Duration.zero),
           ),
           clipPlayerFactoryProvider.overrideWithValue(FakeClipPlayer.new),
           ttsEngineFactoryProvider.overrideWithValue(() => tts),
-          voicePrefsProvider.overrideWithValue(VoicePrefs(prefs)),
+          modePrefsProvider.overrideWithValue(ModePrefs(prefs)),
           micPrefsProvider.overrideWithValue(MicPrefs(prefs)),
           micRecorderFactoryProvider.overrideWithValue(() => recorder),
           micTempDirProvider.overrideWithValue(() async => dir.path),
@@ -236,7 +241,8 @@ void main() {
     await settle(tester);
   });
 
-  testWidgets('ATC-M3-29 warning colour from 0:25, auto-send at 0:30', (tester) async {
+  // Changed in Prompt 29: auto-send at 0:29 (was 0:30).
+  testWidgets('ATC-M3-29 warning colour from 0:25, auto-send at 0:29', (tester) async {
     await pumpCall(tester, consented: true);
     await tapMic(tester);
     Color timerColor() =>
@@ -248,10 +254,12 @@ void main() {
     expect(timerColor(), KoiColors.danger);
     expect(api.audioPaths, isEmpty);
 
-    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(seconds: 3));
+    expect(api.audioPaths, isEmpty, reason: 'still recording at 0:28');
+    await tester.pump(const Duration(seconds: 1));
     await settle(tester);
     expect(api.audioPaths, hasLength(1));
-    expect(diagnostics.last!.line, contains('clip=30.0s'));
+    expect(diagnostics.last!.line, contains('clip=29.0s'));
     tts.finish();
     await settle(tester);
   });
@@ -451,5 +459,84 @@ void main() {
     expect(find.byType(WakingLine), findsNothing);
     tts.finish();
     await settle(tester);
+  });
+
+  Future<void> selectMode(WidgetTester tester, KoiInputMode mode) async {
+    await tester.tap(inCall(find.byKey(const Key('mode-selector-button'))));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(Key('mode-item-${mode.id}')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+
+  testWidgets('ATC-M3-42 the mic never starts without a tap; no Mic button in '
+      'the modes without mic input', (tester) async {
+    final c = await pumpCall(tester, consented: true);
+    await tester.pump(const Duration(seconds: 5));
+    expect(recorder.permissionAsks, 0);
+    expect(recorder.started, isEmpty);
+    // Switching between voice modes does not start it either.
+    await selectMode(tester, KoiInputMode.cameraVoice);
+    await tester.pump(const Duration(seconds: 2));
+    expect(recorder.started, isEmpty);
+    expect(mic, findsOneWidget);
+    for (final m in [KoiInputMode.text, KoiInputMode.camera]) {
+      await selectMode(tester, m);
+      expect(mic, findsNothing, reason: m.label);
+    }
+    expect(recorder.permissionAsks, 0);
+    expect(recorder.started, isEmpty);
+    expect(c.read(effectiveInputModeProvider), KoiInputMode.camera);
+  });
+
+  testWidgets('ATC-M3-43 one voice turn = exactly one chat request; no stand-in '
+      'message, the transcript is the only user message; clip deleted after '
+      'send', (tester) async {
+    final c = await pumpCall(tester, consented: true);
+    await tapMic(tester);
+    final path = recorder.current!;
+    api.gate = Completer<void>();
+    await tapMic(tester);
+    // Uploaded, transcript not back yet: nothing stands in for it.
+    expect(api.audioPaths, [path]);
+    expect(chat(c).messages.where((m) => m.isUser), isEmpty);
+    api.gate!.complete();
+    await settle(tester);
+    expect(api.audioPaths, hasLength(1));
+    expect(api.texts, isEmpty, reason: 'no extra text request');
+    final users = chat(c).messages.where((m) => m.isUser).toList();
+    expect(users.single.content, 'I feel tired');
+    expect(File(path).existsSync(), isFalse);
+    expect(dir.listSync(), isEmpty, reason: 'no recording left behind');
+    tts.finish();
+    await settle(tester);
+  });
+
+  testWidgets('ATC-M3-44 a mode change discards the recording: nothing sent, '
+      'clip deleted', (tester) async {
+    await pumpCall(tester, consented: true);
+    await tapMic(tester);
+    final path = recorder.current!;
+    expect(recorder.started, hasLength(1));
+    await selectMode(tester, KoiInputMode.cameraVoice);
+    await settle(tester);
+    expect(find.byKey(const Key('mic-recording')), findsNothing);
+    expect(File(path).existsSync(), isFalse);
+    expect(api.audioPaths, isEmpty);
+  });
+
+  testWidgets('ATC-M3-45 sign-out / another uid discards the recording: '
+      'nothing sent, clip deleted', (tester) async {
+    final c = await pumpCall(tester, consented: true);
+    await tapMic(tester);
+    final path = recorder.current!;
+    (c.read(authServiceProvider) as FakeAuthService).set(
+      user: const KoiUser(uid: 'u2', isAnonymous: true),
+    );
+    await settle(tester);
+    expect(File(path).existsSync(), isFalse);
+    expect(api.audioPaths, isEmpty);
+    await tester.pump(const Duration(seconds: 2));
   });
 }

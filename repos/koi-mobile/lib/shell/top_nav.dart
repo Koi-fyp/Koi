@@ -73,8 +73,15 @@ class KoiTopNav extends StatelessWidget {
               child: Row(
                 children: [
                   _Logo(onTap: onLogoTap),
-                  const Spacer(),
-                  const ModeSelector(),
+                  const SizedBox(width: 8),
+                  // Long mode labels ("Camera view + voice") ellipsize
+                  // instead of overflowing on narrow phones.
+                  const Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: ModeSelector(),
+                    ),
+                  ),
                 ],
               ),
             ),

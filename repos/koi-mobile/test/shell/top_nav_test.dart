@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/progress/progress_screen.dart';
 import 'package:koi_mobile/chat/chat_screen.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
+import 'package:koi_mobile/core/key_value_store.dart';
+import 'package:koi_mobile/modes/input_mode.dart';
+import 'package:koi_mobile/settings/settings_prefs.dart';
 import 'package:koi_mobile/settings/settings_screen.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
 import 'package:koi_mobile/shell/mode_selector.dart';
@@ -17,18 +20,28 @@ void main() {
   useRealFonts();
 
   // Default = Infinix X663: 1080x2400 px at density 480 → 360x800 dp.
+  late MemoryKeyValueStore prefs;
+  setUp(() => prefs = MemoryKeyValueStore());
+
   Future<void> pumpShell(WidgetTester tester, {double widthDp = 360}) async {
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = Size(widthDp * 3, 2400);
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
-        overrides: overridesFor(
-          FakeAuthService(
-            fakeUser: const KoiUser(uid: 'u1', isAnonymous: true),
+        overrides: [
+          ...overridesFor(
+            FakeAuthService(
+              fakeUser: const KoiUser(uid: 'u1', isAnonymous: true),
+            ),
+            onboardingStore(complete: true),
+            // Raza: all modes (Koi's fox is text only).
+            settings: MemorySettingsPrefsStore({
+              'u1': const SettingsPrefs(companion: 'raza'),
+            }),
           ),
-          onboardingStore(complete: true),
-        ),
+          modePrefsProvider.overrideWithValue(ModePrefs(prefs)),
+        ],
         child: const MaterialApp(home: AppShell()),
       ),
     );
@@ -135,36 +148,50 @@ void main() {
     expect(find.byType(ChatScreen), findsOneWidget);
   });
 
-  testWidgets('ATC-M20-03 mode selector: tap opens, 3 locked modes, Text selectable', (
-    tester,
-  ) async {
+  // Changed in Prompt 29: the four modes are live (were Text + 3 LOCKED),
+  // labels are Prompt 29's, the menu is web w-64 and the button shows the
+  // mode only (web hides "Mode: " below sm).
+  testWidgets('ATC-M20-03 mode selector: tap opens, 4 live modes with the exact '
+      'labels, a tap selects, saves per uid and closes', (tester) async {
     await pumpShell(tester);
-    expect(find.text('Mode: Text'), findsOneWidget);
+    expect(find.text('Text'), findsOneWidget);
+    expect(find.bySemanticsLabel('Mode: Text'), findsOneWidget);
     expect(find.byKey(const Key('mode-selector-menu')), findsNothing);
 
     await tester.tap(find.byKey(const Key('mode-selector-button')));
     await tester.pumpAndSettle();
     final menu = find.byKey(const Key('mode-selector-menu'));
     expect(menu, findsOneWidget);
-    expect(tester.getSize(menu).width, 224);
-    for (final m in ModeSelector.modes) {
-      expect(find.byKey(Key('mode-item-${m.name}')), findsOneWidget);
+    expect(tester.getSize(menu).width, ModeSelector.menuWidth);
+    const labels = ['Text', 'Voice', 'Camera view', 'Camera view + voice'];
+    expect(KoiInputMode.values.map((m) => m.label), labels);
+    for (final m in KoiInputMode.values) {
+      expect(
+        find.descendant(
+          of: find.byKey(Key('mode-item-${m.id}')),
+          matching: find.text(m.label),
+        ),
+        findsOneWidget,
+      );
     }
-    expect(find.text('LOCKED'), findsNWidgets(3));
+    expect(find.text('LOCKED'), findsNothing);
+    expect(find.text(ModeSelector.foxNote), findsNothing);
     final rect = tester.getRect(menu);
     expect(rect.left, greaterThanOrEqualTo(0));
     expect(rect.right, lessThanOrEqualTo(360));
 
-    // Disabled mode: no change, menu stays open.
-    await tester.tap(find.byKey(const Key('mode-item-Audio')));
-    await tester.pumpAndSettle();
-    expect(find.text('Mode: Text'), findsOneWidget);
-    expect(menu, findsOneWidget);
-
-    // Enabled mode closes it.
-    await tester.tap(find.byKey(const Key('mode-item-Text')));
+    await tester.tap(find.byKey(const Key('mode-item-camera-voice')));
     await tester.pumpAndSettle();
     expect(menu, findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('mode-selector-button')),
+        matching: find.text('Camera view + voice'),
+      ),
+      findsOneWidget,
+    );
+    expect(prefs.values['koi_input_mode_u1'], 'camera-voice');
+    expect(tester.takeException(), isNull, reason: 'long label fits 360dp');
 
     // A tap outside closes it too.
     await tester.tap(find.byKey(const Key('mode-selector-button')));
@@ -173,5 +200,15 @@ void main() {
     await tester.tapAt(const Offset(180, 700));
     await tester.pumpAndSettle();
     expect(menu, findsNothing);
+  });
+
+  testWidgets('ATC-M20-03 the longest label fits the top nav at 320dp too', (
+    tester,
+  ) async {
+    prefs.values['koi_input_mode_u1'] = 'camera-voice';
+    await pumpShell(tester, widthDp: 320);
+    expect(tester.takeException(), isNull);
+    final r = tester.getRect(find.byKey(const Key('mode-selector-button')));
+    expect(r.right, lessThanOrEqualTo(320));
   });
 }

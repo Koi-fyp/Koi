@@ -1,54 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/providers.dart' show authServiceProvider;
+import '../modes/input_mode.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_shadows.dart';
 import '../theme/koi_text.dart';
 import 'nav_icons.dart';
 
-/// One entry of the `modes` array in ModeSelector.tsx.
-@immutable
-class KoiMode {
-  const KoiMode(this.name, this.status, this.enabled);
-  final String name;
-  final String status;
-  final bool enabled;
-}
-
-/// Mirrors repos/koi-backend/nextjs_app/src/components/layout/ModeSelector.tsx.
+/// The input mode menu (Prompt 29): the top nav and the call screen's top
+/// bar. Mirrors repos/koi-backend/nextjs_app/src/components/layout/
+/// ModeSelector.tsx (web reference branch origin/avatar/vrm-emotion):
+/// the four modes, the selected one on slate-200, a tap selects and closes.
 ///
-/// Mobile differences (no hover on touch):
-/// - web opens on mouseenter and closes on mouseleave; mobile opens/closes on
-///   tap of the button and closes on a tap outside the menu;
-/// - web's whileHover (x/y 2px + small shadow) and the per-item hover colour
-///   are dropped; web's whileTap (x/y 5px, no shadow) is the pressed state.
+/// Mobile differences:
+/// - labels are Prompt 29's ("Text", "Voice", "Camera view", "Camera view +
+///   voice"); web's per-item hints are not shown;
+/// - the button shows the mode only: web hides its "Mode: " prefix below
+///   the `sm` breakpoint (`hidden sm:inline`), i.e. on every phone;
+///   screen readers still hear "Mode: …";
+/// - web opens on click and closes on mouseleave; mobile closes on a tap
+///   outside the menu; web's whileHover is dropped, whileTap (x/y 5px) is
+///   the pressed state;
+/// - Koi's fox chats by text only: the other three are disabled (the old
+///   locked look without the badge) and [foxNote] is shown.
 ///
 /// Tailwind values assume 1 unit = 0.25rem = 4px and the Tailwind v3.4.19
 /// default palette (gray-300 #d1d5db, slate-200 #e2e8f0), checked against
 /// tailwindcss@3.4.19 lib/public/colors.js and stubs/config.full.js.
-class ModeSelector extends StatefulWidget {
+class ModeSelector extends ConsumerStatefulWidget {
   const ModeSelector({super.key});
 
-  // ModeSelector.tsx `modes`
-  static const List<KoiMode> modes = [
-    KoiMode('Text', 'Active', true),
-    KoiMode('Audio', 'BETA', false),
-    KoiMode('Video + Text', 'BETA', false),
-    KoiMode('Video + Audio', 'BETA', false),
-  ];
+  static const String foxNote = 'Koi (fox) chats by text only.';
 
-  /// Badge text rendered for disabled modes (`<span className="beta-badge">`).
-  /// Note: web renders "LOCKED" here, not the `status` value "BETA".
-  static const String lockedBadge = 'LOCKED';
+  /// `w-64`.
+  static const double menuWidth = 256;
 
   static const Duration menuDuration = Duration(
     milliseconds: 200,
   ); // duration: 0.2
 
   @override
-  State<ModeSelector> createState() => _ModeSelectorState();
+  ConsumerState<ModeSelector> createState() => _ModeSelectorState();
 }
 
-class _ModeSelectorState extends State<ModeSelector>
+class _ModeSelectorState extends ConsumerState<ModeSelector>
     with SingleTickerProviderStateMixin {
   final OverlayPortalController _portal = OverlayPortalController();
   final LayerLink _link = LayerLink();
@@ -57,7 +53,6 @@ class _ModeSelectorState extends State<ModeSelector>
     duration: ModeSelector.menuDuration,
   );
 
-  String _selected = 'Text'; // useState('Text')
   bool _pressed = false;
 
   bool get _open =>
@@ -76,6 +71,13 @@ class _ModeSelectorState extends State<ModeSelector>
 
   void _toggle() => _open ? _hide() : _show();
 
+  void _select(KoiInputMode mode) {
+    final uid = ref.read(authServiceProvider).user?.uid;
+    if (uid == null) return;
+    ref.read(inputModeControllerProvider(uid)).select(mode);
+    _hide();
+  }
+
   @override
   void dispose() {
     _menu.dispose();
@@ -84,39 +86,56 @@ class _ModeSelectorState extends State<ModeSelector>
 
   @override
   Widget build(BuildContext context) {
+    final mode = ref.watch(effectiveInputModeProvider);
     return CompositedTransformTarget(
       link: _link,
       child: OverlayPortal(
         controller: _portal,
         overlayChildBuilder: _buildMenuOverlay,
-        child: GestureDetector(
-          key: const Key('mode-selector-button'),
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) => setState(() => _pressed = true),
-          onTapUp: (_) => setState(() => _pressed = false),
-          onTapCancel: () => setState(() => _pressed = false),
-          onTap: _toggle,
-          // whileTap={{ x: 5, y: 5, boxShadow: none }}
-          child: Transform.translate(
-            offset: _pressed ? const Offset(5, 5) : Offset.zero,
-            child: Container(
-              // px-3 py-1 border-[2px] border-black rounded-full
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                border: Border.all(color: KoiColors.neoBlack, width: 2),
-                borderRadius: BorderRadius.circular(9999),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Mode: $_selected', style: _textSm),
-                  const SizedBox(width: 8), // gap-2
-                  const KoiNavIcon(
-                    KoiNavGlyph.chevronDown,
-                    color: KoiColors.neoBlack,
-                    size: 14, // width="14" height="14"
-                  ),
-                ],
+        child: Semantics(
+          button: true,
+          label: 'Mode: ${mode.label}',
+          excludeSemantics: true,
+          child: GestureDetector(
+            key: const Key('mode-selector-button'),
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (_) => setState(() => _pressed = true),
+            onTapUp: (_) => setState(() => _pressed = false),
+            onTapCancel: () => setState(() => _pressed = false),
+            onTap: _toggle,
+            // whileTap={{ x: 5, y: 5, boxShadow: none }}
+            child: Transform.translate(
+              offset: _pressed ? const Offset(5, 5) : Offset.zero,
+              child: Container(
+                // px-3 py-1 border-[2px] border-black rounded-full
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: KoiColors.neoBlack, width: 2),
+                  borderRadius: BorderRadius.circular(9999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        mode.label,
+                        key: const Key('mode-selector-label'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _textSm,
+                      ),
+                    ),
+                    const SizedBox(width: 8), // gap-2
+                    const KoiNavIcon(
+                      KoiNavGlyph.chevronDown,
+                      color: KoiColors.neoBlack,
+                      size: 14, // width="14" height="14"
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -163,7 +182,7 @@ class _ModeSelectorState extends State<ModeSelector>
                   ),
                 );
               },
-              child: _buildMenu(),
+              child: Consumer(builder: (context, ref, _) => _buildMenu(ref)),
             ),
           ),
         ),
@@ -171,13 +190,15 @@ class _ModeSelectorState extends State<ModeSelector>
     );
   }
 
-  Widget _buildMenu() {
-    final modes = ModeSelector.modes;
+  Widget _buildMenu(WidgetRef ref) {
+    const modes = KoiInputMode.values;
+    final selected = ref.watch(effectiveInputModeProvider);
+    final fox = ref.watch(foxTextOnlyProvider);
     return Container(
       key: const Key('mode-selector-menu'),
-      // w-56 bg-white border-[3px] border-black rounded-2xl
+      // w-64 bg-white border-[3px] border-black rounded-2xl
       // shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] overflow-hidden
-      width: 224,
+      width: ModeSelector.menuWidth,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: KoiColors.neoWhite,
@@ -196,13 +217,9 @@ class _ModeSelectorState extends State<ModeSelector>
               for (var i = 0; i < modes.length; i++) ...[
                 _ModeItem(
                   mode: modes[i],
-                  selected: modes[i].name == _selected,
-                  onTap: () {
-                    if (modes[i].enabled) {
-                      setState(() => _selected = modes[i].name);
-                      _hide();
-                    }
-                  },
+                  selected: modes[i] == selected,
+                  enabled: !fox || modes[i] == KoiInputMode.text,
+                  onTap: () => _select(modes[i]),
                 ),
                 if (i < modes.length - 1)
                   // h-px bg-gray-300 my-1
@@ -212,6 +229,21 @@ class _ModeSelectorState extends State<ModeSelector>
                     color: _gray300,
                   ),
               ],
+              if (fox)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: Text(
+                    ModeSelector.foxNote,
+                    key: const Key('mode-fox-note'),
+                    // text-xs text-gray-600 (web's hint style)
+                    style: KoiText.body(
+                      fontSize: 12,
+                      height: 16 / 12,
+                      color: _gray600,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -231,39 +263,34 @@ final TextStyle _textSm = KoiText.body(
 );
 
 const Color _gray300 = Color(0xFFD1D5DB); // Tailwind gray-300
+const Color _gray600 = Color(0xFF4B5563); // Tailwind gray-600
 const Color _slate200 = Color(0xFFE2E8F0); // Tailwind slate-200
 
 class _ModeItem extends StatelessWidget {
   const _ModeItem({
     required this.mode,
     required this.selected,
+    required this.enabled,
     required this.onTap,
   });
 
-  final KoiMode mode;
+  final KoiInputMode mode;
   final bool selected;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     Widget item = Container(
-      // p-3 rounded-lg flex items-center justify-between
+      // p-3 rounded-lg
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: selected
-            ? _slate200
-            : null, // mode.name === selected ? bg-slate-200
+        color: selected ? _slate200 : null, // item.id === mode ? bg-slate-200
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(child: Text(mode.name, style: _textSm)),
-          if (!mode.enabled) const _BetaBadge(ModeSelector.lockedBadge),
-        ],
-      ),
+      child: Text(mode.label, style: _textSm),
     );
-    if (!mode.enabled) {
+    if (!enabled) {
       // opacity-50 cursor-not-allowed locked-stripes
       item = Opacity(
         opacity: 0.5,
@@ -276,38 +303,18 @@ class _ModeItem extends StatelessWidget {
         ),
       );
     }
-    return GestureDetector(
-      key: Key('mode-item-${mode.name}'),
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: item,
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: enabled,
+      child: GestureDetector(
+        key: Key('mode-item-${mode.id}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: enabled ? onTap : null,
+        child: item,
+      ),
     );
   }
-}
-
-/// globals.css `.beta-badge`.
-class _BetaBadge extends StatelessWidget {
-  const _BetaBadge(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
-    decoration: BoxDecoration(
-      color: KoiColors.neoBlack,
-      borderRadius: BorderRadius.circular(3),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(
-        // ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono',
-        // monospace → the platform monospace font.
-        fontFamily: 'monospace',
-        fontSize: 10,
-        color: KoiColors.neoWhite,
-      ),
-    ),
-  );
 }
 
 /// globals.css `.locked-stripes`: linear-gradient(135deg, rgba(0,0,0,0.03)

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../avatar/avatar_state.dart';
 import '../core/emotion.dart';
+import '../safety/safety_contract.dart' show UiAction;
 import '../safety/safety_controller.dart';
 import 'backend_warmup.dart';
 import 'chat_api.dart';
@@ -103,11 +104,23 @@ class ChatController extends ChangeNotifier {
   final List<Future<void> Function()> _offlineQueue = [];
   final _avatar = StreamController<AvatarStateEvent>.broadcast();
   bool _disposed = false;
+  int _textOnlyEvents = 0;
+  int _exerciseStarts = 0;
 
   /// The stored messages, then the live AI bubble while a reply streams.
   List<ChatMessage> get messages => List.unmodifiable([..._messages, ?_live]);
 
   bool get isTyping => _isTyping;
+
+  /// Counts the stream events that keep a reply text only (Prompt 29, web
+  /// useSpokenReplies.ts turnBlocksVoice): any handoff, a HIGH / CRITICAL
+  /// risk result and any exercise ui_action. The call screen compares it
+  /// across a turn.
+  int get textOnlyEvents => _textOnlyEvents;
+
+  /// Counts exercise starts (start_breathing / start_grounding /
+  /// start_plan); the call screen discards a recording on each.
+  int get exerciseStarts => _exerciseStarts;
 
   /// True once reply text is streaming into the live bubble.
   bool get isStreaming => _live != null;
@@ -229,10 +242,45 @@ class ChatController extends ChangeNotifier {
       );
       _notify();
     },
-    onUiAction: (action, urgent) => safety?.handleUiAction(action),
-    onHandoff: (handoff) => safety?.handleHandoff(handoff),
-    onRisk: (risk) => safety?.handleRisk(risk),
+    onUiAction: (action, urgent) {
+      _noteUiAction(action);
+      safety?.handleUiAction(action);
+    },
+    onHandoff: (handoff) {
+      _textOnlyEvents++;
+      _notify();
+      safety?.handleHandoff(handoff);
+    },
+    onRisk: (risk) {
+      if (risk.showsCrisisFlow) {
+        _textOnlyEvents++;
+        _notify();
+      }
+      safety?.handleRisk(risk);
+    },
   );
+
+  /// Exercise ui_actions (web useSpokenReplies.ts EXERCISE_ACTIONS), also
+  /// the ones mobile does not run yet.
+  static const Set<String> exerciseActions = {
+    'start_breathing',
+    'start_grounding',
+    'start_plan',
+    'stop_breathing',
+    'pause_breathing',
+  };
+  static const Set<String> exerciseStartActions = {
+    'start_breathing',
+    'start_grounding',
+    'start_plan',
+  };
+
+  void _noteUiAction(UiAction action) {
+    if (!exerciseActions.contains(action.name)) return;
+    _textOnlyEvents++;
+    if (exerciseStartActions.contains(action.name)) _exerciseStarts++;
+    _notify();
+  }
 
   ChatMessage _liveBubble(String id) => ChatMessage(
     id: id,

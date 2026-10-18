@@ -5,12 +5,14 @@ import '../theme/koi_colors.dart';
 import '../widgets/neo_button.dart';
 import 'mic_controller.dart';
 
-/// Mobile-only texts (no web version), approved 2026-10-18 (Prompt 26).
+/// Mobile-only texts (no web version), approved 2026-10-18 (Prompt 26;
+/// consent replaced in Prompt 29).
 abstract final class MicTexts {
+  /// Prompt 29 (exact text).
   static const String consent =
-      'Voice messages: your recording is sent to the KOI server to turn it '
-      "into text. The recording isn't saved on this phone; only the text "
-      'appears in your chat.';
+      "Your recording is sent to KOI's speech-recognition service to be "
+      'turned into text, then discarded. The text is sent to the reply model '
+      'like typed text. Recordings are not saved.';
   static const String consentContinue = 'Continue';
   static const String consentNotNow = 'Not now';
   static const String denied = 'Microphone is off. You can still type.';

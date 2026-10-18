@@ -16,6 +16,7 @@ import '../environment/environment_providers.dart';
 import '../onboarding/onboarding_service.dart';
 import '../safety/safety_providers.dart';
 import '../settings/settings_prefs.dart';
+import '../voice/voice_providers.dart' show speechWarmupProvider;
 
 /// Overridden in main.dart (and in tests) with a concrete implementation.
 final authServiceProvider = ChangeNotifierProvider<AuthService>(
@@ -121,6 +122,7 @@ final backendWarmupProvider = ChangeNotifierProvider<BackendWarmup>((ref) {
   final warmup = BackendWarmup(
     chatHealth: chat.isConfigured ? chat.checkHealth : null,
     crisisHealth: crisis.isConfigured ? crisis.checkHealth : null,
+    speechSettled: ref.read(speechWarmupProvider).settled,
   );
   ref.listen(authServiceProvider.select((a) => a.user?.uid), (prev, uid) {
     if (uid != null && uid != prev) warmup.warmUp();

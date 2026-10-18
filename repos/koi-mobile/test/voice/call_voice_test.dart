@@ -14,12 +14,14 @@ import 'package:koi_mobile/core/auth/auth_service.dart';
 import 'package:koi_mobile/core/key_value_store.dart';
 import 'package:koi_mobile/environment/environment_palette.dart';
 import 'package:koi_mobile/environment/environment_providers.dart';
+import 'package:koi_mobile/modes/input_mode.dart';
 import 'package:koi_mobile/safety/safety_contract.dart';
 import 'package:koi_mobile/safety/safety_providers.dart';
 import 'package:koi_mobile/settings/settings_prefs.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
 import 'package:koi_mobile/voice/voice_controller.dart';
 import 'package:koi_mobile/voice/voice_providers.dart';
+import 'package:koi_mobile/voice/voice_text.dart' show chunkReply;
 
 import '../support/chat_fakes.dart';
 import '../support/fake_auth.dart';
@@ -87,7 +89,9 @@ void main() {
     WidgetTester tester, {
     String companion = 'raza',
     String? language,
+    KoiInputMode mode = KoiInputMode.voice,
   }) async {
+    prefs.values[ModePrefs.keyFor('u1')] = mode.id;
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.padding = const FakeViewPadding(top: 108, bottom: 1);
@@ -113,13 +117,13 @@ void main() {
           speechWarmupProvider.overrideWithValue(
             SpeechWarmup(
               health: (_) async => speechWarm,
-              // Not warm: no retry timer left behind.
-              delay: (_) => Completer<void>().future,
+              // Not warm: the warm-up gives up at once (unavailable).
+              limit: speechWarm ? const Duration(seconds: 240) : Duration.zero,
             ),
           ),
           clipPlayerFactoryProvider.overrideWithValue(() => player),
           ttsEngineFactoryProvider.overrideWithValue(() => tts),
-          voicePrefsProvider.overrideWithValue(VoicePrefs(prefs)),
+          modePrefsProvider.overrideWithValue(ModePrefs(prefs)),
         ],
         child: const MaterialApp(home: AppShell()),
       ),
@@ -186,7 +190,10 @@ void main() {
     expect(avatar(tester).conversationState, AvatarConversationState.idle);
   });
 
-  testWidgets('ATC-M3-12 not warm → device voice and its label; Aisha voice', (
+  // Changed in Prompt 29: the device voice only once the speech service is
+  // unavailable (its warm-up ended without a 200), not while it warms.
+  testWidgets('ATC-M3-12 speech unavailable → device voice and its label; '
+      'Aisha voice', (
     tester,
   ) async {
     speechWarm = false;
@@ -200,29 +207,31 @@ void main() {
     expect(label, findsNothing);
   });
 
-  testWidgets('ATC-M3-12 server error → device voice, never an error on screen', (
-    tester,
-  ) async {
+  // Changed in Prompt 29: a failing chunk is skipped (was: device voice).
+  testWidgets('ATC-M3-12 server error → chunk skipped: silent, no device voice, '
+      'never an error on screen', (tester) async {
     speech.respond = (_) async =>
         FakeSpeechServer.error(503, 'speech-unavailable');
     await pumpCall(tester, companion: 'aisha');
     await send(tester);
     expect(speech.requests.single['voice_id'], 'aisha_en');
-    expect(tts.spoken, hasLength(1));
+    expect(tts.spoken, isEmpty);
+    expect(player.played, isEmpty);
     expect(find.textContaining('speech-unavailable'), findsNothing);
-    expect(find.text(AvatarCallScreen.deviceVoiceLabel), findsOneWidget);
-    tts.finish();
-    await tester.pump(const Duration(milliseconds: 100));
+    expect(label, findsNothing);
   });
 
-  testWidgets('ATC-M3-12 Koi fox: voice only (Raza), no avatar', (tester) async {
-    await pumpCall(tester, companion: 'koi');
+  // Changed in Prompt 29: the fox is text only (was: Raza's voice).
+  testWidgets('ATC-M3-12 Koi fox: silent even with Voice saved, no avatar', (
+    tester,
+  ) async {
+    final c = await pumpCall(tester, companion: 'koi');
     expect(find.byType(AvatarView), findsNothing);
+    expect(c.read(effectiveInputModeProvider), KoiInputMode.text);
     await send(tester);
-    expect(speech.requests.single['voice_id'], 'raza_en');
-    expect(find.text(AvatarCallScreen.serverVoiceLabel), findsOneWidget);
-    player.finish();
-    await tester.pump(const Duration(milliseconds: 100));
+    expect(speech.requests, isEmpty);
+    expect(tts.spoken, isEmpty);
+    expect(label, findsNothing);
   });
 
   testWidgets('ATC-M3-12 Roman Urdu for an Urdu user is not spoken', (tester) async {
@@ -243,40 +252,52 @@ void main() {
     expect(tts.spoken, isEmpty);
   });
 
-  testWidgets('ATC-M3-14 voice toggle: off stops and silences, remembered per uid', (
-    tester,
-  ) async {
+  Future<void> selectMode(WidgetTester tester, KoiInputMode mode) async {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AvatarCallScreen),
+        matching: find.byKey(const Key('mode-selector-button')),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(Key('mode-item-${mode.id}')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+
+  // Changed in Prompt 29: the Voice on/off pill is replaced by the mode
+  // menu; Text / Camera view are the "voice off" modes.
+  testWidgets('ATC-M3-14 mode Text: switching stops the reply at once, later '
+      'replies are silent, remembered per uid', (tester) async {
     await pumpCall(tester);
-    final toggle = find.byKey(const Key('voice-toggle'));
-    expect(find.text('Voice on'), findsOneWidget);
+    expect(find.byKey(const Key('voice-toggle')), findsNothing);
     await send(tester);
     expect(player.isPlaying, isTrue);
 
-    await tester.tap(toggle);
-    await tester.pump();
-    expect(player.isPlaying, isFalse, reason: 'off stops at once');
-    expect(find.text('Voice off'), findsOneWidget);
-    expect(prefs.values['koi_voice_enabled_u1'], 'false');
+    await selectMode(tester, KoiInputMode.text);
+    expect(player.isPlaying, isFalse, reason: 'switching stops at once');
+    expect(prefs.values['koi_input_mode_u1'], 'text');
 
     await send(tester, 'again');
-    expect(speech.requests, hasLength(1), reason: 'off: nothing new');
+    expect(speech.requests, hasLength(1), reason: 'Text: nothing new');
     expect(tts.spoken, isEmpty);
 
-    await tester.tap(toggle);
-    await tester.pump();
-    expect(prefs.values['koi_voice_enabled_u1'], 'true');
+    await selectMode(tester, KoiInputMode.cameraVoice);
+    expect(prefs.values['koi_input_mode_u1'], 'camera-voice');
   });
 
-  testWidgets('ATC-M3-14 voice off is restored when the call screen opens', (
+  testWidgets('ATC-M3-14 Text / Camera view saved: replies stay silent', (
     tester,
   ) async {
-    prefs.values['koi_voice_enabled_u1'] = 'false';
-    await pumpCall(tester);
-    expect(find.text('Voice off'), findsOneWidget);
-    await send(tester);
-    expect(speech.requests, isEmpty);
-    expect(tts.spoken, isEmpty);
-    // Voice off: streaming shows speaking, as before Prompt 25.
+    for (final mode in [KoiInputMode.text, KoiInputMode.camera]) {
+      speech.requests.clear();
+      await pumpCall(tester, mode: mode);
+      await send(tester, mode.id);
+      expect(speech.requests, isEmpty, reason: mode.label);
+      expect(tts.spoken, isEmpty, reason: mode.label);
+      await tester.pumpWidget(const SizedBox());
+    }
   });
 
   testWidgets('ATC-M3-15 a new message stops the reply that is playing', (tester) async {
@@ -372,15 +393,21 @@ void main() {
     expect(player.isPlaying, isFalse);
   });
 
-  testWidgets('ATC-M3-16 top bar fits 360dp with voice off and the transcript open', (
-    tester,
-  ) async {
-    prefs.values['koi_voice_enabled_u1'] = 'false';
-    await pumpCall(tester);
+  // Changed in Prompt 29: the mode menu (longest label) instead of the
+  // voice pill.
+  testWidgets('ATC-M3-16 top bar fits 360dp with "Camera view + voice" and the '
+      'transcript open', (tester) async {
+    await pumpCall(tester, mode: KoiInputMode.cameraVoice);
     await tester.tap(find.byKey(const Key('transcript-toggle')));
     await tester.pump();
     expect(find.text('Hide transcript'), findsOneWidget);
-    expect(find.text('Voice off'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AvatarCallScreen),
+        matching: find.text('Camera view + voice'),
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
     final status = tester.getRect(find.byKey(const Key('call-status')));
     expect(status.width, greaterThan(40));
@@ -412,7 +439,7 @@ void main() {
     final last = c.read(chatControllerProvider('u1')).messages.last;
     expect(last.isFallback, isTrue);
     expect(last.content, ConversationService.fallbackReply);
-    expect(find.byKey(const Key('voice-toggle')), findsOneWidget);
+    expect(c.read(effectiveInputModeProvider).spokenReplies, isTrue);
     expect(speech.requests, isEmpty);
     expect(player.played, isEmpty);
     expect(tts.spoken, isEmpty);
@@ -466,5 +493,88 @@ void main() {
     );
     player.finish();
     await tester.pump(const Duration(milliseconds: 100));
+  });
+
+  testWidgets('ATC-M3-46 a mixed-script reply is silent (no device voice)', (
+    tester,
+  ) async {
+    chat.reply = 'Hello. آپ کیسے ہیں؟';
+    await pumpCall(tester, companion: 'aisha');
+    await send(tester);
+    expect(speech.requests, isEmpty);
+    expect(tts.spoken, isEmpty);
+    expect(label, findsNothing);
+  });
+
+  testWidgets('ATC-M3-47 Roman Urdu is silent for an English-setting user', (
+    tester,
+  ) async {
+    chat.reply = 'Tum theek ho? Mujhe batao kya hua.';
+    await pumpCall(tester, language: 'en');
+    await send(tester);
+    expect(speech.requests, isEmpty);
+    expect(tts.spoken, isEmpty);
+  });
+
+  testWidgets('ATC-M3-48 exercise turn (a grounding / plan ui_action, which '
+      'mobile does not run yet) is silent', (tester) async {
+    for (final name in ['start_grounding', 'start_plan']) {
+      speech.requests.clear();
+      chat.during = (h) => h.onUiAction?.call(UiAction(name), false);
+      final c = await pumpCall(tester);
+      await send(tester);
+      expect(speech.requests, isEmpty, reason: name);
+      expect(tts.spoken, isEmpty, reason: name);
+      expect(c.read(chatControllerProvider('u1')).exerciseStarts, 1);
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
+  testWidgets('ATC-M3-48 a HIGH risk result in the turn is silent', (
+    tester,
+  ) async {
+    chat.during = (h) => h.onRisk?.call(
+      RiskResult.fromJson(const {'status': 'ok', 'risk_category': 'HIGH'}),
+    );
+    final c = await pumpCall(tester);
+    await send(tester);
+    expect(c.read(chatControllerProvider('u1')).textOnlyEvents, 1);
+    expect(speech.requests, isEmpty);
+    expect(tts.spoken, isEmpty);
+  });
+
+  testWidgets('ATC-M3-49 sign-out / another uid stops the voice', (
+    tester,
+  ) async {
+    final c = await pumpCall(tester);
+    await send(tester);
+    expect(player.isPlaying, isTrue);
+    (c.read(authServiceProvider) as FakeAuthService).set(
+      user: const KoiUser(uid: 'u2', isAnonymous: true),
+    );
+    await tester.pump();
+    expect(player.isPlaying, isFalse);
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('ATC-M3-50 the reply goes out in the planned chunks (short '
+      'first, then 140–220), one voice', (tester) async {
+    player.hold = false;
+    chat.reply = List.generate(
+      9,
+      (i) => 'This is sentence number $i of a longer reply.',
+    ).join(' ');
+    await pumpCall(tester);
+    await send(tester);
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final texts = speech.requests.map((r) => r['text']! as String).toList();
+    expect(texts, chunkReply(chat.reply));
+    expect(texts.first, 'This is sentence number 0 of a longer reply.');
+    for (final t in texts.sublist(1, texts.length - 1)) {
+      expect(t.length, inInclusiveRange(140, 220));
+    }
+    expect(speech.requests.map((r) => r['voice_id']).toSet(), {'raza_en'});
   });
 }

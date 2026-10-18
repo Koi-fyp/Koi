@@ -11,6 +11,7 @@ import 'package:koi_mobile/chat/chat_controller.dart';
 import 'package:koi_mobile/chat/conversation_service.dart';
 import 'package:koi_mobile/chat/message_record.dart';
 import 'package:koi_mobile/core/koi_cryptography.dart';
+import 'package:koi_mobile/voice/voice_controller.dart' show SpeechWarmup;
 
 import '../support/chat_fakes.dart';
 import '../support/fake_chat_server.dart';
@@ -537,6 +538,66 @@ void main() {
     test('no crisis base → only chat is waited for', () async {
       final warmup = BackendWarmup(chatHealth: (_) async => true);
       expect(await warmup.holdForAudio(), isTrue);
+      warmup.dispose();
+    });
+  });
+
+  group('ATC-M3-51 holdForAudio also waits for the speech warm-up', () {
+    test('held (waking line) until speech /health ends; a speech 200 or a '
+        'give-up both release it, true when chat + crisis are ok', () async {
+      for (final speechOk in [true, false]) {
+        final speechHealth = Completer<bool>();
+        final speech = SpeechWarmup(
+          health: (_) => speechHealth.future,
+          limit: const Duration(seconds: 1),
+          // A failed try: the 240 s limit (here 1 s) has passed.
+          delay: (_) => Future<void>.delayed(const Duration(seconds: 2)),
+        );
+        unawaited(speech.warmUp());
+        final warmup = BackendWarmup(
+          chatHealth: (_) async => true,
+          crisisHealth: (_) async => true,
+          speechSettled: speech.settled,
+        );
+        var done = false;
+        bool? result;
+        unawaited(
+          warmup.holdForAudio().then((r) {
+            result = r;
+            done = true;
+          }),
+        );
+        await pumpEventQueue();
+        expect(warmup.holdingAudio, isTrue, reason: 'speech still warming');
+        expect(done, isFalse);
+        speechHealth.complete(speechOk);
+        await Future<void>.delayed(const Duration(seconds: 3));
+        await pumpEventQueue();
+        expect(done, isTrue, reason: 'speech ok: $speechOk');
+        expect(result, isTrue, reason: 'speech never blocks the upload');
+        expect(warmup.holdingAudio, isFalse);
+        expect(speech.isUnavailable, !speechOk);
+        warmup.dispose();
+      }
+    });
+
+    test('speech already given up → later voice turns do not wait', () async {
+      final speech = SpeechWarmup(
+        health: (_) async => false,
+        limit: Duration.zero,
+      );
+      await speech.warmUp();
+      expect(speech.isUnavailable, isTrue);
+      final warmup = BackendWarmup(
+        chatHealth: (_) async => true,
+        speechSettled: speech.settled,
+      );
+      warmup.warmUp();
+      await pumpEventQueue();
+      var notified = 0;
+      warmup.addListener(() => notified++);
+      expect(await warmup.holdForAudio(), isTrue);
+      expect(notified, 0, reason: 'no waking line at all');
       warmup.dispose();
     });
   });

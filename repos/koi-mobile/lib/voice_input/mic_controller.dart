@@ -11,10 +11,12 @@ import 'mic_recorder.dart';
 /// Per-uid mic state in `koi_local_prefs` (Prompt 26): the opt-in
 /// explanation is shown once per uid (accepted with Continue), and Android
 /// denials are counted so the second one can point to Android Settings.
+/// Prompt 29 changed the explanation, so it is asked again under a new key
+/// (the Prompt 26 key `koi_mic_consent_{uid}` is no longer read here).
 class MicPrefs {
   MicPrefs(this._store);
 
-  static String consentKey(String uid) => 'koi_mic_consent_$uid';
+  static String consentKey(String uid) => 'koi_mic_consent_v2_$uid';
   static String deniedKey(String uid) => 'koi_mic_denied_$uid';
 
   final KeyValueStore _store;
@@ -97,7 +99,7 @@ class MicController extends ChangeNotifier {
     Future<String> Function()? tempDir,
     Future<void> Function(String path)? delete,
     DateTime Function()? now,
-    this.maxLength = const Duration(seconds: 30),
+    this.maxLength = const Duration(seconds: 29),
     this.warnAt = const Duration(seconds: 25),
   }) : diagnostics = diagnostics ?? MicDiagnosticsLog(),
        _tempDir = tempDir ?? micTempDir,
@@ -128,7 +130,8 @@ class MicController extends ChangeNotifier {
   final Future<void> Function(String path) _delete;
   final DateTime Function() _now;
 
-  /// The server decodes only the first 30 s.
+  /// The server decodes only the first 30 s; 29 s leaves a margin (Ahmad,
+  /// Prompt 29; web MicrophoneCapture.ts stops at 29.5 s).
   final Duration maxLength;
 
   /// The timer turns to the warning colour from here.
@@ -311,8 +314,9 @@ class MicController extends ChangeNotifier {
     await _discardClip();
   }
 
-  /// The crisis or breathing screen opened, or the app went to the
-  /// background: a recording in progress is discarded.
+  /// The crisis or breathing screen opened, an exercise started, the mode
+  /// changed, the user signed out or the app went to the background: a
+  /// recording in progress is discarded.
   Future<void> interrupt() => cancel();
 
   Future<void> _discardClip() async {

@@ -5,6 +5,7 @@ import 'package:koi_mobile/chat/chat_api.dart';
 import 'package:koi_mobile/chat/conversation_service.dart';
 import 'package:koi_mobile/core/key_value_store.dart';
 import 'package:koi_mobile/voice_input/mic_controller.dart';
+import 'package:koi_mobile/voice_input/mic_widgets.dart' show MicTexts;
 
 import 'fake_mic.dart';
 
@@ -302,7 +303,8 @@ void main() {
     m.dispose();
   });
 
-  test('ATC-M3-20 clip length is capped at maxLength', () async {
+  // Changed in Prompt 29: default maxLength 30 s → 29 s.
+  test('ATC-M3-20 clip length is capped at maxLength (default 29 s)', () async {
     var now = DateTime(2026, 10, 18);
     final m = MicController(
       uid: 'u1',
@@ -320,13 +322,50 @@ void main() {
     now = now.add(const Duration(seconds: 25));
     expect(m.warning, isTrue);
     now = now.add(const Duration(seconds: 20));
-    expect(m.elapsed, const Duration(seconds: 30));
+    expect(m.elapsed, const Duration(seconds: 29));
     await m.tap();
-    expect(diagnostics.last!.line, contains('clip=30.0s'));
+    expect(diagnostics.last!.line, contains('clip=29.0s'));
     m.dispose();
   });
 
   test('ATC-M3-23 AudioUpload default filename is voice.wav', () {
     expect(const AudioUpload('/x').filename, 'voice.wav');
+  });
+
+  test('ATC-M3-40 consent v2: asked again although the Prompt 26 consent '
+      'was given; stored under koi_mic_consent_v2_{uid}', () async {
+    store.values['koi_mic_consent_u1'] = 'true';
+    final m = mic();
+    await m.tap();
+    expect(consents, 1);
+    expect(MicPrefs.consentKey('u1'), 'koi_mic_consent_v2_u1');
+    expect(store.get('koi_mic_consent_v2_u1'), 'true');
+    expect(m.recording, isTrue);
+    await m.cancel();
+    m.dispose();
+  });
+
+  test('ATC-M3-41 default auto-send is 29 s; warning from 25 s', () {
+    final m = MicController(
+      uid: 'u1',
+      recorder: recorder,
+      prefs: MicPrefs(store),
+      send: (a, {saveTranscript = true}) async =>
+          const AudioSendResult(reply: 'x'),
+      askConsent: () async => true,
+      isBlocked: () => false,
+    );
+    expect(m.maxLength, const Duration(seconds: 29));
+    expect(m.warnAt, const Duration(seconds: 25));
+    m.dispose();
+  });
+
+  test('ATC-M3-52 the consent text is exactly the Prompt 29 text', () {
+    expect(
+      MicTexts.consent,
+      "Your recording is sent to KOI's speech-recognition service to be turned "
+      'into text, then discarded. The text is sent to the reply model like '
+      'typed text. Recordings are not saved.',
+    );
   });
 }

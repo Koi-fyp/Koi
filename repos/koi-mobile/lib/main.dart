@@ -26,11 +26,10 @@ import 'core/key_value_store.dart';
 import 'core/onboarding_store.dart';
 import 'core/sync_queue.dart';
 import 'dev/design_gallery.dart';
+import 'modes/input_mode.dart';
 import 'onboarding/onboarding_service.dart';
 import 'settings/settings_prefs.dart';
 import 'theme/koi_theme.dart';
-import 'voice/voice_controller.dart';
-import 'voice/voice_providers.dart';
 import 'voice_input/mic_controller.dart';
 import 'voice_input/mic_providers.dart';
 
@@ -140,7 +139,7 @@ Future<void> main() async {
       overrides: [
         authServiceProvider.overrideWith((ref) => auth),
         onboardingStoreProvider.overrideWith((ref) => onboarding),
-        voicePrefsProvider.overrideWithValue(VoicePrefs(localPrefs)),
+        modePrefsProvider.overrideWithValue(ModePrefs(localPrefs)),
         micPrefsProvider.overrideWithValue(MicPrefs(localPrefs)),
         onboardingUserWriterProvider.overrideWithValue(
           HiveUserOnboardingWriter(UserRepository()),

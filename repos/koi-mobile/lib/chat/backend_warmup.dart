@@ -19,7 +19,8 @@ typedef HealthCheck = Future<bool> Function(Duration timeout);
 ///   has passed since the warm-up started.
 /// - The crisis service is only warmed (health only, never
 ///   /api/v1/crisis); its result never changes [status] or holds text
-///   chat. Audio turns wait for both services ([holdForAudio], Prompt 26).
+///   chat. Audio turns wait for both services ([holdForAudio], Prompt 26),
+///   and for the speech service warm-up ([speechSettled], Prompt 29).
 /// - [holdFirstSend]: the first chat send waits until chat /health
 ///   returned 200 or the limit passed. Later sends are not held.
 /// - `waking` once health or a chat request has been pending for
@@ -32,6 +33,7 @@ class BackendWarmup extends ChangeNotifier {
   BackendWarmup({
     required this.chatHealth,
     this.crisisHealth,
+    this.speechSettled,
     this.wakingAfter = const Duration(seconds: 3),
     this.resumeAfter = const Duration(minutes: 5),
     this.limit = const Duration(seconds: 240),
@@ -46,6 +48,10 @@ class BackendWarmup extends ChangeNotifier {
 
   /// null when KOI_CRISIS_BASE is not set.
   final HealthCheck? crisisHealth;
+
+  /// SpeechWarmup.settled: the speech /health warm-up to wait for (200 or
+  /// limit), null when there is none. null when not wired (tests).
+  final Future<void>? Function()? speechSettled;
   final Duration wakingAfter;
   final Duration resumeAfter;
 
@@ -199,16 +205,19 @@ class BackendWarmup extends ChangeNotifier {
     if (!_chatOk) _warmChat();
   }
 
-  /// Before an audio upload (Ahmad's audio instructions: /health on both
-  /// first): waits until chat AND crisis /health returned 200. A service
-  /// that is not configured is not waited for. false when one of them did
-  /// not answer 200 within [limit]; the upload is then not sent. Text turns
-  /// never call this.
+  /// Before an audio upload (Ahmad's audio instructions: /health first):
+  /// waits until chat AND crisis /health returned 200, and until the speech
+  /// warm-up has ended. A service that is not configured is not waited for.
+  /// false when chat or crisis did not answer 200 within [limit]; the
+  /// upload is then not sent. Speech never blocks the upload: without its
+  /// 200 the replies use the device voice (Prompt 29). Text turns never
+  /// call this.
   Future<bool> holdForAudio() async {
     prepareAudio();
     final waits = [
       if (chatHealth != null && !_chatOk) _chatWarm!.future,
       if (crisisHealth != null && !_crisisOk) _crisisWarmDone!.future,
+      ?speechSettled?.call(),
     ];
     if (waits.isNotEmpty) {
       _holdingAudio = true;

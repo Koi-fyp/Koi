@@ -4,29 +4,15 @@ import 'package:flutter/foundation.dart';
 
 import '../avatar/avatar_state.dart' show MouthCue;
 import '../chat/backend_warmup.dart' show BackendWarmup, HealthCheck;
-import '../core/key_value_store.dart';
+import 'speech_api.dart' show SpeechApiException;
 import 'speech_source.dart';
 import 'voice_text.dart';
 
-/// The call screen's voice on/off, per uid in `koi_local_prefs`
-/// (`koi_voice_enabled_{uid}`, 'true' / 'false'). On by default.
-class VoicePrefs {
-  VoicePrefs(this._store);
-
-  static const String key = 'koi_voice_enabled';
-  static String keyFor(String uid) => '${key}_$uid';
-
-  final KeyValueStore _store;
-
-  bool isEnabled(String uid) => _store.get(keyFor(uid)) != 'false';
-
-  Future<void> setEnabled(String uid, bool on) =>
-      _store.put(keyFor(uid), on ? 'true' : 'false');
-}
-
-/// `GET /health` on the speech service when the call screen opens, retried
-/// like BackendWarmup (2/4/8/16/30 s, 240 s limit). Until it answers 200
-/// the device voice is used (decided 2026-10-18).
+/// `GET /health` on the speech service, retried like BackendWarmup
+/// (2/4/8/16/30 s, 240 s limit): started when the call screen opens and
+/// awaited before the first voice turn (Prompt 29, [settled]). The service
+/// is [isUnavailable] once a warm-up ended without a 200; replies then use
+/// the device voice until a later warm-up gets one.
 class SpeechWarmup {
   SpeechWarmup({
     required this.health,
@@ -45,60 +31,95 @@ class SpeechWarmup {
   final Future<void> Function(Duration) _delay;
 
   bool _ready = false;
-  bool _warming = false;
+  bool _gaveUp = false;
+  Completer<void>? _run;
 
   bool get isReady => _ready;
 
-  /// Never awaited by the UI; does nothing while one runs or once ready.
-  Future<void> warmUp() async {
+  /// The last warm-up ended without a 200 (and none has had one since).
+  bool get isUnavailable => !_ready && _gaveUp;
+
+  /// Never awaited by the UI; joins the warm-up that is running, does
+  /// nothing once ready. Completes when this warm-up ends.
+  Future<void> warmUp() {
     final check = health;
-    if (check == null || _ready || _warming) return;
-    _warming = true;
-    try {
-      final start = _now();
-      for (var attempt = 0; ; attempt++) {
-        final left = limit - _now().difference(start);
-        if (left <= Duration.zero) return;
-        var ok = false;
-        try {
-          ok = await check(left);
-        } catch (_) {}
-        if (ok) {
-          _ready = true;
-          return;
-        }
-        final remaining = limit - _now().difference(start);
-        if (remaining <= Duration.zero) return;
-        final wait =
-            retryDelays[attempt < retryDelays.length
-                ? attempt
-                : retryDelays.length - 1];
-        await _delay(wait < remaining ? wait : remaining);
+    if (check == null || _ready) return Future.value();
+    final running = _run;
+    if (running != null) return running.future;
+    final run = _run = Completer<void>();
+    unawaited(() async {
+      try {
+        _ready = await _attempts(check);
+        if (!_ready) _gaveUp = true;
+      } finally {
+        _run = null;
+        run.complete();
       }
-    } finally {
-      _warming = false;
+    }());
+    return run.future;
+  }
+
+  /// Before a voice turn: the warm-up to wait for (one is started if none
+  /// has run yet). null when not configured, ready, or after a warm-up
+  /// already ended without a 200 (the turn is then sent and replies use the
+  /// device voice).
+  Future<void>? settled() {
+    if (health == null || _ready) return null;
+    final running = _run;
+    if (running != null) return running.future;
+    if (_gaveUp) return null;
+    return warmUp();
+  }
+
+  Future<bool> _attempts(HealthCheck check) async {
+    final start = _now();
+    for (var attempt = 0; ; attempt++) {
+      final left = limit - _now().difference(start);
+      if (left <= Duration.zero) return false;
+      var ok = false;
+      try {
+        ok = await check(left);
+      } catch (_) {}
+      if (ok) return true;
+      final remaining = limit - _now().difference(start);
+      if (remaining <= Duration.zero) return false;
+      final wait =
+          retryDelays[attempt < retryDelays.length
+              ? attempt
+              : retryDelays.length - 1];
+      await _delay(wait < remaining ? wait : remaining);
     }
   }
 }
 
-/// Speaks completed replies on the call screen: the speech service first,
-/// the device voice for the rest of a reply after any server failure
-/// (error, timeout, rate limit, stale answer), or for the whole reply when
-/// the service isn't warm or the plan is device-only. [speaking] is the
+/// Speaks completed replies on the call screen (Prompt 29 rule, decided
+/// per reply): the speech service, skipping a chunk that fails or takes
+/// longer than 12 s (ServerSpeechSource.timeout); `unauthenticated` /
+/// `rate-limited` end the reply, as later chunks would fail too (web
+/// speechReplyController.ts TERMINAL). The device voice only when the
+/// service is not configured or [serverUnavailable]. [speaking] is the
 /// voice that is audible now (null = idle); [onMouth] gets each part's
 /// cues.
 class VoiceController extends ChangeNotifier {
   VoiceController({
     required this.server,
     required this.device,
-    required this.serverReady,
+    required this.serverUnavailable,
     required this.onMouth,
   });
+
+  /// Codes that end the reply instead of skipping one chunk.
+  static const Set<String> terminalCodes = {
+    'unauthenticated',
+    'rate-limited',
+    '401',
+    '429',
+  };
 
   /// null when KOI_SPEECH_BASE is not set.
   final ServerSpeechSource? server;
   final SpeechSource device;
-  final bool Function() serverReady;
+  final bool Function() serverUnavailable;
   final void Function(List<MouthCue> cues) onMouth;
 
   VoiceKind? _speaking;
@@ -114,28 +135,31 @@ class VoiceController extends ChangeNotifier {
     final reply = _reply;
     final parts = plan.parts;
     final server = this.server;
-    var useServer = server != null && !plan.deviceOnly && serverReady();
+    final useServer = server != null && !serverUnavailable();
     for (var i = 0; i < parts.length; i++) {
       if (reply != _reply) return;
       final next = i + 1 < parts.length ? parts[i + 1] : null;
       final listener = _PartListener(this, reply, () {
         // Fetch the next part while this one plays.
-        if (useServer && next != null) server!.prefetch(next);
+        if (useServer && next != null) server.prefetch(next);
       });
-      if (useServer) {
-        try {
-          await server!.speak(parts[i], listener);
-          continue;
-        } catch (e) {
-          debugPrint('KOI: speech fell back to device voice: $e');
-          useServer = false;
-          unawaited(server!.stop());
-          if (reply != _reply) return;
-        }
+      if (!useServer) {
+        await device.speak(parts[i], listener);
+        continue;
       }
-      await device.speak(parts[i], listener);
+      try {
+        await server.speak(parts[i], listener);
+      } on SpeechApiException catch (e) {
+        debugPrint('KOI: speech chunk skipped: ${e.code}');
+        if (terminalCodes.contains(e.code)) break;
+      } catch (e) {
+        debugPrint('KOI: speech chunk skipped: ${e.runtimeType}');
+      }
     }
-    if (reply == _reply) _setSpeaking(null);
+    if (reply == _reply) {
+      onMouth(const []);
+      _setSpeaking(null);
+    }
   }
 
   /// Stops audio and mouth at once and drops pending requests.

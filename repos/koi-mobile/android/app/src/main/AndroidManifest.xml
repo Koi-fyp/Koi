@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Call screen mic (Prompt 26): asked only after the user opts in. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Call screen camera view (Prompt 29): local preview only, asked on
+         the first tap of the Camera button. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="koi_mobile"
         android:name="${applicationName}"

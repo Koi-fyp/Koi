@@ -7,6 +7,8 @@ import 'package:koi_mobile/chat/chat_screen.dart';
 import 'package:koi_mobile/chat/conversation_service.dart';
 import 'package:koi_mobile/chat/widgets/chat_widgets.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
+import 'package:koi_mobile/core/key_value_store.dart';
+import 'package:koi_mobile/modes/input_mode.dart';
 import 'package:koi_mobile/settings/settings_prefs.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
 
@@ -26,6 +28,9 @@ void main() {
     WidgetTester tester, {
     Size size = const Size(360, 800),
     double keyboard = 0,
+    // Prompt 29: every control and the camera line on screen, so the layout
+    // checks cover the fullest call screen.
+    KoiInputMode mode = KoiInputMode.cameraVoice,
   }) async {
     tester.view.devicePixelRatio = 3;
     tester.view.physicalSize = size * 3;
@@ -47,6 +52,11 @@ void main() {
             }),
           ),
           ...chatOverrides(),
+          modePrefsProvider.overrideWithValue(
+            ModePrefs(
+              MemoryKeyValueStore({ModePrefs.keyFor('u1'): mode.id}),
+            ),
+          ),
         ],
         child: const MaterialApp(home: AppShell()),
       ),
@@ -98,10 +108,6 @@ void main() {
       )
       .properties
       .toggled;
-
-  /// Lets any open toast time out (3s) so no timer is left pending.
-  Future<void> drainToasts(WidgetTester tester) =>
-      tester.pump(const Duration(seconds: 4));
 
   testWidgets('ATC-M20-04 Chat has the entry button; it opens the call screen', (
     tester,
@@ -394,16 +400,35 @@ void main() {
     );
   });
 
-  testWidgets('ATC-M20-08 controls: Camera greyed out, tap = coming-soon toast only; '
-      'Mic enabled (Prompt 26); text stays on; no camera preview', (
+  // Changed in Prompt 29: the Camera button was greyed out with a
+  // coming-soon toast and Chat was a text/voice toggle; now Mic and Camera
+  // follow the mode and Chat only focuses the text box.
+  testWidgets('ATC-M20-08 controls follow the mode: Text → Chat + End only; '
+      'Camera view + voice → Mic and Camera enabled, camera off until tapped', (
     tester,
   ) async {
+    await pumpShell(tester, mode: KoiInputMode.text);
+    await openCall(tester);
+    expect(find.byKey(const Key('call-mic')), findsNothing);
+    expect(find.byKey(const Key('call-camera')), findsNothing);
+    expect(find.byKey(const Key('call-text')), findsOneWidget);
+    expect(find.byKey(const Key('call-end')), findsOneWidget);
+    expect(find.byKey(const Key('camera-disclosure')), findsNothing);
+    expect(toggled(tester, 'call-text'), isFalse);
+    await tester.tap(find.byKey(const Key('call-text')));
+    await tester.pump();
+    await tester.pump();
+    expect(toggled(tester, 'call-text'), isFalse);
+    expect(
+      find.descendant(of: callScreen, matching: find.byType(InputBar)),
+      findsOneWidget,
+    );
+    expect(find.byType(Texture), findsNothing);
+    expect(find.byType(PlatformViewSurface), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
     await pumpShell(tester);
     await openCall(tester);
-    final inputBar = find.descendant(
-      of: callScreen,
-      matching: find.byType(InputBar),
-    );
     double opacity(String key) => tester
         .widget<Opacity>(
           find.descendant(
@@ -412,40 +437,11 @@ void main() {
           ),
         )
         .opacity;
-    bool? enabled(String key) => tester
-        .widget<Semantics>(
-          find
-              .descendant(
-                of: find.byKey(Key(key)),
-                matching: find.byType(Semantics),
-              )
-              .first,
-        )
-        .properties
-        .enabled;
-
-    expect(toggled(tester, 'call-text'), isTrue);
-    expect(opacity('call-camera'), 0.4);
-    expect(enabled('call-camera'), isFalse);
-    expect(toggled(tester, 'call-camera'), isNull);
     expect(opacity('call-mic'), 1);
-    expect(enabled('call-mic'), isNull);
-    expect(toggled(tester, 'call-mic'), isFalse);
-    expect(opacity('call-text'), 1);
-    expect(opacity('call-end'), 1);
-
-    await tester.tap(find.byKey(const Key('call-camera')));
-    await tester.pump();
-    expect(find.text(AvatarCallScreen.cameraSoon), findsOneWidget);
-    expect(toggled(tester, 'call-text'), isTrue);
-    expect(inputBar, findsOneWidget);
+    expect(opacity('call-camera'), 1);
+    expect(toggled(tester, 'call-camera'), isFalse);
+    expect(find.byKey(const Key('camera-pip')), findsNothing);
     expect(find.byType(Texture), findsNothing);
-    expect(find.byType(PlatformViewSurface), findsNothing);
-
-    await tester.tap(find.byKey(const Key('call-text')));
-    await tester.pump();
-    expect(toggled(tester, 'call-text'), isTrue);
     expect(tester.takeException(), isNull);
-    await drainToasts(tester);
   });
 }

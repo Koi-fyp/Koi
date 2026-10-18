@@ -3,16 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/providers.dart';
 import '../avatar/avatar_state.dart' show MouthCue;
 import '../chat/chat_api.dart';
-import '../core/key_value_store.dart';
 import 'speech_api.dart';
 import 'speech_source.dart';
 import 'voice_controller.dart';
-
-/// Overridden in main.dart with the `koi_local_prefs` box; in memory
-/// otherwise (tests).
-final voicePrefsProvider = Provider<VoicePrefs>(
-  (ref) => VoicePrefs(MemoryKeyValueStore()),
-);
 
 final speechApiProvider = Provider<SpeechApiClient>(
   (ref) => SpeechApiClient(baseUrl: koiSpeechBase),
@@ -62,7 +55,7 @@ final voiceControllerFactoryProvider =
                 )
               : null,
           device: DeviceSpeechSource(ref.read(ttsEngineFactoryProvider)()),
-          serverReady: () => warmup.isReady,
+          serverUnavailable: () => warmup.isUnavailable,
           onMouth: onMouth,
         );
       };

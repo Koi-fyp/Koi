@@ -56,6 +56,9 @@ dependencies:
   # 6.0.0 = newest record whose record_web accepts web 0.5.1 (firebase_auth 4.x).
   record: 6.0.0
   path_provider: 2.1.6
+  # Call screen camera view (approved Prompt 29): local front-camera preview
+  # only. 0.12.1 resolves with the Firebase 4.x pins (web stays 0.5.1).
+  camera: 0.12.1
 
 dev_dependencies:
   flutter_test:
