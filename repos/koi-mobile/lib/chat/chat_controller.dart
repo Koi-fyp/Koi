@@ -118,6 +118,9 @@ class ChatController extends ChangeNotifier {
 
   BackendStatus get backendStatus => backend?.status ?? BackendStatus.unknown;
 
+  /// An audio turn waits for chat + crisis /health (show the waking line).
+  bool get holdingAudio => backend?.holdingAudio ?? false;
+
   /// Avatar updates for [conversationId]: companion_state emotion and the
   /// thinking / speaking / idle state. Lip-sync is not connected.
   Stream<AvatarStateEvent> get avatarEvents => _avatar.stream;
@@ -240,11 +243,8 @@ class ChatController extends ChangeNotifier {
     emotion: Emotion.neutral,
   );
 
-  Future<void> send(String text) async {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty || _isTyping) return;
-
-    // Context is taken BEFORE the new message is added.
+  /// The last [contextTurns] messages, minus saved fallback replies.
+  List<ChatTurn> _context() {
     final history = [
       for (final m in _messages)
         if (!m.isFallback) m,
@@ -252,13 +252,21 @@ class ChatController extends ChangeNotifier {
     final start = history.length > contextTurns
         ? history.length - contextTurns
         : 0;
-    final context = [
+    return [
       for (final m in history.sublist(start))
         ChatTurn(
           role: m.isUser ? historyRoleUser : historyRoleAssistant,
           content: m.content,
         ),
     ];
+  }
+
+  Future<void> send(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || _isTyping) return;
+
+    // Context is taken BEFORE the new message is added.
+    final context = _context();
 
     _messages.add(
       ChatMessage(
@@ -329,6 +337,97 @@ class ChatController extends ChangeNotifier {
       _notify();
     } else {
       await doSend();
+    }
+  }
+
+  /// One audio turn (Prompt 26, call screen only). Same context, session,
+  /// avatar and safety handling as [send]; the user bubble appears when the
+  /// `transcript` event arrives (not when [saveTranscript] is false: a
+  /// Retry whose transcript is already in the chat). Before the upload,
+  /// chat and crisis /health must both answer 200
+  /// ([BackendWarmup.holdForAudio]).
+  ///
+  /// Nothing is queued offline and nothing is invented on failure: no
+  /// fallback reply, and a transcript bubble that could not be saved is
+  /// removed again. The caller shows the error and Retry.
+  Future<AudioSendResult> sendVoice(
+    AudioUpload audio, {
+    bool saveTranscript = true,
+  }) async {
+    if (_isTyping) return const AudioSendResult(failureCode: 'busy');
+    if (!await isOnline()) {
+      return const AudioSendResult(failureCode: 'offline');
+    }
+    final context = _context();
+    final liveId = _newId();
+    final warmup = service.isConfigured ? backend : null;
+    ChatMessage? shown;
+    _isTyping = true;
+    _notify();
+    _avatarState(state: AvatarConversationState.thinking);
+    warmup?.chatStarted();
+    try {
+      final base = _handlers(liveId);
+      final result = await service.sendAudio(
+        userId: uid,
+        conversationId: conversationId,
+        audio: audio,
+        context: context,
+        handlers: ChatHandlers(
+          onEvent: base.onEvent,
+          onCompanionState: base.onCompanionState,
+          onDelta: base.onDelta,
+          onUiAction: base.onUiAction,
+          onHandoff: base.onHandoff,
+          onRisk: base.onRisk,
+          onTranscript: (text) {
+            if (!saveTranscript) return;
+            final bubble = shown = ChatMessage(
+              id: _newId(),
+              conversationId: conversationId,
+              sender: 'user',
+              content: text,
+              timestamp: _now(),
+              emotion: Emotion.neutral,
+            );
+            _messages.add(bubble);
+            _notify();
+          },
+        ),
+        session: session,
+        onResolutionSent: () => safety?.crisisResolutionSent(),
+        beforeRequest: warmup?.holdForAudio,
+        saveTranscript: saveTranscript,
+      );
+      final code = result.failureCode;
+      warmup?.chatFinished(
+        reached: code == 'timeout' || code == 'network'
+            ? false
+            : code == null || int.tryParse(code) != null
+            ? true
+            : null,
+      );
+      if (shown != null && !result.transcriptSaved) _messages.remove(shown);
+      final reply = result.reply;
+      if (reply != null) {
+        _currentEmotion = result.emotion ?? Emotion.neutral;
+        _messages.add(
+          ChatMessage(
+            id: liveId,
+            conversationId: conversationId,
+            sender: 'ai',
+            content: reply,
+            timestamp: _live?.timestamp ?? _now(),
+            emotion: _currentEmotion,
+          ),
+        );
+      }
+      return result;
+    } finally {
+      _live = null;
+      _isTyping = false;
+      _avatarState(state: AvatarConversationState.idle);
+      _notify();
     }
   }
 

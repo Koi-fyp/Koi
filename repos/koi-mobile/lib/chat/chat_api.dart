@@ -105,6 +105,7 @@ class ChatHandlers {
     this.onUiAction,
     this.onHandoff,
     this.onRisk,
+    this.onTranscript,
   });
 
   /// Any SSE frame arrived (its event name); used for "waking up".
@@ -120,6 +121,10 @@ class ChatHandlers {
 
   /// `status: "unavailable"` means no score this turn, never "safe".
   final void Function(RiskResult risk)? onRisk;
+
+  /// Audio turns only: what the server heard, before any reply (`text`,
+  /// exactly as received).
+  final void Function(String text)? onTranscript;
 }
 
 /// streamChat()'s result.
@@ -157,6 +162,9 @@ class ChatApiException implements Exception {
   static const String redirect = 'redirect';
   static const String noBody = 'no_body';
   static const String emptyReply = 'empty_reply';
+
+  /// An audio turn's stream ended without a non-blank `transcript`.
+  static const String noTranscript = 'no_transcript';
 
   @override
   String toString() => 'ChatApiException($code)';
@@ -271,6 +279,9 @@ class SseChatParser {
       case 'risk':
         _sawRisk = true;
         handlers.onRisk?.call(RiskResult.fromJson(_stringKeys(map)));
+      case 'transcript':
+        final text = map['text'];
+        if (text is String) handlers.onTranscript?.call(text);
       case 'state':
         _exerciseState(map);
       case 'done':
@@ -285,7 +296,7 @@ class SseChatParser {
           _sawRisk = true;
           handlers.onRisk?.call(RiskResult.fromJson(_stringKeys(risk)));
         }
-      // `transcript` (audio turns only), `done.reply_backend`,
+      // `transcript.language`, `done.reply_backend`,
       // `reply_fallback_reason`, `trace` (C11, C4) and unknown events are
       // ignored.
     }
@@ -364,6 +375,18 @@ Map<String, Object?> chatRequestBody({
   'crisis_path': crisisPath?.wire,
 };
 
+/// A recorded voice message for an audio turn, sent as the multipart `audio`
+/// file field (Ahmad, 2026-10-18: WAV is the verified format; max 25 MiB,
+/// only the first 30 s are decoded).
+@immutable
+class AudioUpload {
+  const AudioUpload(this.path, {this.filename = 'voice.wav'});
+
+  /// The temporary file on this device.
+  final String path;
+  final String filename;
+}
+
 /// Calls the chat service: `POST {base}/api/v1/chat` (SSE) and
 /// `GET {base}/health`.
 ///
@@ -403,6 +426,7 @@ class ChatApiClient {
     required String idToken,
     required Map<String, Object?> body,
     ChatHandlers handlers = const ChatHandlers(),
+    AudioUpload? audio,
   }) {
     if (!isConfigured) {
       return Future.error(
@@ -443,12 +467,27 @@ class ChatApiClient {
         'Accept': 'text/event-stream',
         'Authorization': 'Bearer $idToken',
       };
+      // Audio turns: multipart/form-data with the same JSON as the `payload`
+      // text field (chat_core.py _parse_chat_request); dio sets the
+      // Content-Type with its boundary. Hops are GETs, so the body is sent
+      // once.
       final res = await _request(
         'POST',
         _url('/api/v1/chat'),
-        headers: {...headers, 'Content-Type': 'application/json'},
+        headers: audio == null
+            ? {...headers, 'Content-Type': 'application/json'}
+            : headers,
         followHeaders: headers,
-        data: jsonEncode(body),
+        data: audio == null
+            ? jsonEncode(body)
+            : FormData.fromMap({
+                'payload': jsonEncode(body),
+                'audio': await MultipartFile.fromFile(
+                  audio.path,
+                  filename: audio.filename,
+                  contentType: DioMediaType('audio', 'wav'),
+                ),
+              }),
         cancel: cancel,
         hops: hops,
       );

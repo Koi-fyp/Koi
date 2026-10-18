@@ -52,6 +52,10 @@ dependencies:
   # Avatar voice (approved Prompt 25): server WAV playback + device fallback.
   audioplayers: 6.8.1
   flutter_tts: 4.2.5
+  # Mic voice input (approved Prompt 26): WAV 16 kHz mono to a temp file.
+  # 6.0.0 = newest record whose record_web accepts web 0.5.1 (firebase_auth 4.x).
+  record: 6.0.0
+  path_provider: 2.1.6
 
 dev_dependencies:
   flutter_test:

@@ -38,6 +38,7 @@ class ScriptedChatApi extends ChatApiClient {
     required String idToken,
     required Map<String, Object?> body,
     ChatHandlers handlers = const ChatHandlers(),
+    AudioUpload? audio,
   }) async {
     calls++;
     handlers.onEvent?.call('delta');

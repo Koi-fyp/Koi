@@ -394,8 +394,10 @@ void main() {
     );
   });
 
-  testWidgets('controls: Mic and Camera greyed out, tap = coming-soon toast '
-      'only; text stays on; no permission, no camera preview', (tester) async {
+  testWidgets('controls: Camera greyed out, tap = coming-soon toast only; '
+      'Mic enabled (Prompt 26); text stays on; no camera preview', (
+    tester,
+  ) async {
     await pumpShell(tester);
     await openCall(tester);
     final inputBar = find.descendant(
@@ -423,19 +425,14 @@ void main() {
         .enabled;
 
     expect(toggled(tester, 'call-text'), isTrue);
-    for (final k in ['call-mic', 'call-camera']) {
-      expect(opacity(k), 0.4, reason: k);
-      expect(enabled(k), isFalse, reason: k);
-      expect(toggled(tester, k), isNull, reason: k);
-    }
+    expect(opacity('call-camera'), 0.4);
+    expect(enabled('call-camera'), isFalse);
+    expect(toggled(tester, 'call-camera'), isNull);
+    expect(opacity('call-mic'), 1);
+    expect(enabled('call-mic'), isNull);
+    expect(toggled(tester, 'call-mic'), isFalse);
     expect(opacity('call-text'), 1);
     expect(opacity('call-end'), 1);
-
-    await tester.tap(find.byKey(const Key('call-mic')));
-    await tester.pump();
-    expect(find.text(AvatarCallScreen.voiceSoon), findsOneWidget);
-    expect(toggled(tester, 'call-text'), isTrue);
-    expect(inputBar, findsOneWidget); // still typing
 
     await tester.tap(find.byKey(const Key('call-camera')));
     await tester.pump();

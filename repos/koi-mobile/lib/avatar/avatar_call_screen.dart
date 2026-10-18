@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
+import '../chat/backend_warmup.dart' show BackendStatus;
 import '../chat/chat_controller.dart';
 import '../chat/widgets/chat_widgets.dart';
 import '../onboarding/step_layout.dart';
@@ -16,6 +17,9 @@ import '../voice/speech_source.dart' show VoiceKind;
 import '../voice/voice_controller.dart';
 import '../voice/voice_providers.dart';
 import '../voice/voice_text.dart';
+import '../voice_input/mic_controller.dart';
+import '../voice_input/mic_providers.dart';
+import '../voice_input/mic_widgets.dart';
 import 'avatar_providers.dart';
 import 'avatar_view.dart';
 import 'call_icons.dart';
@@ -37,8 +41,7 @@ class AvatarCallScreen extends ConsumerStatefulWidget {
   /// screen owns its own.
   final AvatarViewController? avatarController;
 
-  /// Mobile-only toast texts (same "coming soon" toast as Settings/Progress).
-  static const String voiceSoon = 'Voice coming soon!';
+  /// Mobile-only toast text (same "coming soon" toast as Settings/Progress).
   static const String cameraSoon = 'Camera coming soon!';
   static const String emptyTranscript = 'No messages yet.';
 
@@ -77,6 +80,10 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
   int _turnCrisisCount = 0;
   int? _turnBreathingId;
 
+  // Mic voice input (Prompt 26): a one-shot record action, not a CallInputs
+  // mode; the InputBar always stays.
+  MicController? _mic;
+
   CallInputs _inputs = CallInputs.initial;
   bool _transcriptOpen = false;
   ToastMessage? _toast;
@@ -91,7 +98,7 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     _voice = ref.read(voiceControllerFactoryProvider)(
       onMouth: _avatar.setMouthCues,
     )..addListener(_voiceChanged);
-    _lifecycle = AppLifecycleListener(onHide: _stopVoice, onPause: _stopVoice);
+    _lifecycle = AppLifecycleListener(onHide: _onHide, onPause: _onHide);
     final uid = _uid = ref.read(authServiceProvider).user?.uid;
     if (uid != null) {
       _voiceOn = ref.read(voicePrefsProvider).isEnabled(uid);
@@ -99,6 +106,19 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
       _chat = chat;
       _lastAiId = _lastAi(chat)?.id;
       chat.addListener(_onChat);
+      _mic = MicController(
+        uid: uid,
+        recorder: ref.read(micRecorderFactoryProvider)(),
+        prefs: ref.read(micPrefsProvider),
+        send: chat.sendVoice,
+        askConsent: () =>
+            mounted ? showMicConsent(context) : Future.value(false),
+        isBlocked: _micBlocked,
+        onRecordingStarted: _stopVoiceAndMouth,
+        diagnostics: ref.read(micDiagnosticsProvider),
+        tempDir: ref.read(micTempDirProvider),
+        now: ref.read(micClockProvider),
+      )..addListener(_micChanged);
     }
     unawaited(ref.read(speechWarmupProvider).warmUp());
   }
@@ -106,6 +126,9 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
   @override
   void dispose() {
     _chat?.removeListener(_onChat);
+    _mic
+      ?..removeListener(_micChanged)
+      ..dispose();
     _lifecycle.dispose();
     _voice
       ..removeListener(_voiceChanged)
@@ -126,10 +149,45 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     () => _toast = ToastMessage(message, ToastType.info, ++_toastSeq),
   );
 
-  // Voice and camera aren't available yet: the buttons are greyed out and
-  // only show the coming-soon toast (no permission request, no preview).
-  // CallInputs keeps the four approved modes for when they are.
-  void _onMic() => _soon(AvatarCallScreen.voiceSoon);
+  // ── Mic (Prompt 26) ─────────────────────────────────────────────────────
+
+  /// No recording while the crisis or breathing screen is open (or a
+  /// crisis resolution is pending), nor while a reply is pending.
+  bool _micBlocked() {
+    final safety = ref.read(safetyControllerProvider);
+    return safety.crisis != null ||
+        safety.resolutionPending ||
+        safety.breathing != null ||
+        (_chat?.isTyping ?? false);
+  }
+
+  /// Tap to record, tap again to send. Both health warm-ups start at once,
+  /// so they overlap the recording.
+  void _onMic() {
+    final mic = _mic;
+    if (mic == null) return;
+    if (!mic.recording && _micBlocked()) return;
+    ref.read(backendWarmupProvider).prepareAudio();
+    unawaited(mic.tap());
+  }
+
+  void _micChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Recording starts: phase-22 stop rules (voice and mouth stop).
+  void _stopVoiceAndMouth() {
+    _stopVoice();
+    _avatar.setMouthCues(const []);
+  }
+
+  void _onHide() {
+    _stopVoice();
+    unawaited(_mic?.interrupt());
+  }
+
+  // Camera isn't available yet: the button is greyed out and only shows the
+  // coming-soon toast (no permission request, no preview).
 
   void _onText() {
     setState(() => _inputs = _inputs.selectText());
@@ -232,8 +290,15 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
       language = (await ref.read(settingsPrefsStoreProvider).load(uid))
           .language;
     } catch (_) {}
-    // A newer reply, a send or a stop trigger got here first.
-    if (!mounted || !_voiceOn || _turnOpen || aiId != _lastAiId) return;
+    // A newer reply, a send or a stop trigger got here first; never speak
+    // into a recording.
+    if (!mounted ||
+        !_voiceOn ||
+        _turnOpen ||
+        aiId != _lastAiId ||
+        (_mic?.recording ?? false)) {
+      return;
+    }
     await _voice.speak(
       planSpeech(text, companion: companion, userLanguage: language),
     );
@@ -269,18 +334,33 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
       _setModel(next);
       if (prev?.valueOrNull != next.valueOrNull) _stopVoice();
     });
-    // The breathing screen opened or closed.
-    ref.listen(
-      safetyControllerProvider.select((s) => s.breathing != null),
-      (_, _) => _stopVoice(),
-    );
+    // The breathing screen opened or closed. Opening it discards a
+    // recording in progress.
+    ref.listen(safetyControllerProvider.select((s) => s.breathing != null), (
+      _,
+      open,
+    ) {
+      _stopVoice();
+      if (open) unawaited(_mic?.interrupt());
+    });
     // companion-scene/page.tsx:18: the avatar only loads once the saved
     // companion is known and has a model (not Koi's fox).
     final showAvatar = selected.valueOrNull?.model != null;
+    final mic = _mic;
+    // Rebuilds when the crisis / breathing state changes.
+    final micBlocked =
+        ref.watch(
+          safetyControllerProvider.select(
+            (s) =>
+                s.crisis != null || s.resolutionPending || s.breathing != null,
+          ),
+        ) ||
+        chat.isTyping;
     // Crisis flow opened (contract §3: stop any animation): back to idle,
     // neutral, no mouth movement.
     ref.listen(safetyControllerProvider.select((s) => s.crisisCount), (_, _) {
       _stopVoice();
+      unawaited(_mic?.interrupt());
       _avatar
         ..setMouthCues(const [])
         ..setConversationState(AvatarConversationState.idle)
@@ -361,16 +441,32 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
                   ],
                 ),
               ),
+              if (chat.holdingAudio ||
+                  (mic != null &&
+                      mic.sending &&
+                      chat.backendStatus == BackendStatus.waking))
+                const WakingLine(),
+              if (mic != null && mic.recording) MicRecordingStrip(mic: mic),
+              if (mic != null) MicNoticeLine(mic: mic),
+              // Typing is always available; only Send waits while a turn
+              // (typed or voice, including the recording) is pending.
               if (_inputs.textOn)
                 InputBar(
                   onSend: chat.send,
-                  disabled: chat.isTyping,
+                  disabled:
+                      chat.isTyping ||
+                      (mic != null && (mic.recording || mic.sending)),
                   keepTypingEnabled: true,
                   focusNode: _input,
                 ),
               _CallControls(
                 compact: keyboardOpen,
                 inputs: _inputs,
+                micRecording: mic?.recording ?? false,
+                micDisabled:
+                    mic == null ||
+                    mic.sending ||
+                    (!mic.recording && micBlocked),
                 onMic: _onMic,
                 onCamera: _onCamera,
                 onText: _onText,
@@ -723,6 +819,8 @@ class _CallControls extends StatelessWidget {
   const _CallControls({
     required this.inputs,
     required this.compact,
+    required this.micRecording,
+    required this.micDisabled,
     required this.onMic,
     required this.onCamera,
     required this.onText,
@@ -730,6 +828,12 @@ class _CallControls extends StatelessWidget {
   });
 
   final CallInputs inputs;
+
+  /// Recording: the mic button is active and sends.
+  final bool micRecording;
+
+  /// Crisis / breathing open, a reply pending, or a voice message sending.
+  final bool micDisabled;
 
   /// The keyboard is open (read above the Scaffold, which hides it from
   /// its body).
@@ -744,10 +848,12 @@ class _CallControls extends StatelessWidget {
       children: [
         _CallButton(
           key: const Key('call-mic'),
-          label: 'Mic',
+          // Tap again to send (Prompt 26).
+          label: micRecording ? 'Send' : 'Mic',
           paths: micIconPaths,
-          active: false,
-          disabled: true,
+          active: micRecording,
+          disabled: micDisabled,
+          disabledHint: null,
           compact: compact,
           onTap: onMic,
         ),
@@ -793,6 +899,7 @@ class _CallButton extends StatefulWidget {
     required this.onTap,
     this.danger = false,
     this.disabled = false,
+    this.disabledHint = 'Coming soon',
     required this.compact,
   });
 
@@ -801,9 +908,12 @@ class _CallButton extends StatefulWidget {
   final bool active;
   final bool danger;
 
-  /// Not available yet: greyed out; a tap still calls [onTap] (the
-  /// coming-soon toast).
+  /// Greyed out; a tap still calls [onTap] (the coming-soon toast, or the
+  /// mic, which ignores it).
   final bool disabled;
+
+  /// Screen-reader hint while [disabled].
+  final String? disabledHint;
 
   /// Keyboard open: no label under the button.
   final bool compact;
@@ -833,7 +943,7 @@ class _CallButtonState extends State<_CallButton> {
       label: widget.label,
       toggled: widget.danger || widget.disabled ? null : widget.active,
       enabled: widget.disabled ? false : null,
-      hint: widget.disabled ? 'Coming soon' : null,
+      hint: widget.disabled ? widget.disabledHint : null,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

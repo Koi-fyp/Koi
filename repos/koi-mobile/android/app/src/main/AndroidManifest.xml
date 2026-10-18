@@ -2,6 +2,8 @@
     <!-- Needed in release builds for Firebase and the chat API (debug/profile
          manifests already declare it for development tooling). -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Call screen mic (Prompt 26): asked only after the user opts in. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="koi_mobile"
         android:name="${applicationName}"

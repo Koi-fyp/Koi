@@ -18,7 +18,8 @@ typedef HealthCheck = Future<bool> Function(Duration timeout);
 ///   is retried with [retryDelays] backoff until it answers 200 or [limit]
 ///   has passed since the warm-up started.
 /// - The crisis service is only warmed (health only, never
-///   /api/v1/crisis); its result never changes [status] or holds chat.
+///   /api/v1/crisis); its result never changes [status] or holds text
+///   chat. Audio turns wait for both services ([holdForAudio], Prompt 26).
 /// - [holdFirstSend]: the first chat send waits until chat /health
 ///   returned 200 or the limit passed. Later sends are not held.
 /// - `waking` once health or a chat request has been pending for
@@ -75,6 +76,14 @@ class BackendWarmup extends ChangeNotifier {
 
   /// Completes when the current chat warm-up ends (200 or limit).
   Completer<void>? _chatWarm;
+
+  /// The last warm-up of each service ended with HTTP 200.
+  bool _chatOk = false;
+  bool _crisisOk = false;
+
+  /// Completes when the current crisis warm-up ends (200 or limit).
+  Completer<void>? _crisisWarmDone;
+  bool _holdingAudio = false;
 
   BackendStatus get status => _status;
 
@@ -141,28 +150,78 @@ class BackendWarmup extends ChangeNotifier {
   /// Fire-and-forget health warm-up of both services. A service that is
   /// still warming is not started twice.
   void warmUp() {
+    _warmCrisis();
+    _warmChat();
+  }
+
+  void _warmCrisis() {
     final crisis = crisisHealth;
-    if (crisis != null && !_crisisWarming) {
-      _crisisWarming = true;
-      // Failures stay here: chat never waits for or sees the crisis result.
-      unawaited(
-        _retry(crisis)
-            .catchError((Object _) => false)
-            .whenComplete(() => _crisisWarming = false),
-      );
-    }
+    if (crisis == null || _crisisWarming) return;
+    _crisisWarming = true;
+    _crisisOk = false;
+    final warm = _crisisWarmDone = Completer<void>();
+    // Failures stay here: text chat never waits for or sees the crisis
+    // result (only audio turns wait, see holdForAudio).
+    unawaited(
+      _retry(crisis).catchError((Object _) => false).then((ok) {
+        _crisisWarming = false;
+        _crisisOk = ok;
+        warm.complete();
+      }),
+    );
+  }
+
+  void _warmChat() {
     final chat = chatHealth;
     if (chat == null || _chatWarming) return;
     _chatWarming = true;
+    _chatOk = false;
     final warm = _chatWarm = Completer<void>();
     _begin();
     unawaited(
       _retry(chat).then((ok) {
         _chatWarming = false;
+        _chatOk = ok;
         _end(reached: ok);
         warm.complete();
       }),
     );
+  }
+
+  /// True while an audio turn waits in [holdForAudio] (the waking line is
+  /// shown, even when chat itself is already `ready`).
+  bool get holdingAudio => _holdingAudio;
+
+  /// Mic tapped (Prompt 26): warms whichever service has not answered 200
+  /// yet, so the warm-up overlaps the recording.
+  void prepareAudio() {
+    if (!_crisisOk) _warmCrisis();
+    if (!_chatOk) _warmChat();
+  }
+
+  /// Before an audio upload (Ahmad's audio instructions: /health on both
+  /// first): waits until chat AND crisis /health returned 200. A service
+  /// that is not configured is not waited for. false when one of them did
+  /// not answer 200 within [limit]; the upload is then not sent. Text turns
+  /// never call this.
+  Future<bool> holdForAudio() async {
+    prepareAudio();
+    final waits = [
+      if (chatHealth != null && !_chatOk) _chatWarm!.future,
+      if (crisisHealth != null && !_crisisOk) _crisisWarmDone!.future,
+    ];
+    if (waits.isNotEmpty) {
+      _holdingAudio = true;
+      if (!_disposed) notifyListeners();
+      try {
+        await Future.wait(waits);
+      } finally {
+        _holdingAudio = false;
+        if (!_disposed) notifyListeners();
+      }
+    }
+    return (chatHealth == null || _chatOk) &&
+        (crisisHealth == null || _crisisOk);
   }
 
   /// Called before the request of every send; only the first one waits, for

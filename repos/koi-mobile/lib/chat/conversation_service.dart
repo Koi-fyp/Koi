@@ -38,6 +38,36 @@ class SendMessageResult {
   final String? failureCode;
 }
 
+/// [ConversationService.sendAudio]'s result: a reply, or [failureCode] and
+/// nothing invented.
+@immutable
+class AudioSendResult {
+  const AudioSendResult({
+    this.reply,
+    this.emotion,
+    this.latencyMs,
+    this.companionState,
+    this.failureCode,
+    this.transcriptSaved = false,
+  });
+
+  /// The saved AI reply; null on failure.
+  final String? reply;
+  final Emotion? emotion;
+  final num? latencyMs;
+  final CompanionState? companionState;
+
+  /// An HTTP status (e.g. `422`), `timeout`, `network`, `warmup`,
+  /// `no_transcript`, another [ChatApiException] code or an error type.
+  /// Never a body or transcript text.
+  final String? failureCode;
+
+  /// This attempt saved the transcript as the user message.
+  final bool transcriptSaved;
+
+  bool get ok => failureCode == null;
+}
+
 /// Resolves the crypto context (crypto_context.dart, correct two-argument
 /// form — Q4). Injectable for tests.
 typedef CryptoContextGetter = Future<CryptoContext> Function(String uid);
@@ -236,6 +266,101 @@ class ConversationService {
         isFallback: true,
         failureCode: code,
       );
+    }
+  }
+
+  /// An audio turn (Prompt 26): [audio] goes up as multipart with
+  /// `message: ""`. The `transcript` event becomes the user message, saved
+  /// with [saveMessage] like a typed one, unless [saveTranscript] is false
+  /// (a Retry after an earlier attempt already saved it). Then the reply is
+  /// saved as for text.
+  ///
+  /// Unlike [sendMessage], a failure saves nothing and returns its code:
+  /// no fallback reply, no transcript that the server did not send.
+  /// [beforeRequest] returns false to stop before the upload (warm-up
+  /// failed).
+  Future<AudioSendResult> sendAudio({
+    required String userId,
+    required String conversationId,
+    required AudioUpload audio,
+    required List<ChatTurn> context,
+    ChatHandlers handlers = const ChatHandlers(),
+    ChatSessionState? session,
+    VoidCallback? onResolutionSent,
+    Future<bool> Function()? beforeRequest,
+    bool saveTranscript = true,
+  }) async {
+    final state = session ?? ChatSessionState();
+    Future<void>? saving;
+    var saved = false;
+    try {
+      if (!api.isConfigured) {
+        throw const ChatApiException(ChatApiException.notConfigured);
+      }
+      if (beforeRequest != null && !await beforeRequest()) {
+        throw const ChatApiException('warmup');
+      }
+      final token = await idToken();
+      final turn = state.beginTurn();
+      final r = await api.streamChat(
+        idToken: token,
+        body: state.requestBody(turn, message: '', sessionHistory: context),
+        audio: audio,
+        handlers: ChatHandlers(
+          onEvent: handlers.onEvent,
+          onCompanionState: handlers.onCompanionState,
+          onDelta: handlers.onDelta,
+          onUiAction: handlers.onUiAction,
+          onHandoff: handlers.onHandoff,
+          onRisk: handlers.onRisk,
+          onTranscript: (text) {
+            // The first non-blank transcript only.
+            if (saving != null || text.trim().isEmpty) return;
+            handlers.onTranscript?.call(text);
+            saving = saveTranscript
+                ? saveMessage(
+                    _record(conversationId, 'user', text, Emotion.neutral),
+                    userId,
+                  ).then((_) => saved = true)
+                : Future<void>.value();
+          },
+        ),
+      );
+      final userSaved = saving;
+      if (userSaved == null) {
+        throw const ChatApiException(ChatApiException.noTranscript);
+      }
+      // The user message is stored before the reply.
+      await userSaved;
+      if (r.fullText.trim().isEmpty) {
+        throw const ChatApiException(ChatApiException.emptyReply);
+      }
+      if (state.turnSucceeded(turn, r)) onResolutionSent?.call();
+      await saveMessage(
+        _record(conversationId, 'ai', r.fullText, r.emotion),
+        userId,
+      );
+      return AudioSendResult(
+        reply: r.fullText,
+        emotion: r.emotion,
+        latencyMs: r.latencyMs,
+        companionState: r.companionState,
+        transcriptSaved: saved,
+      );
+    } catch (e) {
+      // A transcript save still running finishes before reporting whether
+      // it was saved (Retry must not save it twice).
+      try {
+        await saving;
+      } catch (_) {}
+      // Error code / type only; never audio, transcript or a token.
+      final code = e is ChatApiException
+          ? e.code
+          : e is ChatTimeoutException
+          ? 'timeout'
+          : e.runtimeType.toString();
+      debugPrint('[KOI] sendAudio failed: $code');
+      return AudioSendResult(failureCode: code, transcriptSaved: saved);
     }
   }
 }

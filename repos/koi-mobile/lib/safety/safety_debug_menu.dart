@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/providers.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_text.dart';
+import '../voice_input/mic_providers.dart';
 import '../widgets/neo_button.dart';
 import 'safety_contract.dart';
 import 'safety_controller.dart';
@@ -108,8 +109,7 @@ class SafetyDebugButton extends ConsumerWidget {
         onTap: () => showSafetyDebugMenu(
           context,
           ref.read(safetyControllerProvider),
-          lastChatDiagnostics: () =>
-              ref.read(chatApiProvider).lastDiagnostics?.line,
+          lastChatDiagnostics: () => _lastDiagnostics(ref),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -140,12 +140,21 @@ class SafetyDebugTrigger extends ConsumerWidget {
       onLongPress: () => showSafetyDebugMenu(
         context,
         ref.read(safetyControllerProvider),
-        lastChatDiagnostics: () =>
-            ref.read(chatApiProvider).lastDiagnostics?.line,
+        lastChatDiagnostics: () => _lastDiagnostics(ref),
       ),
       child: child,
     );
   }
+}
+
+/// The last chat request's line, then the last voice message's (Prompt 26:
+/// clip length, format, result; no audio or text).
+String? _lastDiagnostics(WidgetRef ref) {
+  final lines = [
+    ref.read(chatApiProvider).lastDiagnostics?.line,
+    ref.read(micDiagnosticsProvider).last?.line,
+  ].nonNulls;
+  return lines.isEmpty ? null : lines.join('\n');
 }
 
 const String copyChatDiagnosticsLabel = 'Copy last chat diagnostics';
