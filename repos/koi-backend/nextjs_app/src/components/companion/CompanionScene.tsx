@@ -45,9 +45,10 @@ export interface CompanionSceneProps {
   exerciseControlsDisabled?: boolean;
   onCrisisResolution?: (path: import('@/lib/conversation/chatContract').CrisisPath, handoff: { to: 'crisis'; reason: string }) => void;
   crisisIntervention?: CrisisInterventionDisplay;
+  voiceControl?: ReactNode;
 }
 export default function CompanionScene({ companionName, modelUrl, messages, subtitle, subtitleLanguage,
-  subtitleUpdating, onBack, onEnd, notice, transcriptNotice, settings, emotion, emotionIntensity, conversationState, exposeController, composer, avatarEnabled = true, onAvatarFailure, viewportOffset = 0, backLabel, speechSource, onAvatarReady, serverEvents, onExerciseRequest, onQueueClientEvent, exerciseControlsDisabled, onCrisisResolution, crisisIntervention, consumeUiEvent, isHandoffResolved }: CompanionSceneProps) {
+  subtitleUpdating, onBack, onEnd, notice, transcriptNotice, settings, emotion, emotionIntensity, conversationState, exposeController, composer, avatarEnabled = true, onAvatarFailure, viewportOffset = 0, backLabel, speechSource, onAvatarReady, serverEvents, onExerciseRequest, onQueueClientEvent, exerciseControlsDisabled, onCrisisResolution, crisisIntervention, consumeUiEvent, isHandoffResolved, voiceControl }: CompanionSceneProps) {
   const [textOpen, setTextOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dismissedHandoffId, setDismissedHandoffId] = useState<number | null>(null);
@@ -88,6 +89,6 @@ export default function CompanionScene({ companionName, modelUrl, messages, subt
     <CrisisHandoffDialog open={!!handoff && !isHandoffResolved?.(handoff) && handoffEventId !== dismissedHandoffId && !!onCrisisResolution} content={crisisIntervention ?? riskForContent}
       onChoose={(path) => { if (handoff && handoffEventId !== null && onCrisisResolution) { onCrisisResolution(path, handoff); setDismissedHandoffId(handoffEventId); setCrisisSelectionQueued(true); } }} />
     {composer && <div style={{ flexShrink: 0, paddingTop: 10 }}>{composer}</div>}
-    <ConversationControls textOpen={textOpen || !avatarEnabled} textLocked={!avatarEnabled} toggleRef={toggleRef} onToggleText={() => setTextOpen((open) => !open)} onEnd={onEnd} />
+    <ConversationControls textOpen={textOpen || !avatarEnabled} textLocked={!avatarEnabled} toggleRef={toggleRef} onToggleText={() => setTextOpen((open) => !open)} onEnd={onEnd} voiceControl={voiceControl} />
   </main>;
 }

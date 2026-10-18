@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
-export default function ChatComposer({ onSend, onCancel, pending, error, onFocusChange, development = false, disabled = false }: {
+export default function ChatComposer({ onSend, onCancel, pending, error, onFocusChange, development = false, disabled = false, audioPlaying = false }: {
   onSend: (text: string) => Promise<void>; onCancel: () => void; pending: boolean; error: string | null;
-  disabled?: boolean;
+  disabled?: boolean; audioPlaying?: boolean;
   onFocusChange?: (focused: boolean) => void; development?: boolean;
 }) {
   const [text, setText] = useState('');
@@ -14,6 +14,6 @@ export default function ChatComposer({ onSend, onCancel, pending, error, onFocus
       <button type="submit" disabled={pending || disabled || !text.trim() || development} style={{ padding: '8px 14px', borderRadius: 12, border: '1px solid #c9b6a5', background: '#ffd100' }}>Send</button>
       {pending && <button type="button" onClick={onCancel} style={{ border: '1px solid #c9b6a5', borderRadius: 12, padding: 8 }}>Cancel request</button>}
     </form>
-    <p role="status" style={{ margin: '5px 0 0', color: '#75685e' }}>{pending ? 'Connecting to KOI. The self-hosted service can take a little while to respond; you can cancel anytime.' : 'Text conversation only. No audio is playing.'}</p>
+    <p role="status" style={{ margin: '5px 0 0', color: '#75685e' }}>{pending ? 'Connecting to KOI. The self-hosted service can take a little while to respond; you can cancel anytime.' : audioPlaying ? 'A spoken reply is playing. The text above is complete.' : 'Text conversation only. No audio is playing.'}</p>
   </div>;
 }
