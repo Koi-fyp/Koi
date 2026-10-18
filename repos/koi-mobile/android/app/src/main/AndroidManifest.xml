@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Needed in release builds for Firebase and the chat API (debug/profile
          manifests already declare it for development tooling). -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -7,6 +8,15 @@
     <!-- Call screen camera view (Prompt 29): local preview only, asked on
          the first tap of the Camera button. -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- camera_android_camerax declares camera.any as required; KOI works
+         without a camera, so it stays installable on devices without one
+         (Prompt 29 follow-up). -->
+    <uses-feature android:name="android.hardware.camera.any"
+        android:required="false" tools:node="replace"/>
+    <!-- Also merged from camera_android_camerax (video files, API <= 28).
+         KOI never stores camera or audio files, so it is never asked for. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        tools:node="remove"/>
     <application
         android:label="koi_mobile"
         android:name="${applicationName}"
