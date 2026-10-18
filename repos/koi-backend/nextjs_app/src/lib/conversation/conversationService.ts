@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { auth } from '../firebase';
 import { db, type MessageRecord, type Emotion as StoredEmotion } from '../db';
 import { syncQueue } from '../firestore/sync';
+import { messageCollection, messageSyncPayload } from '../firestore/messageSync';
 import { encrypt, getActiveCryptoContext, type AuthState } from '../crypto';
 import { ChatError, type ChatTurn, type ChatResponse, type ChatSendOptions, type ChatRequest } from './chatContract';
 import { singleFlight } from './singleFlight';
@@ -22,10 +23,9 @@ async function saveMessage(record: MessageRecord, secret: string, saltB64: strin
   signal.throwIfAborted();
   await db.messages.put(encrypted);
   // Once a local write commits, queue the same ciphertext for consistency even if cancellation races it.
-  // Turn evidence (handoff_open, done_seen) stays on the local row only.
-  const { handoff_open: _handoffOpen, done_seen: _doneSeen, ...synced } = encrypted;
-  syncQueue.enqueue({ collection: `conversations/${record.conversationId}/messages`, docId: record.id,
-    data: synced as unknown as Record<string, unknown>, priority: 3 });
+  // Only the eight rule-allowed fields leave the device; turn evidence stays on the local row.
+  syncQueue.enqueue({ collection: messageCollection(record.ownerUid!, record.conversationId), docId: record.id,
+    data: messageSyncPayload(encrypted) as unknown as Record<string, unknown>, priority: 3 });
 }
 export async function sendMessage(uid: string, conversationId: string, text: string, context: ChatTurn[], authState: AuthState, options: ChatSendOptions,
   requestFields: Pick<ChatRequest, 'exercise_state' | 'client_event' | 'policy_event' | 'crisis_path' | 'audio'> = {}): Promise<ChatResponse> {

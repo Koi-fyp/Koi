@@ -48,3 +48,11 @@ it('a committed New Chat remounts route state once and leaves the old session in
   expect(latest.conversationId).toBe(a); expect(latest.messages.map(m => m.content)).toEqual(['Synthetic A', 'Synthetic reply']);
   expect(mockSend).toHaveBeenCalledTimes(1);
 });
+it('retries queued cloud writes when the signed-in app starts', async () => {
+  const { syncQueue } = jest.requireActual('@/lib/firestore/sync');
+  const flush = jest.spyOn(syncQueue, 'flush').mockResolvedValue(undefined);
+  const view = render(<ConversationProvider><RouteState /></ConversationProvider>);
+  await waitFor(() => expect(view.getByTestId('id')).toBeInTheDocument());
+  expect(flush).toHaveBeenCalled();
+  flush.mockRestore();
+});

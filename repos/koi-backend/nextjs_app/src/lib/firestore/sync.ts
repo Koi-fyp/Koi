@@ -1,5 +1,6 @@
-import { firestore } from '../firebase';
+import { auth, firestore } from '../firebase';
 import { doc, setDoc, type Firestore } from 'firebase/firestore';
+import { isLegacyMessagePath, repathLegacyMessage, reviveMessageData } from './messageSync';
 
 export interface SyncItem {
   collection: string;
@@ -27,19 +28,49 @@ function saveQueue(items: SyncItem[]): void {
   localStorage.setItem(QUEUE_KEY, JSON.stringify(items));
 }
 
-async function flushQueue(): Promise<void> {
+function pushPending(item: SyncItem): void {
+  const queue = loadQueue();
+  queue.push({ ...item, timestamp: Date.now() });
+  saveQueue(queue);
+}
+
+const itemKey = (item: SyncItem) => `${item.collection}/${item.docId}@${item.timestamp ?? ''}`;
+
+/** One-time move of the signed-in owner's queued root-path messages to users/{uid}/...; synchronous, so atomic. */
+function repathLegacyItems(uid: string | undefined): void {
+  if (!uid) return;
+  const queue = loadQueue();
+  let changed = false;
+  const next = queue.map(item => {
+    const moved = repathLegacyMessage(item, uid);
+    if (moved) changed = true;
+    return moved ?? item;
+  });
+  if (changed) saveQueue(next);
+}
+
+let flushing: Promise<void> | null = null;
+async function flushOnce(): Promise<void> {
   const activeFirestore = getReadyFirestore();
+  repathLegacyItems(auth?.currentUser?.uid);
   if (!activeFirestore) return;
-  const items = loadQueue().sort((a, b) => a.priority - b.priority);
-  const remaining: SyncItem[] = [];
+  // Root-path messages can never pass the phase-1 rules; they wait for their owner to sign in and be re-pathed.
+  const items = loadQueue().filter(item => !isLegacyMessagePath(item.collection)).sort((a, b) => a.priority - b.priority);
+  const sent = new Set<string>();
   for (const item of items) {
     try {
-      await setDoc(doc(activeFirestore, item.collection, item.docId), item.data, { merge: true });
+      await setDoc(doc(activeFirestore, item.collection, item.docId), reviveMessageData(item.collection, item.data), { merge: true });
+      sent.add(itemKey(item));
     } catch {
-      remaining.push(item);
+      // Kept for the next reconnect, app start or sign-in.
     }
   }
-  saveQueue(remaining);
+  // Re-read: items enqueued during this flush are kept.
+  if (sent.size) saveQueue(loadQueue().filter(item => !sent.has(itemKey(item))));
+}
+function flushQueue(): Promise<void> {
+  if (!flushing) flushing = flushOnce().finally(() => { flushing = null; });
+  return flushing;
 }
 
 if (typeof window !== 'undefined') {
@@ -50,19 +81,14 @@ export const syncQueue = {
   enqueue(item: SyncItem): void {
     const activeFirestore = getReadyFirestore();
     if (!activeFirestore) {
-      const queue = loadQueue();
-      queue.push({ ...item, timestamp: Date.now() });
-      saveQueue(queue);
+      pushPending(item);
       return;
     }
 
-    setDoc(doc(activeFirestore, item.collection, item.docId), item.data, { merge: true }).catch(() => {
-      const queue = loadQueue();
-      queue.push({ ...item, timestamp: Date.now() });
-      saveQueue(queue);
-    });
+    setDoc(doc(activeFirestore, item.collection, item.docId), item.data, { merge: true }).catch(() => pushPending(item));
   },
 
+  /** Retries pending writes; called on reconnect and on app start / sign-in. */
   flush: flushQueue,
 
   getPending(): SyncItem[] {

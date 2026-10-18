@@ -3,6 +3,7 @@ import { createContext, Fragment, useContext, useEffect, useState, useRef, useSy
 import { useAuth } from './AuthContext';
 import { PersistentConversation } from '@/lib/conversation/PersistentConversation';
 import { sendMessage } from '@/lib/conversation/conversationService';
+import { syncQueue } from '@/lib/firestore/sync';
 import type { ChatAdapter } from '@/lib/conversation/chatContract';
 
 const Context = createContext<PersistentConversation | null>(null);
@@ -35,6 +36,8 @@ function OwnedConversation({ uid, isLinked, children }: { uid: string; isLinked:
   });
   const state = useSyncExternalStore(manager.subscribe, manager.getSnapshot, manager.getSnapshot);
   const generation = useRef(0);
+  // App start / sign-in: retry queued cloud writes (reconnects are handled by the queue itself).
+  useEffect(() => { void syncQueue.flush().catch(() => {}); }, [uid]);
   useEffect(() => {
     const lease = ++generation.current;
     // Deferral avoids starting two owners during React StrictMode's effect probe.
