@@ -9,8 +9,11 @@ import 'package:koi_mobile/avatar/avatar_providers.dart';
 import 'package:koi_mobile/avatar/avatar_view.dart';
 import 'package:koi_mobile/chat/backend_warmup.dart';
 import 'package:koi_mobile/chat/chat_api.dart';
+import 'package:koi_mobile/chat/conversation_service.dart';
 import 'package:koi_mobile/core/auth/auth_service.dart';
 import 'package:koi_mobile/core/key_value_store.dart';
+import 'package:koi_mobile/environment/environment_palette.dart';
+import 'package:koi_mobile/environment/environment_providers.dart';
 import 'package:koi_mobile/safety/safety_contract.dart';
 import 'package:koi_mobile/safety/safety_providers.dart';
 import 'package:koi_mobile/settings/settings_prefs.dart';
@@ -33,6 +36,9 @@ class ScriptedChatApi extends ChatApiClient {
   Completer<void>? gate;
   int calls = 0;
 
+  /// Thrown before any event (the service then saves the fallback reply).
+  Object? error;
+
   @override
   Future<ChatStreamResult> streamChat({
     required String idToken,
@@ -41,6 +47,8 @@ class ScriptedChatApi extends ChatApiClient {
     AudioUpload? audio,
   }) async {
     calls++;
+    final e = error;
+    if (e != null) throw e;
     handlers.onEvent?.call('delta');
     handlers.onDelta?.call(reply);
     during?.call(handlers);
@@ -151,7 +159,7 @@ void main() {
 
   final label = find.byKey(const Key('voice-label'));
 
-  testWidgets('speaks only after done, with the server voice and label', (
+  testWidgets('ATC-M3-11 speaks only after done, with the server voice and label', (
     tester,
   ) async {
     chat.gate = Completer<void>();
@@ -178,7 +186,7 @@ void main() {
     expect(avatar(tester).conversationState, AvatarConversationState.idle);
   });
 
-  testWidgets('not warm → device voice and its label; Aisha voice', (
+  testWidgets('ATC-M3-12 not warm → device voice and its label; Aisha voice', (
     tester,
   ) async {
     speechWarm = false;
@@ -192,7 +200,7 @@ void main() {
     expect(label, findsNothing);
   });
 
-  testWidgets('server error → device voice, never an error on screen', (
+  testWidgets('ATC-M3-12 server error → device voice, never an error on screen', (
     tester,
   ) async {
     speech.respond = (_) async =>
@@ -207,7 +215,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('Koi fox: voice only (Raza), no avatar', (tester) async {
+  testWidgets('ATC-M3-12 Koi fox: voice only (Raza), no avatar', (tester) async {
     await pumpCall(tester, companion: 'koi');
     expect(find.byType(AvatarView), findsNothing);
     await send(tester);
@@ -217,7 +225,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('Roman Urdu for an Urdu user is not spoken', (tester) async {
+  testWidgets('ATC-M3-12 Roman Urdu for an Urdu user is not spoken', (tester) async {
     chat.reply = 'Aap kaise hain?';
     await pumpCall(tester, language: 'ur');
     await send(tester);
@@ -225,7 +233,7 @@ void main() {
     expect(tts.spoken, isEmpty);
   });
 
-  testWidgets('crisis handoff during the turn: never spoken', (tester) async {
+  testWidgets('ATC-M3-13 crisis handoff during the turn: never spoken', (tester) async {
     chat.during = (h) =>
         h.onHandoff?.call(const Handoff(to: 'crisis', reason: 'test'));
     final container = await pumpCall(tester);
@@ -235,7 +243,7 @@ void main() {
     expect(tts.spoken, isEmpty);
   });
 
-  testWidgets('voice toggle: off stops and silences, remembered per uid', (
+  testWidgets('ATC-M3-14 voice toggle: off stops and silences, remembered per uid', (
     tester,
   ) async {
     await pumpCall(tester);
@@ -259,7 +267,7 @@ void main() {
     expect(prefs.values['koi_voice_enabled_u1'], 'true');
   });
 
-  testWidgets('voice off is restored when the call screen opens', (
+  testWidgets('ATC-M3-14 voice off is restored when the call screen opens', (
     tester,
   ) async {
     prefs.values['koi_voice_enabled_u1'] = 'false';
@@ -271,7 +279,7 @@ void main() {
     // Voice off: streaming shows speaking, as before Prompt 25.
   });
 
-  testWidgets('a new message stops the reply that is playing', (tester) async {
+  testWidgets('ATC-M3-15 a new message stops the reply that is playing', (tester) async {
     await pumpCall(tester);
     await send(tester);
     expect(player.isPlaying, isTrue);
@@ -286,7 +294,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
-  testWidgets('End call stops the voice', (tester) async {
+  testWidgets('ATC-M3-15 End call stops the voice', (tester) async {
     await pumpCall(tester);
     await send(tester);
     expect(player.isPlaying, isTrue);
@@ -297,7 +305,7 @@ void main() {
     expect(find.byType(AvatarCallScreen), findsNothing);
   });
 
-  testWidgets('companion switch stops the voice', (tester) async {
+  testWidgets('ATC-M3-15 companion switch stops the voice', (tester) async {
     final container = await pumpCall(tester);
     await send(tester);
     expect(player.isPlaying, isTrue);
@@ -308,7 +316,7 @@ void main() {
     expect(player.isPlaying, isFalse);
   });
 
-  testWidgets('crisis screen opening stops the voice', (tester) async {
+  testWidgets('ATC-M3-15 crisis screen opening stops the voice', (tester) async {
     final container = await pumpCall(tester);
     await send(tester);
     expect(player.isPlaying, isTrue);
@@ -319,7 +327,7 @@ void main() {
     expect(player.isPlaying, isFalse);
   });
 
-  testWidgets('breathing screen opening stops the voice', (tester) async {
+  testWidgets('ATC-M3-15 breathing screen opening stops the voice', (tester) async {
     final container = await pumpCall(tester);
     await send(tester);
     expect(player.isPlaying, isTrue);
@@ -339,7 +347,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('app going to the background stops the voice', (tester) async {
+  testWidgets('ATC-M3-15 app going to the background stops the voice', (tester) async {
     await pumpCall(tester);
     await send(tester);
     expect(player.isPlaying, isTrue);
@@ -352,7 +360,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('leaving the call screen (back) stops the voice', (tester) async {
+  testWidgets('ATC-M3-15 leaving the call screen (back) stops the voice', (tester) async {
     await pumpCall(tester);
     await send(tester);
     expect(player.isPlaying, isTrue);
@@ -364,7 +372,7 @@ void main() {
     expect(player.isPlaying, isFalse);
   });
 
-  testWidgets('top bar fits 360dp with voice off and the transcript open', (
+  testWidgets('ATC-M3-16 top bar fits 360dp with voice off and the transcript open', (
     tester,
   ) async {
     prefs.values['koi_voice_enabled_u1'] = 'false';
@@ -378,7 +386,7 @@ void main() {
     expect(status.width, greaterThan(40));
   });
 
-  testWidgets('the text Chat screen never speaks', (tester) async {
+  testWidgets('ATC-M3-17 the text Chat screen never speaks', (tester) async {
     await pumpCall(tester);
     await tester.tap(find.byKey(const Key('call-end')));
     await tester.pump();
@@ -392,5 +400,71 @@ void main() {
     expect(chat.calls, 1);
     expect(speech.requests, isEmpty);
     expect(tts.spoken, isEmpty);
+  });
+
+  testWidgets('ATC-M3-35 a fallback ("trouble connecting") reply is never '
+      'spoken, even with voice on and the speech server warm', (tester) async {
+    chat.error = const ChatApiException('500');
+    final c = await pumpCall(tester);
+    await send(tester);
+    await tester.pump(const Duration(seconds: 1));
+
+    final last = c.read(chatControllerProvider('u1')).messages.last;
+    expect(last.isFallback, isTrue);
+    expect(last.content, ConversationService.fallbackReply);
+    expect(find.byKey(const Key('voice-toggle')), findsOneWidget);
+    expect(speech.requests, isEmpty);
+    expect(player.played, isEmpty);
+    expect(tts.spoken, isEmpty);
+    expect(label, findsNothing);
+  });
+
+  testWidgets('ATC-M21-20 one turn: companion_state reaches the avatar '
+      '(setEmotion over the bridge) and the environment tint', (tester) async {
+    final c = await pumpCall(tester);
+    final view = avatar(tester);
+    final sent = <String>[];
+    view
+      ..attachPage(Object(), run: (js) async => sent.add(js), reload: () {})
+      ..markReady();
+    sent.clear();
+    final env = c.read(environmentControllerProvider);
+    expect(env.mood, EnvironmentMood.neutral);
+
+    chat.during = (h) =>
+        h.onCompanionState?.call(const CompanionState(AvatarEmotion.joy, 0.8));
+    await send(tester);
+    await tester.pump(const Duration(seconds: 2));
+
+    // Avatar: Dart state and the JS sent to the page.
+    expect(view.emotion, AvatarEmotion.joy);
+    expect(
+      sent,
+      contains(
+        'window.AvatarController && '
+        'window.AvatarController.setEmotion("joy", 0.8);',
+      ),
+    );
+    // Environment: same turn, same emotion, painted at the call strength.
+    expect(env.mood, EnvironmentMood.joy);
+    final background = tester
+        .widget<ColoredBox>(
+          find
+              .descendant(
+                of: find.byType(AvatarCallScreen),
+                matching: find.byKey(const Key('environment-background')),
+              )
+              .first,
+        )
+        .color;
+    expect(
+      background,
+      EnvironmentPalette.colorFor(
+        EnvironmentMood.joy,
+        EnvironmentPalette.callStrength,
+      ),
+    );
+    player.finish();
+    await tester.pump(const Duration(milliseconds: 100));
   });
 }

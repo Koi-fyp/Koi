@@ -100,7 +100,7 @@ void main() {
     await settle(tester);
   }
 
-  group('signed-in shell tabs', () {
+  group('ATC-M0-06 signed-in shell tabs', () {
     testWidgets('Chat tab: back exits the app', (tester) async {
       await pumpApp(tester);
       expect(find.byType(ChatScreen), findsOneWidget);
@@ -182,7 +182,7 @@ void main() {
     });
   });
 
-  group('landing and info pages (signed out)', () {
+  group('ATC-M0-07 landing and info pages (signed out)', () {
     testWidgets('Landing: back exits the app', (tester) async {
       await pumpApp(tester, signedIn: false);
       expect(find.byType(LandingScreen), findsOneWidget);
@@ -219,7 +219,7 @@ void main() {
     });
   });
 
-  group('onboarding', () {
+  group('ATC-M0-08 onboarding', () {
     test('previous step mirrors the forward path (6 steps, no skip)', () {
       expect(OnboardingScreen.previousStep(0), isNull); // Welcome
       expect(OnboardingScreen.previousStep(1), 0);

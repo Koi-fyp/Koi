@@ -95,7 +95,7 @@ void main() {
       )
       .enabled!;
 
-  testWidgets('no KOI_AVATAR_URL → placeholder image, no WebView made', (
+  testWidgets('ATC-M21-10 no KOI_AVATAR_URL → placeholder image, no WebView made', (
     tester,
   ) async {
     await pumpShell(tester); // default provider: KOI_AVATAR_URL is empty
@@ -106,7 +106,7 @@ void main() {
     expect(inputEnabled(tester), isTrue);
   });
 
-  testWidgets('remote: loads ?model=, shows loading until AVATAR_READY, then '
+  testWidgets('ATC-M21-10 remote: loads ?model=, shows loading until AVATAR_READY, then '
       'sends the current emotion', (tester) async {
     await pumpShell(tester, source: remote);
     await openCall(tester);
@@ -138,7 +138,7 @@ void main() {
     await endCall(tester);
   });
 
-  testWidgets('conversation state: sent after AVATAR_READY and re-sent with '
+  testWidgets('ATC-M21-10 conversation state: sent after AVATAR_READY and re-sent with '
       'the emotion after Reconnect', (tester) async {
     await pumpShell(tester, source: remote, simulate: true);
     await openCall(tester);
@@ -183,7 +183,7 @@ void main() {
 
   for (final c in [CompanionAvatar.aisha, CompanionAvatar.raza]) {
     final avatar = c.model!;
-    testWidgets('${c.name}: Chat card, call placeholder and fallback '
+    testWidgets('ATC-M21-10 ${c.name}: Chat card, call placeholder and fallback '
         'show ${avatar.imageAsset}', (tester) async {
       await pumpShell(tester, companion: c.companion);
       String assetIn(Finder area) =>
@@ -221,7 +221,7 @@ void main() {
     });
   }
 
-  testWidgets('remote: the WebView may not leave the avatar origin', (
+  testWidgets('ATC-M21-08 remote: the WebView may not leave the avatar origin', (
     tester,
   ) async {
     await pumpShell(tester, source: remote);
@@ -234,7 +234,7 @@ void main() {
     await endCall(tester);
   });
 
-  testWidgets('20 s without AVATAR_READY → fallback with the selected avatar '
+  testWidgets('ATC-M21-11 20 s without AVATAR_READY → fallback with the selected avatar '
       '+ Reconnect; Reconnect reloads and re-sends the emotion', (
     tester,
   ) async {
@@ -268,7 +268,7 @@ void main() {
     await endCall(tester);
   });
 
-  testWidgets('page load error → fallback', (tester) async {
+  testWidgets('ATC-M21-11 page load error → fallback', (tester) async {
     await pumpShell(tester, source: remote);
     await openCall(tester);
     pages.last.handlers.onMainFrameError();
@@ -277,7 +277,7 @@ void main() {
     await endCall(tester);
   });
 
-  testWidgets('page reloads itself → not ready until the next AVATAR_READY', (
+  testWidgets('ATC-M21-11 page reloads itself → not ready until the next AVATAR_READY', (
     tester,
   ) async {
     await pumpShell(tester, source: remote, simulate: true);
@@ -302,7 +302,7 @@ void main() {
     await endCall(tester);
   });
 
-  testWidgets('conversation updates for an old session are dropped', (
+  testWidgets('ATC-M21-12 conversation updates for an old session are dropped', (
     tester,
   ) async {
     await pumpShell(tester, source: remote, simulate: true);
@@ -324,7 +324,7 @@ void main() {
     await endCall(tester);
   });
 
-  testWidgets('reopening the call screen: one live WebView, old page ignored', (
+  testWidgets('ATC-M21-12 reopening the call screen: one live WebView, old page ignored', (
     tester,
   ) async {
     await pumpShell(tester, source: remote);
@@ -367,7 +367,7 @@ void main() {
     }
   }
 
-  testWidgets('back from the background: a lost page is reloaded', (
+  testWidgets('ATC-M21-12 back from the background: a lost page is reloaded', (
     tester,
   ) async {
     await pumpShell(tester, source: remote);
@@ -393,7 +393,7 @@ void main() {
     await endCall(tester);
   });
 
-  group('companion picks the avatar', () {
+  group('ATC-M21-13 companion picks the avatar', () {
     Finder inCard(String image) => find.descendant(
       of: find.byKey(const Key('avatar-card')),
       matching: find.byKey(ValueKey('avatar-image-$image')),
@@ -597,7 +597,7 @@ void main() {
     });
   });
 
-  group('onboarding → shell', () {
+  group('ATC-M21-14 onboarding → shell', () {
     Future<void> onboardAs(WidgetTester tester, String companion) async {
       tester.view.devicePixelRatio = 3;
       tester.view.physicalSize = const Size(360, 800) * 3;
@@ -673,7 +673,7 @@ void main() {
 
   group('local (bundled VRM page on 127.0.0.1)', () {
     for (final (companion, model) in [('aisha', 'female'), ('raza', 'male')]) {
-      testWidgets('$companion: starts the server, loads ?model=$model, waits '
+      testWidgets('ATC-M21-15 $companion: starts the server, loads ?model=$model, waits '
           'for AVATAR_READY; End call closes the server', (tester) async {
         await pumpShell(
           tester,
@@ -705,7 +705,7 @@ void main() {
       });
     }
 
-    testWidgets('Koi: no server, no page, fox notice', (tester) async {
+    testWidgets('ATC-M21-15 Koi: no server, no page, fox notice', (tester) async {
       await pumpShell(tester, source: AvatarSource.local, companion: 'koi');
       await openCall(tester);
       expect(hosts.all, isEmpty);
@@ -714,7 +714,7 @@ void main() {
       await endCall(tester);
     });
 
-    testWidgets('the WebView may not leave the local page', (tester) async {
+    testWidgets('ATC-M21-08 the WebView may not leave the local page', (tester) async {
       await pumpShell(tester, source: AvatarSource.local);
       await openCall(tester);
       final allow = pages.last.handlers.allowNavigation;
@@ -731,7 +731,7 @@ void main() {
       );
     });
 
-    testWidgets('server can\'t start → fallback image + Reconnect; text '
+    testWidgets('ATC-M21-15 server can\'t start → fallback image + Reconnect; text '
         'input still works', (tester) async {
       await pumpShell(
         tester,
@@ -752,7 +752,7 @@ void main() {
       expect(hosts.last.closed, isTrue);
     });
 
-    testWidgets('20 s without AVATAR_READY → fallback; Reconnect reloads the '
+    testWidgets('ATC-M21-15 20 s without AVATAR_READY → fallback; Reconnect reloads the '
         'same page and re-sends the latest emotion on ready', (tester) async {
       await pumpShell(tester, source: AvatarSource.local, companion: 'raza');
       await openCall(tester);
@@ -771,7 +771,7 @@ void main() {
       await endCall(tester);
     });
 
-    testWidgets('changing the companion during a call reloads with the new '
+    testWidgets('ATC-M21-15 changing the companion during a call reloads with the new '
         '?model= on the same server', (tester) async {
       final container = await pumpShell(
         tester,
@@ -799,7 +799,7 @@ void main() {
     });
   });
 
-  test('the real page uses the KoiBridge channel name', () {
+  test('ATC-M21-16 the real page uses the KoiBridge channel name', () {
     expect(koiBridgeChannel, 'KoiBridge');
     expect(AvatarViewController.readyMessage, 'AVATAR_READY');
   });

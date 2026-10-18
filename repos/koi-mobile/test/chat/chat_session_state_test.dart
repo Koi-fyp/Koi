@@ -16,7 +16,7 @@ Map<String, Object?> _body(ChatSessionState s, ChatTurnSnapshot t) =>
     s.requestBody(t, message: 'm', sessionHistory: const []);
 
 void main() {
-  test('client_event is sent once, then reset to none', () {
+  test('ATC-M12-14 client_event is sent once, then reset to none', () {
     final s = ChatSessionState()..setClientEvent(ClientEvent.playbackDone);
     final t1 = s.beginTurn();
     expect(_body(s, t1)['client_event'], 'playback_done');
@@ -24,7 +24,7 @@ void main() {
     expect(_body(s, s.beginTurn())['client_event'], 'none');
   });
 
-  test('crisis_path + policy_event once; true → crisisResolutionSent', () {
+  test('ATC-M12-14 crisis_path + policy_event once; true → crisisResolutionSent', () {
     final s = ChatSessionState()..setCrisisPath(CrisisPath.misunderstanding);
     final t1 = s.beginTurn();
     final body = _body(s, t1);
@@ -38,7 +38,7 @@ void main() {
     expect(s.turnSucceeded(t2, _result()), isFalse);
   });
 
-  test('on failure (no turnSucceeded) both are kept for the next send', () {
+  test('ATC-M12-14 on failure (no turnSucceeded) both are kept for the next send', () {
     final s = ChatSessionState()
       ..setClientEvent(ClientEvent.playbackStopped)
       ..setCrisisPath(CrisisPath.reachedOut);
@@ -48,7 +48,7 @@ void main() {
     expect(retry['crisis_path'], 'reached_out');
   });
 
-  test('a value set while the request is in flight is not cleared', () {
+  test('ATC-M12-14 a value set while the request is in flight is not cleared', () {
     final s = ChatSessionState()..setClientEvent(ClientEvent.playbackDone);
     final t1 = s.beginTurn();
     // Crisis opens mid-stream and stops breathing → playback_stopped.
@@ -70,7 +70,7 @@ void main() {
     expect(p.pendingCrisisPath, CrisisPath.saidButDidNot);
   });
 
-  test('exercise_state: echoed exactly; explicit null clears; '
+  test('ATC-M2-10 exercise_state: echoed exactly; explicit null clears; '
       'unchanged otherwise (contract §1)', () {
     final s = ChatSessionState();
     final t1 = s.beginTurn();

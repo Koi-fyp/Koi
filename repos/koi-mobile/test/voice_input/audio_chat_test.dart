@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:koi_flutter_lib/services/crypto_service.dart';
 import 'package:koi_mobile/chat/backend_warmup.dart';
 import 'package:koi_mobile/chat/chat_api.dart';
 import 'package:koi_mobile/chat/chat_controller.dart';
 import 'package:koi_mobile/chat/conversation_service.dart';
 import 'package:koi_mobile/chat/message_record.dart';
+import 'package:koi_mobile/core/koi_cryptography.dart';
 
 import '../support/chat_fakes.dart';
 import '../support/fake_chat_server.dart';
@@ -86,7 +89,7 @@ void main() {
   });
   tearDown(() => dir.delete(recursive: true));
 
-  group('transport (multipart)', () {
+  group('ATC-M3-24 transport (multipart)', () {
     late FakeChatServer server;
     setUp(() async => server = await FakeChatServer.start());
     tearDown(() => server.close());
@@ -192,7 +195,7 @@ void main() {
     });
   });
 
-  group('ConversationService.sendAudio', () {
+  group('ATC-M3-25 ConversationService.sendAudio', () {
     late MemoryMessageStore store;
     late RecordingSyncQueue queue;
     late _AudioApi api;
@@ -315,7 +318,66 @@ void main() {
     });
   });
 
-  group('ChatController.sendVoice', () {
+  group('encrypted sync payload for a voice turn (real KoiCryptoService)', () {
+    final original = Cryptography.instance;
+    setUpAll(() => KoiCryptography.install(useNative: false));
+    tearDownAll(() {
+      Cryptography.instance = original;
+      CachingPbkdf2.clear();
+    });
+
+    test(
+      'ATC-M3-34 mic transcript reaches the Firestore sync queue encrypted; '
+      'no plaintext in the store or the queue',
+      () async {
+        const transcript = 'my private voice note ✦ اردو';
+        final store = MemoryMessageStore();
+        final queue = RecordingSyncQueue();
+        final cipher = KoiMessageCipher(KoiCryptoService());
+        final api = _AudioApi()..transcript = transcript;
+        var n = 0;
+        final r =
+            await ConversationService(
+              cryptoContext: (_) async => testCryptoContext,
+              cipher: cipher,
+              store: store,
+              syncQueue: queue,
+              api: api,
+              idToken: () async => _token,
+              newId: () => 'id-${n++}',
+            ).sendAudio(
+              userId: 'u1',
+              conversationId: 'u1',
+              audio: AudioUpload(clip),
+              context: const [],
+            );
+        expect(r.ok, isTrue);
+        expect(r.transcriptSaved, isTrue);
+
+        // Transcript (user) and reply (ai), both queued for Firestore.
+        expect(queue.items, hasLength(2));
+        expect(queue.items.map((i) => i.data['sender']), ['user', 'ai']);
+        for (final item in queue.items) {
+          expect(item.collection, 'users/u1/conversations/u1/messages');
+          expect(
+            item.data['content'],
+            startsWith('v1:PBKDF2:${testCryptoContext.saltB64}:'),
+          );
+          expect(jsonEncode(item.data), isNot(contains('private voice')));
+          expect(jsonEncode(item.data), isNot(contains('sounds hard')));
+        }
+        final rows = await store.byConversation('u1');
+        expect(rows.first.content, queue.items.first.data['content']);
+        expect(
+          await cipher.decrypt(rows.first.content, testCryptoContext.secret),
+          transcript,
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 2)),
+    );
+  });
+
+  group('ATC-M3-26 ChatController.sendVoice', () {
     late _AudioApi api;
     late MemoryMessageStore store;
 
@@ -436,7 +498,7 @@ void main() {
     });
   });
 
-  group('BackendWarmup.holdForAudio', () {
+  group('ATC-M3-27 BackendWarmup.holdForAudio', () {
     test('crisis never 200 within the limit → false, chat untouched', () async {
       var now = DateTime(2026, 10, 18);
       final warmup = BackendWarmup(

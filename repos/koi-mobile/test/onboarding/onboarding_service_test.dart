@@ -28,7 +28,7 @@ const _data = OnboardingData(
 );
 
 void main() {
-  group('OnboardingService (completeOnboarding)', () {
+  group('ATC-M1-10 OnboardingService (completeOnboarding)', () {
     test('sets the local flag first, then writes the user record', () async {
       final kv = MemoryKeyValueStore();
       final flag = OnboardingStore(kv);
@@ -105,7 +105,7 @@ void main() {
     });
   });
 
-  group('HiveUserOnboardingWriter (flutter_lib UserRepository)', () {
+  group('ATC-M1-11 HiveUserOnboardingWriter (flutter_lib UserRepository)', () {
     late Directory dir;
 
     setUp(() async {

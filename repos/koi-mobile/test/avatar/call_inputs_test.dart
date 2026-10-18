@@ -7,49 +7,49 @@ void main() {
   const textCam = CallInputs(camera: true);
   const voiceCam = CallInputs(modality: CallModality.voice, camera: true);
 
-  test('starts as text only', () {
+  test('ATC-M20-01 starts as text only', () {
     expect(CallInputs.initial, text);
     expect(text.textOn, isTrue);
     expect(text.micOn, isFalse);
     expect(text.cameraOn, isFalse);
   });
 
-  test('exactly the four allowed combinations', () {
+  test('ATC-M20-02 exactly the four allowed combinations', () {
     expect(
       CallInputs.allowed,
       unorderedEquals([text, voice, textCam, voiceCam]),
     );
   });
 
-  test('mic on turns typing off; mic off goes back to text', () {
+  test('ATC-M20-02 mic on turns typing off; mic off goes back to text', () {
     expect(text.toggleMic(), voice);
     expect(voice.toggleMic(), text);
     expect(textCam.toggleMic(), voiceCam);
     expect(voiceCam.toggleMic(), textCam);
   });
 
-  test('text chat turns the mic off and keeps the camera', () {
+  test('ATC-M20-02 text chat turns the mic off and keeps the camera', () {
     expect(voice.selectText(), text);
     expect(voiceCam.selectText(), textCam);
     expect(text.selectText(), text); // already on: no change
     expect(textCam.selectText(), textCam);
   });
 
-  test('camera toggles alongside whichever input is on', () {
+  test('ATC-M20-02 camera toggles alongside whichever input is on', () {
     expect(text.toggleCamera(), textCam);
     expect(textCam.toggleCamera(), text);
     expect(voice.toggleCamera(), voiceCam);
     expect(voiceCam.toggleCamera(), voice);
   });
 
-  test('mic and typing are never on together', () {
+  test('ATC-M20-02 mic and typing are never on together', () {
     for (final s in CallInputs.allowed) {
       expect(s.micOn && s.textOn, isFalse, reason: '$s');
       expect(s.micOn || s.textOn, isTrue, reason: '$s');
     }
   });
 
-  test('every action from every state stays allowed (camera never alone)', () {
+  test('ATC-M20-02 every action from every state stays allowed (camera never alone)', () {
     // Breadth-first over all actions: the reachable set is exactly allowed.
     final seen = <CallInputs>{CallInputs.initial};
     final queue = [CallInputs.initial];
@@ -64,7 +64,7 @@ void main() {
     expect(seen, CallInputs.allowed.toSet());
   });
 
-  test('value equality', () {
+  test('ATC-M20-01 value equality', () {
     expect(const CallInputs(camera: true), textCam);
     expect(textCam.hashCode, const CallInputs(camera: true).hashCode);
     expect(text == voice, isFalse);

@@ -4,7 +4,7 @@ import 'package:koi_mobile/screens/splash_screen.dart';
 import 'package:koi_mobile/theme/koi_colors.dart';
 
 void main() {
-  testWidgets('splash matches (authenticated)/layout.tsx', (tester) async {
+  testWidgets('ATC-M0-02 splash matches (authenticated)/layout.tsx', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: SplashScreen()));
 
     final logo = find.byKey(const Key('splash-logo'));

@@ -12,7 +12,7 @@ import '../support/fake_chat_server.dart';
 // Plain test() only: a widget test in the same file would make every
 // HttpClient request return 400.
 void main() {
-  group('chat stream (127.0.0.1)', () {
+  group('ATC-M6-07 chat stream (127.0.0.1)', () {
     late FakeChatServer server;
     setUp(() async => server = await FakeChatServer.start());
     tearDown(() => server.close());

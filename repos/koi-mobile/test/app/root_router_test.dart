@@ -20,7 +20,7 @@ const _user = KoiUser(uid: 'u1', isAnonymous: true);
 void main() {
   useRealFonts();
 
-  group('resolveRootRoute (page.tsx + (authenticated)/layout.tsx)', () {
+  group('ATC-M1-05 resolveRootRoute (page.tsx + (authenticated)/layout.tsx)', () {
     RootRoute r(
       bool loading,
       bool signedIn,
@@ -76,7 +76,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   }
 
-  testWidgets('loading → splash', (tester) async {
+  testWidgets('ATC-M1-06 loading → splash', (tester) async {
     await pumpRouter(
       tester,
       FakeAuthService(fakeLoading: true, fakeRestored: false),
@@ -85,7 +85,7 @@ void main() {
     expect(find.byType(SplashScreen), findsOneWidget);
   });
 
-  testWidgets('signed out → landing; Start signs in → onboarding', (
+  testWidgets('ATC-M1-06 signed out → landing; Start signs in → onboarding', (
     tester,
   ) async {
     final auth = FakeAuthService();
@@ -99,7 +99,7 @@ void main() {
     expect(find.byType(OnboardingScreen), findsOneWidget);
   });
 
-  testWidgets('sign-in error shows the web error copy and Try Again', (
+  testWidgets('ATC-M1-06 sign-in error shows the web error copy and Try Again', (
     tester,
   ) async {
     await pumpRouter(
@@ -112,7 +112,7 @@ void main() {
   });
 
   testWidgets(
-    'signed in + not complete → onboarding; completing → chat shell',
+    'ATC-M1-07 signed in + not complete → onboarding; completing → chat shell',
     (tester) async {
       final onboarding = onboardingStore();
       await pumpRouter(tester, FakeAuthService(fakeUser: _user), onboarding);
@@ -126,7 +126,7 @@ void main() {
     },
   );
 
-  testWidgets('signed in + complete → chat; sign out → landing, flag kept', (
+  testWidgets('ATC-M1-07 signed in + complete → chat; sign out → landing, flag kept', (
     tester,
   ) async {
     final auth = FakeAuthService(fakeUser: _user);
@@ -150,7 +150,7 @@ void main() {
     ); // web never clears it on sign-out
   });
 
-  testWidgets('same uid signs back in → chat (onboarding skipped)', (
+  testWidgets('ATC-M1-07 same uid signs back in → chat (onboarding skipped)', (
     tester,
   ) async {
     final auth = FakeAuthService(fakeUser: _user);
@@ -167,7 +167,7 @@ void main() {
     expect(find.byType(OnboardingScreen), findsNothing);
   });
 
-  testWidgets('new uid (after sign-out or debug → Firebase) → onboarding', (
+  testWidgets('ATC-M1-07 new uid (after sign-out or debug → Firebase) → onboarding', (
     tester,
   ) async {
     final auth = FakeAuthService(fakeUser: _user);
@@ -184,7 +184,7 @@ void main() {
     expect(onboarding.isCompleteFor('u1'), isTrue);
   });
 
-  testWidgets('with the debug stand-in: splash, then restored user → chat', (
+  testWidgets('ATC-M1-07 with the debug stand-in: splash, then restored user → chat', (
     tester,
   ) async {
     final kv = MemoryKeyValueStore({

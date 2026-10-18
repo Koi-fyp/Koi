@@ -31,7 +31,7 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({});
   });
 
-  group('ensureCreated (users/{uid} create-once)', () {
+  group('ATC-M14-09 ensureCreated (users/{uid} create-once)', () {
     test('missing → web fields, koiUuid = uid, classification {}', () async {
       await store.ensureCreated(_uid);
       final data = (await userDoc().get()).data()!;
@@ -96,7 +96,7 @@ void main() {
     });
   });
 
-  group('createSaltOnce', () {
+  group('ATC-M14-09 createSaltOnce', () {
     test('missing (no doc) → ours stored and returned', () async {
       expect(await store.createSaltOnce(_uid, 'ours'), 'ours');
       expect((await userDoc().get()).data(), {
@@ -148,7 +148,7 @@ void main() {
     });
   });
 
-  group('FirestoreRemoteWriter', () {
+  group('ATC-M14-10 FirestoreRemoteWriter', () {
     late int keyClears;
     late String? signedIn;
     late FirestoreRemoteWriter writer;
@@ -275,7 +275,7 @@ void main() {
   });
 
   test(
-    'SyncingSettingsPrefsStore saves locally, then queues the merge',
+    'ATC-M14-11 SyncingSettingsPrefsStore saves locally, then queues the merge',
     () async {
       final local = MemorySettingsPrefsStore();
       final queue = _Queue();
@@ -294,7 +294,7 @@ void main() {
     },
   );
 
-  test('settingsProfileItem: unsaved fields are left out, saved ones sent', () {
+  test('ATC-M14-11 settingsProfileItem: unsaved fields are left out, saved ones sent', () {
     final empty = settingsProfileItem(_uid, const SettingsPrefs()).data;
     expect(empty['profile'], {'avatar': 'fox', 'companion': 'koi'});
     expect(empty.containsKey('settings'), isFalse);
@@ -311,7 +311,7 @@ void main() {
     expect(full['settings'], {'notifications_enabled': true});
   });
 
-  test('settingsProfileItem: profile.avatar always matches companion', () {
+  test('ATC-M14-11 settingsProfileItem: profile.avatar always matches companion', () {
     String avatarFor(String companion) =>
         (settingsProfileItem(
                   _uid,

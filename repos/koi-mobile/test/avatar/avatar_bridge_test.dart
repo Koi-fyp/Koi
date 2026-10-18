@@ -31,7 +31,7 @@ void main() {
     });
     tearDown(() => c.dispose());
 
-    test('nothing is sent before AVATAR_READY; other messages ignored', () {
+    test('ATC-M21-02 nothing is sent before AVATAR_READY; other messages ignored', () {
       c.beginLoad();
       c.setEmotion(AvatarEmotion.joy, 0.5);
       c.handleBridgeMessage('HELLO');
@@ -40,7 +40,7 @@ void main() {
       expect(c.status, AvatarStatus.loading);
     });
 
-    test('only the latest queued emotion is sent, once, after ready', () {
+    test('ATC-M21-02 only the latest queued emotion is sent, once, after ready', () {
       c.beginLoad();
       c.setEmotion(AvatarEmotion.joy, 0.5);
       c.setEmotion(AvatarEmotion.sorrow, 0.2);
@@ -62,7 +62,7 @@ void main() {
       expect(sent, hasLength(3));
     });
 
-    test('after a reload the current emotion is sent again once ready', () {
+    test('ATC-M21-02 after a reload the current emotion is sent again once ready', () {
       c.beginLoad();
       c.handleBridgeMessage('AVATAR_READY');
       c.setEmotion(AvatarEmotion.joy, 0.7);
@@ -79,7 +79,7 @@ void main() {
       ]);
     });
 
-    test('conversation state: nothing before AVATAR_READY, only the latest '
+    test('ATC-M21-03 conversation state: nothing before AVATAR_READY, only the latest '
         'is sent once ready, then each change is sent', () {
       c.beginLoad();
       c.setConversationState(AvatarConversationState.listening);
@@ -109,7 +109,7 @@ void main() {
       expect(argsOf(sent.single), ['speaking']);
     });
 
-    test('after a reload the conversation state is sent again with the '
+    test('ATC-M21-03 after a reload the conversation state is sent again with the '
         'emotion once ready', () {
       c.beginLoad();
       c.handleBridgeMessage('AVATAR_READY');
@@ -127,7 +127,7 @@ void main() {
       ]);
     });
 
-    test('a detached page gets no conversation state', () {
+    test('ATC-M21-03 a detached page gets no conversation state', () {
       c.beginLoad();
       c.handleBridgeMessage('AVATAR_READY');
       c.detachPage(token);
@@ -136,27 +136,27 @@ void main() {
       expect(sent, isEmpty);
     });
 
-    test('reconnect asks the view to load the page again', () {
+    test('ATC-M21-04 reconnect asks the view to load the page again', () {
       c.markFailed();
       c.reconnect();
       expect(reloads, 1);
     });
 
-    test('a detached page can no longer make the avatar ready', () {
+    test('ATC-M21-04 a detached page can no longer make the avatar ready', () {
       c.beginLoad();
       c.detachPage(token);
       c.handleBridgeMessage('AVATAR_READY');
       expect(c.isReady, isFalse);
     });
 
-    test('a stale token cannot detach the current page', () {
+    test('ATC-M21-04 a stale token cannot detach the current page', () {
       c.detachPage(Object());
       c.beginLoad();
       c.handleBridgeMessage('AVATAR_READY');
       expect(c.isReady, isTrue);
     });
 
-    testWidgets('no AVATAR_READY within 20 s → failed; ready recovers', (
+    testWidgets('ATC-M21-04 no AVATAR_READY within 20 s → failed; ready recovers', (
       tester,
     ) async {
       // testWidgets runs timers on a fake clock.
@@ -175,7 +175,7 @@ void main() {
       t.dispose();
     });
 
-    test('avatar is Dart state only', () {
+    test('ATC-M21-04 avatar is Dart state only', () {
       c.beginLoad();
       c.handleBridgeMessage('AVATAR_READY');
       sent.clear();
@@ -184,7 +184,7 @@ void main() {
       expect(sent, isEmpty);
     });
 
-    test('mouth cues: KoiSpeech only after ready, via jsonEncode', () {
+    test('ATC-M3-18 mouth cues: KoiSpeech only after ready, via jsonEncode', () {
       c.beginLoad();
       const cues = [
         MouthCue(start: 0, end: 0.2, value: 'D'),
@@ -214,7 +214,7 @@ void main() {
       expect(sent, ['window.KoiSpeech && window.KoiSpeech.stop();']);
     });
 
-    test('a hostile cue value stays inside the string literal', () {
+    test('ATC-M3-18 a hostile cue value stays inside the string literal', () {
       c.beginLoad();
       c.handleBridgeMessage('AVATAR_READY');
       sent.clear();
@@ -232,7 +232,7 @@ void main() {
     });
   });
 
-  group('jsCall', () {
+  group('ATC-M21-05 jsCall', () {
     test('every argument is JSON-encoded (quotes, Urdu, emoji, </script>)', () {
       const tricky = [
         'he said "hi"',
@@ -309,7 +309,7 @@ void main() {
     });
   });
 
-  group('sessions', () {
+  group('ATC-M21-06 sessions', () {
     test('updates for an old session id are dropped', () {
       final c = AvatarViewController();
       addTearDown(c.dispose);
@@ -384,7 +384,7 @@ void main() {
   });
 
   group('AvatarSource', () {
-    test('KOI_AVATAR_URL: empty → placeholder, mock (debug only), https', () {
+    test('ATC-M21-07 KOI_AVATAR_URL: empty → placeholder, mock (debug only), https', () {
       expect(AvatarSource.parse(''), AvatarSource.placeholder);
       expect(AvatarSource.parse('   '), AvatarSource.placeholder);
       expect(AvatarSource.parse('mock', debug: true), AvatarSource.mock);
@@ -406,7 +406,7 @@ void main() {
       }
     });
 
-    test('page URL adds ?model= and keeps other query parameters', () {
+    test('ATC-M21-07 page URL adds ?model= and keeps other query parameters', () {
       final s = AvatarSource.parse('https://koi.example.com/avatar-host?v=2#x');
       expect(
         s.pageUrl(AvatarType.female).toString(),
@@ -415,7 +415,7 @@ void main() {
       expect(s.pageUrl(AvatarType.male).queryParameters['model'], 'male');
     });
 
-    test('navigation stays on the avatar origin', () {
+    test('ATC-M21-08 navigation stays on the avatar origin', () {
       final s = AvatarSource.parse('https://koi.example.com/avatar-host');
       for (final ok in [
         'https://koi.example.com/avatar-host?model=male',
@@ -440,7 +440,7 @@ void main() {
       }
     });
 
-    test('local: KOI_AVATAR_URL=local works in debug and release', () {
+    test('ATC-M21-07 local: KOI_AVATAR_URL=local works in debug and release', () {
       expect(AvatarSource.parse('local', debug: true), AvatarSource.local);
       expect(AvatarSource.parse('local', debug: false), AvatarSource.local);
       expect(AvatarSource.parse(' local '), AvatarSource.local);
@@ -449,7 +449,7 @@ void main() {
       expect(AvatarSource.local.url, isNull);
     });
 
-    test('local page URL: the bundled host page with ?model=male|female', () {
+    test('ATC-M21-07 local page URL: the bundled host page with ?model=male|female', () {
       final origin = Uri.parse('http://127.0.0.1:40123');
       expect(
         AvatarSource.localPageUrl(origin, AvatarType.male).toString(),
@@ -461,7 +461,7 @@ void main() {
       );
     });
 
-    test('local navigation: only the host page on our own loopback port', () {
+    test('ATC-M21-08 local navigation: only the host page on our own loopback port', () {
       final origin = Uri.parse('http://127.0.0.1:40123');
       const s = AvatarSource.local;
       for (final ok in [
@@ -503,7 +503,7 @@ void main() {
       );
     });
 
-    test('mock may only show its own asset; placeholder nothing', () {
+    test('ATC-M21-07 mock may only show its own asset; placeholder nothing', () {
       expect(
         AvatarSource.mock.allowsNavigation(
           'file:///android_asset/flutter_assets/${AvatarSource.mockAsset}#fail',
@@ -527,14 +527,14 @@ void main() {
     });
   });
 
-  test('AvatarType: stored ids and ?model= values', () {
+  test('ATC-M21-09 AvatarType: stored ids and ?model= values', () {
     expect(AvatarType.female.stored, 'female_human');
     expect(AvatarType.female.model, 'female');
     expect(AvatarType.male.stored, 'male_human');
     expect(AvatarType.male.model, 'male');
   });
 
-  group('CompanionAvatar (web avatarPreference.ts BY_COMPANION)', () {
+  group('ATC-M21-09 CompanionAvatar (web avatarPreference.ts BY_COMPANION)', () {
     test('aisha → female, raza → male, koi → fox with no model', () {
       expect(CompanionAvatar.aisha.avatarId, 'female_human');
       expect(CompanionAvatar.aisha.model, AvatarType.female);
@@ -569,7 +569,7 @@ void main() {
     });
   });
 
-  test('AvatarType: each avatar has its own bundled image', () async {
+  test('ATC-M21-09 AvatarType: each avatar has its own bundled image', () async {
     TestWidgetsFlutterBinding.ensureInitialized();
     expect(AvatarType.male.imageAsset, 'assets/images/Male.png');
     expect(AvatarType.female.imageAsset, 'assets/images/Female.png');

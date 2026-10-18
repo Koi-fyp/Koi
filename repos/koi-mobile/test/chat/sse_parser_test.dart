@@ -27,7 +27,7 @@ Future<SseChatParser> feedBytes(
 }
 
 void main() {
-  test('split UTF-8 (emoji + Urdu) one byte at a time', () async {
+  test('ATC-M2-07 split UTF-8 (emoji + Urdu) one byte at a time', () async {
     final deltas = <String>[];
     final p = await feedBytes(
       'event: delta\ndata: {"text":"سلام 😀"}\n\n'
@@ -39,7 +39,7 @@ void main() {
     expect(p.fullText, 'سلام 😀 کیسے ہیں؟ 🌙');
   });
 
-  test('CRLF frames, data:/event: without a space, multi-line data', () {
+  test('ATC-M2-07 CRLF frames, data:/event: without a space, multi-line data', () {
     final p = SseChatParser()
       ..add('event:delta\r\ndata:{"text":"A"}\r\n\r\n')
       ..add('event: delta\r\ndata: {"text":\r\ndata: "B"}\r\n\r\n')
@@ -47,7 +47,7 @@ void main() {
     expect(p.fullText, 'AB');
   });
 
-  test('C2: deltas are never trimmed; full_text == joined deltas', () {
+  test('ATC-M2-08 C2: deltas are never trimmed; full_text == joined deltas', () {
     final deltas = <String>[];
     final p = SseChatParser(handlers: ChatHandlers(onDelta: deltas.add))
       ..add('event: delta\ndata: {"text":"Breathe in."}\n\n')
@@ -63,21 +63,21 @@ void main() {
     expect(p.fullText, 'Breathe in. Breathe out.   Again.');
   });
 
-  test('empty done.full_text keeps the deltas', () {
+  test('ATC-M2-08 empty done.full_text keeps the deltas', () {
     final p = SseChatParser()
       ..add('event: delta\ndata: {"text":"x"}\n\n')
       ..add('event: done\ndata: {"full_text":""}\n\n');
     expect(p.fullText, 'x');
   });
 
-  test('event name resets to "message" for every frame', () {
+  test('ATC-M2-07 event name resets to "message" for every frame', () {
     final p = SseChatParser()
       ..add('event: delta\ndata: {"text":"a"}\n\n')
       ..add('data: {"text":"b"}\n\n'); // a `message` frame, not a delta
     expect(p.fullText, 'a');
   });
 
-  test('unknown events and malformed JSON are ignored', () {
+  test('ATC-M2-07 unknown events and malformed JSON are ignored', () {
     final p = SseChatParser()
       ..add('event: delta\ndata: {not json\n\n')
       ..add('event: mystery\ndata: {"x":1}\n\n')
@@ -87,14 +87,14 @@ void main() {
     expect(p.fullText, 'ok');
   });
 
-  test('trailing frame without a blank line is flushed at close', () {
+  test('ATC-M2-07 trailing frame without a blank line is flushed at close', () {
     final p = SseChatParser()..add('event: delta\ndata: {"text":"end"}');
     expect(p.fullText, '');
     p.close();
     expect(p.fullText, 'end');
   });
 
-  group('companion_state', () {
+  group('ATC-M2-09 companion_state', () {
     test('arrives before text and goes to onCompanionState', () {
       final order = <String>[];
       SseChatParser(
@@ -139,7 +139,7 @@ void main() {
     });
   });
 
-  test('ui_action urgent only before text; handoff only to crisis', () {
+  test('ATC-M12-13 ui_action urgent only before text; handoff only to crisis', () {
     final actions = <(String, bool)>[];
     final handoffs = <Handoff>[];
     SseChatParser(
@@ -159,7 +159,7 @@ void main() {
     expect(handoffs.single.reason, 'risk');
   });
 
-  test('risk: streamed once; done.risk used only if none was streamed', () {
+  test('ATC-M12-13 risk: streamed once; done.risk used only if none was streamed', () {
     final risks = <RiskResult>[];
     SseChatParser(handlers: ChatHandlers(onRisk: risks.add))
       ..add('event: risk\ndata: {"status":"unavailable"}\n\n')
@@ -176,7 +176,7 @@ void main() {
     expect(onlyDone.single.riskCategory, RiskCategory.low);
   });
 
-  group('exercise_state (contract §1: echo what the last state gave)', () {
+  group('ATC-M2-10 exercise_state (contract §1: echo what the last state gave)', () {
     test('a string is stored exactly', () {
       final p = SseChatParser()
         ..add('event: state\ndata: {"exercise_state":"a.b.c=="}\n\n');
@@ -205,7 +205,7 @@ void main() {
     });
   });
 
-  test('latency_ms and event names for diagnostics', () {
+  test('ATC-M2-11 latency_ms and event names for diagnostics', () {
     final p = SseChatParser()
       ..add('event: latency\ndata: {"latency_ms":412.6}\n\n')
       ..add('event: delta\ndata: {"text":"a"}\n\n')

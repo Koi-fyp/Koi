@@ -40,7 +40,7 @@ class _Health {
 }
 
 void main() {
-  test('health slower than the threshold → waking → ready', () async {
+  test('ATC-M2-19 health slower than the threshold → waking → ready', () async {
     final health = Completer<bool>();
     var crisisCalls = 0;
     final w = BackendWarmup(
@@ -60,7 +60,7 @@ void main() {
     expect(w.status, BackendStatus.ready);
   });
 
-  test('fast health never shows waking', () async {
+  test('ATC-M2-19 fast health never shows waking', () async {
     final seen = <BackendStatus>[];
     final w = BackendWarmup(
       chatHealth: (_) async => true,
@@ -72,13 +72,13 @@ void main() {
     expect(seen, [BackendStatus.ready]);
   });
 
-  test('not configured: nothing called, stays unknown', () async {
+  test('ATC-M2-19 not configured: nothing called, stays unknown', () async {
     final w = BackendWarmup(chatHealth: null, wakingAfter: _waking)..warmUp();
     await _wait();
     expect(w.status, BackendStatus.unknown);
   });
 
-  group('retry until 200 (fake clock)', () {
+  group('ATC-M2-20 retry until 200 (fake clock)', () {
     test('backs off 2, 4, 8 s and stops at the first 200', () async {
       final clock = _Clock();
       final chat = _Health(clock, [false, false, false, true]);
@@ -183,7 +183,7 @@ void main() {
     });
   });
 
-  group('crisis health never blocks chat', () {
+  group('ATC-M2-21 crisis health never blocks chat', () {
     test('crisis failing for the whole limit: chat ready, first send '
         'released by chat alone', () async {
       final clock = _Clock();
@@ -236,7 +236,7 @@ void main() {
     );
   });
 
-  group('first send hold', () {
+  group('ATC-M2-22 first send hold', () {
     test('held until chat health 200, waking shown at once; later sends '
         'not held', () async {
       final health = Completer<bool>();
@@ -288,7 +288,7 @@ void main() {
     });
   });
 
-  test('first chat request: waking after the threshold, cleared on the '
+  test('ATC-M2-19 first chat request: waking after the threshold, cleared on the '
       'first event', () async {
     final w = BackendWarmup(
       chatHealth: (_) async => false,
@@ -311,7 +311,7 @@ void main() {
   });
 
   test(
-    'timeout / network → unreachable; unknown failure ends waking',
+    'ATC-M2-19 timeout / network → unreachable; unknown failure ends waking',
     () async {
       final w = BackendWarmup(chatHealth: null, wakingAfter: _waking)
         ..chatStarted();
@@ -328,7 +328,7 @@ void main() {
   );
 
   test(
-    'resume after more than 5 min warms both again; shorter does not',
+    'ATC-M2-19 resume after more than 5 min warms both again; shorter does not',
     () async {
       var now = DateTime(2026, 10, 18, 12);
       var chat = 0;
@@ -355,7 +355,7 @@ void main() {
     },
   );
 
-  test('defaults: 3 s threshold, 5 min resume, 240 s limit, backoff', () {
+  test('ATC-M2-19 defaults: 3 s threshold, 5 min resume, 240 s limit, backoff', () {
     final w = BackendWarmup(chatHealth: null);
     expect(w.wakingAfter, const Duration(seconds: 3));
     expect(w.resumeAfter, const Duration(minutes: 5));

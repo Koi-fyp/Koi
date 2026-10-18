@@ -103,7 +103,7 @@ void main() {
   Future<void> drainToasts(WidgetTester tester) =>
       tester.pump(const Duration(seconds: 4));
 
-  testWidgets('Chat has the entry button; it opens the call screen', (
+  testWidgets('ATC-M20-04 Chat has the entry button; it opens the call screen', (
     tester,
   ) async {
     await pumpShell(tester);
@@ -124,7 +124,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('layout at 360dp: avatar is the main area, controls at bottom', (
+  testWidgets('ATC-M20-04 layout at 360dp: avatar is the main area, controls at bottom', (
     tester,
   ) async {
     await pumpShell(tester);
@@ -143,7 +143,7 @@ void main() {
   });
 
   for (final size in const [Size(360, 800), Size(360, 640)]) {
-    testWidgets('keyboard open at ${size.width.toInt()}x'
+    testWidgets('ATC-M20-04 keyboard open at ${size.width.toInt()}x'
         '${size.height.toInt()}dp: no overflow, input + controls visible', (
       tester,
     ) async {
@@ -168,7 +168,7 @@ void main() {
     });
   }
 
-  testWidgets('input and send work before the avatar is ready', (tester) async {
+  testWidgets('ATC-M20-05 input and send work before the avatar is ready', (tester) async {
     await pumpShell(tester);
     await tester.tap(find.byKey(const Key('avatar-call-entry')));
     await tester.pump(); // first frame of the call screen
@@ -195,7 +195,7 @@ void main() {
     expect(find.text('Connected'), findsOneWidget);
   });
 
-  testWidgets('transcript toggle shows the shared conversation', (
+  testWidgets('ATC-M20-06 transcript toggle shows the shared conversation', (
     tester,
   ) async {
     await pumpShell(tester);
@@ -252,7 +252,7 @@ void main() {
   });
 
   testWidgets(
-    'Android back closes the transcript first, then returns to Chat',
+    'ATC-M20-06 Android back closes the transcript first, then returns to Chat',
     (tester) async {
       await pumpShell(tester);
       await openCall(tester);
@@ -271,7 +271,7 @@ void main() {
     },
   );
 
-  testWidgets('End call returns to Chat even with the transcript open', (
+  testWidgets('ATC-M20-06 End call returns to Chat even with the transcript open', (
     tester,
   ) async {
     await pumpShell(tester);
@@ -285,7 +285,7 @@ void main() {
     expect(find.byType(ChatScreen), findsOneWidget);
   });
 
-  testWidgets('avatar failed: the user can still type and send (chat never '
+  testWidgets('ATC-M20-05 avatar failed: the user can still type and send (chat never '
       'depends on the avatar)', (tester) async {
     final avatar = AvatarViewController();
     addTearDown(avatar.dispose);
@@ -329,7 +329,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('fallback: static Male.png + Reconnect; input stays enabled', (
+  testWidgets('ATC-M20-07 fallback: static Male.png + Reconnect; input stays enabled', (
     tester,
   ) async {
     final avatar = AvatarViewController();
@@ -362,7 +362,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('fallback fits with the keyboard open (button only)', (
+  testWidgets('ATC-M20-07 fallback fits with the keyboard open (button only)', (
     tester,
   ) async {
     final avatar = AvatarViewController();
@@ -375,7 +375,7 @@ void main() {
     expect(find.byKey(const Key('avatar-reconnect')), findsOneWidget);
   });
 
-  testWidgets('placeholder shows the current emotion', (tester) async {
+  testWidgets('ATC-M20-07 placeholder shows the current emotion', (tester) async {
     final avatar = AvatarViewController();
     addTearDown(avatar.dispose);
     await pumpShell(tester);
@@ -394,7 +394,7 @@ void main() {
     );
   });
 
-  testWidgets('controls: Camera greyed out, tap = coming-soon toast only; '
+  testWidgets('ATC-M20-08 controls: Camera greyed out, tap = coming-soon toast only; '
       'Mic enabled (Prompt 26); text stays on; no camera preview', (
     tester,
   ) async {

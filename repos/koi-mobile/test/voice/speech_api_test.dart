@@ -74,7 +74,7 @@ void main() {
     timeout: timeout,
   );
 
-  test('request shape and a valid response', () async {
+  test('ATC-M3-03 request shape and a valid response', () async {
     final a = FakeAdapter((o, b) async => json(200, okBody('gen-1')));
     final clip = await call(client(a));
     final req = a.requests.single;
@@ -92,7 +92,7 @@ void main() {
     expect(clip.durationS, 0.3);
   });
 
-  test('not configured without KOI_SPEECH_BASE', () async {
+  test('ATC-M3-03 not configured without KOI_SPEECH_BASE', () async {
     final c = SpeechApiClient(baseUrl: '');
     expect(c.isConfigured, isFalse);
     await expectLater(
@@ -117,7 +117,7 @@ void main() {
   };
   for (final MapEntry(key: status, value: code) in errors.entries) {
     test(
-      '$status {"error":{"code":"$code"}} → SpeechApiException($code)',
+      'ATC-M3-04 $status {"error":{"code":"$code"}} → SpeechApiException($code)',
       () async {
         final a = FakeAdapter(
           (o, b) async => json(status, {
@@ -134,7 +134,7 @@ void main() {
     );
   }
 
-  test('an error without a body → the status', () async {
+  test('ATC-M3-04 an error without a body → the status', () async {
     final a = FakeAdapter((o, b) async => ResponseBody.fromString('', 500));
     await expectLater(
       call(client(a)),
@@ -142,7 +142,7 @@ void main() {
     );
   });
 
-  test('timeout', () async {
+  test('ATC-M3-04 timeout', () async {
     final a = FakeAdapter((o, b) => Completer<ResponseBody>().future);
     await expectLater(
       call(client(a), timeout: const Duration(milliseconds: 50)),
@@ -152,7 +152,7 @@ void main() {
     );
   });
 
-  test('a network failure', () async {
+  test('ATC-M3-04 a network failure', () async {
     final a = FakeAdapter((o, b) async => throw const FormatException('boom'));
     await expectLater(
       call(client(a)),
@@ -162,7 +162,7 @@ void main() {
     );
   });
 
-  test('a stale generation_id is rejected', () async {
+  test('ATC-M3-04 a stale generation_id is rejected', () async {
     final a = FakeAdapter((o, b) async => json(200, okBody('older')));
     await expectLater(
       call(client(a)),
@@ -170,7 +170,7 @@ void main() {
     );
   });
 
-  test('bad audio or cues → bad-response', () async {
+  test('ATC-M3-04 bad audio or cues → bad-response', () async {
     final bodies = [
       {...okBody('gen-1'), 'audio_format': 'mp3'},
       {...okBody('gen-1'), 'audio_b64': ''},
@@ -209,7 +209,7 @@ void main() {
     }
   });
 
-  test('parseCues accepts ordered, touching cues A–H/X', () {
+  test('ATC-M3-03 parseCues accepts ordered, touching cues A–H/X', () {
     final cues = parseCues([
       for (final (i, v) in 'ABCDEFGHX'.split('').indexed)
         {'start': i * 0.1, 'end': (i + 1) * 0.1, 'value': v},

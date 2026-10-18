@@ -198,7 +198,7 @@ void main() {
     await settle(tester);
   }
 
-  testWidgets('consent → record with timer → tap again sends; transcript is '
+  testWidgets('ATC-M3-28 consent → record with timer → tap again sends; transcript is '
       'the user message, saved encrypted; clip deleted', (tester) async {
     final c = await pumpCall(tester);
     await tapMic(tester);
@@ -236,7 +236,7 @@ void main() {
     await settle(tester);
   });
 
-  testWidgets('warning colour from 0:25, auto-send at 0:30', (tester) async {
+  testWidgets('ATC-M3-29 warning colour from 0:25, auto-send at 0:30', (tester) async {
     await pumpCall(tester, consented: true);
     await tapMic(tester);
     Color timerColor() =>
@@ -256,7 +256,7 @@ void main() {
     await settle(tester);
   });
 
-  testWidgets('permission denied: mic stays off, typed text works', (
+  testWidgets('ATC-M3-30 permission denied: mic stays off, typed text works', (
     tester,
   ) async {
     recorder.granted = false;
@@ -276,7 +276,7 @@ void main() {
     await settle(tester);
   });
 
-  testWidgets('Not now: no permission, no recording', (tester) async {
+  testWidgets('ATC-M3-30 Not now: no permission, no recording', (tester) async {
     await pumpCall(tester);
     await tapMic(tester);
     await tester.tap(find.byKey(const Key('mic-consent-not-now')));
@@ -286,7 +286,7 @@ void main() {
     expect(prefs.values[MicPrefs.consentKey('u1')], isNull);
   });
 
-  testWidgets('422 → error line + Retry, no reply invented; Retry resends '
+  testWidgets('ATC-M3-31 422 → error line + Retry, no reply invented; Retry resends '
       'the same clip', (tester) async {
     final c = await pumpCall(tester, consented: true);
     await tapMic(tester);
@@ -317,7 +317,7 @@ void main() {
     await settle(tester);
   });
 
-  testWidgets('timeout → send-failed line + Retry, typing still works', (
+  testWidgets('ATC-M3-31 timeout → send-failed line + Retry, typing still works', (
     tester,
   ) async {
     final c = await pumpCall(tester, consented: true);
@@ -335,7 +335,7 @@ void main() {
     await settle(tester);
   });
 
-  testWidgets('Cancel: nothing sent, clip deleted', (tester) async {
+  testWidgets('ATC-M3-30 Cancel: nothing sent, clip deleted', (tester) async {
     await pumpCall(tester, consented: true);
     await tapMic(tester);
     final path = recorder.current!;
@@ -349,7 +349,7 @@ void main() {
     expect(sendEnabled(tester), isTrue);
   });
 
-  testWidgets('recording stops the voice that is playing', (tester) async {
+  testWidgets('ATC-M3-32 recording stops the voice that is playing', (tester) async {
     await pumpCall(tester, consented: true);
     await typeAndSend(tester, 'hi');
     expect(tts.isSpeaking, isTrue);
@@ -361,7 +361,7 @@ void main() {
     await settle(tester);
   });
 
-  testWidgets('no recording while the crisis screen is open', (tester) async {
+  testWidgets('ATC-M3-32 no recording while the crisis screen is open', (tester) async {
     final c = await pumpCall(tester);
     c
         .read(safetyControllerProvider)
@@ -372,7 +372,32 @@ void main() {
     expect(recorder.started, isEmpty);
   });
 
-  testWidgets('no recording during breathing; opening it cancels one', (
+  testWidgets('ATC-M3-36 crisis resolution pending (screen closed, '
+      'crisis_resolved not sent yet): no recording; allowed once sent', (
+    tester,
+  ) async {
+    final c = await pumpCall(tester, consented: true);
+    final safety = c.read(safetyControllerProvider)
+      ..handleHandoff(const Handoff(to: 'crisis', reason: 'test'));
+    await settle(tester);
+    safety.chooseCrisisPath(CrisisPath.reachedOut);
+    await settle(tester);
+    expect(safety.crisis, isNull, reason: 'crisis screen closed');
+    expect(safety.resolutionPending, isTrue);
+
+    await pressMicUnderOverlay(tester);
+    expect(recorder.started, isEmpty);
+    expect(find.byKey(const Key('mic-recording')), findsNothing);
+
+    // Control: the same tap records once the resolution has been sent.
+    safety.crisisResolutionSent();
+    await pressMicUnderOverlay(tester);
+    expect(recorder.started, hasLength(1));
+    await tester.tap(find.byKey(const Key('mic-cancel')));
+    await settle(tester);
+  });
+
+  testWidgets('ATC-M3-32 no recording during breathing; opening it cancels one', (
     tester,
   ) async {
     final c = await pumpCall(tester, consented: true);
@@ -400,7 +425,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('audio waits for chat + crisis /health with the waking line', (
+  testWidgets('ATC-M3-33 audio waits for chat + crisis /health with the waking line', (
     tester,
   ) async {
     final chatHealth = Completer<bool>();

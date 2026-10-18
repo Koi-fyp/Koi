@@ -6,7 +6,7 @@ import 'package:koi_mobile/core/key_value_store.dart';
 import '../support/fake_auth.dart';
 
 void main() {
-  group('isAnonymous / isLinked derivation (AuthContext.tsx)', () {
+  group('ATC-M1-01 isAnonymous / isLinked derivation (AuthContext.tsx)', () {
     bool anon(KoiUser? u) => FakeAuthService(fakeUser: u).isAnonymous;
     bool linked(KoiUser? u) => FakeAuthService(fakeUser: u).isLinked;
 
@@ -38,7 +38,7 @@ void main() {
     });
   });
 
-  group('DebugLocalAuthService (temporary stand-in)', () {
+  group('ATC-M1-02 DebugLocalAuthService (temporary stand-in)', () {
     test(
       'loading until the session is restored; no stored uid → signed out',
       () async {

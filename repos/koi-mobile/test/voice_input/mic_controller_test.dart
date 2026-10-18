@@ -63,7 +63,7 @@ void main() {
 
   bool exists(String? path) => path != null && File(path).existsSync();
 
-  test('consent once per uid; Continue then permission then record', () async {
+  test('ATC-M3-19 consent once per uid; Continue then permission then record', () async {
     final m = mic();
     await m.tap();
     expect(consents, 1);
@@ -84,7 +84,7 @@ void main() {
     other.dispose();
   });
 
-  test('Not now: no permission asked, no recording, asked again', () async {
+  test('ATC-M3-19 Not now: no permission asked, no recording, asked again', () async {
     consentAnswer = false;
     final m = mic();
     await m.tap();
@@ -96,7 +96,7 @@ void main() {
     m.dispose();
   });
 
-  test('permission denied → mic off notice; 2nd → Android Settings', () async {
+  test('ATC-M3-19 permission denied → mic off notice; 2nd → Android Settings', () async {
     recorder.granted = false;
     final m = mic();
     await m.tap();
@@ -116,7 +116,7 @@ void main() {
     m.dispose();
   });
 
-  test('recording start stops voice playback first', () async {
+  test('ATC-M3-20 recording start stops voice playback first', () async {
     final m = mic();
     await m.tap();
     expect(log, ['voice-stop', 'record']);
@@ -124,7 +124,7 @@ void main() {
     m.dispose();
   });
 
-  test('WAV in the temp dir; tap again sends it, then deletes it', () async {
+  test('ATC-M3-20 WAV in the temp dir; tap again sends it, then deletes it', () async {
     final m = mic();
     await m.tap();
     final path = recorder.current!;
@@ -140,7 +140,7 @@ void main() {
     m.dispose();
   });
 
-  test('cancel: nothing sent, file deleted', () async {
+  test('ATC-M3-20 cancel: nothing sent, file deleted', () async {
     final m = mic();
     await m.tap();
     final path = recorder.current!;
@@ -152,7 +152,7 @@ void main() {
     m.dispose();
   });
 
-  test('auto-stop and send at maxLength', () async {
+  test('ATC-M3-20 auto-stop and send at maxLength', () async {
     final m = mic(maxLength: const Duration(milliseconds: 60));
     await m.tap();
     expect(m.recording, isTrue);
@@ -162,7 +162,7 @@ void main() {
     m.dispose();
   });
 
-  test('422 → Retry keeps the same clip; deleted after success', () async {
+  test('ATC-M3-21 422 → Retry keeps the same clip; deleted after success', () async {
     results.add(const AudioSendResult(failureCode: '422'));
     final m = mic();
     await m.tap();
@@ -182,7 +182,7 @@ void main() {
   });
 
   test(
-    'timeout after a saved transcript: Retry does not save it again',
+    'ATC-M3-21 timeout after a saved transcript: Retry does not save it again',
     () async {
       results.add(
         const AudioSendResult(failureCode: 'timeout', transcriptSaved: true),
@@ -198,7 +198,7 @@ void main() {
     },
   );
 
-  test('blocked (crisis / breathing / reply pending): no recording', () async {
+  test('ATC-M3-22 blocked (crisis / breathing / reply pending): no recording', () async {
     blocked = true;
     final m = mic();
     await m.tap();
@@ -208,7 +208,7 @@ void main() {
     m.dispose();
   });
 
-  test('blocked while the consent dialog was open: no recording', () async {
+  test('ATC-M3-22 blocked while the consent dialog was open: no recording', () async {
     final m = MicController(
       uid: 'u1',
       recorder: recorder,
@@ -229,7 +229,7 @@ void main() {
   });
 
   test(
-    'interrupt (crisis / breathing / app hidden) discards the recording',
+    'ATC-M3-22 interrupt (crisis / breathing / app hidden) discards the recording',
     () async {
       final m = mic();
       await m.tap();
@@ -241,7 +241,7 @@ void main() {
     },
   );
 
-  test('dispose deletes a kept clip and a recording', () async {
+  test('ATC-M3-23 dispose deletes a kept clip and a recording', () async {
     results.add(const AudioSendResult(failureCode: 'network'));
     final m = mic();
     await m.tap();
@@ -261,7 +261,7 @@ void main() {
     expect(exists(live), isFalse);
   });
 
-  test('a new recording discards the clip kept for Retry', () async {
+  test('ATC-M3-21 a new recording discards the clip kept for Retry', () async {
     results.add(const AudioSendResult(failureCode: '422'));
     final m = mic();
     await m.tap();
@@ -275,7 +275,7 @@ void main() {
     m.dispose();
   });
 
-  test('diagnostics: clip length, format, bytes, code; no text', () async {
+  test('ATC-M3-23 diagnostics: clip length, format, bytes, code; no text', () async {
     results.add(const AudioSendResult(failureCode: '422'));
     var now = DateTime(2026, 10, 18, 12);
     final m = MicController(
@@ -302,7 +302,7 @@ void main() {
     m.dispose();
   });
 
-  test('clip length is capped at maxLength', () async {
+  test('ATC-M3-20 clip length is capped at maxLength', () async {
     var now = DateTime(2026, 10, 18);
     final m = MicController(
       uid: 'u1',
@@ -326,7 +326,7 @@ void main() {
     m.dispose();
   });
 
-  test('AudioUpload default filename is voice.wav', () {
+  test('ATC-M3-23 AudioUpload default filename is voice.wav', () {
     expect(const AudioUpload('/x').filename, 'voice.wav');
   });
 }

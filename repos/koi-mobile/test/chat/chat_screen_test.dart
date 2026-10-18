@@ -47,7 +47,7 @@ void main() {
     return (store: store, queue: queue, online: status);
   }
 
-  testWidgets('empty chat: avatar panel, hero, CTA, input; no overflow', (
+  testWidgets('ATC-M2-25 empty chat: avatar panel, hero, CTA, input; no overflow', (
     tester,
   ) async {
     await pumpChat(tester);
@@ -60,7 +60,7 @@ void main() {
     expect(find.byKey(const Key('offline-banner')), findsNothing);
   });
 
-  testWidgets('sending: user bubble, then the fallback reply; panel hides', (
+  testWidgets('ATC-M2-25 sending: user bubble, then the fallback reply; panel hides', (
     tester,
   ) async {
     final env = await pumpChat(tester);
@@ -86,14 +86,14 @@ void main() {
     }
   });
 
-  testWidgets('send button disabled until there is text', (tester) async {
+  testWidgets('ATC-M2-25 send button disabled until there is text', (tester) async {
     final env = await pumpChat(tester);
     await tester.tap(find.byKey(const Key('chat-send')));
     await tester.pump();
     expect(env.queue.items, isEmpty);
   });
 
-  testWidgets('offline banner shows while offline', (tester) async {
+  testWidgets('ATC-M2-25 offline banner shows while offline', (tester) async {
     final env = await pumpChat(tester, online: false);
     expect(find.text(OfflineBanner.text), findsOneWidget);
     env.online.set(true);
@@ -104,7 +104,7 @@ void main() {
     expect(find.text(OfflineBanner.text), findsNothing);
   });
 
-  group('fits the real 360dp phone (Infinix X663)', () {
+  group('ATC-M2-26 fits the real 360dp phone (Infinix X663)', () {
     // adb: 1080x2400 @ 480dpi (3.0) → 360x800dp; status bar 108px, gesture
     // nav 1px, keyboard (IME visibleFrame) 911px.
     void phone(WidgetTester tester, {bool keyboard = false}) {
@@ -236,7 +236,7 @@ void main() {
     });
   });
 
-  test('time format follows the 12/24h setting, 2-digit like web', () {
+  test('ATC-M2-27 time format follows the 12/24h setting, 2-digit like web', () {
     final t = DateTime(2026, 10, 13, 8, 5);
     expect(formatTime(t, use24h: false), '08:05 AM');
     expect(formatTime(DateTime(2026, 1, 1, 0, 7), use24h: false), '12:07 AM');

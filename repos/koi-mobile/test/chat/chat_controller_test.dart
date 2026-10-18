@@ -52,7 +52,7 @@ class _ScriptedService extends ConversationService {
 }
 
 void main() {
-  test('optimistic user message + typing, then the reply', () async {
+  test('ATC-M2-12 optimistic user message + typing, then the reply', () async {
     final service = _ScriptedService(MemoryMessageStore());
     final c = ChatController(
       uid: 'u1',
@@ -73,7 +73,7 @@ void main() {
     expect(c.conversationId, 'u1'); // Q5
   });
 
-  test('blank input is ignored', () async {
+  test('ATC-M2-12 blank input is ignored', () async {
     final service = _ScriptedService(MemoryMessageStore());
     final c = ChatController(
       uid: 'u1',
@@ -86,7 +86,7 @@ void main() {
   });
 
   test(
-    'context = the last 5 messages before the new one, web role names',
+    'ATC-M2-13 context = the last 5 messages before the new one, web role names',
     () async {
       final service = _ScriptedService(MemoryMessageStore());
       final c = ChatController(
@@ -115,7 +115,7 @@ void main() {
   );
 
   test(
-    'offline: queued (not sent), typing off; sent when back online',
+    'ATC-M2-14 offline: queued (not sent), typing off; sent when back online',
     () async {
       final online = FakeOnlineStatus(online: false);
       final service = _ScriptedService(MemoryMessageStore());
@@ -140,7 +140,7 @@ void main() {
   );
 
   test(
-    'history: decrypts stored rows in time order; undecryptable shown raw',
+    'ATC-M2-15 history: decrypts stored rows in time order; undecryptable shown raw',
     () async {
       final store = MemoryMessageStore();
       final cipher = FakeCipher();
@@ -198,7 +198,7 @@ void main() {
     },
   );
 
-  test('fallback replies are never sent back as history (B)', () async {
+  test('ATC-M2-13 fallback replies are never sent back as history (B)', () async {
     final store = MemoryMessageStore();
     final cipher = FakeCipher();
     await store.put(
@@ -254,7 +254,7 @@ void main() {
       session: session,
     );
 
-    test('deltas fill a live bubble that becomes the saved reply', () async {
+    test('ATC-M2-16 deltas fill a live bubble that becomes the saved reply', () async {
       final gate = Completer<void>();
       server.handler = (req, _) async {
         req.response.headers.contentType = ContentType('text', 'event-stream');
@@ -287,7 +287,7 @@ void main() {
       expect(c.messages.last.id, liveId);
     });
 
-    test('avatar: thinking → companion_state → speaking → idle', () async {
+    test('ATC-M21-19 avatar: thinking → companion_state → speaking → idle', () async {
       server.handler = (req, _) => writeSse(
         req,
         sseFrame('companion_state', {'emotion': 'mystery', 'intensity': 9}) +
@@ -319,7 +319,7 @@ void main() {
       expect(events.every((e) => e.sessionId == c.conversationId), isTrue);
     });
 
-    test('ui_action / handoff / risk reach SafetyController', () async {
+    test('ATC-M12-15 ui_action / handoff / risk reach SafetyController', () async {
       server.handler = (req, _) => writeSse(
         req,
         sseFrame('ui_action', {
@@ -351,7 +351,7 @@ void main() {
       expect(safety.breathing, isNull); // crisis stopped the animation
     });
 
-    test('risk unavailable never shows anything', () async {
+    test('ATC-M12-15 risk unavailable never shows anything', () async {
       server.handler = (req, _) => writeSse(
         req,
         sseFrame('delta', {'text': 'ok'}) +
@@ -367,7 +367,7 @@ void main() {
       expect(safety.crisisCount, 0);
     });
 
-    test('crisis path sent once, then crisisResolutionSent()', () async {
+    test('ATC-M12-15 crisis path sent once, then crisisResolutionSent()', () async {
       server.handler = (req, _) => writeSse(
         req,
         sseFrame('handoff', {'to': 'crisis', 'reason': 'r'}) +
@@ -398,7 +398,7 @@ void main() {
       expect(server.requests[2].json['crisis_path'], isNull);
     });
 
-    test('waking after the threshold; cleared on the first event', () async {
+    test('ATC-M2-23 waking after the threshold; cleared on the first event', () async {
       final gate = Completer<void>();
       server.handler = (req, _) async {
         await gate.future;
@@ -417,7 +417,7 @@ void main() {
       expect(c.backendStatus, BackendStatus.ready);
     });
 
-    test('first send held until chat /health 200, then released; later '
+    test('ATC-M2-23 first send held until chat /health 200, then released; later '
         'sends not held', () async {
       server.handler = (req, _) => writeSse(req, okTurn());
       final health = Completer<bool>();
@@ -439,7 +439,7 @@ void main() {
       expect(server.requests, hasLength(2));
     });
 
-    test('first send released when the warm-up gives up', () async {
+    test('ATC-M2-23 first send released when the warm-up gives up', () async {
       server.handler = (req, _) => writeSse(req, okTurn());
       var now = DateTime(2026, 10, 18, 12);
       final backend = BackendWarmup(

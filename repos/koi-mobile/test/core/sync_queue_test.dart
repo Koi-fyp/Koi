@@ -35,7 +35,7 @@ SyncItem _item(String id, int priority, {String uid = 'u1'}) => SyncItem(
 
 void main() {
   test(
-    'not ready (Firebase not connected): persisted with a timestamp',
+    'ATC-M14-12 not ready (Firebase not connected): persisted with a timestamp',
     () async {
       final kv = MemoryKeyValueStore();
       final q = PersistentSyncQueue(
@@ -56,7 +56,7 @@ void main() {
     },
   );
 
-  test('ready: written straight through; on failure queued', () async {
+  test('ATC-M14-12 ready: written straight through; on failure queued', () async {
     final remote = _Remote()..ready = true;
     final q = PersistentSyncQueue(store: MemoryKeyValueStore(), remote: remote);
     remote.failDocs.add('bad');
@@ -67,7 +67,7 @@ void main() {
   });
 
   test(
-    'permission-denied (rules not deployed): kept queued, never throws',
+    'ATC-M14-12 permission-denied (rules not deployed): kept queued, never throws',
     () async {
       final remote = _Remote()
         ..ready = true
@@ -87,7 +87,7 @@ void main() {
     },
   );
 
-  test('syncFailureReason: Firebase code, timeout, else the type only', () {
+  test('ATC-M14-12 syncFailureReason: Firebase code, timeout, else the type only', () {
     expect(
       syncFailureReason(
         FirebaseException(plugin: 'p', code: 'permission-denied', message: 'x'),
@@ -98,7 +98,7 @@ void main() {
     expect(syncFailureReason(StateError('secret text')), 'StateError');
   });
 
-  test('flush: priority order (1 first), failures stay queued', () async {
+  test('ATC-M14-13 flush: priority order (1 first), failures stay queued', () async {
     final remote = _Remote();
     final q = PersistentSyncQueue(store: MemoryKeyValueStore(), remote: remote);
     await q.enqueueAsync(_item('user', 4));
@@ -119,7 +119,7 @@ void main() {
   });
 
   test(
-    'flush: equal priorities keep queue order (later merge lands last)',
+    'ATC-M14-13 flush: equal priorities keep queue order (later merge lands last)',
     () async {
       final remote = _Remote();
       final q = PersistentSyncQueue(
@@ -137,7 +137,7 @@ void main() {
     },
   );
 
-  test('items for another uid are skipped and kept, not deleted', () async {
+  test('ATC-M14-13 items for another uid are skipped and kept, not deleted', () async {
     final remote = _Remote()..ready = true;
     final q = PersistentSyncQueue(store: MemoryKeyValueStore(), remote: remote);
     await q.enqueueAsync(_item('old', 3, uid: 'debug-abc'));
@@ -157,7 +157,7 @@ void main() {
     expect(q.pending.map((i) => i.docId), ['old', 'legacy']);
   });
 
-  test('ownerUid reads users/{uid} from the path', () {
+  test('ATC-M14-13 ownerUid reads users/{uid} from the path', () {
     expect(_item('x', 3, uid: 'abc').ownerUid, 'abc');
     expect(SyncItem.saltCreateOnce('abc', 's').ownerUid, 'abc');
     expect(
@@ -180,7 +180,7 @@ void main() {
     );
   });
 
-  test('op and timestampFields survive persistence; old JSON = merge', () {
+  test('ATC-M14-14 op and timestampFields survive persistence; old JSON = merge', () {
     SyncItem roundTrip(SyncItem i) => SyncItem.fromJson(
       (jsonDecode(jsonEncode(i.toJson())) as Map).cast<String, Object?>(),
     );
@@ -211,7 +211,7 @@ void main() {
     expect(legacy.timestampFields, isEmpty);
   });
 
-  test('coming back online triggers a flush (retry on reconnect)', () async {
+  test('ATC-M14-15 coming back online triggers a flush (retry on reconnect)', () async {
     final remote = _Remote();
     final online = StreamController<bool>();
     final q = PersistentSyncQueue(
@@ -233,7 +233,7 @@ void main() {
     await q.dispose();
   });
 
-  test('corrupt stored queue reads as empty (web: JSON.parse catch → [])', () {
+  test('ATC-M14-14 corrupt stored queue reads as empty (web: JSON.parse catch → [])', () {
     final q = PersistentSyncQueue(
       store: MemoryKeyValueStore({'koi_sync_queue': '{not json'}),
       remote: _Remote(),

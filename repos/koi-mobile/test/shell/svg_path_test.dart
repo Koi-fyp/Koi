@@ -11,23 +11,23 @@ void main() {
       (a.right - b.right).abs() < 0.01 &&
       (a.bottom - b.bottom).abs() < 0.01;
 
-  test('relative lines, H/V and close', () {
+  test('ATC-M0-05 relative lines, H/V and close', () {
     final p = parseSvgPath('M2 3h4v5l-6 0z');
     expect(near(p.getBounds(), const Rect.fromLTRB(0, 3, 6, 8)), isTrue);
   });
 
-  test('compact numbers like ".5.5" and "1-4" tokenize correctly', () {
+  test('ATC-M0-05 compact numbers like ".5.5" and "1-4" tokenize correctly', () {
     final p = parseSvgPath('M0 0l.5.5L1-4');
     expect(near(p.getBounds(), const Rect.fromLTRB(0, -4, 1, 0.5)), isTrue);
   });
 
-  test('arc: half circle radius 2 bulges by 2', () {
+  test('ATC-M0-05 arc: half circle radius 2 bulges by 2', () {
     // From (0,0) to (4,0) with sweep=1 (clockwise, y-down) bulges upward.
     final p = parseSvgPath('M0 0A2 2 0 0 1 4 0');
     expect(near(p.getBounds(), const Rect.fromLTRB(0, -2, 4, 0)), isTrue);
   });
 
-  test('web icons have the expected extents in the 24x24 viewBox', () {
+  test('ATC-M0-05 web icons have the expected extents in the 24x24 viewBox', () {
     // ChatIcon: x 3..21, y 3..21 (bubble with its tail at (3,21)).
     expect(
       near(chatIconPath.getBounds(), const Rect.fromLTRB(3, 3, 21, 21)),
@@ -50,7 +50,7 @@ void main() {
     );
   });
 
-  group('S/s smooth cubic (progress icons)', () {
+  group('ATC-M0-05 S/s smooth cubic (progress icons)', () {
     /// Points along both paths at several fractions of their length.
     void expectSameCurve(Path a, Path b) {
       final ma = a.computeMetrics().toList();
@@ -88,7 +88,7 @@ void main() {
     });
   });
 
-  test('unsupported commands fail loudly', () {
+  test('ATC-M0-05 unsupported commands fail loudly', () {
     expect(() => parseSvgPath('M0 0Q1 1 2 2'), throwsFormatException);
     expect(() => parseSvgPolyline('1 2 3'), throwsFormatException);
   });

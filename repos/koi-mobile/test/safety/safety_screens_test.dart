@@ -80,7 +80,7 @@ void main() {
       tester.widget<Text>(find.byKey(const Key('breathing-cycle'))).data!;
 
   group('Crisis screen', () {
-    testWidgets('cannot be dismissed by back or tapping outside', (
+    testWidgets('ATC-M12-06 cannot be dismissed by back or tapping outside', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -99,7 +99,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('shows content, never the category or score, max 3 items', (
+    testWidgets('ATC-M12-07 shows content, never the category or score, max 3 items', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -127,7 +127,7 @@ void main() {
       expect(texts.toLowerCase(), isNot(contains('verified')));
     });
 
-    testWidgets('CRITICAL fallback: neutral label + limited information', (
+    testWidgets('ATC-M12-07 CRITICAL fallback: neutral label + limited information', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -146,7 +146,7 @@ void main() {
       );
     });
 
-    testWidgets('all three paths close it and report crisis_path', (
+    testWidgets('ATC-M12-08 all three paths close it and report crisis_path', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -164,7 +164,7 @@ void main() {
       expect(find.text('I reached out for support'), findsNothing);
     });
 
-    testWidgets('a repeated handoff never opens a second screen', (
+    testWidgets('ATC-M12-08 a repeated handoff never opens a second screen', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -181,7 +181,7 @@ void main() {
       expect(find.byKey(const Key('crisis-item-0')), findsOneWidget);
     });
 
-    testWidgets('call button dials the payload helpline', (tester) async {
+    testWidgets('ATC-M12-09 call button dials the payload helpline', (tester) async {
       tester.view.devicePixelRatio = 3;
       tester.view.physicalSize = const Size(1080, 2400);
       addTearDown(tester.view.reset);
@@ -216,7 +216,7 @@ void main() {
       expect(opened, [Uri.parse('tel:0800123')]);
     });
 
-    testWidgets('default helpline call button dials 1166', (tester) async {
+    testWidgets('ATC-M12-09 default helpline call button dials 1166', (tester) async {
       tester.view.devicePixelRatio = 3;
       tester.view.physicalSize = const Size(1080, 2400);
       addTearDown(tester.view.reset);
@@ -238,7 +238,7 @@ void main() {
   });
 
   group('Breathing screen', () {
-    testWidgets('timing: cues, cycles and orb scale follow inhale/exhale', (
+    testWidgets('ATC-M9-04 timing: cues, cycles and orb scale follow inhale/exhale', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -265,7 +265,7 @@ void main() {
       expect(events, isEmpty);
     });
 
-    testWidgets('finishing all cycles reports playback_done once', (
+    testWidgets('ATC-M9-04 finishing all cycles reports playback_done once', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -285,7 +285,7 @@ void main() {
       expect(events, [ClientEvent.playbackDone]);
     });
 
-    testWidgets('pause and resume (user) freeze and continue the clock', (
+    testWidgets('ATC-M9-05 pause and resume (user) freeze and continue the clock', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -307,7 +307,7 @@ void main() {
       expect(events, isEmpty);
     });
 
-    testWidgets('pause_breathing pauses; only the user resumes', (
+    testWidgets('ATC-M9-05 pause_breathing pauses; only the user resumes', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -321,7 +321,7 @@ void main() {
       expect(events, isEmpty);
     });
 
-    testWidgets('Stop button → playback_stopped, screen closes', (
+    testWidgets('ATC-M9-06 Stop button → playback_stopped, screen closes', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -333,7 +333,7 @@ void main() {
       expect(find.text(SafetyController.noticeStopped), findsOneWidget);
     });
 
-    testWidgets('stop_breathing event → playback_stopped, Web notice', (
+    testWidgets('ATC-M9-06 stop_breathing event → playback_stopped, Web notice', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -345,7 +345,7 @@ void main() {
       expect(find.text(SafetyController.noticeStoppedByKoi), findsOneWidget);
     });
 
-    testWidgets('back while running stops it', (tester) async {
+    testWidgets('ATC-M9-06 back while running stops it', (tester) async {
       final c = await pumpHost(tester);
       await startBreathing(c, tester);
       await back(tester);
@@ -353,7 +353,7 @@ void main() {
       expect(events, [ClientEvent.playbackStopped]);
     });
 
-    testWidgets('a crisis stops the exercise and shows the crisis screen', (
+    testWidgets('ATC-M12-10 a crisis stops the exercise and shows the crisis screen', (
       tester,
     ) async {
       final c = await pumpHost(tester);
@@ -373,7 +373,7 @@ void main() {
     });
   });
 
-  group('Debug menu', () {
+  group('ATC-M12-11 Debug menu', () {
     testWidgets('debug build: long-press opens it and simulates events', (
       tester,
     ) async {

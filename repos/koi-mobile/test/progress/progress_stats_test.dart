@@ -21,7 +21,7 @@ void main() {
   DateTime day(int offset, [int hour = 10]) =>
       DateTime(2026, 10, 14 + offset, hour);
 
-  test('no messages → all zero, empty heatmap rows', () {
+  test('ATC-M0-18 no messages → all zero, empty heatmap rows', () {
     final s = ProgressStats.from(const [], now);
     expect(s.daysActive, 0);
     expect(s.sessions, 0);
@@ -35,7 +35,7 @@ void main() {
     );
   });
 
-  test('only the user\'s messages count; AI replies are ignored', () {
+  test('ATC-M0-18 only the user\'s messages count; AI replies are ignored', () {
     final s = ProgressStats.from([
       msg(day(0)),
       msg(day(0, 11), sender: 'ai'),
@@ -45,7 +45,7 @@ void main() {
     expect(s.daysActive, 1);
   });
 
-  test('days active / sessions = distinct local days', () {
+  test('ATC-M0-18 days active / sessions = distinct local days', () {
     final s = ProgressStats.from([
       msg(day(0, 9)),
       msg(day(0, 20)),
@@ -56,7 +56,7 @@ void main() {
     expect(s.sessions, 3);
   });
 
-  test('current streak ends today', () {
+  test('ATC-M0-19 current streak ends today', () {
     final s = ProgressStats.from([
       msg(day(0)),
       msg(day(-1)),
@@ -67,18 +67,18 @@ void main() {
     expect(s.longestStreak, 3);
   });
 
-  test('no message yet today → streak still counts up to yesterday', () {
+  test('ATC-M0-19 no message yet today → streak still counts up to yesterday', () {
     final s = ProgressStats.from([msg(day(-1)), msg(day(-2))], now);
     expect(s.currentStreak, 2);
   });
 
-  test('a gap of a whole day breaks the current streak', () {
+  test('ATC-M0-19 a gap of a whole day breaks the current streak', () {
     final s = ProgressStats.from([msg(day(-2)), msg(day(-3))], now);
     expect(s.currentStreak, 0);
     expect(s.longestStreak, 2);
   });
 
-  test('longest streak across months', () {
+  test('ATC-M0-19 longest streak across months', () {
     final s = ProgressStats.from([
       for (var i = 0; i < 9; i++) msg(DateTime(2026, 9, 26 + i, 12)),
       msg(day(0)),
@@ -88,7 +88,7 @@ void main() {
     expect(s.currentStreak, 1);
   });
 
-  test('heatmap: rows Mon→Sun, last column = this week, capped at 4', () {
+  test('ATC-M0-20 heatmap: rows Mon→Sun, last column = this week, capped at 4', () {
     final s = ProgressStats.from([
       for (var i = 0; i < 6; i++) msg(day(0, 8 + i)), // Wed: 6 messages
       msg(day(-2)), // Mon this week: 1
@@ -105,7 +105,7 @@ void main() {
     expect(total, 4 + 1 + 1 + 1);
   });
 
-  test('UTC timestamps are bucketed by local day', () {
+  test('ATC-M0-20 UTC timestamps are bucketed by local day', () {
     final t = DateTime(2026, 10, 13, 23, 30); // local, yesterday
     final s = ProgressStats.from([msg(t.toUtc())], now);
     expect(s.currentStreak, 1);

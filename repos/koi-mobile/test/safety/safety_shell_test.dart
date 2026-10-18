@@ -51,7 +51,7 @@ void main() {
     (KoiTab.progress, 'Your Progress'),
     (KoiTab.settings, 'Settings'),
   ]) {
-    testWidgets('long-press on the $title title opens the debug menu', (
+    testWidgets('ATC-M12-11 long-press on the $title title opens the debug menu', (
       tester,
     ) async {
       await pumpShell(tester, tab: tab);
@@ -66,7 +66,7 @@ void main() {
       expect(find.byKey(const Key('safety-debug-high')), findsOneWidget);
     });
 
-    testWidgets('release mode: no debug menu on the $title title', (
+    testWidgets('ATC-M12-11 release mode: no debug menu on the $title title', (
       tester,
     ) async {
       await pumpShell(tester, tab: tab, debugMenu: false);
@@ -78,7 +78,7 @@ void main() {
     });
   }
 
-  testWidgets('Progress DEBUG button opens the menu and simulates events', (
+  testWidgets('ATC-M12-11 Progress DEBUG button opens the menu and simulates events', (
     tester,
   ) async {
     await pumpShell(tester, tab: KoiTab.progress);
@@ -99,13 +99,13 @@ void main() {
     expect(find.byType(CrisisScreen), findsOneWidget);
   });
 
-  testWidgets('release mode: no DEBUG button on Progress', (tester) async {
+  testWidgets('ATC-M12-11 release mode: no DEBUG button on Progress', (tester) async {
     await pumpShell(tester, tab: KoiTab.progress, debugMenu: false);
     expect(find.byKey(const Key('safety-debug-button')), findsNothing);
     expect(find.text(SafetyDebugButton.label), findsNothing);
   });
 
-  testWidgets('crisis opens above the call screen and resets the avatar', (
+  testWidgets('ATC-M12-12 crisis opens above the call screen and resets the avatar', (
     tester,
   ) async {
     await pumpShell(tester);

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/avatar/avatar_view.dart';
 
 void main() {
-  test('AvatarEmotion is exactly the avatar set', () {
+  test('ATC-M21-01 AvatarEmotion is exactly the avatar set', () {
     expect(AvatarEmotion.values.map((e) => e.name), [
       'neutral',
       'joy',
@@ -12,7 +12,7 @@ void main() {
     ]);
   });
 
-  test('starts neutral, loading', () {
+  test('ATC-M21-01 starts neutral, loading', () {
     final c = AvatarViewController();
     expect(c.emotion, AvatarEmotion.neutral);
     expect(c.intensity, 0);
@@ -20,7 +20,7 @@ void main() {
     expect(c.isReady, isFalse);
   });
 
-  test('setEmotion stores, clamps 0..1, and rejects NaN', () {
+  test('ATC-M21-01 setEmotion stores, clamps 0..1, and rejects NaN', () {
     final c = AvatarViewController();
     var notified = 0;
     c.addListener(() => notified++);
@@ -41,7 +41,7 @@ void main() {
     expect(c.emotion, AvatarEmotion.sorrow);
   });
 
-  test('status: ready, failed, reconnect', () {
+  test('ATC-M21-01 status: ready, failed, reconnect', () {
     final c = AvatarViewController();
     c.markReady();
     expect(c.isReady, isTrue);

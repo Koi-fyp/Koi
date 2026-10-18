@@ -130,7 +130,7 @@ void main() {
       tester.widget<Text>(find.byKey(const Key('settings-status'))).data!;
 
   group('Settings page at 360dp', () {
-    testWidgets('all web sections and rows; no overflow', (tester) async {
+    testWidgets('ATC-M1-24 all web sections and rows; no overflow', (tester) async {
       await pumpSettings(tester);
       expect(find.text('Settings'), findsOneWidget);
       for (final label in [
@@ -197,7 +197,7 @@ void main() {
       await scrollThrough(tester, const Key('settings-scroll'));
     });
 
-    testWidgets('shows the saved values', (tester) async {
+    testWidgets('ATC-M1-24 shows the saved values', (tester) async {
       await pumpSettings(
         tester,
         stored: const SettingsPrefs(
@@ -218,7 +218,7 @@ void main() {
       );
     });
 
-    testWidgets('check-in on: real saved time in desc and status line', (
+    testWidgets('ATC-M1-25 check-in on: real saved time in desc and status line', (
       tester,
     ) async {
       const on = SettingsPrefs(
@@ -261,7 +261,7 @@ void main() {
       );
     });
 
-    testWidgets('the status line re-reads the clock every minute', (
+    testWidgets('ATC-M1-25 the status line re-reads the clock every minute', (
       tester,
     ) async {
       var now = DateTime(2026, 1, 1, 21, 14);
@@ -297,7 +297,7 @@ void main() {
       expect(status(tester), startsWith('Preferred time reached'));
     });
 
-    testWidgets('language toggle saves, then says so (web toasts)', (
+    testWidgets('ATC-M1-26 language toggle saves, then says so (web toasts)', (
       tester,
     ) async {
       await pumpSettings(tester);
@@ -318,7 +318,7 @@ void main() {
       expect(find.byKey(const Key('settings-toast')), findsNothing);
     });
 
-    testWidgets('daily check-in toggle: desc, status and save', (tester) async {
+    testWidgets('ATC-M1-25 daily check-in toggle: desc, status and save', (tester) async {
       await pumpSettings(tester);
       await tapVisible(tester, find.byKey(const Key('row-checkin')));
       expect(find.text('Preference saved on this device.'), findsOneWidget);
@@ -334,7 +334,7 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('a failed save keeps the old value and says so', (
+    testWidgets('ATC-M1-26 a failed save keeps the old value and says so', (
       tester,
     ) async {
       await pumpSettings(tester, stored: const SettingsPrefs(language: 'ur'));
@@ -349,7 +349,7 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('preference rows do nothing while loading or saving', (
+    testWidgets('ATC-M1-26 preference rows do nothing while loading or saving', (
       tester,
     ) async {
       final slow = _GatedStore()..loadGate = Completer<void>();
@@ -372,7 +372,7 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('Clear History is disabled: no toast, nothing changes', (
+    testWidgets('ATC-M1-28 Clear History is disabled: no toast, nothing changes', (
       tester,
     ) async {
       await pumpSettings(tester);
@@ -392,7 +392,7 @@ void main() {
       expect(semantics.flagsCollection.isEnabled, Tristate.isFalse);
     });
 
-    testWidgets('Reminder Time: system time picker saves HH:mm', (
+    testWidgets('ATC-M1-25 Reminder Time: system time picker saves HH:mm', (
       tester,
     ) async {
       await pumpSettings(tester, now: DateTime(2026, 10, 18, 7, 5));
@@ -413,7 +413,7 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('Reminder Time picker opens on the saved time', (tester) async {
+    testWidgets('ATC-M1-25 Reminder Time picker opens on the saved time', (tester) async {
       await pumpSettings(
         tester,
         stored: const SettingsPrefs(notificationTime: '21:15'),
@@ -426,7 +426,7 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('a new toast restarts the 3s timer', (tester) async {
+    testWidgets('ATC-M1-26 a new toast restarts the 3s timer', (tester) async {
       await pumpSettings(tester);
       await tapVisible(tester, find.byKey(const Key('row-language')));
       await tester.pump(const Duration(milliseconds: 2500));
@@ -441,7 +441,7 @@ void main() {
       expect(find.byKey(const Key('settings-toast')), findsNothing);
     });
 
-    testWidgets('Storage: real KOI data size, never a quota or percent', (
+    testWidgets('ATC-M14-20 Storage: real KOI data size, never a quota or percent', (
       tester,
     ) async {
       await pumpSettings(tester, storageBytes: 1572864); // 1.5 MiB
@@ -457,7 +457,7 @@ void main() {
       expect(find.textContaining('%'), findsNothing);
     });
 
-    testWidgets('crisis helplines expand and dial the exact tel: links', (
+    testWidgets('ATC-M12-09 crisis helplines expand and dial the exact tel: links', (
       tester,
     ) async {
       await pumpSettings(tester);
@@ -479,7 +479,7 @@ void main() {
       await scrollThrough(tester, const Key('settings-scroll'));
     });
 
-    testWidgets('help panels: one open at a time, collapsed panels hidden', (
+    testWidgets('ATC-M1-28 help panels: one open at a time, collapsed panels hidden', (
       tester,
     ) async {
       await pumpSettings(tester);
@@ -508,7 +508,7 @@ void main() {
       expect(h('whatsnew'), 0);
     });
 
-    testWidgets("What's New: web's list, avatar line only when animated", (
+    testWidgets("ATC-M1-28 What's New: web's list, avatar line only when animated", (
       tester,
     ) async {
       const web = [
@@ -530,7 +530,7 @@ void main() {
     });
   });
 
-  group('AvatarPicker (companions, web parity)', () {
+  group('ATC-M1-27 AvatarPicker (companions, web parity)', () {
     testWidgets('opens, fits 360dp, saves companion + nickname', (
       tester,
     ) async {
@@ -713,7 +713,7 @@ void main() {
     });
   });
 
-  group('sub-pages (nested navigator, top nav stays)', () {
+  group('ATC-M14-21 sub-pages (nested navigator, top nav stays)', () {
     testWidgets('Privacy: content, no overflow, Back to Settings', (
       tester,
     ) async {
@@ -822,7 +822,7 @@ void main() {
     });
   });
 
-  testWidgets('in the shell: Settings tab shows the page under the top nav', (
+  testWidgets('ATC-M0-24 in the shell: Settings tab shows the page under the top nav', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 3;

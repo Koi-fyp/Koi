@@ -20,7 +20,7 @@ void main() {
     KoiText.useGoogleFonts = false; // restore flutter_test_config default
   });
 
-  test('all bundled weights load offline via google_fonts', () async {
+  test('ATC-M0-12 all bundled weights load offline via google_fonts', () async {
     final styles = <TextStyle>[
       for (final w in [200, 300, 400, 500, 600, 700, 800])
         KoiText.display(fontWeight: FontWeight.values[w ~/ 100 - 1]),
@@ -32,7 +32,7 @@ void main() {
     await GoogleFonts.pendingFonts(styles);
   });
 
-  test('weights outside the bundled range are clamped and still load', () async {
+  test('ATC-M0-12 weights outside the bundled range are clamped and still load', () async {
     // Web uses font-weight 800/900 on DM Sans text (e.g. settings and
     // progress headings); without clamping google_fonts would look for
     // DMSans-ExtraBold/Black, which are not bundled, and fail.
@@ -56,7 +56,7 @@ void main() {
   // build/ can be stale). Hashes are the expectedFileHash values in
   // google_fonts 6.3.3 lib/src/google_fonts_parts/part_b.g.dart (Bricolage)
   // and part_d.g.dart (DM Sans).
-  test('bundled .ttf files are the exact google_fonts files', () async {
+  test('ATC-M0-12 bundled .ttf files are the exact google_fonts files', () async {
     const expected = {
       'BricolageGrotesque-ExtraLight.ttf': '749a547b99e0f8b0c40c705460dfec9883f970a58c8b30c6f0e4c748068d5e5d',
       'BricolageGrotesque-Light.ttf': '3f40769977ea17b4ae2ad9953ecaea85a40dddcb62b3643b2e6b3f26a3c110c7',
@@ -89,7 +89,7 @@ void main() {
     }
   });
 
-  test('OFL license files are bundled', () async {
+  test('ATC-M0-12 OFL license files are bundled', () async {
     for (final file in ['OFL-BricolageGrotesque.txt', 'OFL-DMSans.txt']) {
       final text = await rootBundle.loadString('assets/google_fonts/$file');
       expect(text, contains('SIL OPEN FONT LICENSE Version 1.1'));

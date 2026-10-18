@@ -10,7 +10,7 @@ import 'package:koi_mobile/theme/koi_theme.dart';
 // Expected values are copied from repos/koi-backend/nextjs_app/
 // tailwind.config.ts and src/app/globals.css.
 void main() {
-  test('neo colours match tailwind.config.ts', () {
+  test('ATC-M0-09 neo colours match tailwind.config.ts', () {
     expect(KoiColors.neoBlue, const Color(0xFF2D63EB));
     expect(KoiColors.neoYellow, const Color(0xFFFFD100));
     expect(KoiColors.neoBlack, const Color(0xFF000000));
@@ -23,7 +23,7 @@ void main() {
     expect(KoiColors.neoOrange, const Color(0xFFFF9F43));
   });
 
-  test('base and legacy colours match globals.css', () {
+  test('ATC-M0-09 base and legacy colours match globals.css', () {
     expect(KoiColors.background, const Color(0xFFFFE5D9));
     expect(KoiColors.koiBrand, const Color(0xFFFF80AB));
     expect(KoiColors.koiAiBubble, const Color(0xFFF3E5F5));
@@ -35,7 +35,7 @@ void main() {
     expect(KoiColors.focusRing.a, closeTo(0.2, 0.002));
   });
 
-  test('radii use 1rem = 16px', () {
+  test('ATC-M0-09 radii use 1rem = 16px', () {
     expect(KoiRadii.neo, 20);
     expect(KoiRadii.koi, 40);
     expect(KoiRadii.xl2, 16);
@@ -44,7 +44,7 @@ void main() {
     expect(KoiRadii.input, 12);
   });
 
-  test('neo shadows are zero-blur black offsets', () {
+  test('ATC-M0-09 neo shadows are zero-blur black offsets', () {
     for (final (shadow, px) in [
       (KoiShadows.neoSm, 3.0),
       (KoiShadows.neoMd, 4.0),
@@ -66,7 +66,7 @@ void main() {
     expect(KoiShadows.hardShadowCyan.single.color, const Color(0xFF06B6D4));
   });
 
-  test('hero font size follows clamp(3rem, 8vw, 6rem)', () {
+  test('ATC-M0-09 hero font size follows clamp(3rem, 8vw, 6rem)', () {
     expect(KoiText.heroFontSize(400), 48); // 32 → clamped up
     expect(KoiText.heroFontSize(800), 64);
     expect(KoiText.heroFontSize(1600), 96); // 128 → clamped down
@@ -76,12 +76,12 @@ void main() {
     expect(s.letterSpacing, closeTo(-2.56, 1e-9)); // -0.04em of 64
   });
 
-  test('font families', () {
+  test('ATC-M0-09 font families', () {
     expect(KoiText.display().fontFamily, 'Bricolage Grotesque');
     expect(KoiText.body().fontFamily, 'DM Sans');
   });
 
-  test('animation specs match tailwind.config.ts', () {
+  test('ATC-M0-10 animation specs match tailwind.config.ts', () {
     expect(KoiMotion.floatSlow.duration, const Duration(seconds: 5));
     expect(KoiMotion.floatMid.delay, const Duration(milliseconds: 700));
     expect(KoiMotion.floatFast.delay, const Duration(milliseconds: 1400));
@@ -92,7 +92,7 @@ void main() {
     expect(KoiMotion.pulseDot.duration, const Duration(seconds: 2));
   });
 
-  test('keyframe tweens hit the web keyframe values', () {
+  test('ATC-M0-10 keyframe tweens hit the web keyframe values', () {
     expect(KoiMotion.floatYTween.transform(0), 0);
     expect(KoiMotion.floatYTween.transform(0.5), closeTo(-12, 1e-9));
     expect(KoiMotion.floatYTween.transform(1), closeTo(0, 1e-9));
@@ -101,7 +101,7 @@ void main() {
     expect(KoiMotion.pulseDotTween.transform(1), closeTo(1, 1e-9));
   });
 
-  test('theme exposes tokens and the base background', () {
+  test('ATC-M0-09 theme exposes tokens and the base background', () {
     final theme = KoiTheme.light();
     expect(theme.scaffoldBackgroundColor, KoiColors.background);
     expect(theme.colorScheme.primary, KoiColors.neoBlue);

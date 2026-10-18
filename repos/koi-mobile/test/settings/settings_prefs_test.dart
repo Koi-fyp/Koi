@@ -51,7 +51,7 @@ void main() {
     ),
   );
 
-  test('no user record → nothing saved (koi, no language/check-in)', () async {
+  test('ATC-M1-21 no user record → nothing saved (koi, no language/check-in)', () async {
     final p = await HiveUserSettingsStore(repo).load('u1');
     expect(p.companion, 'koi');
     expect(p.displayName, '');
@@ -60,7 +60,7 @@ void main() {
     expect(p.notificationTime, isNull);
   });
 
-  test('reads what onboarding wrote', () async {
+  test('ATC-M1-21 reads what onboarding wrote', () async {
     await onboard();
     final p = await HiveUserSettingsStore(repo).load('u1');
     expect(p.companion, 'raza');
@@ -69,7 +69,7 @@ void main() {
     expect(p.notificationTime, '21:15'); // the real saved time (G13)
   });
 
-  test('save updates the same fields and keeps other settings keys', () async {
+  test('ATC-M1-21 save updates the same fields and keeps other settings keys', () async {
     await onboard();
     final store = HiveUserSettingsStore(repo);
     await store.save(
@@ -98,7 +98,7 @@ void main() {
   });
 
   test(
-    'the avatar follows the companion; save stores the matching one',
+    'ATC-M1-22 the avatar follows the companion; save stores the matching one',
     () async {
       await onboard(); // raza saved with a mismatched female_human
       final store = HiveUserSettingsStore(repo);
@@ -117,7 +117,7 @@ void main() {
     },
   );
 
-  test('legacy record without a companion: avatar picks it', () async {
+  test('ATC-M1-22 legacy record without a companion: avatar picks it', () async {
     final now = DateTime(2026);
     await repo.saveUser(
       HiveUser(
@@ -139,7 +139,7 @@ void main() {
     expect(p.avatarOutOfDate, isFalse);
   });
 
-  group('existing user migration (selectedAvatarProvider)', () {
+  group('ATC-M1-22 existing user migration (selectedAvatarProvider)', () {
     // A record from before Prompt 19: Aisha chosen, avatar saved as
     // male_human (the old onboarding fallback).
     Future<void> oldRecord(String companion) =>
@@ -216,7 +216,7 @@ void main() {
     });
   });
 
-  test('save without a user record throws and writes nothing', () async {
+  test('ATC-M1-21 save without a user record throws and writes nothing', () async {
     await expectLater(
       HiveUserSettingsStore(repo).save('u1', const SettingsPrefs()),
       throwsStateError,
@@ -224,7 +224,7 @@ void main() {
     expect(await repo.getUser('u1'), isNull);
   });
 
-  test('old "Your Name" value is not shown as a nickname and is removed '
+  test('ATC-M1-21 old "Your Name" value is not shown as a nickname and is removed '
       'on save (decision 2026-10-18)', () async {
     await onboard();
     final user = (await repo.getUser('u1'))!;
@@ -243,7 +243,7 @@ void main() {
   });
 
   test(
-    'nothing saved stays unsaved: null fields keep the record values',
+    'ATC-M1-21 nothing saved stays unsaved: null fields keep the record values',
     () async {
       await onboard();
       final store = HiveUserSettingsStore(repo);
@@ -256,7 +256,7 @@ void main() {
     },
   );
 
-  group('validation (userPreferences.ts:22-37)', () {
+  group('ATC-M1-23 validation (userPreferences.ts:22-37)', () {
     Future<void> save(SettingsPrefs p) async {
       await onboard();
       await HiveUserSettingsStore(repo).save('u1', p);
@@ -288,7 +288,7 @@ void main() {
     );
   });
 
-  test('validTime and reminderStatus match web', () {
+  test('ATC-M1-23 validTime and reminderStatus match web', () {
     expect(validTime('00:00'), isTrue);
     expect(validTime('23:59'), isTrue);
     for (final bad in ['24:00', '7:05', '07:60', '', null, 705]) {

@@ -47,7 +47,7 @@ void main() {
     return c.decoration as BoxDecoration?;
   }
 
-  testWidgets('fits a 360dp phone with no overflow', (tester) async {
+  testWidgets('ATC-M0-03 fits a 360dp phone with no overflow', (tester) async {
     await pumpShell(tester);
     expect(tester.takeException(), isNull);
     for (final k in ['nav-pill-brand', 'nav-pill-tabs']) {
@@ -57,7 +57,7 @@ void main() {
     }
   });
 
-  testWidgets('360dp: tab labels render at full size (no scaling)', (
+  testWidgets('ATC-M0-03 360dp: tab labels render at full size (no scaling)', (
     tester,
   ) async {
     await pumpShell(tester);
@@ -65,7 +65,7 @@ void main() {
     expect(tester.getRect(find.text('Progress')).width, closeTo(59.6, 0.5));
   });
 
-  testWidgets('320dp: tab row scales down instead of overflowing', (
+  testWidgets('ATC-M0-03 320dp: tab row scales down instead of overflowing', (
     tester,
   ) async {
     await pumpShell(tester, widthDp: 320);
@@ -75,7 +75,7 @@ void main() {
     expect(r.right, lessThanOrEqualTo(320));
   });
 
-  testWidgets('pills: white, 3px black border, pill radius, cyan 5px shadow', (
+  testWidgets('ATC-M0-04 pills: white, 3px black border, pill radius, cyan 5px shadow', (
     tester,
   ) async {
     await pumpShell(tester);
@@ -100,7 +100,7 @@ void main() {
     expect(find.text('KOI'), findsOneWidget);
   });
 
-  testWidgets('tabs: labels, black active pill, tapping switches screens', (
+  testWidgets('ATC-M0-04 tabs: labels, black active pill, tapping switches screens', (
     tester,
   ) async {
     await pumpShell(tester);
@@ -135,7 +135,7 @@ void main() {
     expect(find.byType(ChatScreen), findsOneWidget);
   });
 
-  testWidgets('mode selector: tap opens, 3 locked modes, Text selectable', (
+  testWidgets('ATC-M20-03 mode selector: tap opens, 3 locked modes, Text selectable', (
     tester,
   ) async {
     await pumpShell(tester);

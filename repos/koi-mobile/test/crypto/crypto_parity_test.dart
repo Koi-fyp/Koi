@@ -44,12 +44,12 @@ void main() {
   final cases = _loadCases();
   final crypto = KoiCryptoService();
 
-  test('fixture covers ASCII, Urdu, emoji and empty plaintexts', () {
+  test('ATC-M14-01 fixture covers ASCII, Urdu, emoji and empty plaintexts', () {
     final names = cases.map((c) => c['name']).toSet();
     expect(names, containsAll(['ascii', 'urdu', 'emoji', 'empty']));
   });
 
-  group('web → Dart (decrypt web-generated payloads)', () {
+  group('ATC-M14-01 web → Dart (decrypt web-generated payloads)', () {
     for (final c in cases) {
       test(c['name'] as String, () async {
         final payload = c['payload'] as String;
@@ -60,7 +60,7 @@ void main() {
     }
   });
 
-  group('Dart → web (Node decrypts Dart-generated payloads)', () {
+  group('ATC-M14-02 Dart → web (Node decrypts Dart-generated payloads)', () {
     late Directory tmp;
     setUpAll(() => tmp = Directory.systemTemp.createTempSync('koi_parity_'));
     tearDownAll(() => tmp.deleteSync(recursive: true));
@@ -91,7 +91,7 @@ void main() {
     }, timeout: const Timeout(Duration(minutes: 10)));
   });
 
-  group('integrity (GCM tag is checked)', () {
+  group('ATC-M14-03 integrity (GCM tag is checked)', () {
     test('tampered web payload is rejected', () async {
       final c = cases.firstWhere((c) => c['name'] == 'ascii');
       final parts = (c['payload'] as String).split(':');

@@ -5,11 +5,11 @@ import 'package:koi_mobile/main.dart';
 import 'package:koi_mobile/widgets/neo_button.dart';
 
 void main() {
-  test('gallery is off unless --dart-define=KOI_DESIGN_GALLERY=true', () {
+  test('ATC-M0-17 gallery is off unless --dart-define=KOI_DESIGN_GALLERY=true', () {
     expect(showDesignGallery, isFalse);
   });
 
-  testWidgets('gallery renders every section without errors', (tester) async {
+  testWidgets('ATC-M0-17 gallery renders every section without errors', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.6;
     addTearDown(tester.view.reset);

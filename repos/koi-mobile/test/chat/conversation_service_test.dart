@@ -84,7 +84,7 @@ ConversationService _service({
 
 void main() {
   test(
-    'user message is saved BEFORE the API call; reply saved after',
+    'ATC-M2-17 user message is saved BEFORE the API call; reply saved after',
     () async {
       final log = <String>[];
       final s = _service(
@@ -105,7 +105,7 @@ void main() {
     },
   );
 
-  test('Q5: Firestore path uses conversationId = uid; priority 3', () async {
+  test('ATC-M14-17 Q5: Firestore path uses conversationId = uid; priority 3', () async {
     final queue = RecordingSyncQueue();
     await _service(
       store: MemoryMessageStore(),
@@ -128,7 +128,7 @@ void main() {
     expect(queue.items.map((i) => i.docId), ['id0', 'id1']);
   });
 
-  group('fallback reply (web wording, emotion calm)', () {
+  group('ATC-M2-18 fallback reply (web wording, emotion calm)', () {
     Future<void> expectFallback(
       ConversationService s,
       MemoryMessageStore store,
@@ -188,7 +188,7 @@ void main() {
     });
   });
 
-  group('encrypted-only sync payloads (real KoiCryptoService)', () {
+  group('ATC-M14-18 encrypted-only sync payloads (real KoiCryptoService)', () {
     final original = Cryptography.instance;
     setUpAll(() => KoiCryptography.install(useNative: false));
     tearDownAll(() {
@@ -285,7 +285,7 @@ void main() {
       onResolutionSent: onResolutionSent,
     );
 
-    test('the AI reply is saved as the full untrimmed text', () async {
+    test('ATC-M2-16 the AI reply is saved as the full untrimmed text', () async {
       server.handler = (req, _) =>
           writeSse(req, okTurn(a: ' Breathe in.', b: ' Breathe out. '));
       final store = MemoryMessageStore();
@@ -301,7 +301,7 @@ void main() {
       expect(r.companionState!.intensity, 0.7);
     });
 
-    test('client_event once, crisis_path once → onResolutionSent', () async {
+    test('ATC-M12-16 client_event once, crisis_path once → onResolutionSent', () async {
       server.handler = (req, _) => writeSse(req, okTurn());
       final session = ChatSessionState()
         ..setClientEvent(ClientEvent.playbackDone)
@@ -321,7 +321,7 @@ void main() {
       expect(resolved, 1);
     });
 
-    test('kept for the next send when the request fails', () async {
+    test('ATC-M12-16 kept for the next send when the request fails', () async {
       var fail = true;
       server.handler = (req, _) async {
         if (fail) {
@@ -350,7 +350,7 @@ void main() {
       expect(resolved, 1);
     });
 
-    test('401 / 500 / network / timeout → fallback saved, code only', () async {
+    test('ATC-M2-18 401 / 500 / network / timeout → fallback saved, code only', () async {
       Future<void> expectFallback(
         ConversationService s,
         String code,
@@ -392,7 +392,7 @@ void main() {
       await expectFallback(s, 'network', offline);
     });
 
-    group('C8 decided: no /api/v1/crisis (Ahmad, 2026-10-18)', () {
+    group('ATC-M12-17 C8 decided: no /api/v1/crisis (Ahmad, 2026-10-18)', () {
       test(
         'turns only call /api/v1/chat; risk comes from the stream',
         () async {
@@ -436,7 +436,7 @@ void main() {
       });
     });
 
-    test('beforeRequest holds the request; the user message is saved '
+    test('ATC-M2-22 beforeRequest holds the request; the user message is saved '
         'first', () async {
       server.handler = (req, _) => writeSse(req, okTurn());
       final store = MemoryMessageStore();

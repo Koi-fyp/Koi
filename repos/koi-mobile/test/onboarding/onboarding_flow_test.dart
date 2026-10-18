@@ -18,7 +18,7 @@ void main() {
   const avatars = {'aisha': 'female_human', 'raza': 'male_human', 'koi': 'fox'};
 
   for (final MapEntry(key: companion, value: avatar) in avatars.entries) {
-    testWidgets('full flow mirrors page.tsx (6 steps): $companion saves '
+    testWidgets('ATC-M1-19 full flow mirrors page.tsx (6 steps): $companion saves '
         "avatar '$avatar'", (tester) async {
       tester.view.devicePixelRatio = 3;
       tester.view.physicalSize = const Size(1080, 2400);
@@ -107,7 +107,7 @@ void main() {
     });
   }
 
-  test('6 steps like web TOTAL_STEPS; back goes to the previous step', () {
+  test('ATC-M1-20 6 steps like web TOTAL_STEPS; back goes to the previous step', () {
     expect(OnboardingScreen.totalSteps, 6);
     expect(OnboardingScreen.previousStep(4), 3); // Language → AI Disclosure
   });

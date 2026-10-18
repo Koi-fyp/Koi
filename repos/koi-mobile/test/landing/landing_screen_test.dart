@@ -49,7 +49,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1)); // reveal animations
   }
 
-  testWidgets('every section renders at 360dp without overflow', (
+  testWidgets('ATC-M22-01 every section renders at 360dp without overflow', (
     tester,
   ) async {
     await pumpLanding(tester);
@@ -81,7 +81,7 @@ void main() {
     }
   });
 
-  testWidgets('BLOCKS: 10 blocks with web colours, labels and heights', (
+  testWidgets('ATC-M22-01 BLOCKS: 10 blocks with web colours, labels and heights', (
     tester,
   ) async {
     expect(ColorGrid.blocks.map((b) => b.label), [
@@ -106,14 +106,14 @@ void main() {
     }
   });
 
-  testWidgets('hero CTA signs in; error state shows web copy', (tester) async {
+  testWidgets('ATC-M22-02 hero CTA signs in; error state shows web copy', (tester) async {
     final auth = await pumpLanding(tester);
     await tester.tap(find.byKey(const Key('landing-start')));
     await tester.pump();
     expect(auth.signInCalls, 1);
   });
 
-  testWidgets('error state', (tester) async {
+  testWidgets('ATC-M22-02 error state', (tester) async {
     await pumpLanding(tester, error: Exception('offline'));
     expect(
       LandingScreen.errorText,
@@ -133,7 +133,7 @@ void main() {
     );
   });
 
-  testWidgets('copy matches web 223e97c: no invented or false claims', (
+  testWidgets('ATC-M22-03 copy matches web 223e97c: no invented or false claims', (
     tester,
   ) async {
     await pumpLanding(tester);
@@ -171,7 +171,7 @@ void main() {
     }
   });
 
-  testWidgets('nav shrinks to 52dp once scrolled past 20px', (tester) async {
+  testWidgets('ATC-M22-04 nav shrinks to 52dp once scrolled past 20px', (tester) async {
     await pumpLanding(tester);
     final nav = find.byKey(const Key('landing-nav'));
     final top = MediaQuery.paddingOf(tester.element(nav)).top;
@@ -182,7 +182,7 @@ void main() {
     expect(tester.getSize(nav).height, 52 + top);
   });
 
-  testWidgets('FAQ: one open at a time, tap again closes', (tester) async {
+  testWidgets('ATC-M22-04 FAQ: one open at a time, tap again closes', (tester) async {
     await pumpLanding(tester);
     final q0 = find.byKey(const Key('faq-0'));
     await scrollTo(tester, q0);
@@ -209,7 +209,7 @@ void main() {
     expect(h(find.text(LandingScreen.faqs[1].a)), 0);
   });
 
-  testWidgets('How We Do It / About open the info pages', (tester) async {
+  testWidgets('ATC-M22-04 How We Do It / About open the info pages', (tester) async {
     await pumpLanding(tester);
     final how = find.byKey(const Key('landing-how-it-works'));
     await scrollTo(tester, how);
@@ -231,7 +231,7 @@ void main() {
     expect(find.byType(AboutScreen), findsOneWidget);
   });
 
-  testWidgets('About → FAQ link returns here and scrolls to the FAQ', (
+  testWidgets('ATC-M22-04 About → FAQ link returns here and scrolls to the FAQ', (
     tester,
   ) async {
     await pumpLanding(tester);

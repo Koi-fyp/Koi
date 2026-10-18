@@ -64,7 +64,7 @@ void main() {
     warm = true;
   });
 
-  test('server voice: every part, real cues, speaking then idle', () async {
+  test('ATC-M3-05 server voice: every part, real cues, speaking then idle', () async {
     final c = make();
     await c.speak(const SpeakPlan([en, en2], deviceOnly: false));
     expect(http.requests.map((r) => r['text']), ['One.', 'Two more words.']);
@@ -87,7 +87,7 @@ void main() {
     expect(mouth.last, isEmpty);
   });
 
-  test('the next part is fetched while the first plays', () async {
+  test('ATC-M3-05 the next part is fetched while the first plays', () async {
     player.hold = true;
     final c = make();
     final done = c.speak(const SpeakPlan([en, en2, en3], deviceOnly: false));
@@ -126,7 +126,7 @@ void main() {
         'network failure': (_) async => throw const FormatException('down'),
       };
   for (final MapEntry(key: name, value: respond) in failures.entries) {
-    test('$name → device voice for the rest of the reply', () async {
+    test('ATC-M3-06 $name → device voice for the rest of the reply', () async {
       http.respond = respond;
       final c = make();
       await c.speak(const SpeakPlan([en, en2], deviceOnly: false));
@@ -137,7 +137,7 @@ void main() {
     });
   }
 
-  test('timeout → device voice', () async {
+  test('ATC-M3-06 timeout → device voice', () async {
     http.respond = (_) => Completer<ResponseBody>().future;
     final c = make(timeout: const Duration(milliseconds: 50));
     await c.speak(const SpeakPlan([en], deviceOnly: false));
@@ -145,7 +145,7 @@ void main() {
     expect(player.played, isEmpty);
   });
 
-  test('a server failure on a later part switches only from there', () async {
+  test('ATC-M3-06 a server failure on a later part switches only from there', () async {
     var n = 0;
     http.respond = (b) async => n++ == 0
         ? FakeSpeechServer.ok(b['generation_id']! as String)
@@ -156,7 +156,7 @@ void main() {
     expect(tts.spoken.map((s) => s.$1), ['Two more words.', 'Three.']);
   });
 
-  test('10/min would be exceeded → the rest uses the device voice', () async {
+  test('ATC-M3-06 10/min would be exceeded → the rest uses the device voice', () async {
     var now = DateTime(2026, 10, 18);
     final limiter = SpeechRateLimiter(max: 2, now: () => now);
     final c = make(limiter: limiter);
@@ -167,7 +167,7 @@ void main() {
     expect(limiter.tryAcquire(), isTrue, reason: 'the window moves on');
   });
 
-  test('default limiter is 10 per minute', () {
+  test('ATC-M3-06 default limiter is 10 per minute', () {
     final l = SpeechRateLimiter(now: () => DateTime(2026));
     expect(List.generate(11, (_) => l.tryAcquire()), [
       ...List.filled(10, true),
@@ -175,7 +175,7 @@ void main() {
     ]);
   });
 
-  test('not warm yet, device-only plan or no server → device voice', () async {
+  test('ATC-M3-06 not warm yet, device-only plan or no server → device voice', () async {
     warm = false;
     await make().speak(const SpeakPlan([en], deviceOnly: false));
     warm = true;
@@ -185,13 +185,13 @@ void main() {
     expect(tts.spoken.map((s) => s.$1), ['One.', 'Two more words.', 'Three.']);
   });
 
-  test('silent plan says nothing', () async {
+  test('ATC-M3-07 silent plan says nothing', () async {
     await make().speak(const SilentPlan());
     expect(http.requests, isEmpty);
     expect(tts.spoken, isEmpty);
   });
 
-  test('stop: audio and mouth stop, a late answer is dropped', () async {
+  test('ATC-M3-08 stop: audio and mouth stop, a late answer is dropped', () async {
     final pending = Completer<ResponseBody>();
     http.respond = (_) => pending.future;
     final c = make();
@@ -211,7 +211,7 @@ void main() {
     expect(c.speaking, isNull);
   });
 
-  test('stop while playing ends the reply', () async {
+  test('ATC-M3-08 stop while playing ends the reply', () async {
     player.hold = true;
     final c = make();
     final done = c.speak(const SpeakPlan([en, en2], deviceOnly: false));
@@ -225,7 +225,7 @@ void main() {
   });
 
   test(
-    'device voice: word cues, else timed cues — ordered and valid',
+    'ATC-M3-09 device voice: word cues, else timed cues — ordered and valid',
     () async {
       final c = make(server: false);
       await c.speak(const SpeakPlan([en2], deviceOnly: false));
@@ -243,14 +243,14 @@ void main() {
     },
   );
 
-  test('a failing device voice is silent, never an error', () async {
+  test('ATC-M3-07 a failing device voice is silent, never an error', () async {
     tts.fail = true;
     final c = make(server: false);
     await c.speak(const SpeakPlan([en], deviceOnly: false));
     expect(c.speaking, isNull);
   });
 
-  test('VoicePrefs: on by default, per uid', () async {
+  test('ATC-M3-10 VoicePrefs: on by default, per uid', () async {
     final store = MemoryKeyValueStore();
     final prefs = VoicePrefs(store);
     expect(prefs.isEnabled('u1'), isTrue);
@@ -260,7 +260,7 @@ void main() {
     expect(store.values, {'koi_voice_enabled_u1': 'false'});
   });
 
-  test('SpeechWarmup retries /health until 200', () async {
+  test('ATC-M3-10 SpeechWarmup retries /health until 200', () async {
     var calls = 0;
     final waits = <Duration>[];
     final w = SpeechWarmup(

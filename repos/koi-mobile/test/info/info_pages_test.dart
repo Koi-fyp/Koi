@@ -73,7 +73,7 @@ void main() {
   }
 
   group('How it works', () {
-    testWidgets('all web text, no CDN images, no overflow at 360dp', (
+    testWidgets('ATC-M22-05 all web text, no CDN images, no overflow at 360dp', (
       tester,
     ) async {
       await pump(tester, HowItWorksScreen(links: links()));
@@ -111,7 +111,7 @@ void main() {
       );
     });
 
-    testWidgets('Start button fits inside the closing card', (tester) async {
+    testWidgets('ATC-M22-05 Start button fits inside the closing card', (tester) async {
       await pump(tester, HowItWorksScreen(links: links()));
       final button = find.byKey(const Key('how-start'));
       await tester.ensureVisible(button);
@@ -126,7 +126,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Start: signs in, then closes back to the app router', (
+    testWidgets('ATC-M22-06 Start: signs in, then closes back to the app router', (
       tester,
     ) async {
       final auth = await pump(tester, HowItWorksScreen(links: links()));
@@ -137,7 +137,7 @@ void main() {
       expect(find.text('landing-stub'), findsOneWidget);
     });
 
-    testWidgets('Start: a failed sign-in stays on the page and re-enables', (
+    testWidgets('ATC-M22-06 Start: a failed sign-in stays on the page and re-enables', (
       tester,
     ) async {
       final auth = await pump(
@@ -152,7 +152,7 @@ void main() {
       expect(find.text(HowItWorksScreen.startLabel), findsOneWidget);
     });
 
-    testWidgets('nav and footer links', (tester) async {
+    testWidgets('ATC-M22-05 nav and footer links', (tester) async {
       await pump(tester, HowItWorksScreen(links: links()));
       await tester.tap(find.byKey(const Key('info-nav-start')));
       await tester.tap(find.byKey(const Key('info-nav-logo')));
@@ -162,7 +162,7 @@ void main() {
       expect(taps, ['home', 'home', 'home', 'about', 'faq']);
     });
 
-    testWidgets('nav shrinks to 52px after scrolling 20px', (tester) async {
+    testWidgets('ATC-M22-05 nav shrinks to 52px after scrolling 20px', (tester) async {
       await pump(tester, HowItWorksScreen(links: links()));
       expect(tester.getSize(find.byKey(const Key('info-nav'))).height, 64);
       await tester.drag(
@@ -176,7 +176,7 @@ void main() {
   });
 
   group('About', () {
-    testWidgets('all web text, no CDN images, no overflow at 360dp', (
+    testWidgets('ATC-M22-07 all web text, no CDN images, no overflow at 360dp', (
       tester,
     ) async {
       await pump(tester, AboutScreen(links: links()));
@@ -220,7 +220,7 @@ void main() {
       await scrollThrough(tester, const Key('about-scroll'));
     });
 
-    testWidgets('team buttons are disabled "Biography unavailable"', (
+    testWidgets('ATC-M22-07 team buttons are disabled "Biography unavailable"', (
       tester,
     ) async {
       final handle = tester.ensureSemantics();
@@ -247,7 +247,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('copy matches web 223e97c: no invented numbers or dates', (
+    testWidgets('ATC-M22-03 copy matches web 223e97c: no invented numbers or dates', (
       tester,
     ) async {
       expect(AboutScreen.timeline.map((t) => t.$1), [
@@ -285,7 +285,7 @@ void main() {
       expect(all, contains('This is CSE at rest, not end-to-end encryption.'));
     });
 
-    testWidgets('timeline line runs the full height, solid coral', (
+    testWidgets('ATC-M22-07 timeline line runs the full height, solid coral', (
       tester,
     ) async {
       await pump(tester, AboutScreen(links: links()));
@@ -307,7 +307,7 @@ void main() {
       expect(deco.color, const Color(0xFFFF6B6B));
     });
 
-    testWidgets('footer links', (tester) async {
+    testWidgets('ATC-M22-07 footer links', (tester) async {
       await pump(tester, AboutScreen(links: links()));
       for (final l in ['Home', 'How It Works', 'FAQ']) {
         await tapVisible(tester, find.byKey(Key('footer-$l')));
@@ -316,7 +316,7 @@ void main() {
     });
   });
 
-  testWidgets('signed-in user is not required to view the pages', (
+  testWidgets('ATC-M22-08 signed-in user is not required to view the pages', (
     tester,
   ) async {
     await pump(

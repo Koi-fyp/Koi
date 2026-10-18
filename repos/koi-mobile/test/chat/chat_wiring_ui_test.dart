@@ -95,7 +95,7 @@ void main() {
     return (adapter, warmup, container);
   }
 
-  testWidgets('waking line after 3 s; typing allowed, Send off; cleared '
+  testWidgets('ATC-M2-24 waking line after 3 s; typing allowed, Send off; cleared '
       'on the first event', (tester) async {
     final (adapter, _, _) = await pump(tester);
     await tester.enterText(find.byKey(const Key('chat-input')), 'hello');
@@ -124,7 +124,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('first send held while chat warms: waking line at once, '
+  testWidgets('ATC-M2-24 first send held while chat warms: waking line at once, '
       'typing allowed, nothing sent until /health 200', (tester) async {
     final health = Completer<bool>();
     final (adapter, _, _) = await pump(
@@ -155,7 +155,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('call-screen source: session start, then the chat stream', (
+  testWidgets('ATC-M20-09 call-screen source: session start, then the chat stream', (
     tester,
   ) async {
     final (adapter, _, container) = await pump(tester);
@@ -187,7 +187,7 @@ void main() {
     );
   });
 
-  test('simulator only for mock + debug + no chat service', () {
+  test('ATC-M21-18 simulator only for mock + debug + no chat service', () {
     for (final (mock, configured, debug, expected) in [
       (true, false, true, true),
       (true, true, true, false), // mock follows the live chat
@@ -206,7 +206,7 @@ void main() {
     }
   });
 
-  testWidgets('mock page + KOI_API_BASE set → the chat stream drives it', (
+  testWidgets('ATC-M21-18 mock page + KOI_API_BASE set → the chat stream drives it', (
     tester,
   ) async {
     final (_, _, container) = await pump(tester, avatar: AvatarSource.mock);
@@ -215,7 +215,7 @@ void main() {
     expect((source as StreamAvatarStateSource).sessionId, 'u1');
   });
 
-  testWidgets('mock page + KOI_API_BASE empty → the 4 s simulator', (
+  testWidgets('ATC-M21-18 mock page + KOI_API_BASE empty → the 4 s simulator', (
     tester,
   ) async {
     final (_, _, container) = await pump(
@@ -228,7 +228,7 @@ void main() {
     source.dispose(); // stops its timer
   });
 
-  testWidgets('SafetyController callbacks feed the chat session', (
+  testWidgets('ATC-M12-18 SafetyController callbacks feed the chat session', (
     tester,
   ) async {
     final (_, _, container) = await pump(tester);
@@ -240,7 +240,7 @@ void main() {
     expect(session.pendingCrisisPath, CrisisPath.misunderstanding);
   });
 
-  testWidgets('DEBUG menu copies the last chat diagnostics line', (
+  testWidgets('ATC-M2-28 DEBUG menu copies the last chat diagnostics line', (
     tester,
   ) async {
     String? copied;

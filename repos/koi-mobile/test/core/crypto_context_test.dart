@@ -76,7 +76,7 @@ void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
 
   group('getActiveCryptoContext', () {
-    test('linked without linkedSecret throws (not a SaltFetchBlockedError)',
+    test('ATC-M14-05 linked without linkedSecret throws (not a SaltFetchBlockedError)',
         () async {
       final h = _Harness();
       for (final s in [null, '']) {
@@ -88,7 +88,7 @@ void main() {
       expect(h.fetches, isEmpty);
     });
 
-    test('cache hit returns cached salt without touching the network',
+    test('ATC-M14-05 cache hit returns cached salt without touching the network',
         () async {
       FlutterSecureStorage.setMockInitialValues({_cacheKey: 'cached-salt'});
       final h = _Harness(online: false, fetchThrows: true);
@@ -99,7 +99,7 @@ void main() {
       expect(h.fetches, isEmpty);
     });
 
-    test('empty cached value counts as a miss (JS `if (cached)`)', () async {
+    test('ATC-M14-05 empty cached value counts as a miss (JS `if (cached)`)', () async {
       FlutterSecureStorage.setMockInitialValues({_cacheKey: ''});
       final h = _Harness(fetchResult: _remoteSalt);
       final ctx = await h.resolver.getActiveCryptoContext(_uid, _linked);
@@ -107,20 +107,20 @@ void main() {
       expect(h.fetches, [_uid]);
     });
 
-    test('linked + no cache + offline → no-network, no fetch', () async {
+    test('ATC-M14-05 linked + no cache + offline → no-network, no fetch', () async {
       final h = _Harness(online: false, fetchResult: _remoteSalt);
       await expectLater(h.resolver.getActiveCryptoContext(_uid, _linked),
           throwsA(_blocked(SaltBlockedReason.noNetwork)));
       expect(h.fetches, isEmpty);
     });
 
-    test('linked + online + fetch throws → fetch-failed', () async {
+    test('ATC-M14-05 linked + online + fetch throws → fetch-failed', () async {
       final h = _Harness(fetchThrows: true);
       await expectLater(h.resolver.getActiveCryptoContext(_uid, _linked),
           throwsA(_blocked(SaltBlockedReason.fetchFailed)));
     });
 
-    test('linked + online + no salt on record → fetch-failed', () async {
+    test('ATC-M14-05 linked + online + no salt on record → fetch-failed', () async {
       final h = _Harness(fetchResult: null);
       await expectLater(h.resolver.getActiveCryptoContext(_uid, _linked),
           throwsA(_blocked(SaltBlockedReason.fetchFailed)));
@@ -128,7 +128,7 @@ void main() {
       expect(h.queue.items, isEmpty);
     });
 
-    test('linked + remote salt → cached under koi_salt_cache_{uid}', () async {
+    test('ATC-M14-05 linked + remote salt → cached under koi_salt_cache_{uid}', () async {
       final h = _Harness(fetchResult: _remoteSalt);
       final ctx = await h.resolver.getActiveCryptoContext(_uid, _linked);
       expect(ctx.saltB64, _remoteSalt);
@@ -137,7 +137,7 @@ void main() {
       expect(h.queue.items, isEmpty);
     });
 
-    test('anonymous ignores connectivity and still tries Firestore', () async {
+    test('ATC-M14-06 anonymous ignores connectivity and still tries Firestore', () async {
       final h = _Harness(online: false, remoteSalt: _remoteSalt);
       final ctx = await h.resolver.getActiveCryptoContext(_uid, _anon);
       expect(ctx.saltB64, _remoteSalt);
@@ -145,7 +145,7 @@ void main() {
       expect(h.onlineChecks, 0);
     });
 
-    test('anonymous + salt exists in Firestore → use it, cache, no queue',
+    test('ATC-M14-06 anonymous + salt exists in Firestore → use it, cache, no queue',
         () async {
       final h = _Harness(remoteSalt: _remoteSalt);
       final ctx = await h.resolver.getActiveCryptoContext(_uid, _anon);
@@ -155,7 +155,7 @@ void main() {
       expect(h.fetches, isEmpty); // the read is inside the transaction
     });
 
-    test('anonymous secret is created once in secure storage and reused',
+    test('ATC-M14-06 anonymous secret is created once in secure storage and reused',
         () async {
       final h = _Harness(remoteSalt: _remoteSalt);
       final first = await h.resolver.getActiveCryptoContext(_uid, _anon);
@@ -166,7 +166,7 @@ void main() {
       expect(second.secret, first.secret);
     });
 
-    test('anonymous + create-once fails → generate, cache, queue create-once',
+    test('ATC-M14-06 anonymous + create-once fails → generate, cache, queue create-once',
         () async {
       final h = _Harness(createThrows: true);
       final ctx = await h.resolver.getActiveCryptoContext(_uid, _anon);
@@ -184,7 +184,7 @@ void main() {
       });
     });
 
-    test('anonymous + no salt in Firestore → ours stored, cached, no queue',
+    test('ATC-M14-06 anonymous + no salt in Firestore → ours stored, cached, no queue',
         () async {
       final h = _Harness();
       final ctx = await h.resolver.getActiveCryptoContext(_uid, _anon);
@@ -193,7 +193,7 @@ void main() {
       expect(h.queue.items, isEmpty);
     });
 
-    test('anonymous second call uses the cache (no new salt, no new write)',
+    test('ATC-M14-06 anonymous second call uses the cache (no new salt, no new write)',
         () async {
       final h = _Harness(createThrows: true);
       final first = await h.resolver.getActiveCryptoContext(_uid, _anon);
@@ -203,7 +203,7 @@ void main() {
       expect(h.creates, hasLength(1));
     });
 
-    test('linked users never create a salt', () async {
+    test('ATC-M14-05 linked users never create a salt', () async {
       final h = _Harness(fetchResult: null);
       await expectLater(h.resolver.getActiveCryptoContext(_uid, _linked),
           throwsA(_blocked(SaltBlockedReason.fetchFailed)));
@@ -211,7 +211,7 @@ void main() {
     });
   });
 
-  group('ensureSaltStored (after sign-in, online)', () {
+  group('ATC-M14-07 ensureSaltStored (after sign-in, online)', () {
     test('no cache + Firestore has a salt → cached, no queue', () async {
       final h = _Harness(remoteSalt: _remoteSalt);
       await h.resolver.ensureSaltStored(_uid, _anon);
@@ -278,7 +278,7 @@ void main() {
     });
   });
 
-  group('SaltCache.adopt', () {
+  group('ATC-M14-08 SaltCache.adopt', () {
     test('first salt: cached, keys not cleared', () async {
       var clears = 0;
       final c = SaltCache(onReplaced: () => clears++);
@@ -302,7 +302,7 @@ void main() {
     });
   });
 
-  group('resolveSaltWithRetry', () {
+  group('ATC-M14-08 resolveSaltWithRetry', () {
     test('succeeds on a later attempt; backoff 1s then 2s', () async {
       final h = _Harness(online: false, fetchResult: _remoteSalt);
       final sleeps = <Duration>[];
@@ -380,7 +380,7 @@ void main() {
     });
   });
 
-  group('helpers', () {
+  group('ATC-M14-08 helpers', () {
     test('saltFromUserData mirrors data()?.public_crypto_metadata?.salt', () {
       expect(saltFromUserData(null), isNull);
       expect(saltFromUserData({}), isNull);

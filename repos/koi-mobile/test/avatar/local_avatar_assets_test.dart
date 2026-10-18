@@ -34,7 +34,7 @@ const _upstreamBlobs = {
 };
 
 void main() {
-  test('every served file is bundled and listed in pubspec.yaml', () {
+  test('ATC-M21-16 every served file is bundled and listed in pubspec.yaml', () {
     final pubspec = File('pubspec.yaml')
         .readAsStringSync()
         .replaceAll('\r\n', '\n');
@@ -45,7 +45,7 @@ void main() {
     }
   });
 
-  test('the VRMs are byte-for-byte Fatima\'s (git blob ids)', () async {
+  test('ATC-M21-16 the VRMs are byte-for-byte Fatima\'s (git blob ids)', () async {
     const blobs = {
       'koi-male.vrm': '07c30ad867ea3a618eeab9914135bd360dc36efe',
       'koi-female.vrm': '0999b8e3458995ab29ee6639c8be52d10c8a9a07',
@@ -56,7 +56,7 @@ void main() {
     }
   });
 
-  test('copied sources = upstream + the two-line header only', () async {
+  test('ATC-M21-16 copied sources = upstream + the two-line header only', () async {
     for (final MapEntry(key: path, value: id) in _upstreamBlobs.entries) {
       final text = File('avatar_bundle/$path')
           .readAsStringSync()
@@ -77,7 +77,7 @@ void main() {
     }
   });
 
-  test('the page only talks to its own origin', () {
+  test('ATC-M21-16 the page only talks to its own origin', () {
     final html = File('assets/avatar_local/index.html').readAsStringSync();
     final csp = RegExp(
       r'''http-equiv="Content-Security-Policy" content="([^"]*)"''',
@@ -97,7 +97,7 @@ void main() {
     expect(html, contains('viewport-fit=cover'));
   });
 
-  test('the built page has the bridge contract and the hasOwn polyfill', () {
+  test('ATC-M21-16 the built page has the bridge contract and the hasOwn polyfill', () {
     final js = File('assets/avatar_local/avatar.js').readAsStringSync();
     expect(js, contains('AVATAR_READY'));
     expect(js, contains('AvatarController'));

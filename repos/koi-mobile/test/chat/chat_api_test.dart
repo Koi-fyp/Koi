@@ -26,7 +26,7 @@ void main() {
     deadline: deadline ?? const Duration(seconds: 240),
   );
 
-  group('configuration (web chatEndpoint())', () {
+  group('ATC-M2-01 configuration (web chatEndpoint())', () {
     test('valid bases; trailing / stripped', () {
       expect(
         parseApiBase('http://127.0.0.1:8000/')?.toString(),
@@ -67,7 +67,7 @@ void main() {
     });
   });
 
-  group('request', () {
+  group('ATC-M2-02 request', () {
     test('body keys, roles user/assistant, no risk; Bearer + Accept', () async {
       server.handler = (req, _) => writeSse(req, okTurn());
       final body = chatRequestBody(
@@ -123,7 +123,7 @@ void main() {
     });
   });
 
-  group('stream', () {
+  group('ATC-M2-03 stream', () {
     test(
       'parses SSE split across chunks; companion_state before text',
       () async {
@@ -181,7 +181,7 @@ void main() {
     });
   });
 
-  group('C7: 303 redirect-and-poll', () {
+  group('ATC-M2-04 C7: 303 redirect-and-poll', () {
     test('two 303 hops → GET poll URL with Authorization, then SSE', () async {
       server.handler = (req, seen) async {
         final n = server.requests.length;
@@ -284,7 +284,7 @@ void main() {
     });
   });
 
-  group('diagnostics', () {
+  group('ATC-M2-05 diagnostics', () {
     test('one debug line: time, status, hops, elapsed, event names; '
         'never the token or text', () async {
       server.handler = (req, _) => writeSse(req, okTurn(a: 'SECRET words'));
@@ -319,7 +319,7 @@ void main() {
     });
   });
 
-  group('GET /health', () {
+  group('ATC-M2-06 GET /health', () {
     test('no Authorization; true on 2xx, false otherwise', () async {
       var status = 200;
       server.handler = (req, _) async {

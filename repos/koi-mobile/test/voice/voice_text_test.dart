@@ -3,7 +3,7 @@ import 'package:koi_mobile/avatar/avatar_state.dart';
 import 'package:koi_mobile/voice/voice_text.dart';
 
 void main() {
-  group('splitSentences', () {
+  group('ATC-M3-01 splitSentences', () {
     test('splits after . ! ? … ۔ ؟ and at line breaks', () {
       expect(
         splitSentences('Hi there. How are you?\nGood!  آپ کیسے ہیں؟ ٹھیک ہوں۔'),
@@ -30,7 +30,7 @@ void main() {
     });
   });
 
-  group('planSpeech voice and language', () {
+  group('ATC-M3-02 planSpeech voice and language', () {
     SpeakPlan plan(String text, CompanionAvatar c, [String? lang]) =>
         planSpeech(text, companion: c, userLanguage: lang) as SpeakPlan;
 

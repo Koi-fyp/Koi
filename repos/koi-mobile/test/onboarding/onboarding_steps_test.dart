@@ -33,7 +33,7 @@ void main() {
   bool enabled(WidgetTester tester, Key key) =>
       tester.widget<NeoButton>(find.byKey(key)).onPressed != null;
 
-  group('WelcomeStep', () {
+  group('ATC-M1-12 WelcomeStep', () {
     testWidgets('copy, and auto-advances after 2200ms', (tester) async {
       var next = 0;
       await pump(tester, WelcomeStep(onNext: () => next++));
@@ -53,7 +53,7 @@ void main() {
     });
   });
 
-  group('PrivacyStep', () {
+  group('ATC-M1-13 PrivacyStep', () {
     testWidgets('both lists and "I Understand →"', (tester) async {
       var next = 0;
       await pump(tester, PrivacyStep(onNext: () => next++));
@@ -76,7 +76,7 @@ void main() {
     });
   });
 
-  group('CompanionSelectionStep', () {
+  group('ATC-M1-14 CompanionSelectionStep', () {
     testWidgets("defaults to 'raza'; selecting changes the CTA and the id", (
       tester,
     ) async {
@@ -152,7 +152,7 @@ void main() {
     });
   });
 
-  group('AIDisclosureStep', () {
+  group('ATC-M1-15 AIDisclosureStep', () {
     testWidgets('"I Agree" needs both boxes; helplines open tel: links', (
       tester,
     ) async {
@@ -199,7 +199,7 @@ void main() {
     });
   });
 
-  group('LanguageStep', () {
+  group('ATC-M1-16 LanguageStep', () {
     testWidgets("defaults to 'en'; can pick 'ur'", (tester) async {
       final chosen = <String>[];
       await pump(tester, LanguageStep(onNext: chosen.add));
@@ -213,7 +213,7 @@ void main() {
     });
   });
 
-  group('NotificationStep', () {
+  group('ATC-M1-17 NotificationStep', () {
     testWidgets("defaults '20:00' + enabled; picker and switch update values", (
       tester,
     ) async {
@@ -260,7 +260,7 @@ void main() {
     });
   });
 
-  group('OnboardingProgressIndicator', () {
+  group('ATC-M1-18 OnboardingProgressIndicator', () {
     testWidgets('done segments faded, active one double width', (tester) async {
       await pump(
         tester,

@@ -37,7 +37,7 @@ class _FakeBackend implements AuthBackend {
 }
 
 void main() {
-  group('FirebaseAuthService', () {
+  group('ATC-M1-03 FirebaseAuthService', () {
     test('loading until the first auth event restores the session', () async {
       final b = _FakeBackend();
       final s = FirebaseAuthService(b);
@@ -119,7 +119,7 @@ void main() {
     });
   });
 
-  group('FirebaseConfig.fromValues', () {
+  group('ATC-M1-04 FirebaseConfig.fromValues', () {
     test('nothing set → null (debug stand-in)', () {
       expect(
         FirebaseConfig.fromValues(
@@ -173,7 +173,7 @@ void main() {
     });
   });
 
-  group('FirebaseSessionSync', () {
+  group('ATC-M14-16 FirebaseSessionSync', () {
     late List<String> calls;
     late bool online;
     late bool userDocFails;

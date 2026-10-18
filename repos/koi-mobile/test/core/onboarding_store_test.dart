@@ -3,7 +3,7 @@ import 'package:koi_mobile/core/key_value_store.dart';
 import 'package:koi_mobile/core/onboarding_store.dart';
 
 void main() {
-  test('per-uid key and the web value (onboarding.ts)', () async {
+  test('ATC-M1-08 per-uid key and the web value (onboarding.ts)', () async {
     final kv = MemoryKeyValueStore();
     final store = OnboardingStore(kv);
     expect(store.isCompleteFor('u1'), isFalse);
@@ -17,7 +17,7 @@ void main() {
     expect(notified, 1);
   });
 
-  test('same uid stays complete; a new uid is not complete', () async {
+  test('ATC-M1-08 same uid stays complete; a new uid is not complete', () async {
     final store = OnboardingStore(MemoryKeyValueStore());
     await store.markComplete('u1');
     expect(store.isCompleteFor('u1'), isTrue);
@@ -25,7 +25,7 @@ void main() {
     expect(store.isCompleteFor(null), isFalse);
   });
 
-  test("only the exact string 'true' counts as complete", () {
+  test("ATC-M1-08 only the exact string 'true' counts as complete", () {
     for (final v in ['TRUE', '1', 'yes', '']) {
       final store = OnboardingStore(
         MemoryKeyValueStore({OnboardingStore.keyFor('u1'): v}),
@@ -34,7 +34,7 @@ void main() {
     }
   });
 
-  group('migrateDeviceFlag (old per-device flag)', () {
+  group('ATC-M1-09 migrateDeviceFlag (old per-device flag)', () {
     test('goes to the persisted debug uid only; device key removed', () async {
       final kv = MemoryKeyValueStore({OnboardingStore.key: 'true'});
       final store = OnboardingStore(kv);

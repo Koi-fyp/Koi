@@ -20,7 +20,7 @@ Map<String, Object?> breathingArgs({
 
 void main() {
   group('RiskResult / InterventionContent', () {
-    test('parses the contract fields and ignores unknown ones', () {
+    test('ATC-M12-01 parses the contract fields and ignores unknown ones', () {
       final r = RiskResult.fromJson({
         'status': 'ok',
         'risk_category': 'HIGH',
@@ -60,7 +60,7 @@ void main() {
       expect(c.helpline!.verified, isFalse);
     });
 
-    test('only HIGH and CRITICAL open the crisis flow; unavailable never', () {
+    test('ATC-M12-02 only HIGH and CRITICAL open the crisis flow; unavailable never', () {
       for (final (cat, shows) in [
         ('LOW', false),
         ('MODERATE', false),
@@ -81,7 +81,7 @@ void main() {
       );
     });
 
-    test('keeps at most 3 items and rejects invalid content', () {
+    test('ATC-M12-03 keeps at most 3 items and rejects invalid content', () {
       final four = InterventionContent.fromJson({
         'source': 'grounded',
         'items': [
@@ -113,7 +113,7 @@ void main() {
       );
     });
 
-    test('helpline falls back to the 1166 default', () {
+    test('ATC-M12-03 helpline falls back to the 1166 default', () {
       const view = CrisisView();
       expect(view.helpline.number, '1166');
       expect(
@@ -122,7 +122,7 @@ void main() {
       );
     });
 
-    test('CRITICAL content that is not fallback is not shown', () {
+    test('ATC-M12-03 CRITICAL content that is not fallback is not shown', () {
       final risk = RiskResult.fromJson({
         'risk_category': 'CRITICAL',
         'intervention_content': {
@@ -140,7 +140,7 @@ void main() {
     });
   });
 
-  group('BreathingPattern', () {
+  group('ATC-M9-01 BreathingPattern', () {
     test('parses the contract example', () {
       final p = BreathingPattern.fromArgs(breathingArgs())!;
       expect(p.inhaleS, 4);
@@ -181,7 +181,7 @@ void main() {
     });
   });
 
-  group('BreathingFrame / BreathingClock', () {
+  group('ATC-M9-02 BreathingFrame / BreathingClock', () {
     final p = BreathingPattern.fromArgs(breathingArgs(cycles: 2))!;
 
     test('phases, cycles and orb scale over time', () {
@@ -220,7 +220,7 @@ void main() {
 
     void start() => c.handleUiAction(SimulatedSafetyEvents.startBreathing());
 
-    test('start, pause (event), resume (user), complete → playback_done', () {
+    test('ATC-M9-03 start, pause (event), resume (user), complete → playback_done', () {
       start();
       expect(c.breathingActive, isTrue);
       c.handleUiAction(const UiAction(UiAction.pauseBreathing));
@@ -236,7 +236,7 @@ void main() {
       expect(events, [ClientEvent.playbackDone]);
     });
 
-    test('stop by user or by KOI → playback_stopped + Web notice', () {
+    test('ATC-M9-03 stop by user or by KOI → playback_stopped + Web notice', () {
       start();
       c.stopBreathing();
       expect(events, [ClientEvent.playbackStopped]);
@@ -250,7 +250,7 @@ void main() {
       expect(c.notice, SafetyController.noticeStoppedByKoi);
     });
 
-    test('an invalid start_breathing shows the Web notice', () {
+    test('ATC-M9-03 an invalid start_breathing shows the Web notice', () {
       c.handleUiAction(
         UiAction(UiAction.startBreathing, breathingArgs(inhale: null)),
       );
@@ -258,7 +258,7 @@ void main() {
       expect(c.notice, SafetyController.noticeInvalidPattern);
     });
 
-    test('crisis interrupts a running exercise', () {
+    test('ATC-M12-04 crisis interrupts a running exercise', () {
       start();
       c.handleRisk(SimulatedSafetyEvents.high());
       expect(c.breathing, isNull);
@@ -270,14 +270,14 @@ void main() {
       expect(c.breathing, isNull);
     });
 
-    test('a finished exercise is closed by crisis without an event', () {
+    test('ATC-M12-04 a finished exercise is closed by crisis without an event', () {
       start();
       c.completeBreathing();
       c.handleHandoff(const Handoff(to: 'crisis', reason: 'r'));
       expect(events, [ClientEvent.playbackDone]);
     });
 
-    test('repeated handoffs never open a second crisis screen', () {
+    test('ATC-M12-05 repeated handoffs never open a second crisis screen', () {
       c.handleHandoff(const Handoff(to: 'crisis', reason: 'r'));
       expect(c.crisisCount, 1);
       expect(c.crisis!.content, isNull);
@@ -290,14 +290,14 @@ void main() {
       expect(c.crisis!.category, RiskCategory.high);
     });
 
-    test('non-crisis handoff, LOW and unavailable results change nothing', () {
+    test('ATC-M12-05 non-crisis handoff, LOW and unavailable results change nothing', () {
       c.handleHandoff(const Handoff(to: 'other', reason: 'r'));
       c.handleRisk(RiskResult.fromJson({'risk_category': 'LOW'}));
       c.handleRisk(RiskResult.fromJson({'status': 'unavailable'}));
       expect(c.crisis, isNull);
     });
 
-    test('choosing a path closes it and waits for crisis_resolved', () {
+    test('ATC-M12-05 choosing a path closes it and waits for crisis_resolved', () {
       c.handleRisk(SimulatedSafetyEvents.high());
       c.chooseCrisisPath(CrisisPath.saidButDidNot);
       expect(c.crisis, isNull);
@@ -311,7 +311,7 @@ void main() {
       expect(c.crisis, isNotNull);
     });
 
-    test('wire names match the contract', () {
+    test('ATC-M12-01 wire names match the contract', () {
       expect(CrisisPath.values.map((p) => p.wire), [
         'reached_out',
         'said_but_did_not',

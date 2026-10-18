@@ -42,7 +42,7 @@ void main() {
   useRealFonts();
 
   group('palette', () {
-    test('each companion emotion maps to its own mood and token', () {
+    test('ATC-M6-01 each companion emotion maps to its own mood and token', () {
       expect(
         {
           for (final e in AvatarEmotion.values)
@@ -73,7 +73,7 @@ void main() {
       expect(EnvironmentPalette.token(EnvironmentMood.calm), KoiColors.cyan);
     });
 
-    test('approved strengths and the resulting colours', () {
+    test('ATC-M6-02 approved strengths and the resulting colours', () {
       expect(EnvironmentPalette.callStrength, 0.25);
       expect(EnvironmentPalette.chatStrength, 0.15);
       String at(double s) => [
@@ -96,7 +96,7 @@ void main() {
       );
     });
 
-    test('text on the background stays >= 4.5:1 on every tint', () {
+    test('ATC-M6-03 text on the background stays >= 4.5:1 on every tint', () {
       const gray600 = Color(0xFF4B5563);
       for (final s in [
         EnvironmentPalette.callStrength,
@@ -118,7 +118,7 @@ void main() {
       }
     });
 
-    test('an unknown backend emotion is neutral', () {
+    test('ATC-M6-01 an unknown backend emotion is neutral', () {
       final state = CompanionState.fromJson({'emotion': 'mystery'});
       final env = EnvironmentController(uid: 'u1')
         ..onAvatarEvent(_emotion(AvatarEmotion.joy))
@@ -128,7 +128,7 @@ void main() {
   });
 
   group('controller', () {
-    test('follows the latest emotion of its own conversation only', () {
+    test('ATC-M6-04 follows the latest emotion of its own conversation only', () {
       final env = EnvironmentController(uid: 'u1');
       expect(env.mood, EnvironmentMood.neutral);
       env.onAvatarEvent(_emotion(AvatarEmotion.sorrow));
@@ -143,7 +143,7 @@ void main() {
       expect(env.mood, EnvironmentMood.sorrow);
     });
 
-    test('breathing → calm, then back to the last emotion', () {
+    test('ATC-M6-05 breathing → calm, then back to the last emotion', () {
       final env = EnvironmentController(uid: 'u1')
         ..onAvatarEvent(_emotion(AvatarEmotion.joy));
       env.updateSafety(crisis: false, breathing: true);
@@ -154,7 +154,7 @@ void main() {
       expect(env.mood, EnvironmentMood.angry);
     });
 
-    test('crisis → calm, then neutral until the next emotion', () {
+    test('ATC-M6-05 crisis → calm, then neutral until the next emotion', () {
       final env = EnvironmentController(uid: 'u1')
         ..onAvatarEvent(_emotion(AvatarEmotion.joy));
       env.updateSafety(crisis: true, breathing: false);
@@ -165,7 +165,7 @@ void main() {
       expect(env.mood, EnvironmentMood.fun);
     });
 
-    test('new conversation / reset() → neutral; no notify if unchanged', () {
+    test('ATC-M6-04 new conversation / reset() → neutral; no notify if unchanged', () {
       final env = EnvironmentController(uid: 'u1');
       var notified = 0;
       env.addListener(() => notified++);
@@ -181,7 +181,7 @@ void main() {
       expect(notified, 5); // joy, new conversation, sorrow, preview, reset
     });
 
-    test('debug preview wins until cleared', () {
+    test('ATC-M6-05 debug preview wins until cleared', () {
       final env = EnvironmentController(uid: 'u1')
         ..onAvatarEvent(_emotion(AvatarEmotion.joy))
         ..updateSafety(crisis: true, breathing: false)
@@ -212,7 +212,7 @@ void main() {
     EnvironmentController env() =>
         container.read(environmentControllerProvider);
 
-    test('HIGH risk → calm until the resolution is sent, then neutral', () {
+    test('ATC-M6-06 HIGH risk → calm until the resolution is sent, then neutral', () {
       env().onAvatarEvent(_emotion(AvatarEmotion.angry));
       final safety = container.read(safetyControllerProvider)
         ..handleRisk(SimulatedSafetyEvents.high());
@@ -235,7 +235,7 @@ void main() {
       expect(env().mood, EnvironmentMood.fun);
     });
 
-    test('breathing from the backend → calm, then the emotion again', () {
+    test('ATC-M6-06 breathing from the backend → calm, then the emotion again', () {
       env().onAvatarEvent(_emotion(AvatarEmotion.joy));
       final safety = container.read(safetyControllerProvider)
         ..handleUiAction(SimulatedSafetyEvents.startBreathing());
@@ -244,7 +244,7 @@ void main() {
       expect(env().mood, EnvironmentMood.joy);
     });
 
-    test('sign-out / another user → a fresh neutral controller', () {
+    test('ATC-M6-06 sign-out / another user → a fresh neutral controller', () {
       env().onAvatarEvent(_emotion(AvatarEmotion.joy));
       final first = env();
       auth.set(user: null);
@@ -304,7 +304,7 @@ void main() {
 
     final joy = EnvironmentPalette.colorFor(EnvironmentMood.joy, 0.12);
 
-    testWidgets('animates over ~1.8 s', (tester) async {
+    testWidgets('ATC-M6-08 animates over ~1.8 s', (tester) async {
       final env = await pumpBackground(tester, disableAnimations: false);
       expect(background(tester), KoiColors.background);
       env.onAvatarEvent(_emotion(AvatarEmotion.joy));
@@ -316,7 +316,7 @@ void main() {
       expect(background(tester), joy);
     });
 
-    testWidgets('reduce motion: changes at once', (tester) async {
+    testWidgets('ATC-M6-08 reduce motion: changes at once', (tester) async {
       final env = await pumpBackground(tester, disableAnimations: true);
       env.onAvatarEvent(_emotion(AvatarEmotion.joy));
       await tester.pump();
@@ -353,7 +353,7 @@ void main() {
     Color navStrip(WidgetTester tester) =>
         tester.widget<KoiTopNav>(find.byType(KoiTopNav)).background;
 
-    testWidgets('Chat tab: message area and nav strip at 15%; '
+    testWidgets('ATC-M6-09 Chat tab: message area and nav strip at 15%; '
         'other tabs keep the nav peach', (tester) async {
       final container = await pumpShell(tester);
       final chatJoy = EnvironmentPalette.colorFor(
@@ -374,7 +374,7 @@ void main() {
       expect(navStrip(tester), KoiColors.background);
     });
 
-    testWidgets('call screen tint is 25%', (tester) async {
+    testWidgets('ATC-M6-09 call screen tint is 25%', (tester) async {
       final container = await pumpShell(tester);
       container
           .read(environmentControllerProvider)
@@ -399,7 +399,7 @@ void main() {
       );
     });
 
-    testWidgets('debug menu: "Set environment emotion" previews a palette', (
+    testWidgets('ATC-M6-10 debug menu: "Set environment emotion" previews a palette', (
       tester,
     ) async {
       final container = await pumpShell(tester);
@@ -428,7 +428,7 @@ void main() {
       );
     });
 
-    testWidgets('no debug menu (release behaviour): no environment option', (
+    testWidgets('ATC-M6-10 no debug menu (release behaviour): no environment option', (
       tester,
     ) async {
       await pumpShell(tester, debugMenu: false);

@@ -94,7 +94,7 @@ void main() {
               as BoxDecoration)
           .color;
 
-  test('every web icon path parses', () {
+  test('ATC-M0-21 every web icon path parses', () {
     for (final icon in [
       ProgressIcons.flame,
       ProgressIcons.chat,
@@ -118,7 +118,7 @@ void main() {
     }
   });
 
-  testWidgets('no history: zero / empty states, every section, no overflow', (
+  testWidgets('ATC-M0-21 no history: zero / empty states, every section, no overflow', (
     tester,
   ) async {
     await pump(tester);
@@ -163,7 +163,7 @@ void main() {
     await scrollThrough(tester);
   });
 
-  testWidgets('real history: streak, sessions, milestones, heatmap', (
+  testWidgets('ATC-M0-22 real history: streak, sessions, milestones, heatmap', (
     tester,
   ) async {
     await pump(
@@ -195,7 +195,7 @@ void main() {
     await scrollThrough(tester);
   });
 
-  testWidgets('jigsaw: expand, 25 locked pieces, 0%, collapse via arrow', (
+  testWidgets('ATC-M0-23 jigsaw: expand, 25 locked pieces, 0%, collapse via arrow', (
     tester,
   ) async {
     await pump(tester);
@@ -225,7 +225,7 @@ void main() {
     await scrollThrough(tester);
   });
 
-  testWidgets('milestone tap toggles its highlight', (tester) async {
+  testWidgets('ATC-M0-23 milestone tap toggles its highlight', (tester) async {
     await pump(tester);
     BoxDecoration hl() =>
         tester
@@ -243,7 +243,7 @@ void main() {
     expect(hl().color, isNull);
   });
 
-  testWidgets('Download and Share show "coming soon" toasts', (tester) async {
+  testWidgets('ATC-M0-23 Download and Share show "coming soon" toasts', (tester) async {
     await pump(tester);
     await tapVisible(tester, find.byKey(const Key('share-download')));
     expect(find.text(ProgressScreen.downloadSoon), findsOneWidget);
@@ -254,7 +254,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('Progress tab in the shell shows the page under the nav', (
+  testWidgets('ATC-M0-24 Progress tab in the shell shows the page under the nav', (
     tester,
   ) async {
     await pump(tester, home: const AppShell(initialTab: KoiTab.progress));

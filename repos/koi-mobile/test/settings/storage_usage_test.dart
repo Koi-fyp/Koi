@@ -22,11 +22,11 @@ void main() {
 
   int sizeOf(String name) => File('${dir.path}/$name.hive').lengthSync();
 
-  test('no open box → unavailable (null)', () async {
+  test('ATC-M14-19 no open box → unavailable (null)', () async {
     expect(await koiHiveBytes(), isNull);
   });
 
-  test('sums the .hive files of KOI boxes, open or closed', () async {
+  test('ATC-M14-19 sums the .hive files of KOI boxes, open or closed', () async {
     final messages = await Hive.openBox<String>(HiveMessageStore.boxName);
     await messages.put('a', 'x' * 5000);
     final prefs = await Hive.openBox<String>(OnboardingStore.boxName);
@@ -44,7 +44,7 @@ void main() {
     expect(bytes, greaterThan(5000));
   });
 
-  test('covers flutter_lib boxes and the app boxes', () {
+  test('ATC-M14-19 covers flutter_lib boxes and the app boxes', () {
     expect(
       koiHiveBoxNames,
       containsAll([

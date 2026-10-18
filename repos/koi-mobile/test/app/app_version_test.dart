@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/app/app_version.dart';
 
 void main() {
-  test('koiAppVersion is the pubspec.yaml version (no build number)', () {
+  test('ATC-M0-01 koiAppVersion is the pubspec.yaml version (no build number)', () {
     final line = File('pubspec.yaml')
         .readAsLinesSync()
         .firstWhere((l) => l.startsWith('version:'));
