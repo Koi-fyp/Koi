@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState, useRef, useSyncExternalStore } from 'react';
+import { createContext, Fragment, useContext, useEffect, useState, useRef, useSyncExternalStore } from 'react';
 import { useAuth } from './AuthContext';
 import { PersistentConversation } from '@/lib/conversation/PersistentConversation';
 import { sendMessage } from '@/lib/conversation/conversationService';
@@ -11,6 +11,14 @@ export const useSharedConversation = () => {
   if (!value) throw new Error('useChat requires ConversationProvider');
   return value;
 };
+/** Owned conversation selection. Both refuse with a typed ConversationSwitchError (busy, conflict, ...). */
+export function useOwnedConversationActions() {
+  const manager = useSharedConversation();
+  return {
+    createOwned: () => manager.archiveAndStartNew(manager.uid),
+    openOwned: (conversationId: string) => manager.activateArchived(manager.uid, conversationId),
+  };
+}
 export default function ConversationProvider({ children }: { children: React.ReactNode }) {
   const { user, isLinked } = useAuth();
   if (!user) return null;
@@ -34,7 +42,9 @@ function OwnedConversation({ uid, isLinked, children }: { uid: string; isLinked:
     const start = setTimeout(() => { if (mounted) void manager.initialize(); }, 0);
     return () => { mounted = false; clearTimeout(start); queueMicrotask(() => { if (generation.current === lease) manager.dispose(); }); };
   }, [manager]);
+  // Keyed by conversation: a committed swap remounts route state, cancelling speech, recording and
+  // exercise UI bound to the previous session (their callbacks still point at the disposed session).
   return <Context.Provider value={manager}>{state.loading || !manager.session
     ? <div role="status" style={{ padding: 24 }}>{state.error ?? 'Restoring encrypted conversation...'}</div>
-    : children}</Context.Provider>;
+    : <Fragment key={manager.session.conversationId}>{children}</Fragment>}</Context.Provider>;
 }

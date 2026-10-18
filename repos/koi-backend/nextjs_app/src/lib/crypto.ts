@@ -326,6 +326,18 @@ export async function getActiveCryptoContext(
 }
 
 /**
+ * Read-only counterpart of getActiveCryptoContext for history/report reads.
+ * Returns the context only when the secret and this UID's salt already exist on
+ * this device; otherwise null (locked). Never generates, writes, syncs or fetches.
+ */
+export function peekActiveCryptoContext(uid: string, authState: AuthState = { isLinked: false }): CryptoContext | null {
+  if (!uid) return null;
+  const secret = authState.isLinked ? authState.linkedSecret : localStorage.getItem(ANON_SECRET_STORAGE_KEY);
+  const saltB64 = localStorage.getItem(`${SALT_CACHE_PREFIX}${uid}`);
+  return secret && saltB64 ? { secret, saltB64 } : null;
+}
+
+/**
  * 🆕 [SESSION FIX] UI-facing retry driver for the locked block decision.
  *
  * Attempts getActiveCryptoContext() up to `maxAttempts` times (locked: 5),

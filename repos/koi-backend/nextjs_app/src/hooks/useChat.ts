@@ -19,6 +19,6 @@ export function useChat() {
     .map(m => ({ ...m, content: m.input === 'voice' && !m.content ? voicePlaceholder(m.status) : m.content, emotion: m.companion_state?.emotion ?? 'neutral' }));
   return { ...chat, messages, sendVoice: (audio: Blob) => session.sendVoice(audio), isTyping: chat.pending, currentEmotion: chat.companion.emotion,
     currentIntensity: chat.companion.intensity, conversationId: session.conversationId,
-    blocked: recovery.loading || recovery.completing || !!recovery.error, error: recovery.error ?? chat.error,
+    blocked: recovery.loading || recovery.completing || recovery.switching || !!recovery.error, error: recovery.error ?? chat.error,
     hasUnresolvedHandoff: recovery.hasUnresolvedHandoff, hasQualifyingPair: recovery.hasQualifyingPair };
 }

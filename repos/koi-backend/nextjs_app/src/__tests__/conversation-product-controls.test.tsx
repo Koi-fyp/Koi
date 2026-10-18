@@ -8,16 +8,18 @@ jest.mock('@/hooks/useAvatarPreference', () => ({ useAvatarPreference: () => ({ 
 jest.mock('@/lib/avatar/avatarPreference', () => ({ saveAvatarPreference: (...args: unknown[]) => mockSave(...args) }));
 jest.mock('@/app/(authenticated)/settings/components/AvatarPicker', () => ({ __esModule: true, default: ({ onSave, currentAvatar }: { onSave: (id: string, name: string) => Promise<boolean>; currentAvatar: string }) => <button onClick={() => void onSave('raza', 'Raza')}>Save {currentAvatar} as Raza</button> }));
 const mockComplete = jest.fn();
-let mockRecovery = { loading: false, error: null as string | null, completing: false, hasQualifyingPair: false, hasUnresolvedHandoff: false };
+const mockCreate = jest.fn();
+let mockRecovery = { loading: false, error: null as string | null, completing: false, switching: false, hasQualifyingPair: false, hasUnresolvedHandoff: false };
 const mockManager = { uid: 'synthetic-owner', subscribe: () => () => {}, getSnapshot: () => mockRecovery };
-jest.mock('@/contexts/ConversationContext', () => ({ useSharedConversation: () => mockManager }));
+jest.mock('@/contexts/ConversationContext', () => ({ useSharedConversation: () => mockManager, useOwnedConversationActions: () => ({ createOwned: (...args: unknown[]) => mockCreate(...args), openOwned: jest.fn() }) }));
 jest.mock('@/lib/activities/conversationCompletion', () => ({ saveConversationCompletion: (...args: unknown[]) => mockComplete(...args) }));
 import ProductControls from '@/components/chat/ConversationProductControls';
 function Controls({ pending = false }: { pending?: boolean }) { return <ProductControls pending={pending} preferenceState={{ status: 'ready', uid: mockUid, profile: null, preference: { status: 'selected', companion: 'koi', avatar: 'fox', name: 'Koi', imageSrc: null, modelUrl: null } }} />; }
 beforeEach(() => {
   mockUid = 'synthetic-owner'; mockSave.mockReset().mockResolvedValue(undefined);
   mockComplete.mockReset().mockResolvedValue({ status: 'saved', outcome: 'awarded', completionId: 'c' });
-  mockRecovery = { loading: false, error: null, completing: false, hasQualifyingPair: false, hasUnresolvedHandoff: false };
+  mockCreate.mockReset().mockResolvedValue({ conversationId: 'next', previousConversationId: 'prev' });
+  mockRecovery = { loading: false, error: null, completing: false, switching: false, hasQualifyingPair: false, hasUnresolvedHandoff: false };
 });
 it('keeps Save completion disabled without a saved pair, while pending, or with an open handoff', () => {
   const view = render(<Controls />);
@@ -44,10 +46,20 @@ it('saves completion only on the explicit click and reports the real ledger outc
   fireEvent.click(screen.getByRole('button', { name: 'Save completion' }));
   expect(await screen.findByText(/already earned, so no new piece/)).toBeInTheDocument();
 });
-it('New Chat stays disabled and never completes the conversation', () => {
+it('New Chat is enabled when idle, says reply in progress while pending, and never completes the conversation', async () => {
   mockRecovery = { ...mockRecovery, hasQualifyingPair: true };
-  render(<Controls />); expect(screen.getByRole('button', { name: 'New Chat' })).toBeDisabled();
-  fireEvent.click(screen.getByRole('button', { name: 'New Chat' })); expect(mockComplete).not.toHaveBeenCalled();
+  const view = render(<Controls pending />);
+  expect(screen.getByRole('button', { name: 'New Chat (reply in progress)' })).toBeDisabled();
+  view.rerender(<Controls />);
+  fireEvent.click(screen.getByRole('button', { name: 'New Chat' }));
+  await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+  expect(mockComplete).not.toHaveBeenCalled();
+});
+it('reports a refused New Chat without claiming a new conversation', async () => {
+  const { ConversationSwitchError } = jest.requireActual('@/lib/conversation/PersistentConversation');
+  mockCreate.mockRejectedValue(new ConversationSwitchError('conflict'));
+  render(<Controls />); fireEvent.click(screen.getByRole('button', { name: 'New Chat' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('changed in another tab');
 });
 it('preserves fox until explicit selection and saves only through existing UID preference writer', async () => {
   render(<Controls />); expect(mockSave).not.toHaveBeenCalled();

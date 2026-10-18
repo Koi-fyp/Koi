@@ -75,11 +75,16 @@ export interface ConversationRecord {
   /** Entire session snapshot is CSE ciphertext; no plaintext transcript or safety state. */
   encryptedState?: string;
 }
+/** A non-active owned conversation: the same header and ciphertext blob, moved verbatim. Local only. */
+export interface ConversationArchiveRecord extends ConversationRecord {
+  archivedAt: Date;
+}
 export class KoiDatabase extends Dexie {
   activityEvents!: Table<ActivityEventRecord, string>;
   rewardReceipts!: Table<RewardReceiptRecord, string>;
   milestoneReceipts!: Table<MilestoneReceiptRecord, string>;
   conversations!: Table<ConversationRecord, string>;
+  conversationArchive!: Table<ConversationArchiveRecord, [string, string]>;
   users!: Table<UserRecord, number>;
   messages!: Table<MessageRecord, string>;
   moodEntries!: Table<MoodEntryRecord, string>;
@@ -100,6 +105,8 @@ export class KoiDatabase extends Dexie {
       rewardReceipts: 'id, owner_uid, &[owner_uid+source_type+day_key], &[owner_uid+slot_index]',
       milestoneReceipts: 'id, owner_uid, &[owner_uid+milestone]',
     });
+    // Additive only: no existing store changes and no upgrade callback; never queued for sync.
+    this.version(4).stores({ conversationArchive: '&[uid+conversationId], uid, archivedAt' });
   }
 }
 export const db = new KoiDatabase();

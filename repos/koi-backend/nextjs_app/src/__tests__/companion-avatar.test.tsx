@@ -6,7 +6,7 @@ const mockUseAuth = jest.fn();
 const mockUseChat = jest.fn();
 jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => mockUseAuth() }));
 jest.mock('@/hooks/useChat', () => ({ useChat: () => mockUseChat() }));
-jest.mock('@/contexts/ConversationContext', () => { const snapshot = { loading: false, error: null, completing: false, switching: false, hasQualifyingPair: false, hasUnresolvedHandoff: false }; const manager = { uid: 'fixture', session: null, subscribe: () => () => {}, getSnapshot: () => snapshot }; return { useSharedConversation: () => manager }; });
+jest.mock('@/contexts/ConversationContext', () => { const snapshot = { loading: false, error: null, completing: false, switching: false, hasQualifyingPair: false, hasUnresolvedHandoff: false }; const manager = { uid: 'fixture', session: null, subscribe: () => () => {}, getSnapshot: () => snapshot }; return { useSharedConversation: () => manager, useOwnedConversationActions: () => ({ createOwned: async () => ({}), openOwned: async () => ({}) }) }; });
 jest.mock('@/components/companion/CompanionScene.module.css', () => ({}));
 jest.mock('@/components/companion/CompanionScene', () => ({
   __esModule: true,
