@@ -30,6 +30,11 @@ MAX_REPLY_TOKENS = 512
 # Crisis score budget: 5 s from request start, never waiting more than 5 s
 # after the reply ends; a miss is reported as risk {"status": "unavailable"}.
 POST_REPLY_RISK_CAP_S = 5.0
+# Pre-reply wait for the score: audio turns need the transcript (KOI_AUDIO_WAIT_S), exercise and start_* turns
+# need the tier, plain turns wait briefly.
+DEFAULT_AUDIO_WAIT_S = 3.0
+EXERCISE_WAIT_S = 3.0
+PLAIN_WAIT_S = 1.0
 # DRAFT, English only (no native-speaker or clinician review): sent when the model
 # gives no usable reply twice.
 FALLBACK_REPLY = "I'm sorry, I couldn't put my reply into words just now. Could you say that again?"
@@ -45,6 +50,15 @@ CRISIS_TIERS = ("HIGH", "CRITICAL")
 def _trace_enabled() -> bool:
     """KOI_DEBUG_TRACE is ON only for 1/true/yes/on; "0", "false", empty or unset = OFF."""
     return os.environ.get("KOI_DEBUG_TRACE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _audio_wait_s() -> float:
+    """KOI_AUDIO_WAIT_S in seconds; unset, invalid, non-finite or non-positive = 3.0."""
+    try:
+        value = float(os.environ.get("KOI_AUDIO_WAIT_S", ""))
+    except ValueError:
+        return DEFAULT_AUDIO_WAIT_S
+    return value if 0 < value < float("inf") else DEFAULT_AUDIO_WAIT_S
 
 
 def _join_text(previous: list[str], text: str) -> str:
@@ -363,11 +377,14 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             text=req.message or None, audio_bytes=parsed.audio, video_bytes=parsed.video,
             language=req.language, turn_id=req.turn_id, uid=uid,
         ))
-        wait_seconds = 3.0 if (
-            parsed.audio is not None
-            or req.exercise_state
-            or (req.client_event or "").startswith("start_")
-        ) else 1.0
+        exercise_turn = bool(req.exercise_state or (req.client_event or "").startswith("start_"))
+        if parsed.audio is not None:
+            # An audio exercise turn never waits less than an exercise turn.
+            wait_seconds = max(_audio_wait_s(), EXERCISE_WAIT_S) if exercise_turn else _audio_wait_s()
+        elif exercise_turn:
+            wait_seconds = EXERCISE_WAIT_S
+        else:
+            wait_seconds = PLAIN_WAIT_S
         risk = None
         try:
             risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=wait_seconds)
@@ -383,7 +400,12 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
         effective_message = (risk or {}).get("transcript") if isinstance(risk, dict) else None
         effective_message = effective_message or req.message
         if not effective_message:
-            raise HTTPException(422, "audio scoring did not return a transcript")
+            score_task.cancel()
+            if parsed.audio is None:
+                raise HTTPException(422, "message is required")
+            if risk is None:
+                raise HTTPException(422, "audio transcription did not complete in time")
+            raise HTTPException(422, "audio transcription returned no transcript")
         # Validate roles before constructing a streaming response so malformed
         # requests retain the normal JSON 422 contract.
         messages(req, effective_message)
