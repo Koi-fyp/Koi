@@ -179,3 +179,40 @@ describe('explicit conversation completion (ADR-REWARDS matrix)', () => {
     expect(await counts()).toEqual({ events: 0, rewards: 0 });
   });
 });
+
+describe('New Chat during an open safety handoff', () => {
+  const reasonOf = (promise: Promise<unknown>) => promise.then(() => 'resolved', (error: { reason?: string }) => error?.reason ?? String(error));
+  it('is blocked with crisis-open while the handoff is open; resuming the same conversation stays allowed', async () => {
+    const m = await owner(), id = m.session!.conversationId;
+    mockTurns.push({ handoff: HANDOFF }); await m.session!.send('Synthetic first');
+    expect((await settled(m)).hasUnresolvedHandoff).toBe(true);
+    const header = await db.conversations.get(mockUid);
+    expect(await reasonOf(m.archiveAndStartNew(mockUid))).toBe('crisis-open');
+    expect(await reasonOf(m.activateArchived(mockUid, 'another-conversation'))).toBe('crisis-open');
+    expect(await m.activateArchived(mockUid, id)).toEqual({ conversationId: id, previousConversationId: id });
+    expect(m.session!.conversationId).toBe(id); expect(m.getSnapshot().switching).toBe(false);
+    expect(await db.conversationArchive.count()).toBe(0);
+    expect((await db.conversations.get(mockUid))!.conversationId).toBe(header!.conversationId);
+    // The blocked attempt left the conversation usable.
+    mockTurns.push({ handoff: HANDOFF }); await m.session!.send('Synthetic still here');
+    expect(m.session!.getSnapshot().messages.filter(x => x.status === 'completed')).toHaveLength(4);
+  });
+  it('re-reads saved rows, so a stale cached flag cannot bypass the block', async () => {
+    const m = await owner(); mockTurns.push({}); await m.session!.send('Synthetic first');
+    expect((await settled(m)).hasUnresolvedHandoff).toBe(false);
+    const [ai] = await aiRows(); await db.messages.update(ai.id, { handoff_open: true });
+    expect(await reasonOf(m.archiveAndStartNew(mockUid))).toBe('crisis-open');
+    expect(m.getSnapshot().hasUnresolvedHandoff).toBe(true);
+    expect(await db.conversationArchive.count()).toBe(0);
+  });
+  it('is allowed again after a resolving turn returns no handoff', async () => {
+    const m = await owner(), a = m.session!.conversationId;
+    mockTurns.push({ handoff: HANDOFF }); await m.session!.send('Synthetic first');
+    expect(await reasonOf(m.archiveAndStartNew(mockUid))).toBe('crisis-open');
+    m.session!.queueCrisisPath('reached_out', HANDOFF);
+    mockTurns.push({ handoff: null }); await m.session!.send('Synthetic resolving turn');
+    expect((await settled(m)).hasUnresolvedHandoff).toBe(false);
+    const { conversationId: b } = await m.archiveAndStartNew(mockUid);
+    expect(b).not.toBe(a); expect(await db.conversationArchive.count()).toBe(1);
+  });
+});

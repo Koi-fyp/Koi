@@ -8,7 +8,7 @@ import { CompletionLeaseError, readPersistedTurnEvidence } from './persistedEvid
 import type { ChatAdapter } from './chatContract';
 import type { ConversationCompletionEvidence } from '../activities/conversationCompletion';
 
-export type ConversationSwitchReason = 'busy' | 'owner-changed' | 'conflict' | 'storage-unavailable' | 'not-found' | 'locked';
+export type ConversationSwitchReason = 'busy' | 'owner-changed' | 'conflict' | 'storage-unavailable' | 'not-found' | 'locked' | 'crisis-open';
 export class ConversationSwitchError extends Error {
   constructor(readonly reason: ConversationSwitchReason) { super(`Conversation switch failed: ${reason}.`); }
 }
@@ -120,6 +120,8 @@ export class PersistentConversation {
     if (targetId === previous.conversationId || (targetId === null && empty)) {
       return { conversationId: previous.conversationId, previousConversationId: previous.conversationId };
     }
+    // An open safety handoff stays with its conversation until a later completed turn resolves it.
+    if (this.state.hasUnresolvedHandoff) throw new ConversationSwitchError('crisis-open');
     // Synchronous lease before the first await: sends, completion and a second switch all wait.
     this.notify({ switching: true }); previous.setReady(false); this.unsubscribe?.(); this.unsubscribe = undefined;
     let candidate: ConversationSession | null = null;
@@ -135,6 +137,12 @@ export class PersistentConversation {
         throw new ConversationSwitchError(header && (header.conversationId !== expected.conversationId || header.revision !== expected.revision) ? 'conflict' : 'storage-unavailable');
       }
       guard();
+      // Re-read saved rows: the cached flag may lag a just-finished turn.
+      let handoffOpen: boolean;
+      try { handoffOpen = (await readPersistedTurnEvidence(uid, previous.conversationId)).hasUnresolvedHandoff; }
+      catch { guard(); throw new ConversationSwitchError('storage-unavailable'); }
+      guard();
+      if (handoffOpen) { this.notify({ hasUnresolvedHandoff: true }); throw new ConversationSwitchError('crisis-open'); }
       const flushed = this.record!;
       let archived: ConversationArchiveRecord | undefined;
       let target: ConversationRecord;

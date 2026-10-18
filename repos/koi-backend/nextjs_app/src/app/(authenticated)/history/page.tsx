@@ -14,6 +14,7 @@ type Data = Omit<HistoryResult, 'conversations'> & { conversations: Listed[] };
 type View = { owner: string; status: 'loading' | 'locked' | 'error' } | { owner: string; status: 'ready'; data: Data };
 const SWITCH_MESSAGES: Record<string, string> = {
   busy: 'A reply is in progress. Wait for it to finish, then try again.',
+  'crisis-open': 'Please finish the safety check first.',
   conflict: 'This conversation changed in another tab. Reload this page; nothing was changed here.',
   'owner-changed': 'Your account changed. Nothing was changed.',
   'not-found': 'That saved conversation is no longer available.',
@@ -84,6 +85,8 @@ export default function HistoryPage() {
     finally { setActing(false); }
   };
   const busy = pending || acting || recovery.switching || recovery.completing || !!recovery.error;
+  // Only the current conversation stays reachable while its safety check is open.
+  const crisisOpen = recovery.hasUnresolvedHandoff;
   const state = view?.owner === user?.uid ? view : null;
   const data = state?.status === 'ready' ? state.data : null;
   const filtered = data ? searchHistory(data, query) as Listed[] : [];
@@ -91,7 +94,8 @@ export default function HistoryPage() {
   return <div className="max-w-3xl mx-auto p-6">
     <Link href="/chat" className="underline">Back to current chat</Link>
     <h1 className="text-3xl font-black my-5">Conversation history</h1>
-    <button type="button" disabled={busy} onClick={() => void act(createOwned)} className="neo-btn-ghost mb-3" aria-describedby="history-create-status">{pending ? 'New Chat (reply in progress)' : 'New Chat'}</button>
+    <button type="button" disabled={busy || crisisOpen} onClick={() => void act(createOwned)} className="neo-btn-ghost mb-3" aria-describedby="history-create-status">{pending ? 'New Chat (reply in progress)' : 'New Chat'}</button>
+    {crisisOpen && <p className="text-sm mb-2 font-bold">Please finish the safety check first.</p>}
     <p id="history-create-status" className="text-sm mb-4">New Chat saves the current conversation here and starts a separate one. It does not complete the conversation or award a piece.</p>
     {actionError && <p role="alert" className="mb-4">{actionError}</p>}
     <p className="text-sm mb-4">Device-local, encrypted conversations. Titles quote your first saved message, not AI summaries. Up to {ARCHIVE_LIST_LIMIT} saved conversations and the newest {HISTORY_MESSAGE_LIMIT} retained messages are listed. No records are deleted.</p>
@@ -114,7 +118,7 @@ export default function HistoryPage() {
         <p className="text-sm">Last activity: {c.lastActivityAt.toLocaleString()} · {c.locked ? 'message count locked' : `${c.messages.length} messages`}</p>
         <button className="neo-btn-ghost mt-3" disabled={!c.messages.length} aria-expanded={selected === c.id} onClick={() => setSelected(selected === c.id ? null : c.id)}>Read saved conversation</button>
         {c.active ? <Link className="underline block mt-3" href="/chat">Continue current conversation</Link>
-          : c.source === 'archived' && !c.locked ? <button type="button" className="neo-btn-ghost mt-3 ml-2" disabled={busy} onClick={() => void act(() => openOwned(c.id))}>{pending ? 'Open conversation (reply in progress)' : 'Open conversation'}</button>
+          : c.source === 'archived' && !c.locked ? <button type="button" className="neo-btn-ghost mt-3 ml-2" disabled={busy || crisisOpen} onClick={() => void act(() => openOwned(c.id))}>{pending ? 'Open conversation (reply in progress)' : 'Open conversation'}</button>
           : <p className="text-sm mt-3">{c.locked ? 'This conversation is locked on this device and cannot be opened. It remains unchanged.' : 'This retained conversation is read-only. It remains unchanged.'}</p>}
       </li>)}</ul>
       {conversation && <section className="neo-card p-5 mt-5" aria-label="Saved conversation transcript">

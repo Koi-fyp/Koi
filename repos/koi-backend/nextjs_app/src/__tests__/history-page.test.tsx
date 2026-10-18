@@ -6,7 +6,7 @@ jest.mock('@/contexts/AuthContext', () => ({ useAuth: () => mockAuth() }));
 jest.mock('@/lib/firebase', () => ({ auth: mockFirebase }));
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush, replace: jest.fn() }) }));
 let mockSessionSnapshot = { pending: false, messages: [] as Array<{ id: string; conversationId: string; sender: 'user' | 'ai'; content: string; timestamp: Date; status: string }> };
-const mockRecovery = { loading: false, error: null, completing: false, switching: false, hasQualifyingPair: false, hasUnresolvedHandoff: false };
+let mockRecovery = { loading: false, error: null, completing: false, switching: false, hasQualifyingPair: false, hasUnresolvedHandoff: false };
 const mockManager = {
   get uid() { return mockFirebase.currentUser.uid; },
   session: { conversationId: 'active-id', subscribe: () => () => {}, getSnapshot: () => mockSessionSnapshot },
@@ -26,6 +26,7 @@ const archived = { status: 'ready', truncated: false, conversations: [
   { conversationId: 'archived-locked', locked: true, title: '', createdAt: new Date('2026-10-17T08:00:00Z'), lastActiveAt: new Date('2026-10-17T09:00:00Z'), archivedAt: new Date(), messageCount: null, messages: [] },
 ] };
 beforeEach(() => {
+  mockRecovery = { ...mockRecovery, hasUnresolvedHandoff: false };
   mockAuth.mockReturnValue({ user: { uid: 'a' }, isLinked: false }); mockFirebase.currentUser.uid = 'a';
   mockRead.mockReset().mockResolvedValue(retained); mockArchive.mockReset().mockResolvedValue(archived);
   mockOpen.mockReset().mockResolvedValue({ conversationId: 'archived-a' }); mockCreate.mockReset().mockResolvedValue({ conversationId: 'new' }); mockPush.mockReset();
@@ -93,4 +94,13 @@ it('does not report rows of listed archived conversations as unreadable', async 
   mockRead.mockResolvedValue({ ...retained, unreadable: 1 });
   fireEvent.click(screen.getByRole('button', { name: 'Refresh saved history' }));
   expect(await screen.findByText(/could not be unlocked or validated/)).toBeInTheDocument();
+});
+it('while a safety handoff is open, only the current conversation stays reachable', async () => {
+  mockRecovery = { ...mockRecovery, hasUnresolvedHandoff: true };
+  render(<History />); await screen.findByText('Synthetic archived title');
+  expect(screen.getByRole('button', { name: 'New Chat' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Open conversation' })).toBeDisabled();
+  expect(screen.getByText('Please finish the safety check first.')).toBeInTheDocument();
+  expect(screen.getByText('Continue current conversation')).toHaveAttribute('href', '/chat');
+  fireEvent.click(screen.getByRole('button', { name: 'Open conversation' })); expect(mockOpen).not.toHaveBeenCalled(); expect(mockCreate).not.toHaveBeenCalled();
 });

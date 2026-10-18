@@ -76,3 +76,16 @@ it('closes the previous owner picker immediately on account change', () => {
   const view = render(<Controls />); fireEvent.click(screen.getByRole('button', { name: 'Change companion' }));
   mockUid = 'other-synthetic-owner'; view.rerender(<Controls />); expect(screen.queryByText('Save koi as Raza')).not.toBeInTheDocument();
 });
+it('disables New Chat with the safety message while a handoff is open', () => {
+  mockRecovery = { ...mockRecovery, hasQualifyingPair: true, hasUnresolvedHandoff: true };
+  render(<Controls />);
+  const button = screen.getByRole('button', { name: 'New Chat' });
+  expect(button).toBeDisabled(); expect(button).toHaveAccessibleDescription('Please finish the safety check first.');
+  fireEvent.click(button); expect(mockCreate).not.toHaveBeenCalled();
+});
+it('shows the safety message if the manager refuses with crisis-open', async () => {
+  const { ConversationSwitchError } = jest.requireActual('@/lib/conversation/PersistentConversation');
+  mockCreate.mockRejectedValue(new ConversationSwitchError('crisis-open'));
+  render(<Controls />); fireEvent.click(screen.getByRole('button', { name: 'New Chat' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Please finish the safety check first.');
+});
