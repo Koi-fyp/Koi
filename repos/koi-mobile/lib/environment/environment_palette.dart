@@ -33,10 +33,10 @@ enum EnvironmentMood {
 abstract final class EnvironmentPalette {
   /// Share of the token on the call screen (the avatar card covers most of
   /// it, so the tint shows around it). Tune here.
-  static const double callStrength = 0.12;
+  static const double callStrength = 0.25;
 
   /// Share of the token on the Chat tab (message area + top nav). Tune here.
-  static const double chatStrength = 0.06;
+  static const double chatStrength = 0.15;
 
   /// Colour change duration; instant when the system removes animations.
   static const Duration transition = Duration(milliseconds: 1800);

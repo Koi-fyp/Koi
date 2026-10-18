@@ -74,21 +74,21 @@ void main() {
     });
 
     test('approved strengths and the resulting colours', () {
-      expect(EnvironmentPalette.callStrength, 0.12);
-      expect(EnvironmentPalette.chatStrength, 0.06);
+      expect(EnvironmentPalette.callStrength, 0.25);
+      expect(EnvironmentPalette.chatStrength, 0.15);
       String at(double s) => [
         for (final m in EnvironmentMood.values)
           '${m.name} ${_hex(EnvironmentPalette.colorFor(m, s))}',
       ].join(', ');
       expect(
-        at(0.12),
-        'neutral #FFE5D9, joy #FFE3BF, angry #F0D5D6, sorrow #E6D5DB, '
-        'fun #E6E3CC, calm #E1DFD8',
+        at(0.25),
+        'neutral #FFE5D9, joy #FFE0A3, angry #E0C3D3, sorrow #CBC5DD, '
+        'fun #CBE1BF, calm #C1D9D8',
       );
       expect(
-        at(0.06),
-        'neutral #FFE5D9, joy #FFE4CC, angry #F8DDD8, sorrow #F2DDDA, '
-        'fun #F2E4D3, calm #F0E2D9',
+        at(0.15),
+        'neutral #FFE5D9, joy #FFE2B8, angry #EDD1D6, sorrow #E0D2DC, '
+        'fun #E0E2C9, calm #DADED8',
       );
       expect(
         EnvironmentPalette.colorFor(EnvironmentMood.joy, 0),
@@ -353,7 +353,7 @@ void main() {
     Color navStrip(WidgetTester tester) =>
         tester.widget<KoiTopNav>(find.byType(KoiTopNav)).background;
 
-    testWidgets('Chat tab: message area and nav strip at 6%; '
+    testWidgets('Chat tab: message area and nav strip at 15%; '
         'other tabs keep the nav peach', (tester) async {
       final container = await pumpShell(tester);
       final chatJoy = EnvironmentPalette.colorFor(
@@ -374,7 +374,7 @@ void main() {
       expect(navStrip(tester), KoiColors.background);
     });
 
-    testWidgets('call screen tint is 12%', (tester) async {
+    testWidgets('call screen tint is 25%', (tester) async {
       final container = await pumpShell(tester);
       container
           .read(environmentControllerProvider)
