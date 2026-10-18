@@ -25,11 +25,11 @@ RHUBARB_URL = (f"https://github.com/DanielSWolf/rhubarb-lip-sync/releases/downlo
 # TODO(Ahmad): replace with the SHA-256 of Rhubarb-Lip-Sync-1.14.0-Linux.zip from a trusted source
 # (compute it on a file you downloaded and checked yourself). While this placeholder is here the build
 # prints a WARNING and the download is NOT verified.
-RHUBARB_SHA256 = "TODO-RHUBARB-SHA256-NOT-SET"
+RHUBARB_SHA256 = "a9a9074862cff47b2d59b8bf399a678a3b0b74f9452ad6ad94cb292913dd8667"
 RHUBARB_DIR = "/opt/rhubarb"
 VOICES_DIR = "/voices"
 
-_checksum = (f'if [ "{RHUBARB_SHA256}" = "TODO-RHUBARB-SHA256-NOT-SET" ]; then '
+_checksum = (f'if [ "{RHUBARB_SHA256}" = "a9a9074862cff47b2d59b8bf399a678a3b0b74f9452ad6ad94cb292913dd8667" ]; then '
              f'echo "WARNING: RHUBARB_SHA256 is a TODO placeholder; Rhubarb download NOT verified"; '
              f'else echo "{RHUBARB_SHA256}  /tmp/rhubarb.zip" | sha256sum -c - ; fi')
 
