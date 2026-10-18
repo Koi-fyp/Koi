@@ -10,6 +10,8 @@ import '../avatar/avatar_providers.dart';
 import '../avatar/avatar_view.dart' show AvatarImage, CompanionAvatar;
 import '../avatar/call_icons.dart';
 import 'backend_warmup.dart';
+import '../environment/environment_palette.dart';
+import '../environment/environment_providers.dart';
 import '../onboarding/step_layout.dart';
 import '../settings/widgets/avatar_picker.dart' show reviewCompanionSelection;
 import '../theme/koi_colors.dart';
@@ -56,8 +58,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final hasMessages = chat.messages.isNotEmpty;
     final avatar = ref.watch(selectedAvatarProvider);
 
-    return ColoredBox(
-      color: KoiColors.background,
+    // Background tint from the companion emotion (Prompt 27).
+    return EnvironmentBackground(
+      strength: EnvironmentPalette.chatStrength,
       child: CustomMultiChildLayout(
         delegate: _ChatLayout(),
         children: [

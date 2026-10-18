@@ -12,6 +12,7 @@ import '../core/crypto_context.dart';
 import '../core/sync_queue.dart';
 import '../core/auth/auth_service.dart';
 import '../core/onboarding_store.dart';
+import '../environment/environment_providers.dart';
 import '../onboarding/onboarding_service.dart';
 import '../safety/safety_providers.dart';
 import '../settings/settings_prefs.dart';
@@ -188,6 +189,11 @@ final chatControllerProvider = ChangeNotifierProvider.autoDispose
         backend: ref.read(backendWarmupProvider),
       );
       controller.loadHistory().then((_) => controller.warmUpKey());
+      // Background tint (Prompt 27). Not cancelled: the stream closes when
+      // the controller is disposed.
+      controller.avatarEvents.listen(
+        ref.read(environmentControllerProvider).onAvatarEvent,
+      );
       return controller;
     });
 

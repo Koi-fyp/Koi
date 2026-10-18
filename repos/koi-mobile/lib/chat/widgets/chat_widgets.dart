@@ -99,8 +99,9 @@ class WakingLine extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        // No web equivalent; Tailwind gray-500, like web's muted text.
-        style: bodyText(13, color: const Color(0xFF6B7280)),
+        // No web equivalent; Tailwind gray-600 (was gray-500): stays
+        // >= 4.5:1 on every background tint (Prompt 27).
+        style: bodyText(13, color: const Color(0xFF4B5563)),
       ),
     ),
   );

@@ -150,8 +150,8 @@ class MicNoticeLine extends StatelessWidget {
             Expanded(
               child: Text(
                 text,
-                // Same muted line as WakingLine (gray-500).
-                style: bodyText(13, color: const Color(0xFF6B7280)),
+                // Same muted line as WakingLine (gray-600).
+                style: bodyText(13, color: const Color(0xFF4B5563)),
               ),
             ),
             if (mic.canRetry)

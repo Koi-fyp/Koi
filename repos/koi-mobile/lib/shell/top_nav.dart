@@ -41,6 +41,7 @@ class KoiTopNav extends StatelessWidget {
     required this.current,
     required this.onSelect,
     required this.onLogoTap,
+    this.background = KoiColors.background,
   });
 
   final KoiTab current;
@@ -50,6 +51,10 @@ class KoiTopNav extends StatelessWidget {
   /// user straight back to '/chat'.
   final VoidCallback onLogoTap;
 
+  /// The strip behind the pills; the Chat tab passes its background tint
+  /// (Prompt 27).
+  final Color background;
+
   /// Mobile-only reductions of the tab `px-4` and pill `px-6` (class doc).
   static const double tabPaddingX = 8;
   static const double pillPaddingX = 16;
@@ -57,7 +62,7 @@ class KoiTopNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: KoiColors.background, // bg-[#ffe5d9]
+      color: background, // bg-[#ffe5d9], or the Chat tint
       child: SafeArea(
         bottom: false,
         child: Column(

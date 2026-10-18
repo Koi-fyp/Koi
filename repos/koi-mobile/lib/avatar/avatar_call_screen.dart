@@ -7,6 +7,8 @@ import '../app/providers.dart';
 import '../chat/backend_warmup.dart' show BackendStatus;
 import '../chat/chat_controller.dart';
 import '../chat/widgets/chat_widgets.dart';
+import '../environment/environment_palette.dart';
+import '../environment/environment_providers.dart';
 import '../onboarding/step_layout.dart';
 import '../safety/safety_providers.dart';
 import '../settings/widgets/avatar_picker.dart' show reviewCompanionSelection;
@@ -370,109 +372,113 @@ class _AvatarCallScreenState extends ConsumerState<AvatarCallScreen> {
     return PopScope<Object?>(
       canPop: !_transcriptOpen,
       onPopInvokedWithResult: _onBack,
-      child: Scaffold(
-        backgroundColor: KoiColors.background,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _TopBar(
-                avatar: _avatar,
-                // companion-scene/page.tsx:19 companionName, shown instead
-                // of the avatar status when there is no avatar.
-                companionName: showAvatar
-                    ? null
-                    : selected.valueOrNull?.name ?? 'KOI',
-                transcriptOpen: _transcriptOpen,
-                onToggleTranscript: () => _setTranscript(!_transcriptOpen),
-                voiceOn: _voiceOn,
-                onToggleVoice: _toggleVoice,
-              ),
-              Expanded(
-                child: Stack(
-                  // Fill the area: the toast layer is the only
-                  // non-positioned child and is empty most of the time.
-                  fit: StackFit.expand,
-                  children: [
-                    Positioned.fill(
-                      child: Padding(
-                        // room for the 6px hard shadow
-                        padding: const EdgeInsets.fromLTRB(16, 4, 22, 14),
-                        child: showAvatar
-                            ? AvatarView(
-                                controller: _avatar,
-                                source: ref.watch(avatarSourceProvider),
-                                pageFactory: ref.watch(
-                                  avatarWebPageFactoryProvider,
-                                ),
-                                localHostFactory: ref.watch(
-                                  avatarLocalHostFactoryProvider,
-                                ),
-                                // Chat never depends on the avatar: typing
-                                // and sending work while it loads, fails or
-                                // is ready.
-                                onReady: () {},
-                              )
-                            : _NoAvatarNotice(
-                                selected: selected,
-                                onReview: () =>
-                                    reviewCompanionSelection(context, ref),
-                              ),
-                      ),
-                    ),
-                    if (_voice.speaking case final kind?)
-                      Positioned(
-                        top: 14,
-                        left: 28,
-                        right: 34,
-                        child: Center(child: _VoiceLabel(kind: kind)),
-                      ),
-                    if (_transcriptOpen)
+      // Background tint from the companion emotion (Prompt 27).
+      child: EnvironmentBackground(
+        strength: EnvironmentPalette.callStrength,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: Column(
+              children: [
+                _TopBar(
+                  avatar: _avatar,
+                  // companion-scene/page.tsx:19 companionName, shown instead
+                  // of the avatar status when there is no avatar.
+                  companionName: showAvatar
+                      ? null
+                      : selected.valueOrNull?.name ?? 'KOI',
+                  transcriptOpen: _transcriptOpen,
+                  onToggleTranscript: () => _setTranscript(!_transcriptOpen),
+                  voiceOn: _voiceOn,
+                  onToggleVoice: _toggleVoice,
+                ),
+                Expanded(
+                  child: Stack(
+                    // Fill the area: the toast layer is the only
+                    // non-positioned child and is empty most of the time.
+                    fit: StackFit.expand,
+                    children: [
                       Positioned.fill(
-                        child: _TranscriptPanel(
-                          messages: chat.messages,
-                          isTyping: chat.isTyping && !chat.isStreaming,
-                          onClose: () => _setTranscript(false),
+                        child: Padding(
+                          // room for the 6px hard shadow
+                          padding: const EdgeInsets.fromLTRB(16, 4, 22, 14),
+                          child: showAvatar
+                              ? AvatarView(
+                                  controller: _avatar,
+                                  source: ref.watch(avatarSourceProvider),
+                                  pageFactory: ref.watch(
+                                    avatarWebPageFactoryProvider,
+                                  ),
+                                  localHostFactory: ref.watch(
+                                    avatarLocalHostFactoryProvider,
+                                  ),
+                                  // Chat never depends on the avatar: typing
+                                  // and sending work while it loads, fails or
+                                  // is ready.
+                                  onReady: () {},
+                                )
+                              : _NoAvatarNotice(
+                                  selected: selected,
+                                  onReview: () =>
+                                      reviewCompanionSelection(context, ref),
+                                ),
                         ),
                       ),
-                    SettingsToastLayer(
-                      toast: _toast,
-                      onClose: () => setState(() => _toast = null),
-                    ),
-                  ],
+                      if (_voice.speaking case final kind?)
+                        Positioned(
+                          top: 14,
+                          left: 28,
+                          right: 34,
+                          child: Center(child: _VoiceLabel(kind: kind)),
+                        ),
+                      if (_transcriptOpen)
+                        Positioned.fill(
+                          child: _TranscriptPanel(
+                            messages: chat.messages,
+                            isTyping: chat.isTyping && !chat.isStreaming,
+                            onClose: () => _setTranscript(false),
+                          ),
+                        ),
+                      SettingsToastLayer(
+                        toast: _toast,
+                        onClose: () => setState(() => _toast = null),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              if (chat.holdingAudio ||
-                  (mic != null &&
-                      mic.sending &&
-                      chat.backendStatus == BackendStatus.waking))
-                const WakingLine(),
-              if (mic != null && mic.recording) MicRecordingStrip(mic: mic),
-              if (mic != null) MicNoticeLine(mic: mic),
-              // Typing is always available; only Send waits while a turn
-              // (typed or voice, including the recording) is pending.
-              if (_inputs.textOn)
-                InputBar(
-                  onSend: chat.send,
-                  disabled:
-                      chat.isTyping ||
-                      (mic != null && (mic.recording || mic.sending)),
-                  keepTypingEnabled: true,
-                  focusNode: _input,
+                if (chat.holdingAudio ||
+                    (mic != null &&
+                        mic.sending &&
+                        chat.backendStatus == BackendStatus.waking))
+                  const WakingLine(),
+                if (mic != null && mic.recording) MicRecordingStrip(mic: mic),
+                if (mic != null) MicNoticeLine(mic: mic),
+                // Typing is always available; only Send waits while a turn
+                // (typed or voice, including the recording) is pending.
+                if (_inputs.textOn)
+                  InputBar(
+                    onSend: chat.send,
+                    disabled:
+                        chat.isTyping ||
+                        (mic != null && (mic.recording || mic.sending)),
+                    keepTypingEnabled: true,
+                    focusNode: _input,
+                  ),
+                _CallControls(
+                  compact: keyboardOpen,
+                  inputs: _inputs,
+                  micRecording: mic?.recording ?? false,
+                  micDisabled:
+                      mic == null ||
+                      mic.sending ||
+                      (!mic.recording && micBlocked),
+                  onMic: _onMic,
+                  onCamera: _onCamera,
+                  onText: _onText,
+                  onEnd: _endCall,
                 ),
-              _CallControls(
-                compact: keyboardOpen,
-                inputs: _inputs,
-                micRecording: mic?.recording ?? false,
-                micDisabled:
-                    mic == null ||
-                    mic.sending ||
-                    (!mic.recording && micBlocked),
-                onMic: _onMic,
-                onCamera: _onCamera,
-                onText: _onText,
-                onEnd: _endCall,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../chat/chat_screen.dart';
+import '../environment/environment_palette.dart';
+import '../environment/environment_providers.dart';
 import '../progress/progress_screen.dart';
 import '../safety/safety_host.dart';
 import '../settings/settings_screen.dart';
@@ -59,10 +61,15 @@ class _AppShellState extends State<AppShell> {
       backgroundColor: KoiColors.background,
       body: Column(
         children: [
-          KoiTopNav(
-            current: _tab,
-            onSelect: _select,
-            onLogoTap: () => _select(KoiTab.chat),
+          // The Chat tab tints the nav strip with its background.
+          EnvironmentColorBuilder(
+            strength: _tab == KoiTab.chat ? EnvironmentPalette.chatStrength : 0,
+            builder: (context, color, _) => KoiTopNav(
+              current: _tab,
+              onSelect: _select,
+              onLogoTap: () => _select(KoiTab.chat),
+              background: color,
+            ),
           ),
           Expanded(
             child: switch (_tab) {

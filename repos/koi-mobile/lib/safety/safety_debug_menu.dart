@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
+import '../environment/environment_debug_menu.dart';
+import '../environment/environment_providers.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_text.dart';
 import '../voice_input/mic_providers.dart';
@@ -110,6 +112,10 @@ class SafetyDebugButton extends ConsumerWidget {
           context,
           ref.read(safetyControllerProvider),
           lastChatDiagnostics: () => _lastDiagnostics(ref),
+          onEnvironmentEmotion: () => showEnvironmentDebugMenu(
+            context,
+            ref.read(environmentControllerProvider),
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -141,6 +147,10 @@ class SafetyDebugTrigger extends ConsumerWidget {
         context,
         ref.read(safetyControllerProvider),
         lastChatDiagnostics: () => _lastDiagnostics(ref),
+        onEnvironmentEmotion: () => showEnvironmentDebugMenu(
+          context,
+          ref.read(environmentControllerProvider),
+        ),
       ),
       child: child,
     );
@@ -162,10 +172,12 @@ const String noChatDiagnostics = '[KOI] chat: no request yet';
 
 /// [lastChatDiagnostics] gives the last chat request's one-line diagnostics
 /// (time, status, hops, elapsed, event names; no message text or token).
+/// [onEnvironmentEmotion] opens the background palette preview (Prompt 27).
 Future<void> showSafetyDebugMenu(
   BuildContext context,
   SafetyController controller, {
   String? Function()? lastChatDiagnostics,
+  VoidCallback? onEnvironmentEmotion,
 }) => showModalBottomSheet<void>(
   context: context,
   useRootNavigator: true,
@@ -236,6 +248,8 @@ Future<void> showSafetyDebugMenu(
               'crisis_resolved sent',
               controller.crisisResolutionSent,
             ),
+            if (onEnvironmentEmotion != null)
+              item('environment', environmentDebugLabel, onEnvironmentEmotion),
             if (lastChatDiagnostics != null)
               item(
                 'copy-chat-diagnostics',
