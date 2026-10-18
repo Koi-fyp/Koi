@@ -30,14 +30,35 @@ MAX_REPLY_TOKENS = 512
 # Crisis score budget: 5 s from request start, never waiting more than 5 s
 # after the reply ends; a miss is reported as risk {"status": "unavailable"}.
 POST_REPLY_RISK_CAP_S = 5.0
+# Pre-reply wait for the score: audio turns need the transcript (KOI_AUDIO_WAIT_S), exercise and start_* turns
+# need the tier, plain turns wait briefly.
+DEFAULT_AUDIO_WAIT_S = 3.0
+EXERCISE_WAIT_S = 3.0
+PLAIN_WAIT_S = 1.0
 # DRAFT, English only (no native-speaker or clinician review): sent when the model
 # gives no usable reply twice.
 FALLBACK_REPLY = "I'm sorry, I couldn't put my reply into words just now. Could you say that again?"
+# DRAFT, English only: the single reply when a start_* request cannot start (no risk tier, or director error).
+CANNOT_START_REPLY = "I can't start that right now. Please try again in a moment."
+# Mirrors of koi_policy director.CLIENT_EVENTS / policy.CRISIS_PATHS (test_g0b checks they match), so bad
+# values are a 422 before scoring or the director run, with or without KOI_EXERCISES.
+CLIENT_EVENTS = ("none", "playback_done", "playback_stopped", "start_breathing", "start_grounding", "start_plan")
+CRISIS_PATHS = ("reached_out", "said_but_did_not", "misunderstanding")
+CRISIS_TIERS = ("HIGH", "CRITICAL")
 
 
 def _trace_enabled() -> bool:
     """KOI_DEBUG_TRACE is ON only for 1/true/yes/on; "0", "false", empty or unset = OFF."""
     return os.environ.get("KOI_DEBUG_TRACE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _audio_wait_s() -> float:
+    """KOI_AUDIO_WAIT_S in seconds; unset, invalid, non-finite or non-positive = 3.0."""
+    try:
+        value = float(os.environ.get("KOI_AUDIO_WAIT_S", ""))
+    except ValueError:
+        return DEFAULT_AUDIO_WAIT_S
+    return value if 0 < value < float("inf") else DEFAULT_AUDIO_WAIT_S
 
 
 def _join_text(previous: list[str], text: str) -> str:
@@ -50,14 +71,16 @@ SYSTEM_PROMPT = (
     "You are KOI, a warm, calm and emotionally supportive AI companion. "
     "Reply in the same language and script as the user's latest message (English, Urdu, or Roman Urdu). If the latest message is in English, reply in English, even if earlier messages were in another language. "
     "Only when the user writes Urdu or Roman Urdu, match their register: tum if they write casually (for example yaar), aap otherwise. Never assume the user's gender; avoid gendered verb forms unless they have shown theirs. "
-    "Use details the user already shared, such as their name and what they told you. "
+    "Use details the user already shared, such as their name and what they told you. Do not repeat the user's message back word for word. "
+    "For a greeting, greet them back warmly and ask what is on their mind. "
     "Do not flatter, do not reassure with promises like 'you will do great', and do not simply agree with negative conclusions the user draws about themselves. "
-    "Briefly reflect what they actually said, without naming feelings they did not mention, and do not repeat harsh self-labels such as 'stupid' word for word; call it 'that thought' instead. Then ask exactly ONE open, curious question starting with what, how or when that helps them examine the thought: what makes them think so, what evidence they have for and against it, what they would say to a friend in the same spot, or what one small step they could take. Never ask two questions in one reply. "
-    "Vary your openings and your questions: do not repeat the same opening or question formula in consecutive turns. "
-    "Never ask yes/no questions. Never claim certainty about their future or their inner life. "
-    "Mention a strength or effort ONLY if the user explicitly said it; never write that they prepared, studied, worked hard or put in effort unless they said so. "
+    "Briefly reflect what they actually said in your own words. Never name, guess or attribute a thought, belief or feeling the user did not state: if they only describe an event (for example 'I failed my exam' or 'I have a quiz tomorrow'), do not mention a thought and do not ask for evidence; acknowledge it and ask what it is like for them or what they need. "
+    "Only when the user states a harsh judgement about themselves or their future (for example 'I always fail', 'I'm stupid', 'nobody likes me', 'they will hate me'), call it 'that thought' without repeating the harsh word, and ask one question that helps them examine it: what makes them think so, what evidence they have for and against it, or what they would say to a friend in the same spot. "
+    "Ask exactly ONE question in each reply (except when the safety rule below applies), starting with what, how or when, and put it last. Never use two question marks in one reply. Never ask yes/no questions. "
+    "Do not begin consecutive replies the same way, and do not begin a reply with 'It sounds like'. Never claim certainty about their future or their inner life. "
+    "Mention a strength or effort ONLY if the user explicitly said it; never write that they prepared, studied, worked, tried, put in effort or are working toward something unless they said so. "
     "Offer practical ideas only when the user asks for tips, help or what to do; then give 3 small ideas in plain sentences and one open question. Otherwise do not give advice. "
-    "When someone is grieving or blaming themselves, do not ask them to list what they missed or what they should have done differently; acknowledge the loss or the pain, then ask what they remember with comfort or what they need right now. "
+    "When someone is grieving or blaming themselves, never ask for evidence, signs they missed or what they could have done differently; say that the guilt shows how much they cared, then ask what they remember with comfort or what they need right now. "
     "When they share good news, celebrate it warmly first and do not turn it into a problem. Support growth and self-compassion. "
     "Write 3 to 5 natural sentences. "
     "If the user expresses hopelessness, wanting to disappear, or harming themselves, stop questioning their thoughts: respond with calm presence, take it seriously, and gently encourage them to reach out to someone they trust or a local helpline, without giving any methods. "
@@ -120,7 +143,13 @@ class ParsedChat:
 
 def _model_validate(data: dict[str, Any]) -> ChatRequest:
     validator = getattr(ChatRequest, "model_validate", None)
-    return validator(data) if validator else ChatRequest.parse_obj(data)
+    req = validator(data) if validator else ChatRequest.parse_obj(data)
+    # Empty strings keep meaning "none", as before.
+    if req.client_event and req.client_event not in CLIENT_EVENTS:
+        raise HTTPException(422, "unknown client_event")
+    if req.crisis_path and req.crisis_path not in CRISIS_PATHS:
+        raise HTTPException(422, "invalid crisis_path")
+    return req
 
 
 def _normalize_risk(value: Any) -> dict[str, Any]:
@@ -144,7 +173,10 @@ async def _parse_chat_request(request: Request) -> ParsedChat:
             return ParsedChat(_model_validate(await request.json()))
         except ValueError as exc:
             raise HTTPException(422, "invalid JSON payload") from exc
-    form = await request.form()
+    try:
+        form = await request.form()
+    except Exception as exc:  # malformed multipart body or boundary
+        raise HTTPException(422, "corrupt multipart body") from exc
     raw_payload = form.get("payload")
     if not isinstance(raw_payload, str):
         raise HTTPException(422, "multipart payload must include a JSON payload field")
@@ -160,6 +192,8 @@ async def _parse_chat_request(request: Request) -> ParsedChat:
         if upload is None:
             media[name] = None
             continue
+        if isinstance(upload, str):
+            raise HTTPException(422, f"{name} must be a file")
         data = await upload.read()
         if len(data) > limits[name]:
             raise HTTPException(413, f"{name} file too large")
@@ -345,28 +379,41 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             text=req.message or None, audio_bytes=parsed.audio, video_bytes=parsed.video,
             language=req.language, turn_id=req.turn_id, uid=uid,
         ))
-        wait_seconds = 3.0 if (
-            parsed.audio is not None
-            or req.exercise_state
-            or (req.client_event or "").startswith("start_")
-        ) else 1.0
+        exercise_turn = bool(req.exercise_state or (req.client_event or "").startswith("start_"))
+        if parsed.audio is not None:
+            # An audio exercise turn never waits less than an exercise turn.
+            wait_seconds = max(_audio_wait_s(), EXERCISE_WAIT_S) if exercise_turn else _audio_wait_s()
+        elif exercise_turn:
+            wait_seconds = EXERCISE_WAIT_S
+        else:
+            wait_seconds = PLAIN_WAIT_S
         risk = None
         try:
             risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=wait_seconds)
         except asyncio.TimeoutError:
             pass
+        except asyncio.CancelledError:
+            if not score_task.cancelled():   # this request itself is being cancelled
+                raise
+            risk = {"status": "unavailable"}
         except Exception:
             risk = {"status": "unavailable"}
         risk = _normalize_risk(risk) if risk is not None else None
         effective_message = (risk or {}).get("transcript") if isinstance(risk, dict) else None
         effective_message = effective_message or req.message
         if not effective_message:
-            raise HTTPException(422, "audio scoring did not return a transcript")
+            score_task.cancel()
+            if parsed.audio is None:
+                raise HTTPException(422, "message is required")
+            if risk is None:
+                raise HTTPException(422, "audio transcription did not complete in time")
+            raise HTTPException(422, "audio transcription returned no transcript")
         # Validate roles before constructing a streaming response so malformed
         # requests retain the normal JSON 422 contract.
         messages(req, effective_message)
         t0 = time.monotonic()
         director_events = []
+        cannot_start = False
         exercises = os.environ.get("KOI_EXERCISES") == "1"
         if exercises:
             secret = os.environ.get("KOI_DIRECTOR_SECRET")
@@ -400,16 +447,32 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 return None, iter((out,))
             # Director is synchronous and intentionally isolated from the event loop.
             handler = director.handle_turn
-            if tier in {"HIGH", "CRITICAL"} and req.exercise_state:
-                handler = director.on_risk
-                director_events = await asyncio.to_thread(
-                    handler, req.exercise_state, tier, time.time(), secret=secret
-                )
-            else:
-                director_events = await asyncio.to_thread(
-                    handler, turn, req.exercise_state, secret=secret,
-                    phrase_fn=lambda d: asyncio.run_coroutine_threadsafe(phrase_async(d), loop).result(timeout=20)
-                )
+            start_requested = (req.client_event or "").startswith("start_")
+            try:
+                if tier in {"HIGH", "CRITICAL"} and req.exercise_state:
+                    handler = director.on_risk
+                    director_events = await asyncio.to_thread(
+                        handler, req.exercise_state, tier, time.time(), secret=secret
+                    )
+                else:
+                    director_events = await asyncio.to_thread(
+                        handler, turn, req.exercise_state, secret=secret,
+                        phrase_fn=lambda d: asyncio.run_coroutine_threadsafe(phrase_async(d), loop).result(timeout=20)
+                    )
+            except Exception:
+                if not start_requested:
+                    raise
+                logging.getLogger("koi.chat").warning("director failed on %s", req.client_event)
+                try:
+                    fresh = director.new_token(secret)
+                except Exception:
+                    fresh = None
+                director_events = [{"type": "state", "token": fresh}] if fresh else []
+                cannot_start = True
+            # A start_* that started nothing (no tier, or director error): one fixed line, no generation.
+            if start_requested and tier is None and not any(
+                    e.get("type") in ("sentence", "ui_action") for e in director_events):
+                cannot_start = True
 
         async def stream():
             stream_risk = risk
@@ -449,7 +512,14 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
             use_api = (os.environ.get("KOI_REPLY_BACKEND") == "api"
                        and (not crisis or os.environ.get("KOI_API_ON_HANDOFF") == "1")
                        and not any(e.get("type") in ("sentence", "ui_action", "companion_state") for e in director_events))
-            async for name, value in normal_events(req, uid, t0, transcript, use_api):
+            async def cannot_start_events():
+                state = _clamp_state(None)
+                yield "companion_state", state
+                yield "delta", {"text": CANNOT_START_REPLY}
+                yield "_complete", {"reply": CANNOT_START_REPLY, "state": state, "trimmed": 0,
+                                    "backend": "local", "fallback": None}
+            events = cannot_start_events() if cannot_start else normal_events(req, uid, t0, transcript, use_api)
+            async for name, value in events:
                 if name == "_trace":
                     trace.append(value)
                 elif name == "_complete":
@@ -480,6 +550,10 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                         stream_risk = await asyncio.wait_for(asyncio.shield(score_task), timeout=remaining or None)
                     else:
                         stream_risk = {"status": "unavailable"}
+                except asyncio.CancelledError:
+                    if not score_task.cancelled():   # client went away: stop streaming
+                        raise
+                    stream_risk = {"status": "unavailable"}
                 except (asyncio.TimeoutError, Exception):
                     stream_risk = {"status": "unavailable"}
                 stream_risk = _normalize_risk(stream_risk)
@@ -489,6 +563,12 @@ def build_app(engine: Any, tokenizer: Any, verify_token: Any, sampling_factory: 
                 yield frame("risk", stream_risk)
                 emitted_risk = True
             handoff = crisis
+            # Final tier HIGH/CRITICAL (incl. a score that arrived after the reply) always ends in a crisis
+            # handoff, emitted once, before state/done. Unavailable is never a tier.
+            final_tier = stream_risk.get("risk_category") if isinstance(stream_risk, dict) else None
+            if handoff is None and final_tier in CRISIS_TIERS:
+                handoff = {"to": "crisis", "reason": f"tier {final_tier}"}
+                yield frame("handoff", handoff)
             for event in director_events:
                 if event.get("type") == "handoff" and event.get("to") == "crisis":
                     yield frame("handoff", {"to": "crisis", "reason": event.get("reason", "")})

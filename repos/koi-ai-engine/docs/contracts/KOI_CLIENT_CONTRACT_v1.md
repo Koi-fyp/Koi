@@ -257,3 +257,50 @@ transcript) are sent to the provider; never the user id, token, risk result, `ex
 | `reply_backend` | `"local"`, `"api"` (primary provider) or `"api2"` (secondary provider) |
 | `reply_fallback_reason` | `null`, or the reasons of the failed attempts joined with `\|` (e.g. `"timeout\|blocked"`), each one of `not_configured, timeout, http_4xx, http_5xx, network, invalid_json, empty, blocked, bad_emotion, bad_shape, internal_error, budget_exhausted` |
 Clients need no change; both fields are diagnostic. Not yet verified against a live provider.
+
+**C12. Client notes (2026-10-18).** Each item is marked "VERIFIED live <date>" (seen against the deployed services)
+or "PROPOSED" (read from the code on branch `backend/g0b`, not checked live). Items marked "on branch backend/g0b,
+NOT deployed" describe code that the deployed services do not run yet.
+
+1. **`/health` needs no token** on either service (chat and crisis); see C6. PROPOSED.
+2. **`done.language`**: on audio turns, the ASR language from the server's risk result; on text turns `null` when the
+   request sends no `language`. If a text request sends `language`, that value is echoed (chat_core `payload["language"]
+   = risk.language or req.language`; `test_done_language.py::test_done_language_echoes_request_language`). PROPOSED.
+3. **Direct audio chat: keep the mic disabled.** The first live test of `POST /api/v1/chat` with an `audio` part
+   returned 422 `no_transcript` (two runs, 2026-10-18). VERIFIED live 2026-10-18. On branch backend/g0b, NOT deployed:
+   audio turns wait `KOI_AUDIO_WAIT_S` seconds for the transcript (default 3.0, the deployed behaviour); if it is not
+   ready in time the 422 detail is `"audio transcription did not complete in time"`, if scoring finished without a
+   transcript it is `"audio transcription returned no transcript"`, and an empty text message is
+   `"message is required"`.
+4. **Hosted replies arrive as ONE `delta`** together with one `companion_state` (no token streaming); see C11.
+   PROPOSED.
+5. **Event order varies.** Parse every SSE event by its `event:` name, never by position. Only these hold:
+   `companion_state` comes before the first `delta` it belongs to, `state` is immediately before `done`, and `done`
+   is last. PROPOSED.
+6. **`crisis_resolved` with a message that itself scores HIGH/CRITICAL is dropped** (fail-closed): with an
+   `exercise_state` the server routes the turn to `director.on_risk`, which does not receive `policy_event`; without
+   one the director starts from fresh state (mode `chat`), so the crisis-exit rule does not apply and the HIGH tier
+   re-enters crisis. Clients send `crisis_resolved` (with `crisis_path`) on its own request with a neutral message.
+   PROPOSED.
+7. **A genuinely new HIGH after `crisis_resolved` re-triggers the handoff.** Any turn whose final tier is HIGH or
+   CRITICAL ends with a `handoff` `{"to": "crisis", ...}`. PROPOSED.
+8. **`exercise_state` semantics (read from `deploy/modal/chat_core.py` on backend/g0b):**
+   - The `state` event carries every distinct token from the director's `state` events; if there is none it carries
+     `{"exercise_state": null}`. `done.exercise_state` is the first director token, else `null`. In practice both
+     carry the same value.
+   - **`null`** happens when the server runs without exercises (`KOI_EXERCISES` not `"1"`: the director is not called),
+     or when a `start_*` turn fails inside the director and the server cannot mint a fresh token either.
+   - **A string** is returned on every turn the director runs, including turns with no active exercise (the token
+     also carries policy state such as offer cooldowns and crisis mode). So a non-null token does not mean an exercise
+     is active; a `null` token does mean none is.
+   - **Next request, `null` or absent:** the director starts from fresh state (no exercise, initial policy state,
+     mode `chat`). If the pre-reply tier is HIGH/CRITICAL the server calls `handle_turn` with that tier, not
+     `on_risk`.
+   - **Next request, a token:** verified with the server secret. Valid: the director continues from it (or
+     `on_risk` when the tier is HIGH/CRITICAL). Invalid or tampered: discarded silently and the director starts from
+     fresh state (no error; the reason is only in the debug trace).
+   - Clients store the last `state.exercise_state` and send it back unchanged, including `null`. PROPOSED.
+9. **On branch backend/g0b, NOT deployed:** a `start_*` request that cannot start (no risk tier, or a director
+   error) gets one fixed line as its only `delta`, with no model generation; an unknown `client_event` or an invalid
+   `crisis_path` is a 422 before any scoring; a turn whose final tier is HIGH/CRITICAL (including a score that arrives
+   after the reply) ends with a crisis `handoff` before `state`/`done`.
