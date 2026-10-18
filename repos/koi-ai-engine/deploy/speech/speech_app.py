@@ -29,7 +29,7 @@ RHUBARB_SHA256 = "a9a9074862cff47b2d59b8bf399a678a3b0b74f9452ad6ad94cb292913dd86
 RHUBARB_DIR = "/opt/rhubarb"
 VOICES_DIR = "/voices"
 
-_checksum = (f'if [ "{RHUBARB_SHA256}" = "a9a9074862cff47b2d59b8bf399a678a3b0b74f9452ad6ad94cb292913dd8667" ]; then '
+_checksum = (f'if [ "{RHUBARB_SHA256}" = "TODO-RHUBARB-SHA256-NOT-SET" ]; then '
              f'echo "WARNING: RHUBARB_SHA256 is a TODO placeholder; Rhubarb download NOT verified"; '
              f'else echo "{RHUBARB_SHA256}  /tmp/rhubarb.zip" | sha256sum -c - ; fi')
 
