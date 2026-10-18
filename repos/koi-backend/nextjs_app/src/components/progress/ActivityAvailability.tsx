@@ -14,6 +14,8 @@ export default function ActivityAvailability({ legacyTotal, totals }: { legacyTo
   const { user } = useAuth();
   return user ? <OwnedActivities key={user.uid} uid={user.uid} legacyTotal={legacyTotal} totals={totals} /> : null;
 }
+/** Matches the existing Progress card headings (e.g. "Mood Trends (Preview)"). */
+const CARD_TITLE = 'font-extrabold text-[1.1rem] tracking-[-0.02em] text-black';
 const COUNT_LABELS = [
   ['completedExchanges', 'Completed exchanges'], ['conversations', 'Conversations with replies'], ['completedConversations', 'Completed conversations'],
   ['checkIns', 'Check-ins'], ['breathingSessions', 'Breathing sessions'], ['pieces', 'Earned pieces'], ['milestones', 'Milestones'],
@@ -53,42 +55,49 @@ function OwnedActivities({ uid, legacyTotal, totals }: { uid: string; legacyTota
   const ready = data.status === 'ready' ? data : null;
   const counts = ready ? dashboardCounts({ completedExchanges: totals?.completedExchanges ?? NaN, conversations: totals?.conversations ?? NaN,
     events: ready.ledger.events, rewards: ready.ledger.rewards, milestones: ready.ledger.milestones }) : null;
+  // Same card, heading and spacing as the rest of Progress; order: counts, board, check-in, calendar.
   return <>
-    <section className="neo-card p-5 my-5" aria-label="Recorded activities">
-      <h2 className="font-bold text-xl">Check-ins and activities</h2>
-      <p className="my-3">Voluntary check-in: Mood, Connection and Energy, each from 1 to 5. Ratings describe your own experience; they are not a diagnosis.</p>
+    <section className="neo-card p-5 mb-5" aria-label="Saved activity counts">
+      <h2 className={CARD_TITLE}>Your saved activity</h2>
+      {data.status === 'error' && <p role="alert" className="text-sm mt-2">Saved activities could not be loaded. Your records have not been changed.</p>}
+      <dl className="text-sm grid grid-cols-2 gap-3 mt-3">{COUNT_LABELS.map(([key, label]) => <div key={key} className="border-[2.5px] border-black rounded-2xl p-3 bg-white shadow-[4px_4px_0_0_#000] min-w-0">
+        <dt className="font-bold break-words">{label}</dt>
+        <dd className="text-lg font-extrabold">{counts && Number.isFinite(counts[key]) ? (key === 'pieces' ? `${counts.pieces} of 25` : counts[key]) : data.status === 'error' || counts ? 'Unavailable' : 'Loading…'}</dd>
+      </div>)}</dl>
+    </section>
+    <RecordedBoard ownerUid={uid} legacyTotal={legacyTotal} pieces={ready ? ready.ledger.rewards.map(receipt => ({ ownerUid: uid, slot: receipt.slot_index - 1, completionId: receipt.completion_id, source: receipt.source_type, unlockedAt: ready.ledger.events.find(event => event.id === receipt.completion_id)?.completed_at ?? receipt.awarded_at, provenance: receipt.source_type === 'breathing' ? 'client-measured' : receipt.source_type === 'check_in' ? 'saved-consented-check-in' : 'explicit-persisted-exchange' })) : null} milestones={ready?.ledger.milestones.map(receipt => receipt.milestone) ?? []} />
+    <section className="neo-card p-5 mb-5" aria-label="Recorded activities">
+      <h2 className={CARD_TITLE}>Check-ins and activities</h2>
+      <p className="text-sm my-3">Voluntary check-in: Mood, Connection and Energy, each from 1 to 5. Ratings describe your own experience; they are not a diagnosis.</p>
       <form onSubmit={save}>
-        <fieldset disabled={!available || saving || saved}>
+        <fieldset disabled={!available || saving || saved} className="min-w-0">
           <legend className="font-bold">Voluntary check-in</legend>
-          {(['mood', 'connection', 'energy'] as const).map(name => <label className="block my-3" key={name}>
+          <div className="grid grid-cols-1 gap-3 my-3">{(['mood', 'connection', 'energy'] as const).map(name => <label className="block text-sm font-semibold" key={name}>
             {name[0].toUpperCase() + name.slice(1)}
-            <select required aria-label={name[0].toUpperCase() + name.slice(1)} value={ratings[name]} onChange={event => setRatings(previous => ({ ...previous, [name]: event.target.value }))} className="border-2 border-black rounded-lg p-2 ml-3">
+            <select required aria-label={name[0].toUpperCase() + name.slice(1)} value={ratings[name]} onChange={event => setRatings(previous => ({ ...previous, [name]: event.target.value }))} className="neo-input mt-1" style={{ padding: '0.55rem 2.25rem 0.55rem 0.75rem' }}>
               <option value="">Choose rating</option>{[1, 2, 3, 4, 5].map(value => <option key={value} value={value}>{value}</option>)}
             </select>
-          </label>)}
-          <label className="block my-3"><input required type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} /> I consent to saving my check-in encrypted on this device.</label>
-          <button type="submit" className="neo-btn-ghost">{saving ? 'Saving check-in…' : saved ? 'Check-in saved' : 'Save check-in'}</button>
+          </label>)}</div>
+          <label className="flex items-start gap-2 my-3 text-sm"><input required type="checkbox" className="mt-1 h-4 w-4 accent-[var(--neo-blue)]" checked={consent} onChange={event => setConsent(event.target.checked)} /> <span>I consent to saving my check-in encrypted on this device.</span></label>
+          <button type="submit" className="neo-btn-primary neo-btn-sm">{saving ? 'Saving check-in…' : saved ? 'Check-in saved' : 'Save check-in'}</button>
         </fieldset>
       </form>
       <p role="status" className="text-sm my-3">{notice}</p>
-      {!available && <button type="button" onClick={checkAccess}>Retry key access</button>}
-      {saved && <button type="button" className="neo-btn-ghost" onClick={() => { setEntry(crypto.randomUUID()); attemptTime.current = null; setSaved(false); setNotice('A new check-in is ready. Only one check-in piece can be earned per Karachi day.'); }}>Record another check-in</button>}
-      {data.status === 'error' && <p role="alert">Saved activities could not be loaded. Your records have not been changed.</p>}
-      <h3 className="font-bold mt-4">Your saved activity</h3>
-      <dl className="text-sm grid grid-cols-2 gap-2 my-3">{COUNT_LABELS.map(([key, label]) => <div key={key} className="border-2 border-black rounded-lg p-2">
-        <dt className="font-bold">{label}</dt>
-        <dd>{counts && Number.isFinite(counts[key]) ? (key === 'pieces' ? `${counts.pieces} of 25` : counts[key]) : data.status === 'error' || counts ? 'Unavailable' : 'Loading…'}</dd>
-      </div>)}</dl>
+      {(!available || saved) && <div className="koi-action-row">
+        {!available && <button type="button" className="neo-btn-secondary neo-btn-sm" onClick={checkAccess}>Retry key access</button>}
+        {saved && <button type="button" className="neo-btn-secondary neo-btn-sm" onClick={() => { setEntry(crypto.randomUUID()); attemptTime.current = null; setSaved(false); setNotice('A new check-in is ready. Only one check-in piece can be earned per Karachi day.'); }}>Record another check-in</button>}
+      </div>}
       <h3 className="font-bold mt-4">Check-in ratings over time</h3>
       <div role="group" aria-label="Time range" className="flex flex-wrap gap-2 my-2">{RANGES.map(option => <button key={option.key} type="button" aria-pressed={range === option.key}
-        className={`border-2 border-black rounded-lg px-3 py-1 text-sm ${range === option.key ? 'bg-black text-white' : 'bg-white'}`} onClick={() => setRange(option.key)}>{option.label}</button>)}</div>
+        className={`border-2 border-black rounded-full px-3 py-1 text-sm font-bold shadow-[2px_2px_0_0_#000] ${range === option.key ? 'bg-[var(--neo-blue)] text-white' : 'bg-white'}`} onClick={() => setRange(option.key)}>{option.label}</button>)}</div>
       {data.status === 'error' ? <p>Saved rating history is unavailable.</p> : !ready ? <p>Loading saved ratings...</p> : ready.locked ? <p>Saved ratings are locked. Unlock the existing key to view them.</p>
         : <CheckInChart key={range} entries={filterCheckIns(ready.entries, range, now)} from={rangeStart(range, now)} to={now} title={`Check-in ratings, ${RANGES.find(r => r.key === range)!.label.toLowerCase()}`} />}
       {!!ready?.unreadable && <p>{ready.unreadable} encrypted check-in(s) could not be read. They remain unchanged.</p>}
-      <h3 className="font-bold mt-4">Activity calendar</h3>
+    </section>
+    <section className="neo-card p-5 mb-5" aria-label="Activity calendar">
+      <h2 className={CARD_TITLE}>Activity calendar</h2>
       {data.status === 'error' ? <p>Activity history is unavailable.</p> : !ready ? <p>Loading recorded activities...</p> : <ActivityHeatmap days={activityDayCounts(ready.ledger.events)} now={now} />}
       <p className="text-sm mt-3">Daily reward limits use your device clock in Asia/Karachi. This is not an authoritative security clock or a measure of mental-health improvement.</p>
     </section>
-    <RecordedBoard ownerUid={uid} legacyTotal={legacyTotal} pieces={ready ? ready.ledger.rewards.map(receipt => ({ ownerUid: uid, slot: receipt.slot_index - 1, completionId: receipt.completion_id, source: receipt.source_type, unlockedAt: ready.ledger.events.find(event => event.id === receipt.completion_id)?.completed_at ?? receipt.awarded_at, provenance: receipt.source_type === 'breathing' ? 'client-measured' : receipt.source_type === 'check_in' ? 'saved-consented-check-in' : 'explicit-persisted-exchange' })) : null} milestones={ready?.ledger.milestones.map(receipt => receipt.milestone) ?? []} />
   </>;
 }

@@ -2,11 +2,11 @@
 import { useState } from 'react';
 import type { SavedCheckIn } from '@/lib/checkins/checkInService';
 
-/** Reference categorical slots 1-3 (validated; contrast is relieved by direct labels and the table). */
+/** KOI theme colours (--neo-blue, --neo-coral, --neo-mint); shapes, direct labels and the table carry identity too. */
 export const CHECK_IN_SERIES = [
-  { key: 'mood', label: 'Mood', color: '#2a78d6', marker: 'circle' },
-  { key: 'connection', label: 'Connection', color: '#eb6834', marker: 'square' },
-  { key: 'energy', label: 'Energy', color: '#1baf7a', marker: 'triangle' },
+  { key: 'mood', label: 'Mood', color: '#2D63EB', marker: 'circle' },
+  { key: 'connection', label: 'Connection', color: '#FF6B6B', marker: 'square' },
+  { key: 'energy', label: 'Energy', color: '#2DD36F', marker: 'triangle' },
 ] as const;
 type SeriesKey = typeof CHECK_IN_SERIES[number]['key'];
 const W = 320, H = 170, LEFT = 26, RIGHT = 78, TOP = 10, BOTTOM = 24;

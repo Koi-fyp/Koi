@@ -27,18 +27,18 @@ export default function RecordedBoard({ ownerUid, pieces, legacyTotal, milestone
     reward: 'Unlocked',
   }));
   const detail=saved.find(p=>p.slot===current);
-  return <section className="neo-card p-5" aria-label="Recorded 25-piece board">
-    <h2 className="font-bold text-xl mb-2">Recorded puzzle board</h2>
+  return <section className="neo-card p-5 mb-5" aria-label="Recorded 25-piece board">
+    <h2 className="font-extrabold text-[1.1rem] tracking-[-0.02em] text-black mb-2">Recorded puzzle board</h2>
     {Number.isSafeInteger(legacyTotal)&&legacyTotal!>=0&&<p>Legacy recorded total: {legacyTotal}. Not converted into board unlocks.</p>}
     {!valid?<p role="status">Recorded piece events are unavailable or unverified. No unlocks are inferred.</p>
       :<p role="status">{saved.length} of 25 recorded slots. Pieces are not a measure of mental-health improvement.</p>}
     <div className="grid grid-cols-5 gap-2 my-4" aria-label="Puzzle slots">{Array.from({length:25},(_,slot)=>{
       const piece=saved.find(p=>p.slot===slot);
-      return <button key={slot} type="button" className={`border-2 border-black rounded-lg p-3 ${piece?'bg-[var(--neo-yellow)]':'bg-white'}`}
+      return <button key={slot} type="button" className={`border-2 border-black rounded-xl py-3 font-bold shadow-[2px_2px_0_0_#000] ${piece?'bg-[var(--neo-yellow)]':'bg-white'}`}
         aria-label={`Slot ${slot+1}: ${piece?'recorded unlock':valid?'not unlocked':'status unavailable'}`}
         aria-pressed={current===slot} onClick={()=>select({owner:ownerUid,slot})}>{slot+1}</button>;
     })}</div>
-    <div className="flex flex-wrap gap-2 my-3" aria-label="Milestone thresholds">{[5,10,15,20,25].map(n => <button type="button" className="neo-btn-ghost" key={n}
+    <div className="koi-action-row my-3" aria-label="Milestone thresholds">{[5,10,15,20,25].map(n => <button type="button" className="neo-btn-secondary neo-btn-sm" key={n}
       onClick={() => { select(null); selectMilestone({owner:ownerUid,threshold:n}); }} aria-label={`Milestone ${n}: ${!valid?'status unavailable':unlockedMilestones.includes(n)?'recorded milestone unlocked':'not unlocked'}`}>{n} pieces</button>)}</div>
       {/* Existing timeline, now driven only by saved milestone receipts. */}
       <div
@@ -48,7 +48,7 @@ export default function RecordedBoard({ ownerUid, pieces, legacyTotal, milestone
           borderRadius: '1.25rem',
           boxShadow: '6px 6px 0 0 #000',
           padding: '1.25rem',
-          marginBottom: '1.5rem',
+          margin: '0.75rem 0 1.25rem',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.1rem' }}>
@@ -176,7 +176,7 @@ export default function RecordedBoard({ ownerUid, pieces, legacyTotal, milestone
         <h3 id={title} className="font-bold">{threshold!==null?`Milestone: ${threshold} pieces`:`Slot ${current!+1}`}</h3>
         {threshold!==null?<p>{!valid?'No verified piece event source is connected.':unlockedMilestones.includes(threshold)?`Milestone ${threshold} is permanently unlocked by a saved milestone receipt.`:'No saved milestone receipt for this threshold.'}</p>
           :<p>{detail?`Recorded ${detail.source} completion · ${new Date(detail.unlockedAt).toLocaleString()} | ${detail.provenance ?? 'recorded activity'}`:valid?'No recorded unlock for this slot.':'No verified piece event source is connected.'}</p>}
-        <button type="button" className="neo-btn-ghost mt-3" onClick={close}>Close details</button>
+        <button type="button" className="neo-btn-primary neo-btn-sm mt-3" onClick={close}>Close details</button>
       </div></div>}
     <p className="text-sm">One 25-slot board; milestones at 5, 10, 15, 20, 25. Only saved reward receipts unlock pieces. Daily caps use the device clock in Asia/Karachi.</p>
   </section>;

@@ -274,6 +274,92 @@ async function checkControls(page, item, label, vp, size, controls) {
   record(item, `${vp} ${label} no horizontal scroll`, await noHorizontalScroll(page));
 }
 
+ITEM_RUNNERS['3'] = async (browser) => {
+  const CARDS = [
+    ['counts', 'section[aria-label="Saved activity counts"]'],
+    ['recorded board', 'section[aria-label="Recorded 25-piece board"]'],
+    ['check-in (form + chart)', 'section[aria-label="Recorded activities"]'],
+    ['activity calendar', 'section[aria-label="Activity calendar"]'],
+  ];
+  for (const [vp, size] of Object.entries(VIEWPORTS)) {
+    const ctx = await browser.newContext({ viewport: size, storageState: STATE });
+    const page = await ctx.newPage();
+    const errors = watchErrors(page);
+    await page.goto(`${BASE}/progress`, { waitUntil: 'load', timeout: 120000 });
+    await page.locator(CARDS[3][1]).waitFor({ timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+    // Reference: the existing "Mood Trends (Preview)" Progress card (inside the previews disclosure).
+    const ref = await page.evaluate(() => {
+      const details = [...document.querySelectorAll('details')].find((d) => /Design previews/.test(d.querySelector('summary')?.textContent || ''));
+      if (!details) return null;
+      details.open = true;
+      const h = [...details.querySelectorAll('h3')].find((e) => /Mood Trends/.test(e.textContent));
+      const card = h && h.parentElement.parentElement;
+      const cs = getComputedStyle(card);
+      const hs = getComputedStyle(h);
+      const out = { radius: cs.borderRadius, border: `${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor}`, shadow: cs.boxShadow, bg: cs.backgroundColor,
+        title: `${hs.fontWeight} ${hs.fontSize} ${hs.letterSpacing}`, font: getComputedStyle(document.querySelector('main')).fontFamily };
+      details.open = false;
+      return out;
+    });
+    record('3', `${vp} reference Progress card found`, !!ref, JSON.stringify(ref));
+    const tops = [];
+    for (const [name, selector] of CARDS) {
+      const info = await page.evaluate(([sel]) => {
+        const card = document.querySelector(sel);
+        if (!card) return null;
+        const cs = getComputedStyle(card);
+        const r = card.getBoundingClientRect();
+        const title = card.querySelector('h2');
+        const ts = title && getComputedStyle(title);
+        // Every rendered descendant must stay inside the card box (scroll containers excepted).
+        const overflow = [...card.querySelectorAll('*')].filter((el) => {
+          if (el.closest('.overflow-x-auto') || el.closest('[role=dialog]') || el.closest('details:not([open]) > :not(summary)')) return false;
+          const b = el.getBoundingClientRect();
+          if (!b.width && !b.height) return false;
+          return b.left < r.left - 1 || b.right > r.right + 1 || b.top < r.top - 1 || b.bottom > r.bottom + 1;
+        }).map((el) => `${el.tagName}.${String(el.className).slice(0, 30)}`);
+        const textFonts = [...card.querySelectorAll('h2,h3,p,dt,dd,legend,label,figcaption')].map((el) => getComputedStyle(el).fontFamily);
+        return { radius: cs.borderRadius, border: `${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor}`, shadow: cs.boxShadow, bg: cs.backgroundColor,
+          title: ts && `${ts.fontWeight} ${ts.fontSize} ${ts.letterSpacing}`, font: cs.fontFamily, textFonts: [...new Set(textFonts)], overflow, top: r.top + window.scrollY,
+          left: r.left, right: r.right };
+      }, [selector]);
+      if (!info) { record('3', `${vp} ${name} card present`, false); continue; }
+      tops.push(info.top);
+      record('3', `${vp} ${name} card radius/border/shadow/background equal existing card`, !!ref && info.radius === ref.radius && info.border === ref.border && info.shadow === ref.shadow && info.bg === ref.bg,
+        `${info.radius} | ${info.border} | ${info.shadow} | ${info.bg}`);
+      record('3', `${vp} ${name} heading style equals existing card heading`, !!ref && info.title === ref.title, `${info.title} vs ${ref && ref.title}`);
+      record('3', `${vp} ${name} font family equals the page's`, !!ref && info.font === ref.font && info.textFonts.every((f) => f === ref.font), info.textFonts.join(' / '));
+      record('3', `${vp} ${name} no element overflows the card`, info.overflow.length === 0, info.overflow.slice(0, 4).join(', '));
+      record('3', `${vp} ${name} card inside viewport width`, info.left >= 0 && info.right <= size.width + 0.5, `${info.left.toFixed(0)}..${info.right.toFixed(0)}`);
+    }
+    const previewsTop = await page.evaluate(() => {
+      const d = [...document.querySelectorAll('details')].find((e) => /Design previews/.test(e.querySelector('summary')?.textContent || ''));
+      return d ? d.getBoundingClientRect().top + window.scrollY : -1;
+    });
+    tops.push(previewsTop);
+    record('3', `${vp} order: counts, board, check-in, calendar, previews`, tops.length === 5 && tops.every((t, i) => i === 0 || t > tops[i - 1]), tops.map((t) => t.toFixed(0)).join(' < '));
+    const form = await page.evaluate(() => {
+      const card = document.querySelector('section[aria-label="Recorded activities"]');
+      const selects = [...card.querySelectorAll('select')];
+      const save = [...card.querySelectorAll('button')].find((b) => /Save check-in|Check-in saved|Saving/.test(b.textContent));
+      return { selects: selects.length && selects.every((s) => s.classList.contains('neo-input')), save: !!save && save.classList.contains('neo-btn-primary') };
+    });
+    record('3', `${vp} check-in selects use .neo-input`, !!form.selects);
+    record('3', `${vp} Save check-in uses .neo-btn-primary`, form.save);
+    const palette = await page.evaluate(() => {
+      const theme = ['#2d63eb', '#ff6b6b', '#2dd36f', '#f4f4f4', '#c7d6fa', '#86a6f3', '#16399a'];
+      const fills = [...document.querySelectorAll('section[aria-label="Activity calendar"] svg rect, section[aria-label="Recorded activities"] svg [fill]:not(text)')]
+        .map((e) => (e.getAttribute('fill') || '').toLowerCase()).filter((f) => f && f !== 'transparent' && f !== 'none' && f !== '#fff');
+      return { fills: [...new Set(fills)], ok: fills.every((f) => theme.includes(f)) };
+    });
+    record('3', `${vp} chart/calendar colours come from the theme palette (${palette.fills.length ? palette.fills.join(',') : 'no data drawn yet'})`, palette.ok);
+    record('3', `${vp} /progress no horizontal scroll`, await noHorizontalScroll(page));
+    record('3', `${vp} /progress no console errors / page errors`, errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+};
+
 ITEM_RUNNERS['2'] = async (browser) => {
   for (const [vp, size] of Object.entries(VIEWPORTS)) {
     const ctx = await browser.newContext({ viewport: size, storageState: STATE });
