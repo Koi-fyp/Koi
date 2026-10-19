@@ -45,6 +45,8 @@ class KoiTopNav extends StatelessWidget {
     required this.onLogoTap,
     this.background = KoiColors.background,
     this.tabs = defaultTabs,
+    this.trailing,
+    this.wrapTab,
   });
 
   /// The web tabs. The shell adds [KoiTab.care] only when the backend
@@ -68,9 +70,19 @@ class KoiTopNav extends StatelessWidget {
   /// (Prompt 27).
   final Color background;
 
+  /// MOB-2: after the Mode selector in the brand pill (the notification
+  /// bell for Care users). Null = the pill is exactly as before.
+  final Widget? trailing;
+
+  /// MOB-2: decorates one tab (the Care unread dot) without changing it.
+  final Widget Function(KoiTab tab, Widget child)? wrapTab;
+
   /// Mobile-only reductions of the tab `px-4` and pill `px-6` (class doc).
   static const double tabPaddingX = 8;
   static const double pillPaddingX = 16;
+
+  Widget _wrap(KoiTab tab, Widget child) =>
+      wrapTab == null ? child : wrapTab!(tab, child);
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +107,7 @@ class KoiTopNav extends StatelessWidget {
                       child: ModeSelector(),
                     ),
                   ),
+                  ?trailing,
                 ],
               ),
             ),
@@ -105,10 +118,13 @@ class KoiTopNav extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     for (final tab in tabs)
-                      _TabLink(
-                        tab: tab,
-                        active: tab == current,
-                        onTap: () => onSelect(tab),
+                      _wrap(
+                        tab,
+                        _TabLink(
+                          tab: tab,
+                          active: tab == current,
+                          onTap: () => onSelect(tab),
+                        ),
                       ),
                   ],
                 ),

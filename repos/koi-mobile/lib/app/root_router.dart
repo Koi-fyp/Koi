@@ -59,6 +59,7 @@ RootRoute resolveRootRoute({
   required bool onboardingComplete,
   bool registered = false,
   CapabilityStatus capabilities = CapabilityStatus.anonymous,
+  bool capabilityRecheck = false,
   bool psychologist = false,
   UnlockState unlock = UnlockState.notNeeded,
   bool migrating = false,
@@ -69,7 +70,7 @@ RootRoute resolveRootRoute({
   if (!signedIn) return RootRoute.landing;
   if (loading) return RootRoute.splash;
   if (registered) {
-    if (capabilities == CapabilityStatus.loading) {
+    if (capabilities == CapabilityStatus.loading && !capabilityRecheck) {
       return RootRoute.capabilityCheck;
     }
     if (psychologist) return RootRoute.psychologist;
@@ -102,6 +103,7 @@ class RootRouter extends ConsumerWidget {
       onboardingComplete: onboarding.isCompleteFor(user?.uid),
       registered: user != null && !user.isAnonymous,
       capabilities: caps.status,
+      capabilityRecheck: caps.isRecheck,
       psychologist: caps.effective.isPsychologist,
       unlock: account.unlock,
       migrating: account.migrationPending,

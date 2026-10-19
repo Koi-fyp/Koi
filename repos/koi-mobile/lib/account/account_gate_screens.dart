@@ -288,7 +288,7 @@ class AccessEndedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => KoiPage(
-    title: 'Access ended',
+    title: 'Your care relationship has ended',
     children: [
       NeoCard(
         padding: const EdgeInsets.all(18),

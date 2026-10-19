@@ -33,50 +33,76 @@ class _Transport implements PlatformTransport {
 
 void main() {
   group('MOB1-01 capabilities come only from the backend response', () {
+    // MOB-2: fixtures follow contract v0.5.1 CapabilitiesDTO (no role, no
+    // relationship name; patient = an active relationship).
+    Map<String, Object?> caps({
+      String uid = 'u1',
+      String state = 'registered',
+      bool directory = true,
+      bool professional = false,
+      List<Map<String, Object?>> relationships = const [],
+    }) => {
+      'contract_version': '0.5.0',
+      'uid': uid,
+      'account_state': state,
+      'authorization_revision': 1,
+      'capabilities': {
+        'companion_account_sync': directory,
+        'expert_directory': directory,
+        'professional_workspace': professional,
+        'create_organization': false,
+      },
+      'professional_organization_ids': const <String>[],
+      'active_patient_relationships': relationships,
+    };
+    const rel = {
+      'relationship_id': 'r',
+      'organization_id': 'o',
+      'psychologist_uid': 'psy',
+    };
     test('role + flags; a missing flag is false', () {
-      final c = KoiCapabilities.fromJson({
-        'uid': 'u1',
-        'role': 'patient',
-        'capabilities': {'expert_discovery': true},
-        'relationship': {
-          'id': 'r',
-          'status': 'active',
-          'psychologist_display_name': 'P',
-        },
-      }, uid: 'u1');
+      final c = KoiCapabilities.fromJson(caps(relationships: [rel]), uid: 'u1');
       expect(c.isPatient, isTrue);
       expect(c.canDiscoverExperts, isTrue);
-      expect(c.canUseQuestionnaires, isFalse, reason: 'flag missing');
+      expect(c.relationship!.psychologistUid, 'psy');
+      expect(c.relationship!.organizationId, 'o');
+      final noFlag = KoiCapabilities.fromJson(
+        caps(directory: false),
+        uid: 'u1',
+      );
+      expect(noFlag.canDiscoverExperts, isFalse, reason: 'flag false');
+      expect(noFlag.hasCareArea, isFalse);
     });
     test('a response for another uid is rejected', () {
       expect(
-        () => KoiCapabilities.fromJson({
-          'uid': 'u2',
-          'role': 'general',
-        }, uid: 'u1'),
+        () => KoiCapabilities.fromJson(caps(uid: 'u2'), uid: 'u1'),
         throwsFormatException,
       );
+      expect(
+        () => KoiCapabilities.fromJson({
+          ...caps(),
+          'contract_version': '1.0.0',
+        }, uid: 'u1'),
+        throwsFormatException,
+        reason: 'unknown contract version',
+      );
     });
-    test('unknown role → no privileges; ended relationship → not patient', () {
-      final unknown = KoiCapabilities.fromJson({
-        'uid': 'u1',
-        'role': 'admin',
-        'capabilities': {'expert_discovery': true, 'questionnaires': true},
-      }, uid: 'u1');
-      expect(unknown.role, KoiRole.anonymous);
-      expect(unknown.hasCareArea, isFalse);
-      final ended = KoiCapabilities.fromJson({
-        'uid': 'u1',
-        'role': 'patient',
-        'capabilities': {'questionnaires': true},
-        'relationship': {
-          'id': 'r',
-          'status': 'ended',
-          'psychologist_display_name': 'P',
-        },
-      }, uid: 'u1');
+    test('not registered → no privileges; no relationship → not patient', () {
+      for (final state in ['unregistered', 'suspended', 'closed', 'other']) {
+        final c = KoiCapabilities.fromJson(
+          caps(state: state, relationships: [rel]),
+          uid: 'u1',
+        );
+        expect(c.role, KoiRole.anonymous, reason: state);
+        expect(c.hasCareArea, isFalse, reason: state);
+      }
+      final ended = KoiCapabilities.fromJson(caps(), uid: 'u1');
       expect(ended.isPatient, isFalse);
       expect(ended.canUseQuestionnaires, isFalse);
+      expect(
+        KoiCapabilities.fromJson(caps(professional: true), uid: 'u1').role,
+        KoiRole.psychologist,
+      );
     });
   });
 

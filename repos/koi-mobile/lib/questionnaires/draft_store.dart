@@ -95,6 +95,25 @@ class LocalDraft {
 /// Client-Side Encryption (CSE) at rest context (same path as check-ins);
 /// only ids, revision and flags are plaintext. Drafts are deleted on
 /// sign-out, on relationship removal and once an attempt is submitted.
+///
+/// Cross-device compatibility (MOB-2 note, no behaviour change; the
+/// questionnaire realignment to contract v0.5.1 is a later batch):
+/// - This device copy never leaves the phone. The web resumes a mobile
+///   draft only from the SERVER copy written by autosave, never from this
+///   box, so the box format is mobile-private.
+/// - Assumption: every saved answer maps 1:1 to a contract v0.5.1 `Answer`
+///   (`{question_id, type, value}`): `option_ids` of one id →
+///   single_choice / likert / image_single_choice `value`; several →
+///   multi_choice / image_multi_choice `value` array; `text` → short_text
+///   `value`. yes_no is an option id here but a boolean in the contract,
+///   so the realignment must convert it using the pinned version's options.
+/// - `base_revision` is the contract's `expected_revision` of the next
+///   PATCH; `version_id` must equal the assignment's
+///   `questionnaire_version_id` or the draft is ignored (never merged across
+///   versions).
+/// - The contract freeze says "persistent protected offline caches are
+///   disabled in the MVP": keeping this encrypted device draft is an open
+///   question deferred with the realignment (decision A, 2026-10-19).
 class DraftRepository {
   DraftRepository({
     required this.box,

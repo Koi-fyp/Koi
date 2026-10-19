@@ -4,8 +4,11 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-/// Why a platform call failed. PROVISIONAL mapping (no web contract yet):
-/// HTTP status first, then the body's `error.code` for 409 / 423.
+/// Why a platform call failed. HTTP status first, then the server's code:
+/// the contract v0.5.1 flat `ErrorDTO` (`{code, request_id, retryable}`,
+/// origin/feat/web-1-professional-publishing lifecycle-http.ts) or the
+/// MOB-1 provisional nested `{"error": {"code"}}` still used by the
+/// questionnaire endpoints (their realignment is a later batch).
 enum PlatformErrorCode {
   /// KOI_PLATFORM_BASE is empty or invalid.
   notConfigured,
@@ -27,6 +30,19 @@ enum PlatformErrorCode {
 
   /// Another 409.
   conflict,
+
+  /// A mutation answered 401 `unauthenticated` (flat ErrorDTO) even with a
+  /// fresh token: the server wants a sign-in within the last 5 minutes
+  /// (contract semantics "auth_time within five minutes"; web
+  /// service.ts:23). The app asks for the password again. This is NEVER
+  /// a revoked access.
+  reauthRequired,
+
+  /// 429 `rate_limited`.
+  rateLimited,
+
+  /// 400 / 422 `invalid_request` (flat ErrorDTO).
+  invalid,
   server,
 
   /// A 2xx body that is not the JSON the contract describes.
@@ -39,8 +55,15 @@ class PlatformException implements Exception {
   final PlatformErrorCode code;
   final int? status;
 
-  /// The decoded error body (only its `error` object is read; never logged).
+  /// The decoded error body (only its codes are read; never logged).
   final Map<String, Object?>? body;
+
+  /// The contract's flat ErrorDTO `code` (e.g. `not_found`), or null when
+  /// the body is not one (e.g. a route that does not exist yet).
+  String? get contractCode =>
+      body?['code'] is String && body?['request_id'] is String
+      ? body!['code'] as String
+      : null;
 
   /// `error.current_revision` of a 409 revision conflict.
   int? get currentRevision {
@@ -148,12 +171,21 @@ class PlatformClient {
   Future<Object?> getJson(String path, {Map<String, String>? query}) =>
       _call('GET', path, query: query);
 
+  /// [idempotencyKey] becomes the `Idempotency-Key` header, which every
+  /// contract v0.5.1 mutation requires. A retry of the same user action
+  /// must reuse the same key.
   Future<Object?> sendJson(
     String method,
     String path,
     Map<String, Object?> body, {
     Map<String, String>? headers,
-  }) => _call(method, path, body: jsonEncode(body), headers: headers);
+    String? idempotencyKey,
+  }) => _call(
+    method,
+    path,
+    body: jsonEncode(body),
+    headers: {...?headers, 'Idempotency-Key': ?idempotencyKey},
+  );
 
   Future<Object?> _call(
     String method,
@@ -213,9 +245,15 @@ class PlatformClient {
       final Map<dynamic, dynamic> e => e['code'],
       _ => null,
     };
+    final flat = PlatformException(
+      PlatformErrorCode.server,
+      body: errorBody,
+    ).contractCode;
     if (res.status == 403) onForbidden?.call();
     throw PlatformException(
       switch (res.status) {
+        401 when method != 'GET' && flat == 'unauthenticated' =>
+          PlatformErrorCode.reauthRequired,
         401 => PlatformErrorCode.unauthorized,
         403 => PlatformErrorCode.forbidden,
         404 => PlatformErrorCode.notFound,
@@ -224,6 +262,8 @@ class PlatformClient {
         409 || 423 when serverCode == 'attempt_submitted' =>
           PlatformErrorCode.attemptSubmitted,
         409 => PlatformErrorCode.conflict,
+        429 => PlatformErrorCode.rateLimited,
+        400 || 422 when flat == 'invalid_request' => PlatformErrorCode.invalid,
         _ => PlatformErrorCode.server,
       },
       status: res.status,

@@ -39,7 +39,9 @@ class CapabilityController extends ChangeNotifier {
     required this.source,
     this.onPatientAccessLost,
     this.timeout = const Duration(seconds: 20),
-  }) {
+    this.forbiddenCooldown = const Duration(seconds: 10),
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now {
     auth.addListener(_onAuth);
     _tokenSub = auth.tokenChanges.listen((_) => _onToken());
     _onAuth();
@@ -49,6 +51,13 @@ class CapabilityController extends ChangeNotifier {
   final CapabilitiesSource source;
   final Future<void> Function(String uid)? onPatientAccessLost;
   final Duration timeout;
+
+  /// MOB-2 loop guard: a 403 re-checks the capabilities at most once per
+  /// [forbiddenCooldown]. A screen that is re-built after the check and gets
+  /// another 403 shows its error with Retry instead of re-checking again.
+  final Duration forbiddenCooldown;
+  final DateTime Function() _now;
+  DateTime? _lastForbiddenRefresh;
   StreamSubscription<void>? _tokenSub;
 
   String? _uid;
@@ -63,6 +72,19 @@ class CapabilityController extends ChangeNotifier {
   CapabilityStatus get status => _status;
   PlatformErrorCode? get error => _error;
   bool get accessEnded => _accessEnded;
+
+  /// The role last CONFIRMED for this uid in this session (null before the
+  /// first answer).
+  KoiRole? _confirmedRole;
+
+  /// MOB-2: a re-check (e.g. after a 403) of a confirmed General / Patient
+  /// account. [effective] is still default-deny while it runs, but the root
+  /// keeps the shell (its protected screens show the loader) instead of the
+  /// full-screen check, so the user is not thrown back to Chat.
+  bool get isRecheck =>
+      _status == CapabilityStatus.loading &&
+      _confirmedRole != null &&
+      _confirmedRole != KoiRole.psychologist;
   bool get isMock => source.isMock;
 
   /// The ONLY capabilities the UI may act on: the confirmed ones of the
@@ -88,6 +110,8 @@ class CapabilityController extends ChangeNotifier {
     _accessEnded = false;
     // Patient history belongs to the previous account only.
     _wasPatient = false;
+    _lastForbiddenRefresh = null;
+    _confirmedRole = null;
     _error = null;
     _generation++;
     if (u == null) {
@@ -113,7 +137,12 @@ class CapabilityController extends ChangeNotifier {
 
   /// A platform call answered 403: drop to default-deny and re-check.
   void onForbidden() {
-    if (_registered) unawaited(refresh());
+    if (!_registered) return;
+    final now = _now();
+    final last = _lastForbiddenRefresh;
+    if (last != null && now.difference(last) < forbiddenCooldown) return;
+    _lastForbiddenRefresh = now;
+    unawaited(refresh());
   }
 
   /// Re-checks. [silent] keeps the current (confirmed) capabilities on
@@ -135,6 +164,7 @@ class CapabilityController extends ChangeNotifier {
       if (gen != _generation || _disposed) return;
       _caps = caps;
       _status = CapabilityStatus.ready;
+      _confirmedRole = caps.role;
       _error = null;
       if (previouslyPatient && !caps.isPatient) {
         _accessEnded = true;

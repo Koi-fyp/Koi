@@ -1,17 +1,19 @@
 import 'package:flutter/foundation.dart';
 
+import '../care/care_api_support.dart';
 import '../platform/platform_client.dart';
 
-/// A discoverable psychologist, as the AUTHORIZED directory API returns it
-/// (KOI_MOBILE_TRACK_FINAL_REVIEWED.md §7 fields only). PROVISIONAL shape.
+/// A discoverable psychologist: contract v0.5.1 `ExpertDTO`, exactly
+/// `{id, display_name, bio, accepting_new_patients}`. `id` is the
+/// psychologist's uid (what an application targets). Any other field the
+/// server sends is ignored; there are no specialties, languages,
+/// qualifications or availability in the contract (decision C).
 @immutable
 class ExpertProfile {
   const ExpertProfile({
     required this.id,
     required this.displayName,
-    required this.description,
-    required this.languages,
-    required this.modality,
+    required this.bio,
     required this.acceptingNewPatients,
   });
 
@@ -19,60 +21,50 @@ class ExpertProfile {
   final String displayName;
 
   /// The approved professional description.
-  final String description;
-  final List<String> languages;
-
-  /// General session modality, e.g. "Online" (server wording).
-  final String modality;
+  final String bio;
   final bool acceptingNewPatients;
 
   factory ExpertProfile.fromJson(Object? v) {
     final j = asJsonMap(v, 'expert');
-    final langs = j['languages'];
-    final modality = j['session_modality'];
-    final description = j['description'];
+    final bio = j['bio'];
     return ExpertProfile(
       id: reqString(j, 'id'),
       displayName: reqString(j, 'display_name'),
-      description: description is String ? description : '',
-      languages: [
-        if (langs is List)
-          for (final l in langs)
-            if (l is String) l,
-      ],
-      modality: modality is String ? modality : '',
+      bio: bio is String ? bio : '',
       acceptingNewPatients: j['accepting_new_patients'] == true,
     );
   }
 }
 
-/// Read-only expert discovery for General / Patient users. Applications
-/// come in a later batch. Never a client-side unrestricted Firestore read.
+/// Expert discovery for General / Patient users. Never a client-side
+/// unrestricted Firestore read.
 abstract interface class ExpertDirectoryApi {
   bool get isMock;
-  Future<List<ExpertProfile>> list();
+  Future<ApiPage<ExpertProfile>> list({String? cursor});
   Future<ExpertProfile> detail(String id);
 }
 
+// PROVISIONAL CONTRACT: KOI_MOB1_PROVISIONAL_CONTRACTS.md §8 (Expert
+// directory). Contract v0.5.1 operations listExperts / getExpert are
+// `proposed_not_implemented` ("Discovery catalogue is deferred", WEB-2).
 class HttpExpertDirectoryApi implements ExpertDirectoryApi {
   HttpExpertDirectoryApi(this.client);
   final PlatformClient client;
+
+  static const String path = '/api/v1/experts';
 
   @override
   bool get isMock => false;
 
   @override
-  Future<List<ExpertProfile>> list() async {
-    final j = asJsonMap(await client.getJson('/api/v1/experts'));
-    return [
-      for (final e in asJsonList(j['experts'], 'experts'))
-        ExpertProfile.fromJson(e),
-    ];
-  }
+  Future<ApiPage<ExpertProfile>> list({String? cursor}) async => parseApiPage(
+    await client.getJson(path, query: pageQuery(cursor: cursor)),
+    ExpertProfile.fromJson,
+  );
 
   @override
   Future<ExpertProfile> detail(String id) async => ExpertProfile.fromJson(
-    await client.getJson('/api/v1/experts/${Uri.encodeComponent(id)}'),
+    await client.getJson('$path/${Uri.encodeComponent(id)}'),
   );
 }
 
@@ -82,35 +74,40 @@ class UnavailableExpertDirectoryApi implements ExpertDirectoryApi {
   @override
   bool get isMock => false;
   @override
-  Future<List<ExpertProfile>> list() =>
-      Future.error(const PlatformException(PlatformErrorCode.notConfigured));
+  Future<ApiPage<ExpertProfile>> list({String? cursor}) => careNotConfigured();
   @override
-  Future<ExpertProfile> detail(String id) =>
-      Future.error(const PlatformException(PlatformErrorCode.notConfigured));
+  Future<ExpertProfile> detail(String id) => careNotConfigured();
 }
 
-/// KOI_MOCKS=true only: fictional placeholder profiles.
+/// KOI_MOCKS=true only: fictional placeholder profiles, 2 per page so the
+/// lazy loading can be seen.
 class MockExpertDirectoryApi implements ExpertDirectoryApi {
-  MockExpertDirectoryApi({this.latency = const Duration(milliseconds: 500)});
+  MockExpertDirectoryApi({
+    this.latency = const Duration(milliseconds: 500),
+    this.pageSize = 2,
+  });
 
   final Duration latency;
+  final int pageSize;
 
   static const List<ExpertProfile> profiles = [
     ExpertProfile(
       id: 'demo-expert-1',
       displayName: 'Demo Psychologist A',
-      description: 'Placeholder profile text for development.',
-      languages: ['English', 'Urdu'],
-      modality: 'Online',
+      bio: 'Placeholder profile text for development.',
       acceptingNewPatients: true,
     ),
     ExpertProfile(
       id: 'demo-expert-2',
       displayName: 'Demo Psychologist B',
-      description: 'Placeholder profile text for development.',
-      languages: ['Urdu'],
-      modality: 'Online',
+      bio: 'Placeholder profile text for development.',
       acceptingNewPatients: false,
+    ),
+    ExpertProfile(
+      id: 'demo-expert-3',
+      displayName: 'Demo Psychologist C',
+      bio: 'Placeholder profile text for development.',
+      acceptingNewPatients: true,
     ),
   ];
 
@@ -118,9 +115,14 @@ class MockExpertDirectoryApi implements ExpertDirectoryApi {
   bool get isMock => true;
 
   @override
-  Future<List<ExpertProfile>> list() async {
+  Future<ApiPage<ExpertProfile>> list({String? cursor}) async {
     await Future<void>.delayed(latency);
-    return profiles;
+    final start = int.tryParse(cursor ?? '0') ?? 0;
+    final end = (start + pageSize).clamp(0, profiles.length);
+    return ApiPage(
+      profiles.sublist(start, end),
+      end < profiles.length ? '$end' : null,
+    );
   }
 
   @override
@@ -128,7 +130,10 @@ class MockExpertDirectoryApi implements ExpertDirectoryApi {
     await Future<void>.delayed(latency);
     return profiles.firstWhere(
       (p) => p.id == id,
-      orElse: () => throw const PlatformException(PlatformErrorCode.notFound),
+      orElse: () => throw const PlatformException(
+        PlatformErrorCode.notFound,
+        body: {'code': 'not_found', 'request_id': 'mock'},
+      ),
     );
   }
 }

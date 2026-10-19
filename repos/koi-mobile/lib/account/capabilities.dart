@@ -25,46 +25,90 @@ enum KoiRole {
 
 /// The patient's relationship as the backend reports it. No clinical,
 /// evaluation or review data: only what the patient may see.
+///
+/// Contract v0.5.1 `CapabilitiesDTO.active_patient_relationships[]` carries
+/// only ids; the psychologist's name is looked up separately
+/// (`GET /api/v1/experts/{psychologist_uid}`, lib/care/psychologist_name.dart).
 @immutable
 class RelationshipSummary {
   const RelationshipSummary({
     required this.id,
     required this.active,
-    required this.psychologistDisplayName,
+    this.psychologistDisplayName,
+    this.organizationId = '',
+    this.psychologistUid = '',
   });
 
   final String id;
 
-  /// `status == 'active'`; anything else (ended, revoked, pending) is false.
+  /// Every relationship the contract lists is active; a relationship that
+  /// ended or was closed simply disappears from the list.
   final bool active;
-  final String psychologistDisplayName;
 
-  static RelationshipSummary? fromJson(Object? v) {
+  /// Never sent by the contract. Only test fixtures / the MOB-1 shape set it.
+  final String? psychologistDisplayName;
+  final String organizationId;
+  final String psychologistUid;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RelationshipSummary &&
+      other.id == id &&
+      other.active == active &&
+      other.psychologistDisplayName == psychologistDisplayName &&
+      other.organizationId == organizationId &&
+      other.psychologistUid == psychologistUid;
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    active,
+    psychologistDisplayName,
+    organizationId,
+    psychologistUid,
+  );
+
+  static RelationshipSummary? fromContract(Object? v) {
     if (v is! Map) return null;
     final j = v.cast<String, Object?>();
-    final id = j['id'];
-    final name = j['psychologist_display_name'];
-    if (id is! String || id.isEmpty || name is! String) return null;
+    final id = j['relationship_id'];
+    final org = j['organization_id'];
+    final psy = j['psychologist_uid'];
+    if (id is! String || id.isEmpty || org is! String || psy is! String) {
+      return null;
+    }
     return RelationshipSummary(
       id: id,
-      active: j['status'] == 'active',
-      psychologistDisplayName: name,
+      active: true,
+      organizationId: org,
+      psychologistUid: psy,
     );
   }
 }
 
-/// PROVISIONAL `GET /api/v1/me/capabilities` response (no web contract
-/// yet; see KOI_MOB1_PROVISIONAL_CONTRACTS.md):
+/// `GET /api/v1/me/capabilities`: REAL on
+/// origin/feat/web-1-professional-publishing (http.ts:40 → service.ts:54),
+/// contract v0.5.1 `CapabilitiesDTO` (`contract_version` "0.5.0"):
 ///
 /// ```json
-/// {"uid": "...", "role": "general|patient|psychologist",
-///  "capabilities": {"expert_discovery": true, "questionnaires": true},
-///  "relationship": {"id": "...", "status": "active",
-///                   "psychologist_display_name": "..."}}
+/// {"contract_version": "0.5.0", "uid": "...",
+///  "account_state": "unregistered|registered|suspended|closed",
+///  "authorization_revision": 3,
+///  "capabilities": {"companion_account_sync": true, "expert_directory": true,
+///                   "professional_workspace": false,
+///                   "create_organization": false},
+///  "professional_organization_ids": [],
+///  "active_patient_relationships": [{"relationship_id": "...",
+///      "organization_id": "...", "psychologist_uid": "..."}]}
 /// ```
 ///
-/// Every privilege needs BOTH the right role and the server's flag; a
-/// missing flag is false.
+/// The contract has no `role`; mobile derives one:
+/// - not `registered` → [KoiRole.anonymous] (no privileges);
+/// - `professional_workspace` → [KoiRole.psychologist] (portal landing);
+/// - at least one active relationship → [KoiRole.patient];
+/// - otherwise → [KoiRole.general].
+/// Discovery still needs the server's `expert_directory` flag. The contract
+/// has no questionnaire flag: an active relationship is what allows them.
 @immutable
 class KoiCapabilities {
   const KoiCapabilities({
@@ -72,6 +116,8 @@ class KoiCapabilities {
     this.expertDiscovery = false,
     this.questionnaires = false,
     this.relationship,
+    this.relationships = const [],
+    this.authorizationRevision = 0,
   });
 
   /// Default-deny: no registered privileges at all.
@@ -80,7 +126,15 @@ class KoiCapabilities {
   final KoiRole role;
   final bool expertDiscovery;
   final bool questionnaires;
+
+  /// The first active relationship (the app shows one psychologist).
   final RelationshipSummary? relationship;
+
+  /// Every active relationship, in server order (messages / appointments
+  /// are per relationship). Empty for fixtures that only set
+  /// [relationship].
+  final List<RelationshipSummary> relationships;
+  final int authorizationRevision;
 
   bool get isPsychologist => role == KoiRole.psychologist;
 
@@ -97,19 +151,53 @@ class KoiCapabilities {
   /// Any registered (General / Patient) area at all.
   bool get hasCareArea => canDiscoverExperts || isPatient;
 
-  /// Parses the response for [uid]; a response for another uid is
-  /// rejected (never trust a cached / mixed-up answer).
+  /// Active relationships (falls back to [relationship]).
+  List<RelationshipSummary> get activeRelationships => !isPatient
+      ? const []
+      : relationships.isNotEmpty
+      ? relationships
+      : [relationship!];
+
+  /// Parses the response for [uid]; a response for another uid, or of an
+  /// unknown contract major/minor, is rejected (default-deny).
   factory KoiCapabilities.fromJson(Object? body, {required String uid}) {
     final j = asJsonMap(body, 'capabilities');
     if (j['uid'] != uid) throw const FormatException('uid mismatch');
+    final version = j['contract_version'];
+    if (version is! String || !version.startsWith('0.5.')) {
+      throw const FormatException('unknown contract_version');
+    }
+    if (j['account_state'] != 'registered') return none;
     final flags = j['capabilities'] is Map
         ? (j['capabilities']! as Map).cast<String, Object?>()
         : const <String, Object?>{};
+    final rev = j['authorization_revision'];
+    final rels = [
+      if (j['active_patient_relationships'] case final List list)
+        for (final r in list) ?RelationshipSummary.fromContract(r),
+    ];
+    final revision = rev is int ? rev : 0;
+    if (flags['professional_workspace'] == true) {
+      return KoiCapabilities(
+        role: KoiRole.psychologist,
+        authorizationRevision: revision,
+      );
+    }
+    final discovery = flags['expert_directory'] == true;
+    if (rels.isNotEmpty) {
+      return KoiCapabilities(
+        role: KoiRole.patient,
+        expertDiscovery: discovery,
+        questionnaires: true,
+        relationship: rels.first,
+        relationships: rels,
+        authorizationRevision: revision,
+      );
+    }
     return KoiCapabilities(
-      role: KoiRole.fromWire(j['role']),
-      expertDiscovery: flags['expert_discovery'] == true,
-      questionnaires: flags['questionnaires'] == true,
-      relationship: RelationshipSummary.fromJson(j['relationship']),
+      role: KoiRole.general,
+      expertDiscovery: discovery,
+      authorizationRevision: revision,
     );
   }
 }
@@ -147,8 +235,14 @@ class MockCapabilitiesSource implements CapabilitiesSource {
   static const RelationshipSummary demoRelationship = RelationshipSummary(
     id: 'demo-relationship-1',
     active: true,
-    psychologistDisplayName: 'Demo Psychologist',
+    organizationId: 'demo-org-1',
+    psychologistUid: 'demo-expert-1',
   );
+
+  /// The patient relationship the mock returns. The demo care backend
+  /// (lib/care/mock_care_backend.dart) replaces it when a demo application
+  /// is accepted.
+  RelationshipSummary relationship = demoRelationship;
 
   @override
   bool get isMock => true;
@@ -162,11 +256,12 @@ class MockCapabilitiesSource implements CapabilitiesSource {
         role: KoiRole.general,
         expertDiscovery: true,
       ),
-      KoiRole.patient => const KoiCapabilities(
+      KoiRole.patient => KoiCapabilities(
         role: KoiRole.patient,
         expertDiscovery: true,
         questionnaires: true,
-        relationship: demoRelationship,
+        relationship: relationship,
+        relationships: [relationship],
       ),
       KoiRole.psychologist => const KoiCapabilities(role: KoiRole.psychologist),
     };

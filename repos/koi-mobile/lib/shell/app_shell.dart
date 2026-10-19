@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../account/account_providers.dart';
+import '../account/account_widgets.dart' show pushKoiPage;
+import '../account/capability_controller.dart';
 import '../account/care_screen.dart';
 import '../chat/chat_screen.dart';
 import '../environment/environment_palette.dart';
 import '../environment/environment_providers.dart';
+import '../notifications/notification_bell.dart';
+import '../notifications/notification_screens.dart';
 import '../progress/progress_screen.dart';
 import '../safety/safety_host.dart';
 import '../settings/settings_screen.dart';
@@ -35,7 +39,21 @@ class _AppShellState extends ConsumerState<AppShell> {
   /// The Care tab's nested navigator (MOB-1).
   final GlobalKey<NavigatorState> _careNav = GlobalKey<NavigatorState>();
 
+  /// The Care area was confirmed before the current capability re-check.
+  bool _hadCare = false;
+
   void _select(KoiTab tab) => setState(() => _tab = tab);
+
+  /// MOB-2 bell: the inbox opens inside the Care tab, so the top nav stays.
+  void _openInbox() {
+    _select(KoiTab.care);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final nav = _careNav.currentState;
+      if (nav == null || !mounted) return;
+      nav.popUntil((r) => r.isFirst);
+      pushKoiPage<void>(nav.context, const NotificationInboxScreen());
+    });
+  }
 
   /// Android back (decision 2026-10-14): a Settings sub-page → Settings;
   /// Progress or Settings → Chat; Chat → leave the app (canPop). Popups are
@@ -69,9 +87,14 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget _scaffold() {
     // MOB-1: the Care tab exists only while the backend confirms a Care
     // area for THIS account (default-deny). Losing it closes the tab.
-    final hasCare = ref.watch(
-      effectiveCapabilitiesProvider.select((c) => c.hasCareArea),
-    );
+    // MOB-2: while a re-check runs (e.g. after a 403) the tab stays, but
+    // its gates show only the loader (still default-deny: nothing
+    // protected is built). It goes only when the server says so.
+    final controller = ref.watch(capabilityControllerProvider);
+    final confirmed = controller.effective.hasCareArea;
+    final checking = controller.status == CapabilityStatus.loading;
+    if (!checking) _hadCare = confirmed;
+    final hasCare = confirmed || (checking && _hadCare);
     if (!hasCare && _tab == KoiTab.care) _tab = KoiTab.chat;
     return Scaffold(
       backgroundColor: KoiColors.background,
@@ -85,6 +108,11 @@ class _AppShellState extends ConsumerState<AppShell> {
               onSelect: _select,
               onLogoTap: () => _select(KoiTab.chat),
               background: color,
+              trailing: hasCare ? NotificationBell(onTap: _openInbox) : null,
+              wrapTab: hasCare
+                  ? (tab, child) =>
+                        tab == KoiTab.care ? CareTabBadge(child: child) : child
+                  : null,
               tabs: hasCare
                   ? const [
                       KoiTab.chat,

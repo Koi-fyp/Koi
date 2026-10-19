@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../applications/application_screens.dart';
+import '../appointments/appointment_screens.dart';
+import '../care/care_providers.dart';
+import '../care/care_strings.dart';
+import '../care/care_widgets.dart';
+import '../care/simulate_menu.dart';
+import '../care_messages/message_screens.dart';
 import '../experts/expert_screens.dart';
+import '../notifications/notification_screens.dart';
 import '../questionnaires/questionnaire_screens.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_radii.dart';
+import '../widgets/neo_button.dart';
 import '../widgets/neo_card.dart';
 import 'account_providers.dart';
 import 'account_widgets.dart';
@@ -28,65 +37,129 @@ class CareTab extends StatelessWidget {
   );
 }
 
-class CareScreen extends ConsumerWidget {
+/// The Care home. General: Find an Expert + My applications. Patient (an
+/// active relationship confirmed by /me/capabilities): My Psychologist,
+/// Questionnaires, Messages, Appointments, Notifications as well.
+/// Pull-to-refresh re-checks the capabilities (General → Patient after an
+/// accepted application, same uid, no sign-out).
+class CareScreen extends ConsumerStatefulWidget {
   const CareScreen({super.key});
 
+  /// MOB-1 placeholder text (no longer shown since MOB-2).
+  static const String comingLater = 'Coming in a later update';
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) => CapabilityGate(
+  ConsumerState<CareScreen> createState() => _CareScreenState();
+}
+
+class _CareScreenState extends ConsumerState<CareScreen> {
+  Future<void> _refresh() async {
+    await Future.wait([
+      ref.read(capabilityControllerProvider).refresh(silent: true),
+      ref.read(careSessionProvider).notifications.refresh(),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) => CapabilityGate(
     destination: KoiDestination.care,
     builder: (context) {
+      final s = ref.watch(careStringsProvider);
       final caps = ref.watch(effectiveCapabilitiesProvider);
       final demo = ref.watch(capabilityControllerProvider).isMock;
+      final session = ref.watch(careSessionProvider);
       final relationship = caps.relationship;
-      return KoiPage(
+      final notice = session.notice;
+      final unreadMessages = session.unreadMessageNotifications.length;
+      return CarePage(
+        back: false,
         demo: demo,
-        title: 'Care',
+        title: s.t(CareText.care),
+        onRefresh: _refresh,
         children: [
+          if (notice != null) ...[
+            KoiNoticeCard(
+              key: const Key('care-notice'),
+              yellow: true,
+              message: s.t(notice),
+              actionLabel: s.t(CareText.ok),
+              action: session.clearNotice,
+            ),
+            const SizedBox(height: 16),
+          ],
           if (caps.isPatient && relationship != null) ...[
             CareEntry(
               key: const Key('care-psychologist'),
-              title: 'My Psychologist',
-              subtitle: relationship.psychologistDisplayName,
+              title: s.t(CareText.myPsychologist),
+              subtitle:
+                  ref
+                      .watch(psychologistNameProvider(relationship))
+                      .valueOrNull ??
+                  s.t(CareText.yourPsychologist),
               onTap: () =>
                   pushKoiPage<void>(context, const MyPsychologistScreen()),
             ),
             if (caps.canUseQuestionnaires)
               CareEntry(
                 key: const Key('care-questionnaires'),
-                title: 'Questionnaires',
-                subtitle: 'Forms your psychologist asked you to fill in',
+                title: s.t(CareText.questionnaires),
+                subtitle: s.t(CareText.questionnairesSub),
                 onTap: () =>
                     pushKoiPage<void>(context, const QuestionnaireListScreen()),
               ),
-            const CareEntry(
-              key: Key('care-messages'),
-              title: 'Messages',
-              subtitle: comingLater,
+            CareEntry(
+              key: const Key('care-messages'),
+              title: s.t(CareText.messages),
+              subtitle: unreadMessages > 0
+                  ? s.unreadCount(unreadMessages)
+                  : s.t(CareText.messagesSub),
+              onTap: () =>
+                  pushKoiPage<void>(context, const ConversationListScreen()),
             ),
-            const CareEntry(
-              key: Key('care-appointments'),
-              title: 'Appointments',
-              subtitle: comingLater,
-            ),
-            const CareEntry(
-              key: Key('care-notifications'),
-              title: 'Notifications',
-              subtitle: comingLater,
+            CareEntry(
+              key: const Key('care-appointments'),
+              title: s.t(CareText.appointments),
+              subtitle: s.t(CareText.appointmentsSub),
+              onTap: () =>
+                  pushKoiPage<void>(context, const AppointmentListScreen()),
             ),
           ],
-          if (caps.canDiscoverExperts)
+          CareEntry(
+            key: const Key('care-notifications'),
+            title: s.t(CareText.notifications),
+            subtitle: session.unreadCount > 0
+                ? s.unreadCount(session.unreadCount)
+                : s.t(CareText.notificationsSub),
+            onTap: () =>
+                pushKoiPage<void>(context, const NotificationInboxScreen()),
+          ),
+          if (caps.canDiscoverExperts) ...[
             CareEntry(
               key: const Key('care-experts'),
-              title: 'Find an Expert',
-              subtitle: 'Browse psychologists listed in KOI',
+              title: s.t(CareText.findExpert),
+              subtitle: s.t(CareText.findExpertSub),
               onTap: () => pushKoiPage<void>(context, const ExpertListScreen()),
+            ),
+            CareEntry(
+              key: const Key('care-applications'),
+              title: s.t(CareText.myApplications),
+              subtitle: s.t(CareText.myApplicationsSub),
+              onTap: () =>
+                  pushKoiPage<void>(context, const MyApplicationsScreen()),
+            ),
+          ],
+          if (ref.watch(simulatePsychologistMenuProvider))
+            NeoButton(
+              key: const Key('care-simulate'),
+              variant: NeoButtonVariant.ghost,
+              fullWidth: true,
+              onPressed: () => showSimulatePsychologistMenu(context, ref),
+              child: CareButtonLabel(s.t(CareText.simulateTitle)),
             ),
         ],
       );
     },
   );
-
-  static const String comingLater = 'Coming in a later update';
 }
 
 /// One Care row: a Neo card (white when it opens something, grey and
@@ -154,7 +227,7 @@ class CareEntry extends StatelessWidget {
   }
 }
 
-/// The patient's relationship: only the name the server returns.
+/// The patient's relationship: the psychologist's directory name only.
 class MyPsychologistScreen extends ConsumerWidget {
   const MyPsychologistScreen({super.key});
 
@@ -162,27 +235,24 @@ class MyPsychologistScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => CapabilityGate(
     destination: KoiDestination.myPsychologist,
     builder: (_) {
+      final s = ref.watch(careStringsProvider);
       final rel = ref.watch(effectiveCapabilitiesProvider).relationship;
-      return KoiPage(
-        back: true,
+      final name = rel == null
+          ? null
+          : ref.watch(psychologistNameProvider(rel)).valueOrNull;
+      return CarePage(
         demo: ref.watch(capabilityControllerProvider).isMock,
-        title: 'My Psychologist',
+        title: s.t(CareText.myPsychologist),
         children: [
           NeoCard(
             padding: const EdgeInsets.all(18),
             child: Text(
-              rel?.psychologistDisplayName ?? '',
-              style: koiBodyStyle(size: 18, weight: FontWeight.w700),
+              name ?? s.t(CareText.yourPsychologist),
+              style: careBody(s, size: 18, weight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 20),
-          const KoiNoticeCard(
-            yellow: true,
-            message:
-                'Messages and appointments with your psychologist are coming '
-                'in a later update. This app is not monitored for '
-                'emergencies: in a crisis, use the helplines in Settings.',
-          ),
+          KoiNoticeCard(yellow: true, message: s.t(CareText.notMonitored)),
         ],
       );
     },

@@ -17,6 +17,14 @@ enum KoiDestination {
   appointments,
   notifications,
   proPortal,
+
+  /// MOB-2: the applicant's own connection requests (General / Patient).
+  applications,
+  application,
+
+  /// MOB-2: one professional message thread / one appointment (Patient).
+  messageThread,
+  appointment,
 }
 
 /// `koi://experts/{id}`, `koi://care/questionnaires/{attemptId}`, ...
@@ -44,6 +52,22 @@ enum KoiDestination {
       id: at(2),
     ),
     ['care', 'messages'] => (destination: KoiDestination.messages, id: null),
+    ['care', 'messages', _] => (
+      destination: KoiDestination.messageThread,
+      id: at(2),
+    ),
+    ['care', 'appointments', _] => (
+      destination: KoiDestination.appointment,
+      id: at(2),
+    ),
+    ['care', 'applications'] => (
+      destination: KoiDestination.applications,
+      id: null,
+    ),
+    ['care', 'applications', _] => (
+      destination: KoiDestination.application,
+      id: at(2),
+    ),
     ['care', 'appointments'] => (
       destination: KoiDestination.appointments,
       id: null,
@@ -101,7 +125,11 @@ LinkDecision decideDestination(
         KoiDestination.questionnaire ||
         KoiDestination.messages ||
         KoiDestination.appointments ||
-        KoiDestination.notifications:
+        KoiDestination.notifications ||
+        KoiDestination.applications ||
+        KoiDestination.application ||
+        KoiDestination.messageThread ||
+        KoiDestination.appointment:
       if (!registered) return LinkDecision.signIn;
       if (status == CapabilityStatus.loading) return LinkDecision.wait;
       final ok = switch (d) {
@@ -110,6 +138,10 @@ LinkDecision decideDestination(
         KoiDestination.care => caps.hasCareArea,
         KoiDestination.questionnaires ||
         KoiDestination.questionnaire => caps.canUseQuestionnaires,
+        // MOB-2: application outcomes reach General users too.
+        KoiDestination.notifications => caps.hasCareArea,
+        KoiDestination.applications ||
+        KoiDestination.application => caps.canDiscoverExperts,
         _ => caps.isPatient,
       };
       return ok ? LinkDecision.allow : LinkDecision.deny;

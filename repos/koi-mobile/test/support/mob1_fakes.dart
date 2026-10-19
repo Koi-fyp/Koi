@@ -6,6 +6,7 @@ import 'package:koi_mobile/account/account_providers.dart';
 import 'package:koi_mobile/account/capabilities.dart';
 import 'package:koi_mobile/account/secret_store.dart';
 import 'package:koi_mobile/app/providers.dart';
+import 'package:koi_mobile/chat/chat_api.dart';
 import 'package:koi_mobile/chat/conversation_service.dart';
 import 'package:koi_mobile/chat/message_record.dart';
 import 'package:koi_mobile/checkins/checkin_providers.dart';
@@ -196,6 +197,8 @@ class Mob1Harness {
     bool onboarded = true,
     QuestionnaireApi? questionnaires,
     ExpertDirectoryApi? experts,
+    this.capabilities,
+    this.chatApi,
   }) : auth = AccountFakeAuth(fakeUser: user),
        source = ScriptedCapabilitiesSource(caps),
        questionnaireApi = questionnaires,
@@ -211,6 +214,14 @@ class Mob1Harness {
   final ScriptedCapabilitiesSource source;
   final QuestionnaireApi? questionnaireApi;
   final ExpertDirectoryApi? expertApi;
+
+  /// MOB-2: replaces [source] (e.g. a MockCapabilitiesSource driven by the
+  /// demo care backend).
+  final CapabilitiesSource? capabilities;
+
+  /// MOB-2: the companion chat client (to prove nothing reaches it).
+  final ChatApiClient? chatApi;
+  final MemorySettingsPrefsStore settings = MemorySettingsPrefsStore();
   final MemorySecureKv secureKv = MemorySecureKv();
   late final AccountSecretStore secrets = AccountSecretStore(secureKv);
   final MemoryKeyValueStore prefs = MemoryKeyValueStore();
@@ -226,14 +237,19 @@ class Mob1Harness {
     authServiceProvider.overrideWith((ref) => auth),
     onboardingStoreProvider.overrideWith((ref) => onboarding),
     onboardingUserWriterProvider.overrideWithValue(RecordingUserWriter()),
-    settingsPrefsStoreProvider.overrideWithValue(MemorySettingsPrefsStore()),
-    ...chatOverrides(store: messages, queue: queue, cipher: cipher),
+    settingsPrefsStoreProvider.overrideWithValue(settings),
+    ...chatOverrides(
+      store: messages,
+      queue: queue,
+      cipher: cipher,
+      api: chatApi,
+    ),
     cryptoContextResolverProvider.overrideWithValue(fakeResolver(secrets)),
     accountSecretStoreProvider.overrideWithValue(secrets),
     localPrefsProvider.overrideWithValue(prefs),
     checkInBoxProvider.overrideWithValue(checkIns),
     draftBoxProvider.overrideWithValue(drafts),
-    capabilitiesSourceProvider.overrideWithValue(source),
+    capabilitiesSourceProvider.overrideWithValue(capabilities ?? source),
     if (questionnaireApi != null)
       questionnaireApiProvider.overrideWithValue(questionnaireApi!),
     if (expertApi != null)

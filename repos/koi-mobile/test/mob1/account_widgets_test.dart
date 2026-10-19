@@ -148,7 +148,7 @@ void main() {
   });
 
   testWidgets(
-    'MOB1-09 patient: My Psychologist, Questionnaires, later-update entries',
+    'MOB1-09 patient: My Psychologist, Questionnaires, care entries',
     (tester) async {
       final h = Mob1Harness(
         user: AccountFakeAuth.registered('p1', 'p@x'),
@@ -167,7 +167,8 @@ void main() {
       ]) {
         expect(find.byKey(Key(k)), findsOneWidget);
       }
-      expect(find.text(CareScreen.comingLater), findsNWidgets(3));
+      // MOB-2: the three entries open their screens now (no placeholder).
+      expect(find.text(CareScreen.comingLater), findsNothing);
     },
   );
 
