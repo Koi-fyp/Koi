@@ -36,7 +36,7 @@ export default function MessageBubble({ message, showAvatar = false }: MessageBu
           className={
             `p-3 border-[2px] border-black rounded-[15px] text-sm leading-6 break-words font-[var(--font-body)] ` +
             (isUser
-              ? 'bg-[#3B82F6] text-white hard-shadow'
+              ? 'bg-[#3B82F6] text-black hard-shadow'
               : 'glass-white text-black hard-shadow-cyan')
           }
         >

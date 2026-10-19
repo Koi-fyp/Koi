@@ -14,6 +14,6 @@ export default function ChatComposer({ onSend, onCancel, pending, error, onFocus
       <button type="submit" disabled={pending || disabled || !text.trim() || development} style={{ padding: '8px 14px', borderRadius: 12, border: '1px solid #c9b6a5', background: '#ffd100' }}>Send</button>
       {pending && <button type="button" onClick={onCancel} style={{ border: '1px solid #c9b6a5', borderRadius: 12, padding: 8 }}>Cancel request</button>}
     </form>
-    <p role="status" style={{ margin: '5px 0 0', color: '#75685e' }}>{pending ? 'Connecting to KOI. The self-hosted service can take a little while to respond; you can cancel anytime.' : audioPlaying ? 'A spoken reply is playing. The text above is complete.' : idleHint}</p>
+    <p role="status" style={{ margin: '5px 0 0', color: '#4B5563' }}>{pending ? 'Connecting to KOI. The self-hosted service can take a little while to respond; you can cancel anytime.' : audioPlaying ? 'A spoken reply is playing. The text above is complete.' : idleHint}</p>
   </div>;
 }

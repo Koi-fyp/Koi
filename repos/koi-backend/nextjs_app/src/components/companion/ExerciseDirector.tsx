@@ -101,9 +101,11 @@ function PacedBreathingPanel({ runId, pattern, command, onComplete, onStop, regi
   </section>;
 }
 
-export default function ExerciseDirector({ events, disabled = false, interruptKey = 0, onRequest, onQueueClientEvent, consumeEvent, onBreathingResult }: {
+export default function ExerciseDirector({ events, disabled = false, interruptKey = 0, onRequest, onQueueClientEvent, consumeEvent, onBreathingResult, onActivityChange }: {
   events: SessionEvent[];
   onBreathingResult?: (result: BreathingResult) => void;
+  /** Passive presentation observer; does not control exercise or client events. */
+  onActivityChange?: (active: boolean) => void;
   consumeEvent?: (id: number) => boolean;
   disabled?: boolean;
   interruptKey?: number;
@@ -125,6 +127,16 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
   const lastEventId = useRef(0);
   const [breathing, setBreathing] = useState<{ runId: number; pattern: BreathingPattern } | null>(null);
   const activeBreathing = useRef(false);
+  const activityObserver = useRef(onActivityChange);
+  activityObserver.current = onActivityChange;
+  const setActiveBreathing = (active: boolean) => {
+    activeBreathing.current = active;
+    try { activityObserver.current?.(active); } catch { /* Presentation cannot interrupt exercise cleanup. */ }
+  };
+  useEffect(() => {
+    try { onActivityChange?.(activeBreathing.current); } catch { /* Passive observer only. */ }
+    return () => { try { onActivityChange?.(false); } catch { /* Passive observer only. */ } };
+  }, [onActivityChange]);
   const [command, setCommand] = useState<BreathingCommand | null>(null);
   const [notice, setNotice] = useState('');
   const queueRef = useRef(onQueueClientEvent);
@@ -135,7 +147,7 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
     return () => { queueMicrotask(() => {
       if (mountGeneration.current === generation && activeBreathing.current) {
         report('navigation');
-        activeBreathing.current = false;
+        setActiveBreathing(false);
         queueRef.current('playback_stopped');
       }
     }); };
@@ -146,7 +158,7 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
     if (!interruptKey) return;
     const wasActive = activeBreathing.current;
     if (wasActive) report('handoff');
-    activeBreathing.current = false;
+    setActiveBreathing(false);
     setBreathing(null);
     setCommand(null);
     if (wasActive) {
@@ -160,7 +172,7 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
       if (item.id <= lastEventId.current) continue;
       lastEventId.current = item.id;
       if (item.event.event === 'handoff') {
-        if (activeBreathing.current) { report('handoff'); activeBreathing.current = false; setBreathing(null); setCommand(null); queueRef.current('playback_stopped'); }
+        if (activeBreathing.current) { report('handoff'); setActiveBreathing(false); setBreathing(null); setCommand(null); queueRef.current('playback_stopped'); }
         continue;
       }
       if (item.event.event !== 'ui_action') continue;
@@ -169,14 +181,14 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
       if (name === 'start_breathing') {
         const pattern = parseBreathingPattern(args);
         if (!pattern) {
-          activeBreathing.current = false;
+          setActiveBreathing(false);
           setBreathing(null);
           setNotice('Breathing guidance is unavailable because its timing or cues were incomplete.');
         } else {
           if (activeBreathing.current) report('navigation');
           run.current = { sessionId: crypto.randomUUID(), startedAt: new Date().toISOString(), cyclesPlanned: pattern.cycles };
           measure.current = null;
-          activeBreathing.current = true;
+          setActiveBreathing(true);
           setNotice('');
           setCommand(null);
           setBreathing({ runId: item.id, pattern });
@@ -186,14 +198,14 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
       } else if (name === 'stop_breathing') {
         const wasActive = activeBreathing.current;
         if (wasActive) report('user_stop');
-        activeBreathing.current = false;
+        setActiveBreathing(false);
         setBreathing(null);
         setCommand(null);
         setNotice('The activity was stopped by KOI.');
         if (wasActive) queueRef.current('playback_stopped');
       } else if (name === 'start_grounding' || name === 'start_plan') {
         if (activeBreathing.current) report('navigation');
-        activeBreathing.current = false;
+        setActiveBreathing(false);
         setBreathing(null);
         setNotice('This activity is not available in the current Web view yet.');
       } else if (name === 'save_task' || name === 'save_go_to') {
@@ -204,7 +216,7 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
 
   const stopBreathing = () => {
     report('user_stop');
-    activeBreathing.current = false;
+    setActiveBreathing(false);
     setBreathing(null);
     setNotice('Activity stopped.');
     onQueueClientEvent('playback_stopped');
@@ -222,6 +234,6 @@ export default function ExerciseDirector({ events, disabled = false, interruptKe
     </details>
     {notice && <p className={styles.exerciseNotice} role="status">{notice}</p>}
     {breathing && <PacedBreathingPanel key={breathing.runId} runId={breathing.runId} pattern={breathing.pattern} command={command} registerMeasurement={callback => { measure.current = callback; }}
-      onComplete={() => { report('completed'); activeBreathing.current = false; onQueueClientEvent('playback_done'); }} onStop={stopBreathing} />}
+      onComplete={() => { report('completed'); setActiveBreathing(false); onQueueClientEvent('playback_done'); }} onStop={stopBreathing} />}
   </section>;
 }

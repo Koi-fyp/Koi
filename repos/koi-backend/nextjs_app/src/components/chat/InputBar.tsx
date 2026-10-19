@@ -45,7 +45,7 @@ export default function InputBar({ onSend, disabled = false, inputRef, extra }: 
   const canSend = !disabled && value.trim().length > 0;
 
   return (
-    <div style={{ padding: '10px 16px 14px', background: '#ffe5d9', flexShrink: 0 }}>
+    <div style={{ padding: '10px 16px 14px', background: 'transparent', flexShrink: 0 }}>
       <div
         style={{
           display: 'flex',

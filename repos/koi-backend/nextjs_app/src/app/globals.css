@@ -715,3 +715,10 @@ select.neo-input {
   .report-page table, .report-page figure, .report-page section { break-inside: avoid; }
   .report-page details > :not(summary) { display: block !important; }
 }
+/* Adaptive page surfaces; palette values come from the memory-only environment. */
+.environment-background {
+  transition: background-color 1.8s ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .environment-background { transition: none; }
+}

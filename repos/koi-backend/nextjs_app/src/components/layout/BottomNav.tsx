@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ModeSelector from './ModeSelector';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 interface IconProps { active: boolean }
 
@@ -74,9 +75,10 @@ const TABS = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const environment = useEnvironment('chat');
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 px-4 py-2 bg-[#ffe5d9]">
+    <nav className="fixed top-0 left-0 right-0 z-50 px-4 py-2 environment-background" style={{ backgroundColor: pathname === '/chat' ? environment.backgroundColor : '#FFE5D9' }}>
       <div className="max-w-6xl mx-auto flex items-center justify-between sm:justify-start bg-white border-[3px] border-black rounded-full shadow-[5px_5px_0px_0px_#06b6d4] px-1 sm:px-6 py-1 sm:py-2 gap-0 sm:gap-4">
         {/* Logo - Left (Now Interactive) */}
         <Link

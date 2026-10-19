@@ -13,6 +13,7 @@ import styles from './CompanionScene.module.css';
 import ExerciseDirector from './ExerciseDirector';
 import CrisisHandoffDialog from './CrisisHandoffDialog';
 import { riskInterventionForDisplay, type CrisisInterventionDisplay } from '@/lib/conversation/crisisContract';
+import { useEnvironment, useEnvironmentObservers } from '@/contexts/EnvironmentContext';
 
 export interface CompanionSceneProps {
   companionName: string;
@@ -57,6 +58,8 @@ export interface CompanionSceneProps {
 export default function CompanionScene({ companionName, modelUrl, messages, subtitle, subtitleLanguage,
   subtitleUpdating, onBack, onEnd, notice, actions, transcriptNotice, settings, emotion, emotionIntensity, conversationState, exposeController, composer, avatarEnabled = true, onAvatarFailure, viewportOffset = 0, backLabel, speechSource, onAvatarReady, serverEvents, onExerciseRequest, onQueueClientEvent, exerciseControlsDisabled, onCrisisResolution, crisisIntervention, consumeUiEvent, isHandoffResolved, voiceControl, micControl, cameraControl, cameraOverlay }: CompanionSceneProps) {
   const [textOpen, setTextOpen] = useState(false);
+  const environment = useEnvironment('call');
+  const environmentObservers = useEnvironmentObservers();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dismissedHandoffId, setDismissedHandoffId] = useState<number | null>(null);
   const [crisisSelectionQueued, setCrisisSelectionQueued] = useState(false);
@@ -76,8 +79,13 @@ export default function CompanionScene({ companionName, modelUrl, messages, subt
   const handoff = activeCrisis?.handoff;
   const handoffEventId = activeCrisis?.id ?? null;
   const riskForContent = highRiskEvent?.event.event === 'risk' ? riskInterventionForDisplay(highRiskEvent.event.data) : undefined;
+  const dialogOpen = !!handoff && !isHandoffResolved?.(handoff) && handoffEventId !== dismissedHandoffId && !!onCrisisResolution;
+  useEffect(() => {
+    environmentObservers?.dialog(dialogOpen);
+    return () => environmentObservers?.dialog(false);
+  }, [environmentObservers, dialogOpen]);
   useEffect(() => { if (serverEvents?.length === 0) setCrisisSelectionQueued(false); }, [serverEvents]);
-  return <main className={styles.scene} style={viewportOffset ? { height: `calc(100dvh - ${viewportOffset}px)` } : undefined} onKeyDown={(event) => {
+  return <main className={`${styles.scene} environment-background`} data-environment={environment.mood} style={{ backgroundColor: environment.backgroundColor, ...(viewportOffset ? { height: `calc(100dvh - ${viewportOffset}px)` } : {}) }} onKeyDown={(event) => {
     if (event.key === 'Escape') { if (textOpen) closeText(); setSettingsOpen(false); }
   }}>
     {/* The avatar owns ~70% of the height; every other control lives in the scrollable panel below. */}
@@ -100,10 +108,10 @@ export default function CompanionScene({ companionName, modelUrl, messages, subt
       <ConversationControls textOpen={textOpen || !avatarEnabled} textLocked={!avatarEnabled} toggleRef={toggleRef} onToggleText={() => setTextOpen((open) => !open)} onEnd={onEnd} voiceControl={voiceControl}
         micControl={micControl} cameraControl={cameraControl} />
       {serverEvents && onExerciseRequest && onQueueClientEvent && <ExerciseDirector consumeEvent={consumeUiEvent} events={serverEvents} disabled={exerciseControlsDisabled} interruptKey={handoffEventId ?? 0}
-        onRequest={onExerciseRequest} onQueueClientEvent={onQueueClientEvent} />}
+        onRequest={onExerciseRequest} onQueueClientEvent={onQueueClientEvent} onActivityChange={environmentObservers?.breathing} />}
       {notice && <div className={styles.notice}>{notice}</div>}
     </section>
-    <CrisisHandoffDialog open={!!handoff && !isHandoffResolved?.(handoff) && handoffEventId !== dismissedHandoffId && !!onCrisisResolution} content={crisisIntervention ?? riskForContent}
+    <CrisisHandoffDialog open={dialogOpen} content={crisisIntervention ?? riskForContent}
       onChoose={(path) => { if (handoff && handoffEventId !== null && onCrisisResolution) { onCrisisResolution(path, handoff); setDismissedHandoffId(handoffEventId); setCrisisSelectionQueued(true); } }} />
   </main>;
 }

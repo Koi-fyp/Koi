@@ -5,6 +5,7 @@ import { PersistentConversation } from '@/lib/conversation/PersistentConversatio
 import { sendMessage } from '@/lib/conversation/conversationService';
 import { syncQueue } from '@/lib/firestore/sync';
 import type { ChatAdapter } from '@/lib/conversation/chatContract';
+import { EnvironmentSession } from './EnvironmentContext';
 
 const Context = createContext<PersistentConversation | null>(null);
 export const useSharedConversation = () => {
@@ -49,5 +50,5 @@ function OwnedConversation({ uid, isLinked, children }: { uid: string; isLinked:
   // exercise UI bound to the previous session (their callbacks still point at the disposed session).
   return <Context.Provider value={manager}>{state.loading || !manager.session
     ? <div role="status" style={{ padding: 24 }}>{state.error ?? 'Restoring encrypted conversation...'}</div>
-    : <Fragment key={manager.session.conversationId}>{children}</Fragment>}</Context.Provider>;
+    : <Fragment key={manager.session.conversationId}><EnvironmentSession session={manager.session}>{children}</EnvironmentSession></Fragment>}</Context.Provider>;
 }

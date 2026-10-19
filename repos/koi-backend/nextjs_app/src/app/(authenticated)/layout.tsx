@@ -6,6 +6,7 @@ import BottomNav from '@/components/layout/BottomNav';
 import AuthPendingSpinner from '@/components/layout/AuthPendingSpinner';
 import ConversationProvider from '@/contexts/ConversationContext';
 import { InputModeProvider } from '@/contexts/InputModeContext';
+import { EnvironmentProvider } from '@/contexts/EnvironmentContext';
 
 export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -22,11 +23,11 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
   }
 
   return (
-    <InputModeProvider>
+    <EnvironmentProvider><InputModeProvider>
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100svh', paddingTop: '66px' }}>
         <BottomNav />
         <main style={{ flex: 1 }}><ConversationProvider>{children}</ConversationProvider></main>
       </div>
-    </InputModeProvider>
+    </InputModeProvider></EnvironmentProvider>
   );
 }

@@ -11,6 +11,7 @@ import { modeUsesCamera, modeUsesMic, useInputMode } from '@/contexts/InputModeC
 import MicButton from '@/components/voice/MicButton';
 import CameraPip from '@/components/camera/CameraPip';
 import ConversationProductControls from '@/components/chat/ConversationProductControls';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 function OfflineBanner() {
   const [offline, setOffline] = useState(false);
@@ -49,6 +50,7 @@ function OfflineBanner() {
 }
 
 export default function ChatPage() {
+  const environment = useEnvironment('chat');
   const { messages, isTyping, send, sendVoice, error, blocked, serverEvents = [] } = useChat();
   const { user, loading: authLoading } = useAuth();
   const { mode } = useInputMode();
@@ -72,8 +74,9 @@ export default function ChatPage() {
 
   return (
     <div
-      className="chatLayout"
-      style={{ height: 'calc(100svh - 66px)', overflow: 'hidden', background: '#ffe5d9' }}
+      className="chatLayout environment-background"
+      data-environment={environment.mood}
+      style={{ height: 'calc(100svh - 66px)', overflow: 'hidden', backgroundColor: environment.backgroundColor }}
     >
       {/* ── Chat column (left on desktop, bottom on mobile) ── */}
       <div
