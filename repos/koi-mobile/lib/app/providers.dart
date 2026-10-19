@@ -2,6 +2,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../account/account_providers.dart' show accountSecretStoreProvider;
 import '../chat/backend_warmup.dart';
 import '../chat/chat_api.dart';
 import '../chat/chat_controller.dart';
@@ -145,6 +146,7 @@ final messageCipherProvider = Provider<MessageCipher>(
 /// Firestore-backed resolver when Firebase is configured.
 final cryptoContextResolverProvider = Provider<CryptoContextResolver>(
   (ref) => CryptoContextResolver(
+    anonymousSecret: ref.read(accountSecretStoreProvider).anonymousSecret,
     fetchSalt: (uid) async => throw StateError('Firestore is not connected'),
     createSaltOnce: (uid, candidate) async =>
         throw StateError('Firestore is not connected'),
@@ -153,16 +155,24 @@ final cryptoContextResolverProvider = Provider<CryptoContextResolver>(
   ),
 );
 
-/// Q4: the correct two-argument form. Linked users would also need their
-/// password here; there is no unlock step yet (AuthContext.tsx header).
+/// Q4: the correct two-argument form. MOB-1: a linked user's secret is
+/// the account password cached per uid (koi_linked_secret_{uid}); the root
+/// shows the unlock screen until it is there.
 final cryptoContextGetterProvider = Provider<CryptoContextGetter>(
-  (ref) =>
-      (uid) => ref
-          .read(cryptoContextResolverProvider)
-          .getActiveCryptoContext(
-            uid,
-            AuthState(isLinked: ref.read(authServiceProvider).isLinked),
+  (ref) => (uid) async {
+    final linked = ref.read(authServiceProvider).isLinked;
+    return ref
+        .read(cryptoContextResolverProvider)
+        .getActiveCryptoContext(
+          uid,
+          AuthState(
+            isLinked: linked,
+            linkedSecret: linked
+                ? await ref.read(accountSecretStoreProvider).linkedSecret(uid)
+                : null,
           ),
+        );
+  },
 );
 
 final conversationServiceProvider = Provider<ConversationService>((ref) {

@@ -28,6 +28,7 @@ class KoiUser {
     required this.uid,
     required this.isAnonymous,
     this.providerIds = const [],
+    this.email,
   });
 
   final String uid;
@@ -37,6 +38,58 @@ class KoiUser {
 
   /// Firebase `user.providerData.map((p) => p.providerId)`.
   final List<String> providerIds;
+
+  /// Firebase `user.email` (registered accounts only). Shown only on the
+  /// account's own Settings card; never logged.
+  final String? email;
+}
+
+/// Why an account call (MOB-1: create, link, sign in, re-authenticate)
+/// failed, from the Firebase error code.
+enum AccountAuthError {
+  /// `email-already-in-use` / `credential-already-in-use`: the email has
+  /// its own KOI account (credential collision while linking).
+  emailInUse,
+
+  /// `wrong-password` / `invalid-credential` / `user-not-found` /
+  /// `user-mismatch` / `invalid-login-credentials`.
+  wrongCredentials,
+  weakPassword,
+  invalidEmail,
+  network,
+  tooManyRequests,
+  requiresRecentLogin,
+
+  /// Email/password sign-in is turned off for the project, or this auth
+  /// service cannot create accounts.
+  notSupported,
+  unknown;
+
+  static AccountAuthError fromFirebaseCode(String code) => switch (code) {
+    'email-already-in-use' ||
+    'credential-already-in-use' ||
+    'provider-already-linked' => emailInUse,
+    'wrong-password' ||
+    'invalid-credential' ||
+    'invalid-login-credentials' ||
+    'user-not-found' ||
+    'user-mismatch' => wrongCredentials,
+    'weak-password' => weakPassword,
+    'invalid-email' || 'missing-email' => invalidEmail,
+    'network-request-failed' => network,
+    'too-many-requests' => tooManyRequests,
+    'requires-recent-login' => requiresRecentLogin,
+    'operation-not-allowed' || 'admin-restricted-operation' => notSupported,
+    _ => unknown,
+  };
+}
+
+class AccountAuthException implements Exception {
+  const AccountAuthException(this.error);
+  final AccountAuthError error;
+
+  @override
+  String toString() => 'AccountAuthException(${error.name})';
 }
 
 /// Mobile equivalent of AuthContext.tsx's `AuthContextType` (minus
@@ -77,4 +130,33 @@ abstract class AuthService extends ChangeNotifier {
 
   Future<void> signInAnonymously();
   Future<void> signOut();
+
+  // ── MOB-1 accounts. Defaults keep older implementations (tests' fakes)
+  // compiling; FirebaseAuthService and the debug stand-in override them.
+  // Unlike signInAnonymously/signOut these THROW [AccountAuthException]
+  // and never touch `loading` (the root would swap to the splash and
+  // unmount the account form).
+
+  /// Fires when the ID token changes (Firebase idTokenChanges: refresh,
+  /// sign-in, sign-out). Capabilities are re-checked on it.
+  Stream<void> get tokenChanges => const Stream<void>.empty();
+
+  /// A fresh ID token (Firebase getIdToken(true)), used after a 401.
+  Future<String> refreshIdToken() => getIdToken();
+
+  /// Anonymous → registered with Firebase linkWithCredential: SAME uid.
+  Future<void> linkWithEmail(String email, String password) =>
+      Future.error(const AccountAuthException(AccountAuthError.notSupported));
+
+  /// Signs in to an EXISTING registered account (a different uid).
+  Future<void> signInWithEmail(String email, String password) =>
+      Future.error(const AccountAuthException(AccountAuthError.notSupported));
+
+  /// Signed out → a new registered account.
+  Future<void> createAccountWithEmail(String email, String password) =>
+      Future.error(const AccountAuthException(AccountAuthError.notSupported));
+
+  /// Proves the signed-in registered user knows [password] (unlock, claim).
+  Future<void> reauthenticate(String password) =>
+      Future.error(const AccountAuthException(AccountAuthError.notSupported));
 }

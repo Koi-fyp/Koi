@@ -252,6 +252,38 @@ class PersistentSyncQueue implements SyncQueue {
     await _save(remaining);
   });
 
+  /// MOB-1 migration: writes [item] now and reports whether the server
+  /// confirmed it (true). On failure (or not ready / another uid) it is
+  /// kept queued like [enqueueAsync] and false is returned.
+  Future<bool> writeNow(SyncItem item) async {
+    if (!remote.isReady || !remote.owns(item)) {
+      await _append(item);
+      return false;
+    }
+    try {
+      await remote.write(item);
+      return true;
+    } catch (e) {
+      debugPrint('[KOI] sync: write kept queued (${syncFailureReason(e)})');
+      await _append(item);
+      return false;
+    }
+  }
+
+  /// MOB-1 migration: drops queued items matching [test] (e.g. an old
+  /// ciphertext of a re-encrypted message, so it can never overwrite the
+  /// new one), and returns how many were dropped.
+  Future<int> removeWhere(bool Function(SyncItem item) test) =>
+      _locked(() async {
+        final loaded = _load();
+        final kept = [
+          for (final i in loaded)
+            if (!test(i)) i,
+        ];
+        await _save(kept);
+        return loaded.length - kept.length;
+      });
+
   /// sync.ts getPending().
   List<SyncItem> get pending => _load();
 

@@ -166,6 +166,7 @@ class CryptoContextResolver {
     FlutterSecureStorage? storage,
     KoiCryptoService? crypto,
     SaltCache? saltCache,
+    this.anonymousSecret,
   })  : saltCache = saltCache ?? SaltCache(storage: storage),
         _crypto = crypto ??
             KoiCryptoService(
@@ -177,6 +178,10 @@ class CryptoContextResolver {
   final SyncQueue syncQueue;
   final SaltCache saltCache;
   final KoiCryptoService _crypto;
+
+  /// MOB-1: the per-uid anonymous secret (account/secret_store.dart). When
+  /// null, flutter_lib's device-wide secret is used, as before.
+  final Future<String> Function(String uid)? anonymousSecret;
 
   /// crypto.ts getActiveCryptoContext(uid, authState). Makes exactly ONE
   /// attempt; use [resolveSaltWithRetry] from UI code.
@@ -196,7 +201,8 @@ class CryptoContextResolver {
     }
     final secret = authState.isLinked
         ? linkedSecret!
-        : await _crypto.getOrCreateAnonymousSecret();
+        : await (anonymousSecret?.call(uid) ??
+            _crypto.getOrCreateAnonymousSecret());
 
     // 1. Local cache first.
     final cached = await saltCache.read(uid);
@@ -248,6 +254,25 @@ class CryptoContextResolver {
     }
     await saltCache.write(uid, saltB64);
     return saltB64;
+  }
+
+  /// MOB-1: a NEW registered account (created signed-out, so it never had
+  /// an anonymous phase) needs a salt before its first encrypt. Same
+  /// create-once as an anonymous user's first salt. Returns the salt.
+  ///
+  /// [queueOnFailure] false (Firebase configured): a failed create-once
+  /// THROWS instead of caching a local salt, because a registered account
+  /// must never end up with a salt the server does not hold.
+  Future<String> ensureSaltCreated(
+    String uid, {
+    bool queueOnFailure = true,
+  }) async {
+    final cached = await saltCache.read(uid);
+    if (cached != null) return cached;
+    if (queueOnFailure) return _createOrQueueSalt(uid);
+    final salt = await createSaltOnce(uid, _crypto.generateSalt());
+    await saltCache.write(uid, salt);
+    return salt;
   }
 
   /// Run right after sign-in when online, so the salt is in Firestore before

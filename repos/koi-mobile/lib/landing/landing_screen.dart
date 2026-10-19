@@ -3,6 +3,8 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../account/account_auth_screen.dart';
+import '../account/account_widgets.dart' show pushKoiPage;
 import '../app/providers.dart';
 import '../core/auth/auth_service.dart';
 import '../onboarding/step_layout.dart';
@@ -365,6 +367,41 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                               color: _gray400,
                               height: 20 / 14,
                             ),
+                          ),
+                          // MOB-1 (mobile-only): registered accounts. The
+                          // KOI experience above stays the same without one.
+                          const SizedBox(height: 16),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              NeoButton(
+                                key: const Key('landing-sign-in'),
+                                variant: NeoButtonVariant.ghost,
+                                onPressed: isLoading
+                                    ? null
+                                    : () => pushKoiPage<void>(
+                                        context,
+                                        const AccountAuthScreen(
+                                          mode: AccountFormMode.signIn,
+                                        ),
+                                      ),
+                                child: const Text('Sign in'),
+                              ),
+                              NeoButton(
+                                key: const Key('landing-create-account'),
+                                variant: NeoButtonVariant.ghost,
+                                onPressed: isLoading
+                                    ? null
+                                    : () => pushKoiPage<void>(
+                                        context,
+                                        const AccountAuthScreen(
+                                          mode: AccountFormMode.create,
+                                        ),
+                                      ),
+                                child: const Text('Create account'),
+                              ),
+                            ],
                           ),
                         ],
                       ),

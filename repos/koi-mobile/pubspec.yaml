@@ -107,6 +107,10 @@ flutter:
     # Bricolage Grotesque + DM Sans (SIL OFL 1.1), bundled so google_fonts
     # works offline. Exact files google_fonts 6.3.3 fetches (hash-verified).
     - assets/google_fonts/
+    # MOB-1 questionnaire pictures: the shared asset manifest (PLACEHOLDER
+    # "v0-placeholder" shapes from tool/make_questionnaire_placeholders.mjs
+    # until the platform ships the approved, versioned manifest).
+    - assets/questionnaire_assets/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,0 +1,18 @@
+{
+  "manifest_version": "v0-placeholder",
+  "note": "PLACEHOLDER shapes for development and tests only (tool/make_questionnaire_placeholders.mjs). Not approved illustrations. Replace with the platform's shared, versioned asset manifest.",
+  "assets": {
+    "placeholder.circle.v1": {
+      "file": "placeholder_circle_v1.png",
+      "alt": {"en": "Blue circle", "ur": "نیلا دائرہ", "roman_ur": "Neela daira"}
+    },
+    "placeholder.square.v1": {
+      "file": "placeholder_square_v1.png",
+      "alt": {"en": "Yellow square", "ur": "پیلا چوکور", "roman_ur": "Peela chokor"}
+    },
+    "placeholder.triangle.v1": {
+      "file": "placeholder_triangle_v1.png",
+      "alt": {"en": "Green triangle", "ur": "سبز تکون", "roman_ur": "Sabz tikon"}
+    }
+  }
+}

@@ -21,13 +21,27 @@ abstract interface class AuthBackend {
   Future<String> getIdToken();
 }
 
+/// MOB-1 account calls. A separate interface so older [AuthBackend] fakes
+/// keep compiling; [FirebaseAuthService] uses it when the backend has it.
+abstract interface class AccountAuthBackend {
+  /// Firebase idTokenChanges().
+  Stream<void> get idTokenChanges;
+  Future<String> refreshIdToken();
+
+  /// currentUser.linkWithCredential(EmailAuthProvider.credential(...)).
+  Future<KoiUser> linkWithEmail(String email, String password);
+  Future<KoiUser> signInWithEmail(String email, String password);
+  Future<KoiUser> createAccountWithEmail(String email, String password);
+  Future<void> reauthenticate(String password);
+}
+
 /// Firebase error codes meaning "anonymous sign-in is turned off".
 const Set<String> anonymousDisabledCodes = {
   'operation-not-allowed',
   'admin-restricted-operation',
 };
 
-class FirebaseAuthBackend implements AuthBackend {
+class FirebaseAuthBackend implements AuthBackend, AccountAuthBackend {
   FirebaseAuthBackend([fb.FirebaseAuth? auth])
     : _auth = auth ?? fb.FirebaseAuth.instance;
 
@@ -39,6 +53,7 @@ class FirebaseAuthBackend implements AuthBackend {
           uid: u.uid,
           isAnonymous: u.isAnonymous,
           providerIds: [for (final p in u.providerData) p.providerId],
+          email: u.email,
         );
 
   @override
@@ -71,6 +86,74 @@ class FirebaseAuthBackend implements AuthBackend {
     if (token == null) throw StateError('No ID token');
     return token;
   }
+
+  @override
+  Stream<void> get idTokenChanges => _auth.idTokenChanges().map((_) {});
+
+  @override
+  Future<String> refreshIdToken() async {
+    final token = await _auth.currentUser?.getIdToken(true);
+    if (token == null) throw StateError('No ID token');
+    return token;
+  }
+
+  /// Runs a Firebase account call, mapping FirebaseAuthException codes.
+  static Future<T> _mapped<T>(Future<T> Function() body) async {
+    try {
+      return await body();
+    } on fb.FirebaseAuthException catch (e) {
+      throw AccountAuthException(AccountAuthError.fromFirebaseCode(e.code));
+    }
+  }
+
+  KoiUser _current() {
+    final u = _toKoi(_auth.currentUser);
+    if (u == null) throw StateError('No user after the account call');
+    return u;
+  }
+
+  @override
+  Future<KoiUser> linkWithEmail(String email, String password) =>
+      _mapped(() async {
+        final user = _auth.currentUser;
+        if (user == null) throw StateError('No user to link');
+        await user.linkWithCredential(
+          fb.EmailAuthProvider.credential(email: email, password: password),
+        );
+        // Provider data changes in place; reload so it is current.
+        await _auth.currentUser?.reload();
+        return _current();
+      });
+
+  @override
+  Future<KoiUser> signInWithEmail(String email, String password) => _mapped(
+    () async {
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      return _current();
+    },
+  );
+
+  @override
+  Future<KoiUser> createAccountWithEmail(String email, String password) =>
+      _mapped(() async {
+        await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        return _current();
+      });
+
+  @override
+  Future<void> reauthenticate(String password) => _mapped(() async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw const AccountAuthException(AccountAuthError.wrongCredentials);
+    }
+    await user.reauthenticateWithCredential(
+      fb.EmailAuthProvider.credential(email: email, password: password),
+    );
+  });
 }
 
 /// [AuthService] backed by Firebase anonymous sign-in. Firebase persists the
@@ -120,6 +203,45 @@ class FirebaseAuthService extends AuthService {
 
   @override
   Future<String> getIdToken() => _backend.getIdToken();
+
+  AccountAuthBackend get _account => _backend is AccountAuthBackend
+      ? _backend as AccountAuthBackend
+      : throw const AccountAuthException(AccountAuthError.notSupported);
+
+  @override
+  Stream<void> get tokenChanges => _backend is AccountAuthBackend
+      ? (_backend as AccountAuthBackend).idTokenChanges
+      : const Stream<void>.empty();
+
+  @override
+  Future<String> refreshIdToken() => _backend is AccountAuthBackend
+      ? (_backend as AccountAuthBackend).refreshIdToken()
+      : _backend.getIdToken();
+
+  /// linkWithCredential keeps the uid and does NOT fire authStateChanges,
+  /// so the linked user is published here.
+  @override
+  Future<void> linkWithEmail(String email, String password) async {
+    final linked = await _account.linkWithEmail(email, password);
+    _user = linked;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> signInWithEmail(String email, String password) async {
+    _user = await _account.signInWithEmail(email, password);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> createAccountWithEmail(String email, String password) async {
+    _user = await _account.createAccountWithEmail(email, password);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> reauthenticate(String password) =>
+      _account.reauthenticate(password);
 
   @override
   Future<void> signInAnonymously() =>

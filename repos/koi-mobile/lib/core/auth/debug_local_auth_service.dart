@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
+
+import 'package:cryptography/cryptography.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -53,7 +56,7 @@ class DebugLocalAuthService extends AuthService {
     try {
       final store = _store ??= await _openStore();
       final uid = store.get(uidKey);
-      _user = uid == null ? null : KoiUser(uid: uid, isAnonymous: true);
+      _user = uid == null ? null : _userFor(store, uid);
     } catch (e) {
       _error = e;
     } finally {
@@ -89,6 +92,96 @@ class DebugLocalAuthService extends AuthService {
     } finally {
       _loading = false;
       notifyListeners();
+    }
+  }
+
+  // ── MOB-1 accounts (debug stand-in only): fake email accounts in the
+  // same local box, so the account flows can be tried without Firebase.
+  // Passwords are stored only as a SHA-256 hash.
+
+  static String _accountKey(String email) =>
+      'account_${email.trim().toLowerCase()}';
+  static String _emailKey(String uid) => 'email_$uid';
+
+  KoiUser _userFor(KeyValueStore store, String uid) {
+    final email = store.get(_emailKey(uid));
+    return email == null
+        ? KoiUser(uid: uid, isAnonymous: true)
+        : KoiUser(
+            uid: uid,
+            isAnonymous: false,
+            providerIds: const ['password'],
+            email: email,
+          );
+  }
+
+  static Future<String> _hash(String password) async =>
+      base64Encode((await Sha256().hash(utf8.encode(password))).bytes);
+
+  Future<void> _register(String uid, String email, String password) async {
+    final store = _store ??= await _openStore();
+    if (password.length < 6) {
+      throw const AccountAuthException(AccountAuthError.weakPassword);
+    }
+    if (!email.contains('@')) {
+      throw const AccountAuthException(AccountAuthError.invalidEmail);
+    }
+    if (store.get(_accountKey(email)) != null) {
+      throw const AccountAuthException(AccountAuthError.emailInUse);
+    }
+    await store.put(
+      _accountKey(email),
+      jsonEncode({'uid': uid, 'hash': await _hash(password)}),
+    );
+    await store.put(_emailKey(uid), email.trim());
+    await store.put(uidKey, uid);
+    _user = _userFor(store, uid);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> linkWithEmail(String email, String password) async {
+    final u = _user;
+    if (u == null || !u.isAnonymous) {
+      throw const AccountAuthException(AccountAuthError.unknown);
+    }
+    await _register(u.uid, email, password);
+  }
+
+  @override
+  Future<void> createAccountWithEmail(String email, String password) =>
+      _register('debug-${_randomHex(16)}', email, password);
+
+  Future<String> _check(String email, String password) async {
+    final store = _store ??= await _openStore();
+    final raw = store.get(_accountKey(email));
+    if (raw == null) {
+      throw const AccountAuthException(AccountAuthError.wrongCredentials);
+    }
+    final j = jsonDecode(raw) as Map;
+    if (j['hash'] != await _hash(password)) {
+      throw const AccountAuthException(AccountAuthError.wrongCredentials);
+    }
+    return j['uid'] as String;
+  }
+
+  @override
+  Future<void> signInWithEmail(String email, String password) async {
+    final uid = await _check(email, password);
+    final store = _store ??= await _openStore();
+    await store.put(uidKey, uid);
+    _user = _userFor(store, uid);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> reauthenticate(String password) async {
+    final email = _user?.email;
+    if (email == null) {
+      throw const AccountAuthException(AccountAuthError.wrongCredentials);
+    }
+    if (await _check(email, password) != _user?.uid) {
+      throw const AccountAuthException(AccountAuthError.wrongCredentials);
     }
   }
 

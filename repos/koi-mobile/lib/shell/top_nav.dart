@@ -10,7 +10,9 @@ import 'nav_icons.dart';
 enum KoiTab {
   chat('Chat', KoiNavGlyph.chat), // href '/chat'
   progress('Progress', KoiNavGlyph.progress), // href '/progress'
-  settings('Settings', KoiNavGlyph.settings); // href '/settings'
+  settings('Settings', KoiNavGlyph.settings), // href '/settings'
+  /// MOB-1, General / Patient only (mobile-only; no web tab).
+  care('Care', KoiNavGlyph.care);
 
   const KoiTab(this.label, this.glyph);
   final String label;
@@ -42,7 +44,18 @@ class KoiTopNav extends StatelessWidget {
     required this.onSelect,
     required this.onLogoTap,
     this.background = KoiColors.background,
+    this.tabs = defaultTabs,
   });
+
+  /// The web tabs. The shell adds [KoiTab.care] only when the backend
+  /// confirmed a Care area for the current account.
+  static const List<KoiTab> defaultTabs = [
+    KoiTab.chat,
+    KoiTab.progress,
+    KoiTab.settings,
+  ];
+
+  final List<KoiTab> tabs;
 
   final KoiTab current;
   final ValueChanged<KoiTab> onSelect;
@@ -91,7 +104,7 @@ class KoiTopNav extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    for (final tab in KoiTab.values)
+                    for (final tab in tabs)
                       _TabLink(
                         tab: tab,
                         active: tab == current,

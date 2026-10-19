@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../account/account_settings.dart';
 import '../app/app_version.dart';
 import '../app/providers.dart';
 import '../avatar/avatar_providers.dart';
@@ -331,6 +332,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       SettingsCard(
         child: Column(
           children: [
+            // MOB-1: create / sign in / sign out (mobile-only rows).
+            const AccountSettingsRows(),
             SettingsRow(
               key: const Key('row-avatar'),
               icon: '👤',

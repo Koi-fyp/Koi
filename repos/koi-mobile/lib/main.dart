@@ -9,6 +9,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:koi_flutter_lib/storage/hive_manager.dart';
 import 'package:koi_flutter_lib/storage/repositories/user_repository.dart';
 
+import 'account/account_providers.dart';
+import 'account/secret_store.dart';
 import 'app/providers.dart';
 import 'app/root_router.dart';
 import 'chat/message_record.dart';
@@ -30,6 +32,8 @@ import 'checkins/checkin_store.dart';
 import 'dev/design_gallery.dart';
 import 'modes/input_mode.dart';
 import 'onboarding/onboarding_service.dart';
+import 'questionnaires/draft_store.dart';
+import 'questionnaires/questionnaire_providers.dart';
 import 'settings/settings_prefs.dart';
 import 'theme/koi_theme.dart';
 import 'voice_input/mic_controller.dart';
@@ -86,6 +90,9 @@ Future<void> main() async {
   );
   final messages = await HiveMessageStore.open();
   final checkIns = await HiveCheckInBox.open();
+  final questionnaireDrafts = await HiveDraftBox.open();
+  // MOB-1: Client-Side Encryption (CSE) at rest secrets, one set per uid.
+  final secrets = AccountSecretStore(const FlutterSecureKv());
   final online = ConnectivityOnlineStatus();
 
   final auth = firestore != null
@@ -115,6 +122,7 @@ Future<void> main() async {
   final firebaseOverrides = <Override>[];
   if (userDocs != null) {
     final resolver = CryptoContextResolver(
+      anonymousSecret: secrets.anonymousSecret,
       fetchSalt: userDocs.fetchSalt,
       createSaltOnce: userDocs.createSaltOnce,
       isOnline: online.check,
@@ -134,6 +142,7 @@ Future<void> main() async {
     firebaseOverrides.addAll([
       cryptoContextResolverProvider.overrideWithValue(resolver),
       profileSyncQueueProvider.overrideWithValue(syncQueue),
+      firebaseConfiguredProvider.overrideWithValue(true),
     ]);
   }
 
@@ -152,6 +161,9 @@ Future<void> main() async {
         onlineStatusProvider.overrideWithValue(online),
         messageStoreProvider.overrideWithValue(messages),
         syncQueueProvider.overrideWithValue(syncQueue),
+        accountSecretStoreProvider.overrideWithValue(secrets),
+        localPrefsProvider.overrideWithValue(localPrefs),
+        draftBoxProvider.overrideWithValue(questionnaireDrafts),
         ...firebaseOverrides,
       ],
       child: const KoiApp(),

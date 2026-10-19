@@ -33,16 +33,17 @@ class MessageRecord {
   final num emotionConfidence;
   final bool synced;
 
-  MessageRecord copyWith({String? content}) => MessageRecord(
-    id: id,
-    conversationId: conversationId,
-    sender: sender,
-    content: content ?? this.content,
-    timestamp: timestamp,
-    emotion: emotion,
-    emotionConfidence: emotionConfidence,
-    synced: synced,
-  );
+  MessageRecord copyWith({String? content, String? conversationId}) =>
+      MessageRecord(
+        id: id,
+        conversationId: conversationId ?? this.conversationId,
+        sender: sender,
+        content: content ?? this.content,
+        timestamp: timestamp,
+        emotion: emotion,
+        emotionConfidence: emotionConfidence,
+        synced: synced,
+      );
 
   /// JSON with web's field names. The timestamp is an ISO-8601 string, which
   /// is also what web's sync.ts ends up queueing (JSON.stringify of a Date).
@@ -73,6 +74,10 @@ class MessageRecord {
 abstract class MessageStore {
   Future<void> put(MessageRecord record);
   Future<List<MessageRecord>> byConversation(String conversationId);
+
+  /// MOB-1: removes one record (a claimed anonymous record, only after the
+  /// server acknowledged its copy).
+  Future<void> delete(String id);
 }
 
 /// Q9 (decided 2026-10-13): a koi-mobile Hive box, because flutter_lib's
@@ -91,6 +96,9 @@ class HiveMessageStore implements MessageStore {
   @override
   Future<void> put(MessageRecord record) =>
       _box.put(record.id, jsonEncode(record.toJson()));
+
+  @override
+  Future<void> delete(String id) => _box.delete(id);
 
   /// web: `.where('conversationId').equals(id).sortBy('timestamp')`
   @override
@@ -117,6 +125,9 @@ class MemoryMessageStore implements MessageStore {
 
   @override
   Future<void> put(MessageRecord record) async => rows[record.id] = record;
+
+  @override
+  Future<void> delete(String id) async => rows.remove(id);
 
   @override
   Future<List<MessageRecord>> byConversation(String conversationId) async =>
