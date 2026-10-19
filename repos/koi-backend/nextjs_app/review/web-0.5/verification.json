@@ -1,0 +1,28 @@
+{
+  "observed_at": "2026-10-19T14:13:44.313443+00:00",
+  "contract_validation": {
+    "passed": true,
+    "schemas": 96,
+    "operations": 47,
+    "valid_fixtures": 13,
+    "rejected_fixtures": 14,
+    "patient_boundary_schemas": 25,
+    "scope": "Draft-07 fixture validation, reference integrity, DTO boundary checks, API metadata and optional freeze hashes; no runtime security tests"
+  },
+  "existing_tests": {
+    "command": "npm test -- --runInBand --silent --runTestsByPath src/__tests__/auth.test.tsx src/__tests__/firebase.test.ts src/__tests__/sync-queue.test.ts src/__tests__/onboarding.test.tsx src/__tests__/user-preferences.test.tsx src/__tests__/message-sync-payload.test.ts",
+    "suites_passed": 6,
+    "tests_passed": 36,
+    "runtime": "Jest mocks/local storage only; no live authentication or Firestore"
+  },
+  "existing_source_hashes_preserved": true,
+  "main_source_files_checked": 19,
+  "alternate_source_files_checked": 2,
+  "tracked_changes": [],
+  "new_file_whitespace_check": "pass",
+  "deferred_acceptance_cases": 25,
+  "live_rules_verified": false,
+  "live_backend_verified": false,
+  "flutter_parity_verified": false,
+  "committed_or_deployed": false
+}

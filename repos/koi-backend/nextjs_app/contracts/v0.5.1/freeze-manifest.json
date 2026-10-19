@@ -1,0 +1,12 @@
+{
+  "contract_version": "0.5.1",
+  "status": "implemented_additive_package_pending_cross_track_acknowledgement",
+  "sha256": {
+    "contracts.schema.json": "1e8ae602a9141d2126dd601e92a6a322ada6780debd89c293219b3c6b014b86c",
+    "openapi.json": "d4be617aad1205541f0420cfbd4d0e952faa95c18c3858af5b1a84c64815475f",
+    "fixtures.json": "025e9dbe15aa5004d366dc332fac484ab548a9554d6ad67e0f799327475cddda",
+    "CHANGELOG.md": "ee9d5af5433d6f50ebccca5c52e977f9a363df35e860f6765afd726427709d4e",
+    "semantics.md": "fe7d37971c450b059f02a42623d5cbd54fba5dca2fa9b5fccd6b893ed43d95e8",
+    "authorization-matrix.md": "390988b44d370d7df8492ad73b3b1efae825b925ed24cae919efe6ebd971f515"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "manifest_version": 1,
+  "assets": [
+    {
+      "reference": {
+        "asset_id": "shape_circle",
+        "version": 1,
+        "sha256": "cc6048d1e359dcfabb1f64b0443f21c9a88f2a9b4793cc9bd14bc21ced37bd66"
+      },
+      "accessibility_label": {
+        "en": "Circle",
+        "ur": "?????",
+        "ur-Latn": "Daira"
+      },
+      "intended_meaning": {
+        "en": "A neutral geometric circle. No clinical interpretation.",
+        "ur": "??? ???? ????? ???",
+        "ur-Latn": "Aik saada handasi shakal"
+      },
+      "web_path": "/illustrations/web1/circle-v1.svg",
+      "flutter_path": "assets/illustrations/web1/circle-v1.svg"
+    },
+    {
+      "reference": {
+        "asset_id": "shape_square",
+        "version": 1,
+        "sha256": "69dbfb0bb14a32a333acc4fdcb39169bc9011e0414a052b32b05963401cf0a50"
+      },
+      "accessibility_label": {
+        "en": "Square",
+        "ur": "????",
+        "ur-Latn": "Murabba"
+      },
+      "intended_meaning": {
+        "en": "A neutral geometric square. No clinical interpretation.",
+        "ur": "??? ???? ????? ???",
+        "ur-Latn": "Aik saada handasi shakal"
+      },
+      "web_path": "/illustrations/web1/square-v1.svg",
+      "flutter_path": "assets/illustrations/web1/square-v1.svg"
+    },
+    {
+      "reference": {
+        "asset_id": "shape_triangle",
+        "version": 1,
+        "sha256": "af72edba6fe374f0e5e8e0c66244cf12b79538c0ed46828be30530ea3431d998"
+      },
+      "accessibility_label": {
+        "en": "Triangle",
+        "ur": "????",
+        "ur-Latn": "Musallas"
+      },
+      "intended_meaning": {
+        "en": "A neutral geometric triangle. No clinical interpretation.",
+        "ur": "??? ???? ????? ???",
+        "ur-Latn": "Aik saada handasi shakal"
+      },
+      "web_path": "/illustrations/web1/triangle-v1.svg",
+      "flutter_path": "assets/illustrations/web1/triangle-v1.svg"
+    }
+  ]
+}

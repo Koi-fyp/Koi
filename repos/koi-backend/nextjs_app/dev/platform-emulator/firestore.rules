@@ -1,0 +1,7 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Isolated local emulator only. Platform access uses authenticated backend handlers.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

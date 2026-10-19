@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-19",
+  "main_head": "1390f1b3da96270ad47d8edfa06510ed838add77",
+  "alternate_worktree_head_prefix": "2923070",
+  "source_sha256": {
+    "src/contexts/AuthContext.tsx": "3fec85adf309b156e5f88d5dc662b65ac7514c1d684b0481edbd867db6ccc0ba",
+    "src/app/api/auth/anonymous/route.ts": "0cf3ebc8ee0f432378596a2b7c88009771a4ce4d7a0bf2c39c78dadd4e44d2d2",
+    "src/app/api/auth/link-email/route.ts": "caab5e085b629b8098190395ac3569d4f346a3f9a28d697bf706f9ec10952d27",
+    "src/lib/auth/anonymousSignInMode.ts": "7ea3a09fa11335329f1a8c9a85a6278439e45c122ab7c4c1d62e461e24e93ea8",
+    "src/lib/firebase.ts": "06e234b5905573e97211a06cd1109d1beeda9595a9dc41a37beca3a8308f4742",
+    "src/lib/firebase-admin.ts": "31d83151222def5179b05f96b9c9b77ce116edf7ec1b8ad34804f15ebf7a8391",
+    "src/lib/db.ts": "708e114bb0516a6d4f51214e4e31edf2022d4947c5d9ab945841713521b592ae",
+    "src/lib/firestore/sync.ts": "cec346250c2288c238e3bf2dc63c5d2a4d50d184ab256d1408b82c69f5e53165",
+    "src/lib/firestore/messageSync.ts": "63f2542138cfd869377d851fa746ad85460988aa60b9f25839c4a51ffbed7044",
+    "src/lib/crypto.ts": "3d298edcff6e1312cefbcf255af3a4cab3ef87371059b8d2b5060ac7ce5d2512",
+    "src/lib/onboarding.ts": "683b6b10e3a294bdce5c8ba134a5e70587e24ef045d20e77e4c44ea95e700170",
+    "src/lib/conversation/chatContract.ts": "1be1ff87bccb59137a3b1487a41df5ec9da13308708f3be3dbcacb2066953429",
+    "src/lib/conversation/jsonChatTransport.ts": "fd387332ae2ba63b1429612d898079c49aaf54db1f7b10e2fa433769c78d4739",
+    "src/components/layout/AuthPendingSpinner.tsx": "026345cb0f7fbc4e7380fff3c16ba29aba56b2e8c3636c41aa60404a1db5b76d",
+    "src/app/globals.css": "0ea43a235e200682b187e7203f2d1eb3e0b275ef1ca871e3d53183395b36e81d",
+    "tailwind.config.ts": "a9128e64c0c6d2609dd6d436faac460d1775a02b884bf162767c342d292102cc",
+    "../firestore.rules": "1573dd132237f98e19e6a1fb5bee46f348eceefbbd3c7075ea716e522d227fa9",
+    "../firebase.json": "b9f4948f5cfb04d930150e07b357f2dcf5b0cddc4be50ca2b19b3858c97bcac4",
+    "../flutter_lib/lib/services/auth_service.dart": "12dfd10da498e647330c5938f3275055b3db5df6b1741d99702aecb1a9cf49a4"
+  },
+  "alternate_modal_source_sha256": {
+    "C:\\Users\\PMYLS\\Koi-ahmad-contract\\repos\\koi-ai-engine\\deploy\\modal\\chat_app.py": "eaf36a7e0f49ec7fe52221d0fb9426f1ac39629dc216775e82f453b48d795317",
+    "C:\\Users\\PMYLS\\Koi-ahmad-contract\\repos\\koi-ai-engine\\deploy\\modal\\chat_core.py": "30e7da74ce35ee902ca232b82eef3989edfcd3785679ef30a6b349b7bff294b0"
+  },
+  "deployment_probes": {
+    "runs": 2,
+    "second_run": "outside sandbox; approved read-only public GET",
+    "health": "TimeoutError both runs",
+    "openapi": "TimeoutError both runs",
+    "firebase_hosting_init": "404 both runs",
+    "interpretation": "No live backend or rules verification; no authenticated chat request made"
+  },
+  "frontend_companion_source_observation": {
+    "request_path": "/api/v1/chat",
+    "response_media_type_required": "text/event-stream",
+    "recognized_events": [
+      "transcript",
+      "risk",
+      "latency",
+      "companion_state",
+      "delta",
+      "ui_action",
+      "handoff",
+      "state",
+      "error",
+      "done"
+    ],
+    "voice_request": "multipart payload + audio; only inferred from frontend source",
+    "api_proxy": "No Next chat proxy in inspected route set; browser uses configured backend URL",
+    "identity": "Firebase ID token, obtained by client SDK, in Bearer header"
+  },
+  "modal_alternate_source_observation": {
+    "app": "koi-chat-api",
+    "server_class": "ChatServer",
+    "secret_name": "firebase-service-account",
+    "server_credential_variable_name": "SERVICE_ACCOUNT_JSON",
+    "health_response": {
+      "status": "ok"
+    },
+    "streaming": true,
+    "token_validation": "fb_auth.verify_id_token(token), no explicit check_revoked",
+    "limits": "Historical alternate worktree, not current deployment proof; no voice/transcript/risk parity asserted"
+  },
+  "private_data_inspected": false
+}

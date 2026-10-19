@@ -1,0 +1,47 @@
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import NeoButton from '@/components/ui/NeoButton';
+import NeoCard from '@/components/ui/NeoCard';
+import NeoInput from '@/components/ui/NeoInput';
+import { PlatformClientError, type ProfessionalApi } from '@/lib/platform/client';
+import type { Connection, Page, Relationship } from '@/lib/platform/patient-types';
+import type { Submission } from '@/lib/platform/professional-types';
+import SubmissionReview from './SubmissionReview';
+export default function PatientManagement({ api, organizationId, publishedVersionId, onDenied }: { api: ProfessionalApi; organizationId: string; publishedVersionId?: string; onDenied: (error: unknown) => void }) {
+  const [patients, setPatients] = useState<Relationship[]>([]), [applications, setApplications] = useState<Connection[]>([]), [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [cursors, setCursors] = useState<Record<string, string | null>>({}), [selected, setSelected] = useState<string[]>([]), [all, setAll] = useState(false);
+  const [version, setVersion] = useState(publishedVersionId ?? ''), [intended, setIntended] = useState(''), [invite, setInvite] = useState<{ invitation_id: string; token: string; expires_at: string } | null>(null);
+  const [invitationExpiry] = useState(() => new Date(Date.now() + 6 * 86400000).toISOString());
+  const [submission, setSubmission] = useState<string | null>(null), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
+  const alive = useRef(true), running = useRef(false);
+  const failure = (e: unknown) => {
+    if (!alive.current) return;
+    if (e instanceof PlatformClientError && [401, 403].includes(e.status)) { onDenied(e); return; }
+    setError(e instanceof PlatformClientError && e.status === 409 ? 'This record changed or the request conflicts. Refresh before trying again; unsaved review text is kept.' : 'Could not complete this action. Verify practice, patient, version and service availability.');
+  };
+  const load = async (kind: 'patients' | 'applications' | 'submissions', next?: string) => {
+    const path = kind === 'applications' ? '/api/v1/connection-requests' : `/api/v1/professional/${kind === 'patients' ? 'patient-relationships' : 'submissions'}`;
+    const page = await api.request<Page<any>>(`${path}?${kind === 'applications' ? '' : `organization_id=${encodeURIComponent(organizationId)}&`}${next ? `cursor=${encodeURIComponent(next)}` : ''}`);
+    if (!alive.current) return;
+    if (kind === 'patients') setPatients(old => next ? [...old, ...page.items] : page.items);
+    if (kind === 'applications') setApplications(old => next ? [...old, ...page.items] : page.items);
+    if (kind === 'submissions') setSubmissions(old => next ? [...old, ...page.items] : page.items);
+    setCursors(old => ({ ...old, [kind]: page.next_cursor }));
+  };
+  const refresh = async () => { await Promise.all([load('patients'), load('applications'), load('submissions')]); };
+  useEffect(() => { alive.current = true; void refresh().catch(failure); return () => { alive.current = false; }; }, [api, organizationId]);
+  useEffect(() => { if (publishedVersionId) setVersion(publishedVersionId); }, [publishedVersionId]);
+  const run = async (fn: () => Promise<void>) => { if (running.current) return; running.current = true; setBusy(true); setError(''); setMessage(''); try { await fn(); } catch (e) { failure(e); } finally { running.current = false; if (alive.current) setBusy(false); } };
+  return <section className="professional-stack" aria-label="Practice patients and submissions"><h2>Patients and submissions</h2>{error && <p role="alert" className="professional-error">{error}</p>}<p role="status">{busy ? <><span className="neo-spinner" aria-hidden="true" /> Working…</> : message}</p>
+    <NeoCard className="professional-card"><h3>Invite a registered General account</h3><p>Invitations expire within seven days and can be used once. Share the link securely with the intended person.</p><NeoInput label="Intended account UID (optional)" aria-label="Intended account UID (optional)" value={intended} onChange={e => setIntended(e.target.value.trim())} />
+      <NeoButton disabled={busy} onClick={() => void run(async () => { const result = await api.request<any>('/api/v1/professional/patient-invitations', 'POST', { organization_id: organizationId, ...(intended ? { intended_uid: intended } : {}), expires_at: invitationExpiry }); if (alive.current) setInvite(result); })}>Create secure invitation</NeoButton>
+      {invite && <div className="professional-question"><label className="professional-label">Single-use invitation link<input className="neo-input" aria-label="Single-use invitation link" readOnly value={`${window.location.origin}/patient#invite=${invite.token}`} onFocus={e => e.target.select()} /></label><p>Expires {new Date(invite.expires_at).toLocaleString()}</p><NeoButton variant="ghost" disabled={busy} onClick={() => { if (window.confirm('Revoke this invitation?')) void run(async () => { await api.request(`/api/v1/professional/patient-invitations/${invite.invitation_id}/revoke`, 'POST', { expected_revision: 1 }); if (alive.current) { setInvite(null); setMessage('Invitation revoked.'); } }); }}>Revoke invitation</NeoButton></div>}
+    </NeoCard>
+    <NeoCard className="professional-card"><h3>Applications</h3>{!applications.length && <p>No applications yet.</p>}{applications.map(a => <div key={a.id} className="professional-question"><p>{a.applicant_uid} · {a.state.replaceAll('_', ' ')}</p>{a.state === 'pending_psychologist_review' && <div className="professional-row">{(['accepted', 'rejected'] as const).map(state => <NeoButton key={state} disabled={busy} onClick={() => { if (window.confirm(`${state === 'accepted' ? 'Accept' : 'Reject'} this application?`)) void run(async () => { await api.request(`/api/v1/connection-requests/${a.id}/transition`, 'POST', { expected_revision: a.revision, to_state: state }); await refresh(); }); }}>{state === 'accepted' ? 'Accept application' : 'Reject application'}</NeoButton>)}</div>}</div>)}{cursors.applications && <NeoButton onClick={() => void run(() => load('applications', cursors.applications!))}>More applications</NeoButton>}</NeoCard>
+    <NeoCard className="professional-card"><h3>Active patients and assignments</h3>{!patients.length && <p>No patients yet. Invite a General account or accept an application.</p>}{patients.map(p => <div key={p.id} className="professional-row professional-between"><label><input type="checkbox" disabled={p.state !== 'active' || busy || all} checked={selected.includes(p.id)} onChange={e => setSelected(old => e.target.checked ? [...old, p.id] : old.filter(id => id !== p.id))} /> {p.patient_uid} · {p.state}</label>{p.state === 'active' && <NeoButton variant="ghost" disabled={busy} onClick={() => { if (window.confirm('Close this patient relationship? Care access ends immediately; professional history is retained.')) void run(async () => { await api.request(`/api/v1/professional/patient-relationships/${p.id}/close`, 'POST', { expected_revision: p.revision }); setSelected(old => old.filter(id => id !== p.id)); await refresh(); }); }}>Close relationship</NeoButton>}</div>)}{cursors.patients && <NeoButton onClick={() => void run(() => load('patients', cursors.patients!))}>More patients</NeoButton>}
+      <label><input type="checkbox" checked={all} onChange={e => setAll(e.target.checked)} /> Assign to all active patients (snapshot at assignment time)</label><NeoInput label="Published questionnaire version ID" aria-label="Published questionnaire version ID" value={version} onChange={e => setVersion(e.target.value.trim())} /><NeoButton disabled={busy || !version || (!all && !selected.length)} onClick={() => { if (!window.confirm('Create a new independent assignment for each selected patient? Repeat assignments start a new attempt.')) return; void run(async () => { const result = await api.request<{ assignment_ids: string[] }>('/api/v1/professional/assignments', 'POST', { organization_id: organizationId, questionnaire_version_id: version, target: all ? { kind: 'all_active' } : { kind: 'selected', relationship_ids: selected } }); if (alive.current) setMessage(`${result.assignment_ids.length} independent assignments created.`); }); }}>Assign published questionnaire</NeoButton>
+    </NeoCard>
+    <NeoCard className="professional-card"><h3>Submitted questionnaires</h3>{!submissions.length && <p>No submissions yet.</p>}{submissions.map(s => <div key={s.id} className="professional-row professional-between"><span>{s.patient_uid} · {new Date(s.submitted_at).toLocaleString()}</span><NeoButton disabled={busy} onClick={() => setSubmission(s.id)}>Inspect submission</NeoButton></div>)}{cursors.submissions && <NeoButton onClick={() => void run(() => load('submissions', cursors.submissions!))}>More submissions</NeoButton>}</NeoCard>
+    <NeoButton variant="ghost" disabled={busy} onClick={() => void run(refresh)}>Refresh patients and submissions</NeoButton>{submission && <SubmissionReview key={submission} id={submission} api={api} onError={failure} />}
+  </section>;
+}

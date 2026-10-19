@@ -1,0 +1,289 @@
+{
+  "contract_version": "0.5.0",
+  "status": "not_run_requires_implementation",
+  "notice": "Declarative integration acceptance fixtures; schema tests do not establish these outcomes. Fixed-instrument case also requires approved wording/licensing/scoring fixtures.",
+  "cases": [
+    {
+      "id": "custom_guest_denied",
+      "steps": [
+        "GET capabilities with valid custom-auth guest token",
+        "GET experts with same token"
+      ],
+      "expected": [
+        "200 account_state=unregistered; all new grants false",
+        "403; zero directory records"
+      ]
+    },
+    {
+      "id": "firebase_anonymous_denied",
+      "steps": [
+        "GET experts with genuine Firebase anonymous token",
+        "Attempt direct platform Firestore list"
+      ],
+      "expected": [
+        "403",
+        "rules deny"
+      ]
+    },
+    {
+      "id": "profile_forgery_not_authority",
+      "steps": [
+        "Set client-writable users profile role=psychologist and emailVerified=true in synthetic test only",
+        "Request professional workspace"
+      ],
+      "expected": [
+        "No authoritative capability change",
+        "403"
+      ]
+    },
+    {
+      "id": "registration_legacy_link_not_enough",
+      "steps": [
+        "Present password identity with legacy emailVerified flag but no consumed platform challenge",
+        "Register"
+      ],
+      "expected": [
+        "403; no registered account"
+      ]
+    },
+    {
+      "id": "registration_challenge_single_use",
+      "steps": [
+        "Redeem valid UID/email/purpose-bound challenge",
+        "Redeem again with a new key or changed UID"
+      ],
+      "expected": [
+        "One registered account and consent audit",
+        "Denied; no second grant"
+      ]
+    },
+    {
+      "id": "verification_seed_only",
+      "steps": [
+        "Unverified account calls ensureOrganization",
+        "Restricted seeded operation verifies clinician; then ensureOrganization twice concurrently"
+      ],
+      "expected": [
+        "403",
+        "One organization and owner membership; both authorized calls resolve it"
+      ]
+    },
+    {
+      "id": "suspended_clinician",
+      "steps": [
+        "Suspend psychologist while professional page open",
+        "Retry list/publish with old claims and old cursor"
+      ],
+      "expected": [
+        "Protected memory cleared by invalidation; lock on disconnect",
+        "403; no writes"
+      ]
+    },
+    {
+      "id": "cross_practice",
+      "steps": [
+        "Clinician A gets B draft/version/submission/evaluation by forged IDs",
+        "A uses B organization cursor or nested version reference"
+      ],
+      "expected": [
+        "404 with no B data",
+        "404 or 403; no B data or writes"
+      ]
+    },
+    {
+      "id": "immutable_publish",
+      "steps": [
+        "Publish valid manual draft with confirmed revision/hash",
+        "Repeat same revision with a new key",
+        "Edit draft and read old version"
+      ],
+      "expected": [
+        "One immutable version",
+        "Same version ID and timestamp",
+        "Old snapshot unchanged"
+      ]
+    },
+    {
+      "id": "publish_race",
+      "steps": [
+        "Two editors update revision 1 with different content",
+        "Publish losing stale revision/hash"
+      ],
+      "expected": [
+        "One update succeeds; other 409",
+        "409; no stale snapshot"
+      ]
+    },
+    {
+      "id": "structural_publish_guards",
+      "steps": [
+        "Publish duplicate question IDs, missing locale labels or invalid selection bounds",
+        "Publish image option with unknown asset/hash or arbitrary URL"
+      ],
+      "expected": [
+        "422; no version",
+        "422; no version"
+      ]
+    },
+    {
+      "id": "assign_all_snapshot",
+      "steps": [
+        "Assign all current active roster, at most 200",
+        "Roster changes; retry original key",
+        "Try unapproved/closed/foreign relationship or over 200 targets"
+      ],
+      "expected": [
+        "Independent per-patient attempts from saved roster snapshot",
+        "Same assignments; no new roster additions",
+        "Denied before any partial write"
+      ]
+    },
+    {
+      "id": "autosave_race",
+      "steps": [
+        "Two devices save expected_revision=1",
+        "Losing device retries with a new key",
+        "Winning device retries with original key"
+      ],
+      "expected": [
+        "One revision 2 acknowledgement; one 409",
+        "409; no overwrite",
+        "Same acknowledgement; no new revision"
+      ]
+    },
+    {
+      "id": "submit_singleton",
+      "steps": [
+        "Submit complete confirmed revision",
+        "Submit again concurrently/new key",
+        "Replay stale offline autosave"
+      ],
+      "expected": [
+        "One submission, one stable job/outbox and one submitted timestamp",
+        "Same four-field patient ack",
+        "409; submitted attempt remains locked"
+      ]
+    },
+    {
+      "id": "submit_rechecks_membership",
+      "steps": [
+        "Close relationship after autosave before submit",
+        "Replay an earlier valid submit idempotency key after closure"
+      ],
+      "expected": [
+        "Submit denied",
+        "Denied; no recovered patient access"
+      ]
+    },
+    {
+      "id": "evaluation_firewall",
+      "steps": [
+        "Inspect patient list/detail/ack/errors/notifications and browser payloads",
+        "Attempt SDK get/list/collection-group on evaluations/reviews/jobs"
+      ],
+      "expected": [
+        "No score/interpretation/review/job fields; submitted detail has no answers feature",
+        "All denied"
+      ]
+    },
+    {
+      "id": "worker_identity_and_lease",
+      "steps": [
+        "Call internal evaluation route with a Firebase clinician/patient token",
+        "Complete with wrong/expired lease or foreign submission reference"
+      ],
+      "expected": [
+        "401 or 403; no job claimed",
+        "409 or 404; no foreign evaluation"
+      ]
+    },
+    {
+      "id": "fixed_scoring_provider_offline",
+      "steps": [
+        "Submit permission-checked fixed instrument with known scoring vectors and disabled interpretation provider",
+        "Open professional evaluation and patient acknowledgement"
+      ],
+      "expected": [
+        "Deterministic score matches approved vectors; interpretation can fail",
+        "Only clinician sees score; patient ack unchanged"
+      ]
+    },
+    {
+      "id": "review_preserves_original",
+      "steps": [
+        "Save AI evaluation and original response",
+        "Append reviewer correction twice at stale revision"
+      ],
+      "expected": [
+        "Original response immutable",
+        "One appended correction; stale write 409"
+      ]
+    },
+    {
+      "id": "fixed_language_provenance",
+      "steps": [
+        "Try to seed fixed Roman Urdu or unverified official Urdu wording",
+        "Create Roman Urdu custom questions"
+      ],
+      "expected": [
+        "Rejected as fixed instrument",
+        "Allowed only as not_validated custom content"
+      ]
+    },
+    {
+      "id": "invitation_redeem",
+      "steps": [
+        "Concurrent redemption of same expiring invitation",
+        "Wrong intended UID, expired/revoked invite or new-key reuse"
+      ],
+      "expected": [
+        "Single relationship/consumption",
+        "Denied; no duplicate roster entry"
+      ]
+    },
+    {
+      "id": "demo_payment_not_membership",
+      "steps": [
+        "Complete simulated payment",
+        "Patient attempts assignment list before consent and acceptance"
+      ],
+      "expected": [
+        "Only demo/application state advances",
+        "403; no relationship"
+      ]
+    },
+    {
+      "id": "appointment_actor_rules",
+      "steps": [
+        "Clinician proposes; patient confirms exact revision; clinician completes after end",
+        "Clinician tries to confirm own proposal or patient tries completed transition"
+      ],
+      "expected": [
+        "Valid state transitions, once each",
+        "403/409; unchanged appointment"
+      ]
+    },
+    {
+      "id": "notification_dedupe",
+      "steps": [
+        "Emit same assignment/message/application/appointment event twice",
+        "Close relationship then list notifications"
+      ],
+      "expected": [
+        "One event per recipient; no arbitrary evaluation body",
+        "Relationship-scoped references excluded"
+      ]
+    },
+    {
+      "id": "uid_change_and_regression",
+      "steps": [
+        "Switch synthetic account A to B during owned reads/writes and logout",
+        "Run companion streaming/crisis/avatar regression suite without deployments"
+      ],
+      "expected": [
+        "Protected memory/listeners cleared; no A content in B; owned local ciphertext retained",
+        "Existing flows unchanged; hosted proof is a separate test"
+      ]
+    }
+  ]
+}

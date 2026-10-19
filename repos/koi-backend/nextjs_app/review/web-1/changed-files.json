@@ -1,0 +1,286 @@
+{
+  "scope": "WEB-1 additions only; accepted WEB-0.5 baseline excluded",
+  "files": [
+    {
+      "path": "contracts/implementations/WEB-1.md",
+      "change": "added",
+      "sha256": "beb20f57ac9d3f6d182c2d378f145cfb21ffd18c5f93fd8fa89b5b7dbe3ea720"
+    },
+    {
+      "path": "dev/platform-emulator/firebase.json",
+      "change": "added",
+      "sha256": "7f91061ba8cf1be02e8418f3c7febc8935b2d6f2513706a56a4064f04863fd52"
+    },
+    {
+      "path": "dev/platform-emulator/firestore.rules",
+      "change": "added",
+      "sha256": "4cc35d1e4d8a34ef9a02f0720cd201230a52fee3ba183b4c27b9f72857b7c324"
+    },
+    {
+      "path": "public/illustrations/web1/circle-v1.svg",
+      "change": "added",
+      "sha256": "cc6048d1e359dcfabb1f64b0443f21c9a88f2a9b4793cc9bd14bc21ced37bd66"
+    },
+    {
+      "path": "public/illustrations/web1/square-v1.svg",
+      "change": "added",
+      "sha256": "69dbfb0bb14a32a333acc4fdcb39169bc9011e0414a052b32b05963401cf0a50"
+    },
+    {
+      "path": "public/illustrations/web1/triangle-v1.svg",
+      "change": "added",
+      "sha256": "af72edba6fe374f0e5e8e0c66244cf12b79538c0ed46828be30530ea3431d998"
+    },
+    {
+      "path": "review/web-1/SETUP.md",
+      "change": "added",
+      "sha256": "71e8b612984afa697892236d51afc9220660db946eb2f4d8a8d73cdc053593d1"
+    },
+    {
+      "path": "review/web-1/WEB-1-COMPLETION.md",
+      "change": "added",
+      "sha256": "c679dd85613425d4f4377909a8f5faeff3224dc325d5d4c2f22f2f82c7a6a852"
+    },
+    {
+      "path": "review/web-1/changed-files.json",
+      "change": "added",
+      "sha256": null
+    },
+    {
+      "path": "review/web-1/changed-files.md",
+      "change": "added",
+      "sha256": "5d1c72e7a432a928582275ef1da5118feffa7f0fe08e92886b8392516618f830"
+    },
+    {
+      "path": "review/web-1/evidence/functional-emulator.json",
+      "change": "added",
+      "sha256": "0467cd444ff79b444023a9342f418176c2fd1a6beebd6a60027dab0e774f0746"
+    },
+    {
+      "path": "review/web-1/evidence/published-desktop.png",
+      "change": "added",
+      "sha256": "8dd52509f26e4debf1024ec71e83b921d3855e618d90b66e615c51a6466268af"
+    },
+    {
+      "path": "review/web-1/evidence/published-mobile.png",
+      "change": "added",
+      "sha256": "882b4fa1708848cbf3d757adfb3fbc78411c3ef82c4f8d169e39fde5ffe972ee"
+    },
+    {
+      "path": "review/web-1/firestore.indexes.proposed.json",
+      "change": "added",
+      "sha256": "55b6aabb8a18f9c75454462c20789d219f14271ef8eaec99b2500324018c2294"
+    },
+    {
+      "path": "review/web-1/platform.env.example",
+      "change": "added",
+      "sha256": "2238ecd9a7ab62ec1a8d480828c73e67e6b97540f4e9c4b1df5696b71c285a68"
+    },
+    {
+      "path": "review/web-1/verification.json",
+      "change": "added",
+      "sha256": "d54bafc099dcbb92fad5ed0691ef06d0ce8f873699bfc914735f3e6cb6789624"
+    },
+    {
+      "path": "scripts/platform-verify-psychologist.cjs",
+      "change": "added",
+      "sha256": "60b3227ebccceb3e0fceab99fc282ad61dd07cc51b4ed284277cce83d3549817"
+    },
+    {
+      "path": "scripts/web1-emulator-functional.cjs",
+      "change": "added",
+      "sha256": "5ae3d79bd36b8d9a293b1ae106166cbc2f7184d4353ec476a5dda4a7186df99c"
+    },
+    {
+      "path": "src/__tests__/platform/bootstrap.test.ts",
+      "change": "added",
+      "sha256": "95c3e1fdd66474fac229070bd1bf947a77e01438583d891ceee490570aa0d305"
+    },
+    {
+      "path": "src/__tests__/platform/client.test.ts",
+      "change": "added",
+      "sha256": "2080c8a6536860a83727de8f51c683e1a5ddd969a89d2c9a2f9bd06bc132d288"
+    },
+    {
+      "path": "src/__tests__/platform/recent-auth.test.tsx",
+      "change": "added",
+      "sha256": "50952c551d4f8713e517aec9fc2e8796284155eda0d9c3d4ff70ad0ef81621c7"
+    },
+    {
+      "path": "src/__tests__/platform/routes.test.ts",
+      "change": "added",
+      "sha256": "4c29a36f9738f994f21bd2a92793ecd9cecafe16f37b6e038689a842b71487c3"
+    },
+    {
+      "path": "src/__tests__/platform/runtime.test.ts",
+      "change": "added",
+      "sha256": "70357a28b8a6eac9ae1826088797b2f70d45b089e6d43795d12c2968cad976cc"
+    },
+    {
+      "path": "src/__tests__/platform/service.test.ts",
+      "change": "added",
+      "sha256": "04673e7c5fbcf62f6833547f81b677492f1499019c54a533930ea6dbc7fd17c5"
+    },
+    {
+      "path": "src/__tests__/platform/workspace.test.tsx",
+      "change": "added",
+      "sha256": "069f5da92c7cbf987deeb7255a38fdf5615615ec7e4a6a087b1d655921be2146"
+    },
+    {
+      "path": "src/app/api/v1/me/capabilities/route.ts",
+      "change": "added",
+      "sha256": "9e92ad7990a1dc980528c9f09c21df00cdfa78d1c05d31fe4471b695017ffa2d"
+    },
+    {
+      "path": "src/app/api/v1/professional/organizations/route.ts",
+      "change": "added",
+      "sha256": "148a35a794d02950572f95266e0442cac57e6ef7bed006aabedb1dc9cd99526d"
+    },
+    {
+      "path": "src/app/api/v1/professional/questionnaire-versions/[id]/route.ts",
+      "change": "added",
+      "sha256": "457e99b6349686ef7f3a60ed64f5dc9681d746274f264c771399c13b67c59d4e"
+    },
+    {
+      "path": "src/app/api/v1/professional/questionnaires/[id]/.gitignore",
+      "change": "added",
+      "sha256": "805cd3e701593fe7c5f5b24086a91fc5bdd0679103bb344fdc3bf7b55677e1eb"
+    },
+    {
+      "path": "src/app/api/v1/professional/questionnaires/[id]/publish/route.ts",
+      "change": "added",
+      "sha256": "257eed3e547373a3ad8391a20e069a534f96812b4c2df178099da80e47702ba6"
+    },
+    {
+      "path": "src/app/api/v1/professional/questionnaires/[id]/route.ts",
+      "change": "added",
+      "sha256": "51485a5ee3b2a6e98f283913b05a88df958590f067103b6128229ea6eae813c2"
+    },
+    {
+      "path": "src/app/api/v1/professional/questionnaires/route.ts",
+      "change": "added",
+      "sha256": "aa1abe2b4a67feaf59d7bfe5e156de0ffba76e46115342ad93899a0811bae4a1"
+    },
+    {
+      "path": "src/app/professional/layout.tsx",
+      "change": "added",
+      "sha256": "3ae3d2b03d3ea0ae1e7b149a615b5e76146e3ec5ce47740be92a671ab1ef6df4"
+    },
+    {
+      "path": "src/app/professional/loading.tsx",
+      "change": "added",
+      "sha256": "3303a1897fd35e0085181dc282186eb9df6b2876d78f9624a0ff9e7a74e7ab8f"
+    },
+    {
+      "path": "src/app/professional/page.tsx",
+      "change": "added",
+      "sha256": "df83c06cfea66d7ea496783ea63b01e360b3088a94becf6d146c081570f276a4"
+    },
+    {
+      "path": "src/app/professional/professional.css",
+      "change": "added",
+      "sha256": "cae81a896a4c4eb09024b972ea43323a7b29179786c8378345d8038da5a6ab1b"
+    },
+    {
+      "path": "src/components/professional/ProfessionalApp.tsx",
+      "change": "added",
+      "sha256": "e67be3137894d5df4cb8aa73cdc1637ffbeb47e41e14e3f7a0017cde785cf73e"
+    },
+    {
+      "path": "src/components/professional/ProfessionalWorkspace.tsx",
+      "change": "added",
+      "sha256": "8ce1dcdfd513df424da273c21a2fdb330a76d58e6a9d31e3be643d5013e0efe6"
+    },
+    {
+      "path": "src/components/professional/PublishedQuestionnaire.tsx",
+      "change": "added",
+      "sha256": "6d531a852468cacc8a0989923cfe6ff04c24f14f80187bea71b849a72d08b8bb"
+    },
+    {
+      "path": "src/components/professional/QuestionnaireEditor.tsx",
+      "change": "added",
+      "sha256": "7aaae2681b32d0f7efc0376fa084f57a125cd0836dcc800a7b1274e42827f16e"
+    },
+    {
+      "path": "src/components/professional/RecentAuthentication.tsx",
+      "change": "added",
+      "sha256": "abceb6602df8213e9cca8d2839d340a0ce7c95c2c9f1c3bca9792666581a341a"
+    },
+    {
+      "path": "src/lib/platform/canonical.ts",
+      "change": "added",
+      "sha256": "a626bba6a1bc9bb44f5e6cac3ee6d7c7439811d278a1cd97bcf52b562423b77c"
+    },
+    {
+      "path": "src/lib/platform/client.ts",
+      "change": "added",
+      "sha256": "ec7108379affb572e2dac535d36a8408d465c2bbbaae8877e9def6e0e3075f7f"
+    },
+    {
+      "path": "src/lib/platform/content.ts",
+      "change": "added",
+      "sha256": "9b456445e790ddc84229049fd9ff1f72787975a23ea6f8dbb6e7aaa91e0909d0"
+    },
+    {
+      "path": "src/lib/platform/illustrations.json",
+      "change": "added",
+      "sha256": "fc5f0d2874e6fe70aa9fe89a478f206cd8caf6251897910b9e1465341fac218f"
+    },
+    {
+      "path": "src/lib/platform/professional-auth.ts",
+      "change": "added",
+      "sha256": "2ec80da1707bc88cbd5f819422a15e0dafc84680e0708edd8bad71a6839063f1"
+    },
+    {
+      "path": "src/lib/platform/server/admin-config.cjs",
+      "change": "added",
+      "sha256": "3e3b7761a1226e19f6c6d9e27bb76d0ef72be45c92a859fa72d40a7353159adc"
+    },
+    {
+      "path": "src/lib/platform/server/contract.ts",
+      "change": "added",
+      "sha256": "249326882c753c3e8021fc5bfaecfdc3a2666a8ec5691a804847f7f9f284458d"
+    },
+    {
+      "path": "src/lib/platform/server/errors.ts",
+      "change": "added",
+      "sha256": "7afe2841bfe291705beba8bac8034100a9cd1e671278b9a14b94f17dbec97473"
+    },
+    {
+      "path": "src/lib/platform/server/firestore-store.ts",
+      "change": "added",
+      "sha256": "a9d93a91e88ca8ed74087b6394258c89a9231a065b7dd6536bf69b0f3cff6947"
+    },
+    {
+      "path": "src/lib/platform/server/http.ts",
+      "change": "added",
+      "sha256": "50eb87d31c26cfe73f2598f4c8bd39d610fcc6f3f9dd27c88c91a5f7a4d5863c"
+    },
+    {
+      "path": "src/lib/platform/server/runtime.ts",
+      "change": "added",
+      "sha256": "9cd6efa09c68bf54f4daa7e0c0a37e7723c02317bf052471997da8629d5ef904"
+    },
+    {
+      "path": "src/lib/platform/server/service.ts",
+      "change": "added",
+      "sha256": "8e054f2749b68b8865fa0e6ed14bd3d8a61dd6b5395f8a2deec5e0ec78658999"
+    },
+    {
+      "path": "src/lib/platform/server/store.ts",
+      "change": "added",
+      "sha256": "0655121d10fc256dbf2309339a17ad0a27850e05ec52534ac860f0954307d248"
+    },
+    {
+      "path": "src/lib/platform/types.ts",
+      "change": "added",
+      "sha256": "527bab6a2da137c80a991f0a8e0fa351984050cb56e4ccaad06d6e6d49d6bc0b"
+    },
+    {
+      "path": "test/platform-memory.ts",
+      "change": "added",
+      "sha256": "17f3f08d2171145ae1f6ff2817bef47611f2440b91615cf6942679bd4f7b6317"
+    }
+  ],
+  "self_hash_note": "The inventory JSON lists itself with no self-referential hash."
+}

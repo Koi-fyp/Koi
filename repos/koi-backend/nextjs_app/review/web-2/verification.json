@@ -1,0 +1,74 @@
+{
+  "branch": "feat/web-1-professional-publishing",
+  "head": "1390f1b3da96270ad47d8edfa06510ed838add77",
+  "tests": {
+    "command": "npm test -- --runInBand --silent",
+    "suites_passed": 78,
+    "tests_passed": 661,
+    "failed": 0,
+    "seconds": 65.943,
+    "new_web2_suites": 5,
+    "new_web2_tests": 35
+  },
+  "production_build": {
+    "passed": true,
+    "build_id": "EPy57gVKA4Mk6GxBQtdqm",
+    "next_version": "14.2.35",
+    "static_generation_entries": 22
+  },
+  "contract_checks": {
+    "v0.5.0": "passed; original hashes unchanged",
+    "v0.5.1": "passed; 102 definitions, 52 operations, 17 valid and 18 rejected fixtures, 25 patient-reachable definitions"
+  },
+  "emulator": {
+    "passed_scenarios": 15,
+    "run_at": "2026-10-19T16:35:49.510Z",
+    "page_errors": 0,
+    "companion_requests": 0,
+    "provider_calls": 0,
+    "temporary_servers_stopped": true
+  },
+  "preservation": {
+    "tracked_files_modified": [],
+    "original_source_hashes_verified": 19,
+    "unrelated_work_preserved": true,
+    "live_rules_and_services_modified": false
+  },
+  "patient_bundle_scan": {
+    "checked_chunks": [
+      "static/chunks/webpack-cc30fefe6caa21f0.js",
+      "static/chunks/fd9d1056-a7bab8375d621c16.js",
+      "static/chunks/2117-87f045978549eb18.js",
+      "static/chunks/main-app-2668e582bf9a5225.js",
+      "static/chunks/69806262-f1989af7e8eb31a7.js",
+      "static/chunks/8685-99ed0a282e6138ef.js",
+      "static/chunks/3108-911ee7e061c17708.js",
+      "static/chunks/app/patient/page-372fb6eeb3de89fe.js"
+    ],
+    "checked_identifiers": [
+      "clinician_evaluations",
+      "validated_scores",
+      "original_provider_response",
+      "ReviewDecisionDTO",
+      "KOI_PLATFORM_CURSOR_SIGNING_KEY",
+      "FIREBASE_ADMIN_SDK",
+      "provider_response_sha256"
+    ],
+    "matches": [],
+    "scope": "Narrow string check supplements, not replaces, authorization/serializer tests."
+  },
+  "mocks": [
+    "Jest identity, network and atomic store doubles",
+    "Fictional emulator General registration records and verification evidence",
+    "Explicit synthetic interpretation/provider-failure record used only in emulator protection checks"
+  ],
+  "blockers": [
+    "Published project/rules, IAM/App Check, hosting and indexes not verified",
+    "Approved General registration delivery unavailable",
+    "Production consent/retention/deletion/export policy missing",
+    "Token-path access-log redaction and key-rotation policy unverified",
+    "Access-stream proxy and connection behavior unverified",
+    "AI worker/workload identity/scoring/provider integration unavailable",
+    "Flutter source and cross-track 0.5.1 acknowledgement unavailable"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-19T15:06:14.347005+00:00",
+  "branch": "feat/web-1-professional-publishing",
+  "base_head": "1390f1b3da96270ad47d8edfa06510ed838add77",
+  "contracts": {
+    "passed": true,
+    "schemas": 96,
+    "operations": 47,
+    "valid_fixtures": 13,
+    "rejected_fixtures": 14,
+    "patient_boundary_schemas": 25,
+    "scope": "Draft-07 fixture validation, reference integrity, DTO boundary checks, API metadata and optional freeze hashes; no runtime security tests"
+  },
+  "full_jest": {
+    "command": "npm test -- --runInBand --silent",
+    "passed": true,
+    "suites": 73,
+    "tests": 626,
+    "seconds": 60.379
+  },
+  "final_web1_jest": {
+    "passed": true,
+    "suites": 7,
+    "tests": 42,
+    "seconds": 11.851,
+    "scope": "After final internal audit organization metadata addition"
+  },
+  "build": {
+    "command": "npm run build",
+    "passed": true,
+    "typescript_passed": true,
+    "next_version": "14.2.35",
+    "prerender_generation_entries": 21,
+    "build_id": "JPSWRYXul1ou9Pl7ESEhg"
+  },
+  "browser_emulator": {
+    "passed": true,
+    "checks": 18,
+    "artifact": "evidence/functional-emulator.json",
+    "real_application_handlers": true,
+    "firebase": "Local official Auth/Firestore emulators; not production",
+    "browser": "Installed headless Chrome through Playwright"
+  },
+  "preservation": {
+    "existing_source_files_checked": 19,
+    "unchanged": true,
+    "existing_tracked_file_modifications": [],
+    "frozen_0_5_0_hashes_unchanged": true,
+    "professional_page_chunks_scanned": 3,
+    "protected_server_evaluation_names_found": false
+  },
+  "live_rules_or_services_modified": false,
+  "commits_pushes_merges_deployments": false,
+  "temporary_test_services_stopped": true,
+  "unresolved": [
+    "Live Firebase rules release and project/deployment binding remain unverified",
+    "Production IAM/App Check/indexes and platform hosting not verified or deployed",
+    "Flutter app source unavailable; not required for this slice",
+    "Public registration delivery and patient retention policies belong to later slices"
+  ]
+}

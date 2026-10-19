@@ -1,0 +1,3 @@
+# The monorepo's generic publish/ output rule must not hide this source route.
+!publish/
+!publish/route.ts

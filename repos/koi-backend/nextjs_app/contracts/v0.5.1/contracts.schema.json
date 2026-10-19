@@ -1,0 +1,3597 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://koi.local/contracts/0.5.1/contracts.schema.json",
+  "title": "KOI 0.5.1 additive WEB-2 contracts; existing DTO versions remain 0.5.0",
+  "description": "Locally frozen proposal. No production handlers or Firestore rules are implemented by this package.",
+  "definitions": {
+    "Id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"
+    },
+    "Uid": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^/\\u0000-\\u001f]+$"
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "Sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "Locale": {
+      "type": "string",
+      "enum": [
+        "en",
+        "ur",
+        "ur-Latn"
+      ]
+    },
+    "LocalizedText": {
+      "type": "object",
+      "properties": {
+        "en": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "ur": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "ur-Latn": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "ErrorDTO": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "unauthenticated",
+            "account_registration_required",
+            "forbidden",
+            "not_found",
+            "conflict",
+            "invalid_request",
+            "rate_limited",
+            "unavailable"
+          ]
+        },
+        "request_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "request_id",
+        "retryable"
+      ],
+      "additionalProperties": false
+    },
+    "AccountRecord": {
+      "type": "object",
+      "properties": {
+        "uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "registered",
+            "suspended",
+            "closed"
+          ]
+        },
+        "registration_method": {
+          "type": "string",
+          "enum": [
+            "password_email_challenge",
+            "restricted_seeded_verification"
+          ]
+        },
+        "registered_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "authorization_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "general_access": {
+          "type": "boolean"
+        },
+        "registration_evidence_id": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "uid",
+        "state",
+        "registration_method",
+        "registered_at",
+        "authorization_revision",
+        "general_access",
+        "registration_evidence_id"
+      ],
+      "additionalProperties": false
+    },
+    "PsychologistVerificationRecord": {
+      "type": "object",
+      "properties": {
+        "uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "verified",
+            "rejected",
+            "suspended"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "changed_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "changed_by": {
+          "$ref": "#/definitions/Uid"
+        },
+        "audit_id": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "uid",
+        "state",
+        "revision",
+        "changed_at",
+        "changed_by",
+        "audit_id"
+      ],
+      "additionalProperties": false
+    },
+    "OrganizationDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "owner_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "active",
+            "suspended"
+          ]
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "owner_uid",
+        "name",
+        "state",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "OrganizationMembershipRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "owner"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "active",
+            "revoked"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "uid",
+        "kind",
+        "state",
+        "revision",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "PatientRelationshipRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "patient_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "psychologist_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "active",
+            "closed"
+          ]
+        },
+        "consent_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "activated_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "closed_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "patient_uid",
+        "psychologist_uid",
+        "state",
+        "consent_version",
+        "activated_at",
+        "revision"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "closed"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "closed_at"
+            ]
+          }
+        }
+      ]
+    },
+    "CapabilitiesDTO": {
+      "type": "object",
+      "properties": {
+        "contract_version": {
+          "const": "0.5.0"
+        },
+        "uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "account_state": {
+          "type": "string",
+          "enum": [
+            "unregistered",
+            "registered",
+            "suspended",
+            "closed"
+          ]
+        },
+        "authorization_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "companion_account_sync": {
+              "type": "boolean"
+            },
+            "expert_directory": {
+              "type": "boolean"
+            },
+            "professional_workspace": {
+              "type": "boolean"
+            },
+            "create_organization": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "companion_account_sync",
+            "expert_directory",
+            "professional_workspace",
+            "create_organization"
+          ],
+          "additionalProperties": false
+        },
+        "professional_organization_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Id"
+          },
+          "minItems": 0,
+          "maxItems": 1
+        },
+        "active_patient_relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "relationship_id": {
+                "$ref": "#/definitions/Id"
+              },
+              "organization_id": {
+                "$ref": "#/definitions/Id"
+              },
+              "psychologist_uid": {
+                "$ref": "#/definitions/Uid"
+              }
+            },
+            "required": [
+              "relationship_id",
+              "organization_id",
+              "psychologist_uid"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 200
+        }
+      },
+      "required": [
+        "contract_version",
+        "uid",
+        "account_state",
+        "authorization_revision",
+        "capabilities",
+        "professional_organization_ids",
+        "active_patient_relationships"
+      ],
+      "additionalProperties": false
+    },
+    "RegisterAccountRequest": {
+      "type": "object",
+      "properties": {
+        "accepted_terms_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "consent_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "general",
+            "professional"
+          ]
+        },
+        "challenge_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "challenge_secret": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43,128}$"
+        }
+      },
+      "required": [
+        "accepted_terms_version",
+        "consent_version",
+        "purpose",
+        "challenge_id",
+        "challenge_secret"
+      ],
+      "additionalProperties": false
+    },
+    "CreateOrganizationRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "AssetReference": {
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "$ref": "#/definitions/Sha256"
+        }
+      },
+      "required": [
+        "asset_id",
+        "version",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "IllustrationManifest": {
+      "type": "object",
+      "properties": {
+        "manifest_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "assets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "reference": {
+                "$ref": "#/definitions/AssetReference"
+              },
+              "accessibility_label": {
+                "$ref": "#/definitions/LocalizedText"
+              },
+              "intended_meaning": {
+                "$ref": "#/definitions/LocalizedText"
+              },
+              "web_path": {
+                "type": "string",
+                "pattern": "^/illustrations/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*\\.(?:svg|png|webp)$"
+              },
+              "flutter_path": {
+                "type": "string",
+                "pattern": "^assets/illustrations/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*\\.(?:svg|png|webp)$"
+              }
+            },
+            "required": [
+              "reference",
+              "accessibility_label",
+              "intended_meaning",
+              "web_path",
+              "flutter_path"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "manifest_version",
+        "assets"
+      ],
+      "additionalProperties": false
+    },
+    "Option": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "label": {
+          "$ref": "#/definitions/LocalizedText"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "ImageOption": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "label": {
+          "$ref": "#/definitions/LocalizedText"
+        },
+        "asset": {
+          "$ref": "#/definitions/AssetReference"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "asset"
+      ],
+      "additionalProperties": false
+    },
+    "Question": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "prompt": {
+              "$ref": "#/definitions/LocalizedText"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "single_choice"
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Option"
+              },
+              "minItems": 2,
+              "maxItems": 20
+            }
+          },
+          "required": [
+            "id",
+            "prompt",
+            "required",
+            "type",
+            "options"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "prompt": {
+              "$ref": "#/definitions/LocalizedText"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "multi_choice"
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Option"
+              },
+              "minItems": 2,
+              "maxItems": 20
+            },
+            "min_selections": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "max_selections": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          },
+          "required": [
+            "id",
+            "prompt",
+            "required",
+            "type",
+            "options",
+            "min_selections",
+            "max_selections"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "prompt": {
+              "$ref": "#/definitions/LocalizedText"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "yes_no"
+            }
+          },
+          "required": [
+            "id",
+            "prompt",
+            "required",
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "prompt": {
+              "$ref": "#/definitions/LocalizedText"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "likert"
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Option"
+              },
+              "minItems": 2,
+              "maxItems": 11
+            }
+          },
+          "required": [
+            "id",
+            "prompt",
+            "required",
+            "type",
+            "options"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "prompt": {
+              "$ref": "#/definitions/LocalizedText"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "short_text"
+            },
+            "max_length": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4000
+            }
+          },
+          "required": [
+            "id",
+            "prompt",
+            "required",
+            "type",
+            "max_length"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "prompt": {
+              "$ref": "#/definitions/LocalizedText"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "image_single_choice"
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ImageOption"
+              },
+              "minItems": 2,
+              "maxItems": 20
+            }
+          },
+          "required": [
+            "id",
+            "prompt",
+            "required",
+            "type",
+            "options"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "prompt": {
+              "$ref": "#/definitions/LocalizedText"
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "image_multi_choice"
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ImageOption"
+              },
+              "minItems": 2,
+              "maxItems": 20
+            },
+            "min_selections": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "max_selections": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            }
+          },
+          "required": [
+            "id",
+            "prompt",
+            "required",
+            "type",
+            "options",
+            "min_selections",
+            "max_selections"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "CustomQuestionnaireContent": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "custom_questionnaire"
+        },
+        "validation_status": {
+          "const": "not_validated"
+        },
+        "title": {
+          "$ref": "#/definitions/LocalizedText"
+        },
+        "locales": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Locale"
+          },
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Question"
+          },
+          "minItems": 1,
+          "maxItems": 200
+        },
+        "origin": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "ai_drafted"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "validation_status",
+        "title",
+        "locales",
+        "questions",
+        "origin"
+      ],
+      "additionalProperties": false
+    },
+    "CreateQuestionnaireRequest": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "content": {
+          "$ref": "#/definitions/CustomQuestionnaireContent"
+        }
+      },
+      "required": [
+        "organization_id",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "UpdateQuestionnaireRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "content": {
+          "$ref": "#/definitions/CustomQuestionnaireContent"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "QuestionnaireDraftDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "psychologist_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "content": {
+          "$ref": "#/definitions/QuestionnaireContent"
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "updated_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "psychologist_uid",
+        "revision",
+        "content",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "PublishRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expected_content_sha256": {
+          "$ref": "#/definitions/Sha256"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "expected_content_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "QuestionnaireVersionDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "questionnaire_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "psychologist_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "source_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "content": {
+          "$ref": "#/definitions/QuestionnaireContent"
+        },
+        "content_sha256": {
+          "$ref": "#/definitions/Sha256"
+        },
+        "published_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "schema_version": {
+          "const": "0.5.0"
+        }
+      },
+      "required": [
+        "id",
+        "questionnaire_id",
+        "organization_id",
+        "psychologist_uid",
+        "source_revision",
+        "content",
+        "content_sha256",
+        "published_at",
+        "schema_version"
+      ],
+      "additionalProperties": false
+    },
+    "InstrumentTemplateRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "usage_evidence_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "permission_checked_by": {
+          "$ref": "#/definitions/Uid"
+        },
+        "permission_checked_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "item_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "translation_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "scoring_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "locale": {
+          "type": "string",
+          "enum": [
+            "en",
+            "ur"
+          ]
+        },
+        "restrictions": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "item_snapshot_sha256": {
+          "$ref": "#/definitions/Sha256"
+        }
+      },
+      "required": [
+        "id",
+        "source_url",
+        "usage_evidence_url",
+        "permission_checked_by",
+        "permission_checked_at",
+        "item_version",
+        "translation_version",
+        "scoring_version",
+        "locale",
+        "restrictions",
+        "item_snapshot_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "AssignmentRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "relationship_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "patient_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "psychologist_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "questionnaire_version_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "attempt_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "due_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "assigned",
+            "in_progress",
+            "submitted",
+            "revoked"
+          ]
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "idempotency_key": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "relationship_id",
+        "patient_uid",
+        "psychologist_uid",
+        "questionnaire_version_id",
+        "attempt_id",
+        "state",
+        "created_at",
+        "idempotency_key"
+      ],
+      "additionalProperties": false
+    },
+    "CreateAssignmentsRequest": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "questionnaire_version_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "target": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "selected"
+                },
+                "relationship_ids": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Id"
+                  },
+                  "minItems": 1,
+                  "maxItems": 200,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "kind",
+                "relationship_ids"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "all_active"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "due_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "organization_id",
+        "questionnaire_version_id",
+        "target"
+      ],
+      "additionalProperties": false
+    },
+    "AssignmentBatchAckDTO": {
+      "type": "object",
+      "properties": {
+        "assignment_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Id"
+          },
+          "minItems": 0,
+          "maxItems": 200
+        },
+        "resolved_relationship_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Id"
+          },
+          "minItems": 0,
+          "maxItems": 200
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "assignment_ids",
+        "resolved_relationship_ids",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "Answer": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "question_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "type": {
+              "const": "single_choice"
+            },
+            "value": {
+              "$ref": "#/definitions/Id"
+            }
+          },
+          "required": [
+            "question_id",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "question_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "type": {
+              "const": "multi_choice"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Id"
+              },
+              "minItems": 0,
+              "maxItems": 20,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "question_id",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "question_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "type": {
+              "const": "yes_no"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "question_id",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "question_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "type": {
+              "const": "likert"
+            },
+            "value": {
+              "$ref": "#/definitions/Id"
+            }
+          },
+          "required": [
+            "question_id",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "question_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "type": {
+              "const": "short_text"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 4000
+            }
+          },
+          "required": [
+            "question_id",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "question_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "type": {
+              "const": "image_single_choice"
+            },
+            "value": {
+              "$ref": "#/definitions/Id"
+            }
+          },
+          "required": [
+            "question_id",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "question_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "type": {
+              "const": "image_multi_choice"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Id"
+              },
+              "minItems": 0,
+              "maxItems": 20,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "question_id",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Answers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Answer"
+      },
+      "minItems": 0,
+      "maxItems": 200
+    },
+    "PatientAttemptDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "assignment_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "patient_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "version_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_started",
+            "in_progress"
+          ]
+        },
+        "answers": {
+          "$ref": "#/definitions/Answers"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "server_updated_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "assignment_id",
+        "patient_uid",
+        "version_id",
+        "status",
+        "answers",
+        "revision",
+        "server_updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "PatientAssignmentDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "relationship_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "questionnaire_version_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "attempt_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "title": {
+          "$ref": "#/definitions/LocalizedText"
+        },
+        "due_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "assigned",
+            "in_progress",
+            "submitted"
+          ]
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "relationship_id",
+        "organization_id",
+        "questionnaire_version_id",
+        "attempt_id",
+        "title",
+        "state",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "PatientQuestionnaireDTO": {
+      "type": "object",
+      "properties": {
+        "version_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "schema_version": {
+          "const": "0.5.0"
+        },
+        "title": {
+          "$ref": "#/definitions/LocalizedText"
+        },
+        "locales": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Locale"
+          },
+          "minItems": 1,
+          "maxItems": 3
+        },
+        "questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Question"
+          },
+          "minItems": 1,
+          "maxItems": 200
+        }
+      },
+      "required": [
+        "version_id",
+        "schema_version",
+        "title",
+        "locales",
+        "questions"
+      ],
+      "additionalProperties": false
+    },
+    "PatientAssignmentDetailDTO": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/PatientAssignmentInProgressDTO"
+        },
+        {
+          "$ref": "#/definitions/PatientSubmittedAssignmentDTO"
+        }
+      ]
+    },
+    "AutosaveRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "answers": {
+          "$ref": "#/definitions/Answers"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "answers"
+      ],
+      "additionalProperties": false
+    },
+    "AutosaveAckDTO": {
+      "type": "object",
+      "properties": {
+        "attempt_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "server_updated_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "status": {
+          "const": "in_progress"
+        }
+      },
+      "required": [
+        "attempt_id",
+        "revision",
+        "server_updated_at",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "PatientSubmitRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "expected_revision"
+      ],
+      "additionalProperties": false
+    },
+    "PatientSubmitAckDTO": {
+      "type": "object",
+      "properties": {
+        "attempt_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "assignment_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "submitted_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "status": {
+          "const": "submitted"
+        }
+      },
+      "required": [
+        "attempt_id",
+        "assignment_id",
+        "submitted_at",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "ProfessionalSubmissionDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "relationship_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "assignment_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "attempt_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "patient_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "questionnaire_version_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "answers": {
+          "$ref": "#/definitions/Answers"
+        },
+        "submitted_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "relationship_id",
+        "assignment_id",
+        "attempt_id",
+        "patient_uid",
+        "questionnaire_version_id",
+        "answers",
+        "submitted_at"
+      ],
+      "additionalProperties": false
+    },
+    "ValidatedScore": {
+      "type": "object",
+      "properties": {
+        "scale_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "value": {
+          "type": "number"
+        },
+        "instrument_template_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "item_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "scoring_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "implementation_version": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "scale_id",
+        "value",
+        "instrument_template_id",
+        "item_version",
+        "scoring_version",
+        "implementation_version"
+      ],
+      "additionalProperties": false
+    },
+    "EvidenceReference": {
+      "type": "object",
+      "properties": {
+        "question_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "answer_index": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "question_id",
+        "answer_index"
+      ],
+      "additionalProperties": false
+    },
+    "ProfessionalEvaluationDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "submission_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "questionnaire_version_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "validated_scores": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ValidatedScore"
+          },
+          "minItems": 0,
+          "maxItems": 200
+        },
+        "interpretation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EvidenceReference"
+          },
+          "minItems": 0,
+          "maxItems": 200
+        },
+        "review_status": {
+          "type": "string",
+          "enum": [
+            "unreviewed",
+            "reviewed"
+          ]
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "provider_response_sha256": {
+          "$ref": "#/definitions/Sha256"
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "submission_id",
+        "questionnaire_version_id",
+        "validated_scores",
+        "evidence",
+        "review_status",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "CreateReviewRequest": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "evaluation_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "expected_review_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conclusion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000
+        },
+        "feedback": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "organization_id",
+        "evaluation_id",
+        "expected_review_revision",
+        "conclusion"
+      ],
+      "additionalProperties": false
+    },
+    "ReviewRecordDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "evaluation_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "reviewer_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "conclusion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000
+        },
+        "feedback": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "evaluation_id",
+        "reviewer_uid",
+        "revision",
+        "conclusion",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "AIQuestionnaireGenerateRequest": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "brief": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "locales": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Locale"
+          },
+          "minItems": 1,
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "organization_id",
+        "brief",
+        "locales"
+      ],
+      "additionalProperties": false
+    },
+    "AIQuestionnaireReviseRequest": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "questionnaire_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "instruction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "organization_id",
+        "questionnaire_id",
+        "expected_revision",
+        "instruction"
+      ],
+      "additionalProperties": false
+    },
+    "AIQuestionnaireCritiqueRequest": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "questionnaire_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "organization_id",
+        "questionnaire_id",
+        "expected_revision"
+      ],
+      "additionalProperties": false
+    },
+    "ProfessionalJobAckDTO": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "status": {
+          "const": "queued"
+        }
+      },
+      "required": [
+        "job_id",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "ProfessionalJobDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "generate",
+            "revise",
+            "critique",
+            "evaluate"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "claimed",
+            "completed",
+            "failed"
+          ]
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "updated_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "result_ref": {
+          "$ref": "#/definitions/Id"
+        },
+        "failure_code": {
+          "type": "string",
+          "enum": [
+            "provider_unavailable",
+            "invalid_output",
+            "lease_expired",
+            "retry_exhausted"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "kind",
+        "state",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "AIJobRecord": {
+      "type": "object",
+      "properties": {
+        "job": {
+          "$ref": "#/definitions/ProfessionalJobDTO"
+        },
+        "submission_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "questionnaire_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "source_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lease_owner": {
+          "$ref": "#/definitions/Id"
+        },
+        "lease_expires_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "attempt_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "idempotency_key": {
+          "$ref": "#/definitions/Id"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "job",
+        "attempt_count",
+        "idempotency_key",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "ProfessionalAnalyticsDTO": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "questionnaire_version_id": {
+                "$ref": "#/definitions/Id"
+              },
+              "scoring_version": {
+                "$ref": "#/definitions/Id"
+              },
+              "enrolled": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "submitted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "submitted": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "submitted"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "maxItems": 200
+              }
+            },
+            "required": [
+              "questionnaire_version_id",
+              "scoring_version",
+              "enrolled",
+              "submitted",
+              "points"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "organization_id",
+        "series"
+      ],
+      "additionalProperties": false
+    },
+    "ExpertDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Uid"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "bio": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "accepting_new_patients": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "display_name",
+        "bio",
+        "accepting_new_patients"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectionRequestDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "applicant_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "psychologist_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "requested",
+            "awaiting_demo_payment",
+            "pending_psychologist_review",
+            "accepted",
+            "rejected",
+            "withdrawn"
+          ]
+        },
+        "demo_payment_state": {
+          "type": "string",
+          "enum": [
+            "demo_pending",
+            "demo_completed"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "updated_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "organization_id",
+        "applicant_uid",
+        "psychologist_uid",
+        "state",
+        "demo_payment_state",
+        "revision",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "CreateConnectionRequest": {
+      "type": "object",
+      "properties": {
+        "psychologist_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "consent_version": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "psychologist_uid",
+        "consent_version"
+      ],
+      "additionalProperties": false
+    },
+    "TransitionConnectionRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "to_state": {
+          "type": "string",
+          "enum": [
+            "awaiting_demo_payment",
+            "pending_psychologist_review",
+            "accepted",
+            "rejected",
+            "withdrawn"
+          ]
+        }
+      },
+      "required": [
+        "expected_revision",
+        "to_state"
+      ],
+      "additionalProperties": false
+    },
+    "DemoPaymentRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "expected_revision"
+      ],
+      "additionalProperties": false
+    },
+    "CreateInvitationRequest": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "intended_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "expires_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "organization_id",
+        "expires_at"
+      ],
+      "additionalProperties": false
+    },
+    "InvitationCreatedDTO": {
+      "type": "object",
+      "properties": {
+        "invitation_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "token": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43,128}$"
+        },
+        "expires_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "invitation_id",
+        "token",
+        "expires_at"
+      ],
+      "additionalProperties": false
+    },
+    "RedeemInvitationRequest": {
+      "type": "object",
+      "properties": {
+        "consent_version": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "consent_version"
+      ],
+      "additionalProperties": false
+    },
+    "RelationshipAckDTO": {
+      "type": "object",
+      "properties": {
+        "relationship_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "state": {
+          "const": "active"
+        }
+      },
+      "required": [
+        "relationship_id",
+        "organization_id",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "RevokeRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "expected_revision"
+      ],
+      "additionalProperties": false
+    },
+    "RevokeAckDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "revoked",
+            "closed"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "state",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "CreateMessageRequest": {
+      "type": "object",
+      "properties": {
+        "relationship_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "relationship_id",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "HumanMessageDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "relationship_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "sender_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "created_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "relationship_id",
+        "sender_uid",
+        "body",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "AppointmentDTO": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "relationship_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "requested",
+            "proposed",
+            "confirmed",
+            "completed",
+            "rejected",
+            "cancelled"
+          ]
+        },
+        "starts_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "ends_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "updated_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "id",
+        "relationship_id",
+        "state",
+        "revision",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "CreateAppointmentRequest": {
+      "type": "object",
+      "properties": {
+        "relationship_id": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "relationship_id"
+      ],
+      "additionalProperties": false
+    },
+    "TransitionAppointmentRequest": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "to_state": {
+          "type": "string",
+          "enum": [
+            "proposed",
+            "confirmed",
+            "completed",
+            "rejected",
+            "cancelled"
+          ]
+        },
+        "starts_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "ends_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "expected_revision",
+        "to_state"
+      ],
+      "additionalProperties": false
+    },
+    "NotificationDTO": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "event_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "kind": {
+              "const": "assignment"
+            },
+            "reference": {
+              "type": "object",
+              "properties": {
+                "assignment_id": {
+                  "$ref": "#/definitions/Id"
+                }
+              },
+              "required": [
+                "assignment_id"
+              ],
+              "additionalProperties": false
+            },
+            "created_at": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "read_at": {
+              "$ref": "#/definitions/Timestamp"
+            }
+          },
+          "required": [
+            "id",
+            "event_id",
+            "kind",
+            "reference",
+            "created_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "event_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "kind": {
+              "const": "new_message"
+            },
+            "reference": {
+              "type": "object",
+              "properties": {
+                "message_id": {
+                  "$ref": "#/definitions/Id"
+                }
+              },
+              "required": [
+                "message_id"
+              ],
+              "additionalProperties": false
+            },
+            "created_at": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "read_at": {
+              "$ref": "#/definitions/Timestamp"
+            }
+          },
+          "required": [
+            "id",
+            "event_id",
+            "kind",
+            "reference",
+            "created_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "event_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "kind": {
+              "const": "appointment_change"
+            },
+            "reference": {
+              "type": "object",
+              "properties": {
+                "appointment_id": {
+                  "$ref": "#/definitions/Id"
+                }
+              },
+              "required": [
+                "appointment_id"
+              ],
+              "additionalProperties": false
+            },
+            "created_at": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "read_at": {
+              "$ref": "#/definitions/Timestamp"
+            }
+          },
+          "required": [
+            "id",
+            "event_id",
+            "kind",
+            "reference",
+            "created_at"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/Id"
+            },
+            "event_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "kind": {
+              "const": "application_state"
+            },
+            "reference": {
+              "type": "object",
+              "properties": {
+                "connection_request_id": {
+                  "$ref": "#/definitions/Id"
+                }
+              },
+              "required": [
+                "connection_request_id"
+              ],
+              "additionalProperties": false
+            },
+            "created_at": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "read_at": {
+              "$ref": "#/definitions/Timestamp"
+            }
+          },
+          "required": [
+            "id",
+            "event_id",
+            "kind",
+            "reference",
+            "created_at"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "MarkNotificationReadRequest": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "MigrationManifestRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "record_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source_store": {
+          "type": "string",
+          "enum": [
+            "users",
+            "messages",
+            "conversations",
+            "conversationArchive",
+            "activityEvents",
+            "rewardReceipts",
+            "milestoneReceipts",
+            "moodEntries",
+            "jigsawProgress"
+          ]
+        },
+        "original_owner_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "original_local_session_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "destination_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "schema_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "content_sha256": {
+          "$ref": "#/definitions/Sha256"
+        },
+        "destination_record_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "uploaded",
+            "verified",
+            "conflict",
+            "blocked"
+          ]
+        },
+        "conflict_policy": {
+          "const": "preserve_both_require_review"
+        },
+        "server_ack_id": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "id",
+        "record_id",
+        "source_store",
+        "destination_uid",
+        "schema_version",
+        "content_sha256",
+        "destination_record_id",
+        "status",
+        "conflict_policy"
+      ],
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "original_owner_uid"
+          ]
+        },
+        {
+          "required": [
+            "original_local_session_id"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "verified"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "server_ack_id"
+            ]
+          }
+        }
+      ]
+    },
+    "PatientAssignmentListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PatientAssignmentDTO"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "ExpertListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExpertDTO"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "ConnectionRequestListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ConnectionRequestDTO"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "HumanMessageListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/HumanMessageDTO"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "AppointmentListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AppointmentDTO"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "NotificationListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/NotificationDTO"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "QuestionnaireDraftListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/QuestionnaireDraftDTO"
+          },
+          "minItems": 0,
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "AttemptRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "assignment_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "patient_uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "version_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_started",
+            "in_progress",
+            "submitted"
+          ]
+        },
+        "answers": {
+          "$ref": "#/definitions/Answers"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "server_updated_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "relationship_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "submitted_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "submission_id": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "id",
+        "assignment_id",
+        "patient_uid",
+        "version_id",
+        "status",
+        "answers",
+        "revision",
+        "server_updated_at",
+        "organization_id",
+        "relationship_id"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "submitted"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "submitted_at",
+              "submission_id"
+            ]
+          }
+        }
+      ]
+    },
+    "PatientAssignmentInProgressDTO": {
+      "type": "object",
+      "properties": {
+        "assignment": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/PatientAssignmentDTO"
+            },
+            {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "assigned",
+                    "in_progress"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "questionnaire": {
+          "$ref": "#/definitions/PatientQuestionnaireDTO"
+        },
+        "attempt": {
+          "$ref": "#/definitions/PatientAttemptDTO"
+        }
+      },
+      "required": [
+        "assignment",
+        "questionnaire",
+        "attempt"
+      ],
+      "additionalProperties": false
+    },
+    "PatientSubmittedAssignmentDTO": {
+      "type": "object",
+      "properties": {
+        "assignment": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/PatientAssignmentDTO"
+            },
+            {
+              "properties": {
+                "state": {
+                  "const": "submitted"
+                }
+              }
+            }
+          ]
+        },
+        "acknowledgement": {
+          "$ref": "#/definitions/PatientSubmitAckDTO"
+        }
+      },
+      "required": [
+        "assignment",
+        "acknowledgement"
+      ],
+      "additionalProperties": false
+    },
+    "ReviewRecordListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ReviewRecordDTO"
+          },
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "ProfessionalAIResultDTO": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "questionnaire_draft"
+            },
+            "draft": {
+              "$ref": "#/definitions/QuestionnaireDraftDTO"
+            }
+          },
+          "required": [
+            "kind",
+            "draft"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "critique"
+            },
+            "questionnaire_id": {
+              "$ref": "#/definitions/Id"
+            },
+            "source_revision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "observations": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "maxItems": 100
+            }
+          },
+          "required": [
+            "kind",
+            "questionnaire_id",
+            "source_revision",
+            "observations"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "evaluation"
+            },
+            "evaluation": {
+              "$ref": "#/definitions/ProfessionalEvaluationDTO"
+            }
+          },
+          "required": [
+            "kind",
+            "evaluation"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "InstrumentQuestionnaireContent": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "instrument_template"
+        },
+        "instrument_template_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "item_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "translation_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "scoring_version": {
+          "$ref": "#/definitions/Id"
+        },
+        "title": {
+          "$ref": "#/definitions/LocalizedText"
+        },
+        "locales": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ur"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Question"
+          },
+          "minItems": 1,
+          "maxItems": 200
+        }
+      },
+      "required": [
+        "kind",
+        "instrument_template_id",
+        "item_version",
+        "translation_version",
+        "scoring_version",
+        "title",
+        "locales",
+        "questions"
+      ],
+      "additionalProperties": false
+    },
+    "QuestionnaireContent": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/CustomQuestionnaireContent"
+        },
+        {
+          "$ref": "#/definitions/InstrumentQuestionnaireContent"
+        }
+      ]
+    },
+    "CreateFromInstrumentRequest": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "instrument_template_id": {
+          "$ref": "#/definitions/Id"
+        }
+      },
+      "required": [
+        "organization_id",
+        "instrument_template_id"
+      ],
+      "additionalProperties": false
+    },
+    "AccessChangedEventDTO": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "authorization_changed"
+        },
+        "authorization_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "occurred_at": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": [
+        "event",
+        "authorization_revision",
+        "occurred_at"
+      ],
+      "additionalProperties": false
+    },
+    "RegistrationChallengeRequest": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "general",
+            "professional"
+          ]
+        }
+      },
+      "required": [
+        "purpose"
+      ],
+      "additionalProperties": false
+    },
+    "RegistrationChallengeAckDTO": {
+      "type": "object",
+      "properties": {
+        "challenge_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "expires_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "delivery": {
+          "const": "queued"
+        }
+      },
+      "required": [
+        "challenge_id",
+        "expires_at",
+        "delivery"
+      ],
+      "additionalProperties": false
+    },
+    "RegistrationChallengeRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "uid": {
+          "$ref": "#/definitions/Uid"
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "general",
+            "professional"
+          ]
+        },
+        "email_sha256": {
+          "$ref": "#/definitions/Sha256"
+        },
+        "secret_sha256": {
+          "$ref": "#/definitions/Sha256"
+        },
+        "expires_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "consumed",
+            "revoked"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "uid",
+        "purpose",
+        "email_sha256",
+        "secret_sha256",
+        "expires_at",
+        "state",
+        "revision"
+      ],
+      "additionalProperties": false
+    },
+    "ClaimEvaluationJobRequest": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "EvaluationJobLeaseDTO": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "lease_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "lease_expires_at": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "job_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "submission": {
+          "$ref": "#/definitions/ProfessionalSubmissionDTO"
+        },
+        "questionnaire_version": {
+          "$ref": "#/definitions/QuestionnaireVersionDTO"
+        },
+        "instrument_template": {
+          "$ref": "#/definitions/InstrumentTemplateRecord"
+        }
+      },
+      "required": [
+        "job_id",
+        "lease_id",
+        "lease_expires_at",
+        "job_revision",
+        "submission",
+        "questionnaire_version"
+      ],
+      "additionalProperties": false
+    },
+    "ClaimEvaluationJobAckDTO": {
+      "type": "object",
+      "properties": {
+        "lease": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/EvaluationJobLeaseDTO"
+            }
+          ]
+        }
+      },
+      "required": [
+        "lease"
+      ],
+      "additionalProperties": false
+    },
+    "CompleteEvaluationJobRequest": {
+      "type": "object",
+      "properties": {
+        "lease_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "expected_job_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evaluation": {
+          "$ref": "#/definitions/ProfessionalEvaluationDTO"
+        },
+        "original_provider_response": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64000
+        }
+      },
+      "required": [
+        "lease_id",
+        "expected_job_revision",
+        "evaluation"
+      ],
+      "additionalProperties": false
+    },
+    "FailEvaluationJobRequest": {
+      "type": "object",
+      "properties": {
+        "lease_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "expected_job_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "failure_code": {
+          "type": "string",
+          "enum": [
+            "provider_unavailable",
+            "invalid_output",
+            "lease_expired",
+            "retry_exhausted"
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "lease_id",
+        "expected_job_revision",
+        "failure_code",
+        "retryable"
+      ],
+      "additionalProperties": false
+    },
+    "PatientRelationshipListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PatientRelationshipRecord"
+          },
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "ProfessionalSubmissionListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProfessionalSubmissionDTO"
+          },
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "ReviewDecisionRequest": {
+      "type": "object",
+      "properties": {
+        "organization_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "evaluation_id": {
+          "$ref": "#/definitions/Id"
+        },
+        "expected_review_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conclusion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000
+        },
+        "feedback": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "decision": {
+          "enum": [
+            "approve",
+            "reject",
+            "feedback"
+          ]
+        }
+      },
+      "required": [
+        "organization_id",
+        "evaluation_id",
+        "expected_review_revision",
+        "conclusion",
+        "decision"
+      ],
+      "additionalProperties": false
+    },
+    "ReviewDecisionDTO": {
+      "type": "object",
+      "properties": {
+        "review": {
+          "$ref": "#/definitions/ReviewRecordDTO"
+        },
+        "decision": {
+          "enum": [
+            "approve",
+            "reject",
+            "feedback"
+          ]
+        }
+      },
+      "required": [
+        "review",
+        "decision"
+      ],
+      "additionalProperties": false
+    },
+    "ReviewDecisionListDTO": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ReviewDecisionDTO"
+          },
+          "maxItems": 100
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ],
+      "additionalProperties": false
+    },
+    "SubmissionWorkspaceDTO": {
+      "type": "object",
+      "properties": {
+        "submission": {
+          "$ref": "#/definitions/ProfessionalSubmissionDTO"
+        },
+        "questionnaire": {
+          "$ref": "#/definitions/QuestionnaireVersionDTO"
+        },
+        "evaluation": {
+          "$ref": "#/definitions/ProfessionalEvaluationDTO"
+        },
+        "job": {
+          "$ref": "#/definitions/ProfessionalJobDTO"
+        },
+        "review_revision": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "submission",
+        "questionnaire",
+        "evaluation",
+        "job",
+        "review_revision"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

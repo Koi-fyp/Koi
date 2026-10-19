@@ -1,0 +1,35 @@
+{
+  "run_at": "2026-10-19T16:35:49.510Z",
+  "project": "demo-koi-platform-web1",
+  "checks": [
+    "verified clinician creates organization and publishes a text/picture EN/UR questionnaire",
+    "secure invitation UI returns a fragment link and stores no bearer token",
+    "General account accepts single-use invitation and gains only relationship capabilities",
+    "clinician assigns an immutable version using all-active roster snapshot",
+    "runner autosaves and resumes across reload, restarts, renders bundled pictures and mobile Urdu RTL",
+    "confirmation locks answers; duplicate concurrent submissions return one acknowledgement/job",
+    "psychologist manually reviews raw answers while AI is queued and custom scores are absent",
+    "provider failure never affects acknowledgement; review decisions preserve original fixture separately",
+    "cross-patient, cross-practice and patient-to-evaluation access is denied",
+    "General application demo step grants no rights; clinician acceptance activates relationship",
+    "repeat assignment has independent attempt; multi-device saves conflict and forged version is rejected",
+    "concurrent first submission across devices creates one additional job and identical acknowledgements",
+    "emulator Firestore denies direct reads, writes, collection and collection-group evaluation queries",
+    "closure denies subsequent operations and clears an open runner through authorization invalidation",
+    "logout/login into another account exposes no retained patient or evaluation content"
+  ],
+  "passed": 15,
+  "page_errors": 0,
+  "companion_requests": 0,
+  "real": [
+    "Firebase Auth emulator",
+    "Firestore emulator transactions/rules",
+    "Next route handlers",
+    "Chrome browser"
+  ],
+  "fixtures": [
+    "fictional accounts and registration records",
+    "explicitly labelled original interpretation/provider-failure fixture for review protection"
+  ],
+  "provider_calls": 0
+}

@@ -1,0 +1,19 @@
+{
+  "contract_version": "0.5.0",
+  "frozen_at": "2026-10-19T14:13:12.108736+00:00",
+  "status": "local_review_snapshot_not_cross_track_signed_off",
+  "owner_acknowledgements": {
+    "Web": "pending review",
+    "Flutter": "pending source and review",
+    "AI": "pending review"
+  },
+  "sha256": {
+    "contracts.schema.json": "369d26547411aa14ffbe3c1eba30e534250da47bd2e827f9595dd75be595456e",
+    "openapi.json": "def23892f41192d243634e68ab13a376da520f2221f7b74542d6b62d51ad32c4",
+    "fixtures.json": "11c2c66e9b9447ee08177b37ac05aa0b3d946c19f67e6a7951c013b937553222",
+    "semantics.md": "12ba4b401eab9a80ba2f24fa5974b7b164e294ba66bd3b4d16bf753e77b172c8",
+    "authorization-matrix.md": "8a7c26841566e7c94b5672c32f7c10fb68fa23d18e79666a01181cc3f5b56fcd",
+    "acceptance-cases.json": "a6bfaae5c936517e95a8fdcb7e8d44d12b35d7bddcca523ad3c9a7391c0d4ec6",
+    "CHANGELOG.md": "1f2db78495eacc4ad476a5d5230a2d08a01d572cddbe652b5636f4d15c1cabba"
+  }
+}

@@ -1,0 +1,381 @@
+{
+  "baseline": "baseline.json",
+  "self_hash_omitted": true,
+  "files": [
+    {
+      "path": "contracts/README.md",
+      "change": "modified WEB-1 baseline",
+      "sha256": "4c2fb5c35e7e52b87a480926a4143b4f6a7ef2394c184d73f882c4fcad4f88de"
+    },
+    {
+      "path": "contracts/implementations/WEB-2.md",
+      "change": "added in WEB-2",
+      "sha256": "05e11a43c48f045dcb956800aa84b28e6c5af45bd219f690cffe43028d031a28"
+    },
+    {
+      "path": "contracts/v0.5.1/CHANGELOG.md",
+      "change": "added in WEB-2",
+      "sha256": "ee9d5af5433d6f50ebccca5c52e977f9a363df35e860f6765afd726427709d4e"
+    },
+    {
+      "path": "contracts/v0.5.1/authorization-matrix.md",
+      "change": "added in WEB-2",
+      "sha256": "390988b44d370d7df8492ad73b3b1efae825b925ed24cae919efe6ebd971f515"
+    },
+    {
+      "path": "contracts/v0.5.1/contracts.schema.json",
+      "change": "added in WEB-2",
+      "sha256": "1e8ae602a9141d2126dd601e92a6a322ada6780debd89c293219b3c6b014b86c"
+    },
+    {
+      "path": "contracts/v0.5.1/fixtures.json",
+      "change": "added in WEB-2",
+      "sha256": "025e9dbe15aa5004d366dc332fac484ab548a9554d6ad67e0f799327475cddda"
+    },
+    {
+      "path": "contracts/v0.5.1/freeze-manifest.json",
+      "change": "added in WEB-2",
+      "sha256": "dd5dda24fc29cea8b5fca682e4e1dde7b8af7adbfeef841a109ab0eb9c25c1f6"
+    },
+    {
+      "path": "contracts/v0.5.1/openapi.json",
+      "change": "added in WEB-2",
+      "sha256": "d4be617aad1205541f0420cfbd4d0e952faa95c18c3858af5b1a84c64815475f"
+    },
+    {
+      "path": "contracts/v0.5.1/semantics.md",
+      "change": "added in WEB-2",
+      "sha256": "fe7d37971c450b059f02a42623d5cbd54fba5dca2fa9b5fccd6b893ed43d95e8"
+    },
+    {
+      "path": "review/web-2/SETUP.md",
+      "change": "added in WEB-2",
+      "sha256": "1910f5886a2569ff435dc9a31e5a389b8888e1fc974922d561da393a583eb086"
+    },
+    {
+      "path": "review/web-2/WEB-2-COMPLETION.md",
+      "change": "added in WEB-2",
+      "sha256": "4d619df699da479655ed238976be4bea534c341650b3eb4646a94fad0c20e82e"
+    },
+    {
+      "path": "review/web-2/baseline.json",
+      "change": "added in WEB-2",
+      "sha256": "3b023bf3a9a7eef1c051558390816d85d9590093497baf2c2a6a7d4d154e5a65"
+    },
+    {
+      "path": "review/web-2/changed-files.json",
+      "change": "added in WEB-2",
+      "sha256": null
+    },
+    {
+      "path": "review/web-2/changed-files.md",
+      "change": "added in WEB-2",
+      "sha256": "446084895b9a87a84c9b8feb342d5c381fdd3a13de18b8452648e755e523a942"
+    },
+    {
+      "path": "review/web-2/evidence/failure-0.png",
+      "change": "added in WEB-2",
+      "sha256": "c0c096bb1afea3089a5a4b53acff5ed222059fbd048b700b02d50e4a3de72f7d"
+    },
+    {
+      "path": "review/web-2/evidence/failure-1.png",
+      "change": "added in WEB-2",
+      "sha256": "cfa01a4f98e218fa63083ff576c0522d4bd5bdfae155e023e5c727476d8f75bb"
+    },
+    {
+      "path": "review/web-2/evidence/functional-emulator.json",
+      "change": "added in WEB-2",
+      "sha256": "736c2177baea01542cec8e430715a3698c62eafb2524f45fe6bd046177cb9fa7"
+    },
+    {
+      "path": "review/web-2/evidence/patient-acknowledgement.png",
+      "change": "added in WEB-2",
+      "sha256": "e0c8b1a51073cdf2e0b87cd7b59e3f6dab08d6970b40cd9cb34a01a298f52337"
+    },
+    {
+      "path": "review/web-2/evidence/patient-urdu-mobile.png",
+      "change": "added in WEB-2",
+      "sha256": "1b77d620b67c259773aad2f0571d62d0ccd58415750b02fa41f9025770512b80"
+    },
+    {
+      "path": "review/web-2/evidence/professional-review.png",
+      "change": "added in WEB-2",
+      "sha256": "38060e65856f066dbc475aa671c69d3b4df1c78b2475fa2ad163542ae0cd9c8f"
+    },
+    {
+      "path": "review/web-2/firestore.indexes.proposed.json",
+      "change": "added in WEB-2",
+      "sha256": "506449177b3303a0f5709299c1b3d93e5971d3e91310ad1507c444a3528c4d42"
+    },
+    {
+      "path": "review/web-2/verification.json",
+      "change": "added in WEB-2",
+      "sha256": "efad7445d16aa8dfb9693313f5febcc2056ee0eabc8a3190564d1fe76528e8fe"
+    },
+    {
+      "path": "scripts/validate-web2-contract.cjs",
+      "change": "added in WEB-2",
+      "sha256": "6ea165a2af0683f7566f4fe29beab2c4a8da742789a19618e54a2a37bb0f2b1c"
+    },
+    {
+      "path": "scripts/web2-emulator-functional.cjs",
+      "change": "added in WEB-2",
+      "sha256": "c0ce2a8f1f1b1ee36ff99f72d562b10176eb45d98bd7eae27a997ae5ec978284"
+    },
+    {
+      "path": "src/__tests__/platform/access-monitor.test.tsx",
+      "change": "added in WEB-2",
+      "sha256": "9bdc9cfffd866eecc0166044360a87e07a6e6cf04da5b2bdba70517a6ce89b12"
+    },
+    {
+      "path": "src/__tests__/platform/lifecycle-routes.test.ts",
+      "change": "added in WEB-2",
+      "sha256": "70fc5d08775f781b076c010061de250f4874319ac6985f8951296ad1823afa89"
+    },
+    {
+      "path": "src/__tests__/platform/lifecycle.test.ts",
+      "change": "added in WEB-2",
+      "sha256": "968b88e6e453ce32fa261b778f4918053d30b21f22984a5e52a13a3fdd2bcecf"
+    },
+    {
+      "path": "src/__tests__/platform/patient-runner.test.tsx",
+      "change": "added in WEB-2",
+      "sha256": "7f72e277e6be4b3b95a23796d23c6f4e780060802159597f22265d13ade53459"
+    },
+    {
+      "path": "src/__tests__/platform/patient-session.test.tsx",
+      "change": "added in WEB-2",
+      "sha256": "2c8fe72cff53ee0ea68bd2abe44449cab5beb5684fc2d7739c66dd6a28791738"
+    },
+    {
+      "path": "src/app/api/v1/connection-requests/[id]/demo-payment/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "465da1c7d310476404f99227eca3721558ea69e43fb7841a371634d125f5aaf7"
+    },
+    {
+      "path": "src/app/api/v1/connection-requests/[id]/transition/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "ca4e8be6d9e7115f3609c1cb414f56429fa83204c654fc28fd508c3563eb0c4c"
+    },
+    {
+      "path": "src/app/api/v1/connection-requests/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "ae7b822600ec0d40cb9862aba440a9fea03671e7c7e74452c4c696da53a698f9"
+    },
+    {
+      "path": "src/app/api/v1/me/access-events/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "621c21e73739558dd578229c3658e16e2f892fa5072370818f3a7ee4b35f0dc7"
+    },
+    {
+      "path": "src/app/api/v1/patient-invitations/[token]/redeem/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "86846cfd4d3479b5c56baf91b3e70a7137c9917176e9ac386d2f0b6fdbfb87b4"
+    },
+    {
+      "path": "src/app/api/v1/patient/assignments/[id]/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "191b7f5845de5d815ee6c8115b7eaa4c5abf3e042c2d54420ffe41b47deae113"
+    },
+    {
+      "path": "src/app/api/v1/patient/assignments/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "da688cf3f1c1cea25d26e0eb04bab043f21077e10445f8ffdca80d9a500faa93"
+    },
+    {
+      "path": "src/app/api/v1/patient/attempts/[id]/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "e03be893ab664933d847ce090563c62f753e8098949cc4689341f0aa51ccfeb7"
+    },
+    {
+      "path": "src/app/api/v1/patient/attempts/[id]/submit/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "979482268244e7240ec50b385bf1000897fb0f44805e7d51f278b29de668c2fb"
+    },
+    {
+      "path": "src/app/api/v1/professional/assignments/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "71fea8018c6b452b51c268e90995b6e9bdd88ee4a378c8a85dfe934495989151"
+    },
+    {
+      "path": "src/app/api/v1/professional/evaluations/[id]/review-decisions/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "2b14823c6799a6610ebc6fcfc1ca1d02bbf00cb25a6bf7b4689e50a6cd0fcb8c"
+    },
+    {
+      "path": "src/app/api/v1/professional/evaluations/[id]/reviews/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "b1568438a3dcd1f1d8a2447bc844e8a33e402a1841bf7b697636f6528914de8b"
+    },
+    {
+      "path": "src/app/api/v1/professional/evaluations/[id]/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "bb5cf56a780666b17f55d675a1e6e8eb1f3f42e0eb7396aa2c2be4e7b4f6af18"
+    },
+    {
+      "path": "src/app/api/v1/professional/patient-invitations/[id]/revoke/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "9ebae651728df2ab4e5164b8c69c4b7447d3d9d9286bbea6f9555e9654b5bda1"
+    },
+    {
+      "path": "src/app/api/v1/professional/patient-invitations/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "8edc8277e08dc6471bbc3cd815a7314480b9b8cd30bf590a610d4c2411d3d2c2"
+    },
+    {
+      "path": "src/app/api/v1/professional/patient-relationships/[id]/close/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "9adcb7ebbf811c787c9084095bcf9cc49e4b61e5ea81221218e5ca478103561c"
+    },
+    {
+      "path": "src/app/api/v1/professional/patient-relationships/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "e5f5ad357893b22b90946a1b7be28f58697f537494139c5014d3ce0406e557cf"
+    },
+    {
+      "path": "src/app/api/v1/professional/review-decisions/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "f0dc8ebd4d5866878084d79d765b5e36b9b8c6b193b141eaab0f09b76fe30dcf"
+    },
+    {
+      "path": "src/app/api/v1/professional/reviews/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "09b904e446128bb2ba445d10e3dfba9b3c4972ab08dbb9df4d61484cecd3179a"
+    },
+    {
+      "path": "src/app/api/v1/professional/submissions/[id]/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "3a02bf8abbf27bf3bd1a1f85dd30882d289d3e9fb2f74a49b30a10eedd0da76b"
+    },
+    {
+      "path": "src/app/api/v1/professional/submissions/[id]/workspace/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "2272c8d0c60e234bd0defcbcca2afc7539ad2aec7f19a4e3a8497686175103eb"
+    },
+    {
+      "path": "src/app/api/v1/professional/submissions/route.ts",
+      "change": "added in WEB-2",
+      "sha256": "22fff50cf2c57626c8ed2580dff947a36b6afb18e598a98986622395c903bc55"
+    },
+    {
+      "path": "src/app/patient/layout.tsx",
+      "change": "added in WEB-2",
+      "sha256": "3fd29728b34ff0622a5e622a016d906aa15b5a4fe1eb266ca04ffa65af09b885"
+    },
+    {
+      "path": "src/app/patient/loading.tsx",
+      "change": "added in WEB-2",
+      "sha256": "2b5242ce41ed3e1f080934edd68cdfa8566be07cf530f2af5d3fdf3ba4f47e78"
+    },
+    {
+      "path": "src/app/patient/page.tsx",
+      "change": "added in WEB-2",
+      "sha256": "38032042e9b5b6a54867c9a11975e21dfe80865d32030701d919f1802498d99f"
+    },
+    {
+      "path": "src/components/patient/PatientApp.tsx",
+      "change": "added in WEB-2",
+      "sha256": "9065f8b4c0e2ce55bb8338da157df249d3880cf6f839fcfb94dec4519dbbaa46"
+    },
+    {
+      "path": "src/components/patient/PatientWorkspace.tsx",
+      "change": "added in WEB-2",
+      "sha256": "e046a9e5890453e0899f69f30f683363450692abed07a874bb428d764fcbc7c8"
+    },
+    {
+      "path": "src/components/patient/QuestionFields.tsx",
+      "change": "added in WEB-2",
+      "sha256": "81040c87b7843d8c3b0c127104c34c46b7e2b88b0cf88ac8275de9c210c2f78e"
+    },
+    {
+      "path": "src/components/patient/QuestionnaireRunner.tsx",
+      "change": "added in WEB-2",
+      "sha256": "681dabe1558b1b359561bbbc6d752e9665a10846d3b6f2faf4fd744fd8043ee0"
+    },
+    {
+      "path": "src/components/professional/PatientManagement.tsx",
+      "change": "added in WEB-2",
+      "sha256": "61b3a7c6210e26b0ad44cccb519d370a711e1bf332fac567892d4ff5cfce84fa"
+    },
+    {
+      "path": "src/components/professional/ProfessionalWorkspace.tsx",
+      "change": "modified WEB-1 baseline",
+      "sha256": "c0dacd790b42f85c1ee807e6dd542ce9960432ea8f4a32f8d8e77b9e78c8dbc7"
+    },
+    {
+      "path": "src/components/professional/SubmissionReview.tsx",
+      "change": "added in WEB-2",
+      "sha256": "faba6fe85e1d4f2ac3c8598ea8a1c5af127d5841fcb35f7b4549bcd74f1ff24e"
+    },
+    {
+      "path": "src/lib/platform/access-monitor.ts",
+      "change": "added in WEB-2",
+      "sha256": "94eef9034f3ed19ea7abc08f1638cf27356dbcca22a06c5adefbd2f2b94c4e58"
+    },
+    {
+      "path": "src/lib/platform/answers.ts",
+      "change": "added in WEB-2",
+      "sha256": "def95bf840772a2c25b4921d1d934764106e4b8348be201dc6bb2fe7f019e9f6"
+    },
+    {
+      "path": "src/lib/platform/client.ts",
+      "change": "modified WEB-1 baseline",
+      "sha256": "e4a0edc32d8a37f46d0f06769f2e40a265252ab20888a955a8419863145ca95c"
+    },
+    {
+      "path": "src/lib/platform/patient-types.ts",
+      "change": "added in WEB-2",
+      "sha256": "de2cd8894794a146bf8ad6d467457655a23139748258a29eb8f8a8f1e444b545"
+    },
+    {
+      "path": "src/lib/platform/professional-types.ts",
+      "change": "added in WEB-2",
+      "sha256": "f2863f9899d8741edcc5523cb278e3bf490a0e3b1be040d738f95a3670f5ef66"
+    },
+    {
+      "path": "src/lib/platform/server/contract.ts",
+      "change": "modified WEB-1 baseline",
+      "sha256": "98aecda2a3ecb21ee92a00acc7e98ed2cc90b2757c4e5d482465f1ebda4b432c"
+    },
+    {
+      "path": "src/lib/platform/server/firestore-store.ts",
+      "change": "modified WEB-1 baseline",
+      "sha256": "e098f05f120dbdffaf72726d125affca2f4941c1a72f8bd34d3af8a01b19ad9f"
+    },
+    {
+      "path": "src/lib/platform/server/http.ts",
+      "change": "modified WEB-1 baseline",
+      "sha256": "88ee6b572532df5a089797433663ca15c2420bba461f9bb317ccd5f36ce03130"
+    },
+    {
+      "path": "src/lib/platform/server/lifecycle-http.ts",
+      "change": "added in WEB-2",
+      "sha256": "5cb8f96c670d9b706dae51a3ed22b02b959fa60432f9f15b8da960aff20d5ab2"
+    },
+    {
+      "path": "src/lib/platform/server/lifecycle.ts",
+      "change": "added in WEB-2",
+      "sha256": "0b25c94e8e63bc1b761fd43a15f11b4af269d6714a4119cb188cf6eef24b1b0a"
+    },
+    {
+      "path": "src/lib/platform/server/runtime.ts",
+      "change": "modified WEB-1 baseline",
+      "sha256": "4853e12cc5c3a77503252b3a067c31a2fd23523677c8e3d8f14315066b3c42c0"
+    },
+    {
+      "path": "src/lib/platform/server/service.ts",
+      "change": "modified WEB-1 baseline",
+      "sha256": "81a67c6d1b62c5053d80280fb4b7695eb3310ddd722fb807f515b8362054d231"
+    },
+    {
+      "path": "src/lib/platform/server/store.ts",
+      "change": "modified WEB-1 baseline",
+      "sha256": "3c3d3e1c27befd485370171bc09a9434dbe73e09c1fad87d9aa20f7428568412"
+    },
+    {
+      "path": "test/platform-memory.ts",
+      "change": "modified WEB-1 baseline",
+      "sha256": "2e81f33e6b7bac3a0bbb9e822b8046a5f4bbfbb6c72459b0eb1259c19c711c4a"
+    }
+  ]
+}

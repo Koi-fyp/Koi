@@ -1,0 +1,25 @@
+import React from 'react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import PatientApp from '@/components/patient/PatientApp';
+import { professionalApi, PlatformClientError } from '@/lib/platform/client';
+jest.mock('@/lib/platform/client', () => ({ ...jest.requireActual('@/lib/platform/client'), professionalApi: jest.fn() }));
+let generation = 1, ready = true;
+jest.mock('@/lib/platform/access-monitor', () => ({ useAccessMonitor: () => ({ ready, generation }) }));
+const user = { uid: 'patient', getIdToken: async () => 'test-token' };
+jest.mock('@/lib/platform/professional-auth', () => ({ useProfessionalAuth: () => ({ user, loading: false, error: false, currentUser: () => user, signOut: jest.fn() }) }));
+jest.mock('@/components/professional/RecentAuthentication', () => ({ useRecentAuthentication: () => ({ beforeMutation: async () => {}, dialog: null }) }));
+const originalFetch = global.fetch;
+beforeEach(() => { global.fetch = jest.fn(); });
+afterEach(() => { global.fetch = originalFetch; });
+it('never reuses a disposed client across authorization generations or accepts late callbacks', async () => {
+  let rejectOld: (error: unknown) => void;
+  const old = { request: jest.fn(() => new Promise((_, reject) => { rejectOld = reject; })), dispose: jest.fn() };
+  const caps = { capabilities: { expert_directory: true }, active_patient_relationships: [] };
+  const current = { request: jest.fn(async (path: string) => path.includes('capabilities') ? caps : { items: [], next_cursor: null }), dispose: jest.fn() };
+  (professionalApi as jest.Mock).mockReturnValueOnce(old).mockReturnValue(current);
+  const view = render(<PatientApp />); await waitFor(() => expect(old.request).toHaveBeenCalled());
+  generation++; view.rerender(<PatientApp />); await screen.findByRole('heading', { name: 'Join a practice' }); expect(old.dispose).toHaveBeenCalledTimes(1);
+  await act(async () => { rejectOld(new PlatformClientError(401, 'unauthenticated')); });
+  expect(screen.queryByRole('heading', { name: 'Care access changed' })).not.toBeInTheDocument();
+  ready = false; view.rerender(<PatientApp />); expect(screen.queryByRole('heading', { name: 'Join a practice' })).not.toBeInTheDocument(); expect(current.dispose).toHaveBeenCalledTimes(1);
+});

@@ -1,0 +1,27 @@
+{
+  "observed_at": "2026-10-19T13:56:43.405624+00:00",
+  "scope": "Unauthenticated GET only; no chat POST, Firebase account creation, writes or deployment",
+  "local_public_configuration": {
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "koi-companion-fyp",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "koi-companion-fyp.firebaseapp.com",
+    "NEXT_PUBLIC_KOI_API_BASE": "https://ahsulem--koi-chat-api-chatserver-web.us-east.modal.run",
+    "NEXT_PUBLIC_KOI_LOCAL_TEST_ANON": "true"
+  },
+  "probes": [
+    {
+      "url": "https://ahsulem--koi-chat-api-chatserver-web.us-east.modal.run/health",
+      "outcome": "unverified",
+      "error_type": "TimeoutError"
+    },
+    {
+      "url": "https://ahsulem--koi-chat-api-chatserver-web.us-east.modal.run/openapi.json",
+      "outcome": "unverified",
+      "error_type": "TimeoutError"
+    },
+    {
+      "url": "https://koi-companion-fyp.web.app/__/firebase/init.json",
+      "status": 404,
+      "outcome": "http_error_no_body_recorded"
+    }
+  ]
+}
