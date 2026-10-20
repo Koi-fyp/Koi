@@ -1,0 +1,582 @@
+{
+  "title": "Depression Anxiety Stress Scales (DASS21)",
+  "description": "Please read each statement and circle a number 0, 1, 2 or 3 which indicates how much the statement applied to you over the past week. There are no right or wrong answers. Do not spend too much time on any statement.",
+  "category": "fixed_instrument",
+  "validated": true,
+  "language": "en",
+  "rtl": false,
+  "version": {
+    "draft_id": "dass21_v1",
+    "version": 1,
+    "revision_history": [],
+    "created_at": "2026-10-19T00:00:00Z"
+  },
+  "status": "draft",
+  "questions": [
+    {
+      "question_id": "dass21_q1",
+      "type": "likert",
+      "text": "I found it hard to wind down",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q2",
+      "type": "likert",
+      "text": "I was aware of dryness of my mouth",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q3",
+      "type": "likert",
+      "text": "I couldn't seem to experience any positive feeling at all",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q4",
+      "type": "likert",
+      "text": "I experienced breathing difficulty (eg, excessively rapid breathing, breathlessness in the absence of physical exertion)",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q5",
+      "type": "likert",
+      "text": "I found it difficult to work up the initiative to do things",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q6",
+      "type": "likert",
+      "text": "I tended to over-react to situations",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q7",
+      "type": "likert",
+      "text": "I experienced trembling (eg, in the hands)",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q8",
+      "type": "likert",
+      "text": "I felt that I was using a lot of nervous energy",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q9",
+      "type": "likert",
+      "text": "I was worried about situations in which I might panic and make a fool of myself",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q10",
+      "type": "likert",
+      "text": "I felt that I had nothing to look forward to",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q11",
+      "type": "likert",
+      "text": "I found myself getting agitated",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q12",
+      "type": "likert",
+      "text": "I found it difficult to relax",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q13",
+      "type": "likert",
+      "text": "I felt down-hearted and blue",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q14",
+      "type": "likert",
+      "text": "I was intolerant of anything that kept me from getting on with what I was doing",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q15",
+      "type": "likert",
+      "text": "I felt I was close to panic",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q16",
+      "type": "likert",
+      "text": "I was unable to become enthusiastic about anything",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q17",
+      "type": "likert",
+      "text": "I felt I wasn't worth much as a person",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q18",
+      "type": "likert",
+      "text": "I felt that I was rather touchy",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q19",
+      "type": "likert",
+      "text": "I was aware of the action of my heart in the absence of physical exertion (eg, sense of heart rate increase, heart missing a beat)",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q20",
+      "type": "likert",
+      "text": "I felt scared without any good reason",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    },
+    {
+      "question_id": "dass21_q21",
+      "type": "likert",
+      "text": "I felt that life was meaningless",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o0",
+          "label": "Did not apply to me at all"
+        },
+        {
+          "option_id": "o1",
+          "label": "Applied to me to some degree, or some of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Applied to me to a considerable degree, or a good part of time"
+        },
+        {
+          "option_id": "o3",
+          "label": "Applied to me very much, or most of the time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "dass21_en"
+    }
+  ],
+  "review_warnings": [
+    {
+      "code": "fixed_instrument_immutable",
+      "severity": "info",
+      "message": "Validated instrument: wording, options and order must not be edited. Scores are dimensional, not diagnostic; no severity labels are applied."
+    }
+  ],
+  "sources": [
+    {
+      "source_id": "dass21_en",
+      "kind": "fixed_instrument",
+      "title": "Depression Anxiety Stress Scales (DASS21)",
+      "source_url": "https://dass.psy.unsw.edu.au/down.htm",
+      "version": "DASS21 response form (downloaded 2026-10-19)",
+      "license": "Public domain; may not be modified or sold for profit",
+      "citation": "Lovibond, S.H. & Lovibond, P.F. Manual for the Depression Anxiety Stress Scales. Sydney: Psychology Foundation. Forms from https://dass.psy.unsw.edu.au/down.htm",
+      "redistribution_reviewed": false
+    }
+  ]
+}

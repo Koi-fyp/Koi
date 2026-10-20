@@ -1,0 +1,22 @@
+{
+  "assets": [
+    {
+      "asset_id": "placeholder_circle_v1",
+      "kind": "placeholder",
+      "visual_description": "Blue circle",
+      "license": null
+    },
+    {
+      "asset_id": "placeholder_square_v1",
+      "kind": "placeholder",
+      "visual_description": "Yellow square",
+      "license": null
+    },
+    {
+      "asset_id": "placeholder_triangle_v1",
+      "kind": "placeholder",
+      "visual_description": "Green triangle",
+      "license": null
+    }
+  ]
+}

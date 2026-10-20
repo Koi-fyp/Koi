@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:koi_mobile/questionnaires/questionnaire_models.dart';
+import 'package:koi_mobile/questionnaires/questionnaire_wire.dart';
 import 'package:koi_mobile/widgets/koi_loader.dart';
 
 /// The new MOB-1 feature folders.
@@ -78,6 +78,7 @@ void main() {
     const files = [
       'lib/questionnaires/questionnaire_models.dart',
       'lib/questionnaires/questionnaire_api.dart',
+      'lib/questionnaires/questionnaire_wire.dart',
       'lib/questionnaires/draft_store.dart',
       'lib/questionnaires/attempt_controller.dart',
       'lib/account/capabilities.dart',
@@ -102,28 +103,39 @@ void main() {
     });
 
     test('extra server fields are dropped, never kept or re-sent', () {
-      final attempt = Attempt.fromJson({
-        'attempt_id': 'a',
+      final attempt = parseAttempt({
+        'id': 'a',
         'assignment_id': 's',
+        'patient_uid': 'p',
         'version_id': 'v',
-        'status': 'submitted',
+        'status': 'in_progress',
         'revision': 3,
-        'answers': {
-          'q1': {
+        'server_updated_at': '2026-10-19T10:00:00Z',
+        'answers': [
+          {
+            'answer_id': 'x1',
+            'question_id': 'q1',
             'option_ids': ['x'],
+            'value': null,
+            'text': null,
             'score': 4,
             'evaluation': 'hidden',
           },
-        },
+        ],
         'score': 12,
         'evaluation_status': 'pending',
         'ai_job_id': 'j1',
       });
-      expect(attempt.answers['q1']!.toJson(), {
+      expect(encodeAnswer(attempt.answers.single), {
+        'answer_id': 'x1',
+        'question_id': 'q1',
         'option_ids': ['x'],
+        'value': null,
+        'text': null,
       });
-      final ack = SubmitAck.fromJson({
+      final ack = parseSubmitAck({
         'attempt_id': 'a',
+        'assignment_id': 's',
         'status': 'submitted',
         'submitted_at': '2026-10-19T10:00:00Z',
         'score': 12,

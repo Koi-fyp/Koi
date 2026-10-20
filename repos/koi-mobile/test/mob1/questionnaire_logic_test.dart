@@ -5,51 +5,59 @@ import 'package:koi_mobile/core/crypto_context.dart';
 import 'package:koi_mobile/platform/platform_client.dart';
 import 'package:koi_mobile/questionnaires/attempt_controller.dart';
 import 'package:koi_mobile/questionnaires/draft_store.dart';
+import 'package:koi_mobile/questionnaires/mock_fixtures.dart';
 import 'package:koi_mobile/questionnaires/mock_questionnaire_api.dart';
 import 'package:koi_mobile/questionnaires/questionnaire_models.dart';
+import 'package:koi_mobile/questionnaires/questionnaire_wire.dart';
 
 import '../support/mob1_fakes.dart';
 
-final _assignment = MockQuestionnaireRemote.demoAssignments().first;
+// MOB-3 rewrite: same MOB-1 IDs and behaviours, now on the contract v0.5.1
+// flow (PATCH autosave, Restart = empty PATCH, POST submit) with the AI
+// QuestionnaireDraft body (PROVISIONAL).
 
-Map<String, Object?> _versionJson({
-  bool approved = true,
-  int schema = 1,
-  String type = 'single_choice',
-}) => {
-  'version_id': 'v1',
-  'questionnaire_id': 'q',
-  'approved': approved,
-  'schema_version': schema,
-  'locale': 'en',
-  'title': 'T',
-  'questions': [
-    {
-      'id': 'q1',
-      'type': type,
-      'required': true,
-      'prompt': 'Placeholder',
-      'options': [
-        {'id': 'a', 'label': 'A'},
-        {'id': 'b', 'label': 'B'},
-      ],
-    },
-  ],
+const _attempt = 'demo_attempt_en';
+
+/// Fills every required question of the English all-types fixture.
+const Map<String, AnswerValue> _complete = {
+  'q_single': AnswerValue(optionIds: ['o_a']),
+  'q_multi': AnswerValue(optionIds: ['o_b', 'o_c']),
+  'q_yes_no': AnswerValue(optionIds: ['o_yes']),
+  'q_likert': AnswerValue(optionIds: ['o3']),
+  'q_numeric': AnswerValue(value: 4),
+  'q_image_single': AnswerValue(optionIds: ['img_square']),
 };
 
-/// Fills every required question of the English demo version.
-const Map<String, Answer> _complete = {
-  'q1': Answer(optionIds: ['opt_A']),
-  'q2': Answer(optionIds: ['opt_B', 'opt_C']),
-  'q3': Answer(optionIds: ['yes']),
-  'q4': Answer(optionIds: ['l3']),
-  'q6': Answer(optionIds: ['img_square']),
+Map<String, Object?> _published({
+  String status = 'published',
+  String type = 'single',
+}) => {
+  'questionnaire_id': 'q',
+  'version': 1,
+  'status': status,
+  'body': {
+    'title': 'T',
+    'language': 'en',
+    'rtl': false,
+    'questions': [
+      {
+        'question_id': 'q1',
+        'type': type,
+        'text': 'Placeholder',
+        'options': [
+          {'option_id': 'a', 'label': 'A'},
+          {'option_id': 'b', 'label': 'B'},
+        ],
+      },
+    ],
+  },
 };
 
 void main() {
   late MemoryDraftBox box;
   late DraftRepository drafts;
   late MockQuestionnaireRemote remote;
+  late Assignment assignment;
 
   DraftRepository draftsOn(MemoryDraftBox b) => DraftRepository(
     box: b,
@@ -63,7 +71,7 @@ void main() {
     String Function()? newKey,
   }) => AttemptController(
     uid: 'p1',
-    assignment: _assignment,
+    assignment: assignment,
     api: remote,
     drafts: store ?? drafts,
     debounce: debounce,
@@ -76,36 +84,43 @@ void main() {
     }
   }
 
-  setUp(() {
+  List<String>? serverOptions(String questionId) => remote
+      .answersOf(_attempt)
+      .where((a) => a.questionId == questionId)
+      .firstOrNull
+      ?.optionIds;
+
+  setUp(() async {
     box = MemoryDraftBox();
     drafts = draftsOn(box);
     remote = MockQuestionnaireRemote();
+    assignment = (await remote.assignments()).items.first;
   });
 
-  group('MOB1-26 only approved, immutable, known versions render', () {
-    test('unapproved, unknown schema and unknown type are refused', () {
+  group('MOB1-26 only published, known questionnaires render', () {
+    test('unpublished and unknown types are refused', () {
       expect(
-        () => QuestionnaireVersion.fromJson(_versionJson(approved: false)),
+        () => parsePublishedQuestionnaire(_published(status: 'draft')),
         throwsA(isA<UnsupportedQuestionnaireException>()),
       );
       expect(
-        () => QuestionnaireVersion.fromJson(_versionJson(schema: 2)),
+        () => parsePublishedQuestionnaire(_published(type: 'slider')),
         throwsA(isA<UnsupportedQuestionnaireException>()),
       );
       expect(
-        () => QuestionnaireVersion.fromJson(_versionJson(type: 'numeric')),
-        throwsA(isA<UnsupportedQuestionnaireException>()),
-      );
-      expect(
-        QuestionnaireVersion.fromJson(_versionJson()).questions.single.id,
+        parsePublishedQuestionnaire(_published()).questions.single.id,
         'q1',
       );
     });
-    test('answers are sanitized against the pinned version', () {
-      final v = QuestionnaireVersion.fromJson(_versionJson());
+    test('answers are sanitized against the pinned questionnaire', () {
+      final v = parsePublishedQuestionnaire(_published());
       final clean = sanitizeAnswers(v, const {
-        'q1': Answer(optionIds: ['zzz', 'b', 'a']),
-        'q9': Answer(optionIds: ['a']),
+        'q1': Answer(
+          answerId: 'id1',
+          questionId: 'q1',
+          optionIds: ['zzz', 'b', 'a'],
+        ),
+        'q9': Answer(answerId: 'id9', questionId: 'q9', optionIds: ['a']),
       });
       expect(clean.keys, ['q1']);
       expect(clean['q1']!.optionIds, [
@@ -117,12 +132,12 @@ void main() {
       () async {
         final c = AttemptController(
           uid: 'p1',
-          assignment: const Assignment(
-            assignmentId: 'demo-assignment-en',
-            attemptId: 'demo-attempt-en',
-            versionId: 'demo-form-ur-v1',
-            title: 't',
-            status: AttemptStatus.notStarted,
+          assignment: Assignment(
+            assignmentId: assignment.assignmentId,
+            attemptId: assignment.attemptId,
+            versionId: 'demo_version_ur',
+            title: const {'en': 't'},
+            state: AssignmentState.assigned,
           ),
           api: remote,
           drafts: drafts,
@@ -139,19 +154,17 @@ void main() {
       final c = device(debounce: const Duration(milliseconds: 30));
       await c.load();
       expect(c.serverRevision, 0);
-      c.setAnswer('q1', const Answer(optionIds: ['opt_A']));
-      c.setAnswer('q1', const Answer(optionIds: ['opt_B']));
-      c.setAnswer('q3', const Answer(optionIds: ['no']));
+      c.setAnswer('q_single', const AnswerValue(optionIds: ['o_a']));
+      c.setAnswer('q_single', const AnswerValue(optionIds: ['o_b']));
+      c.setAnswer('q_yes_no', const AnswerValue(optionIds: ['o_no']));
       expect(c.saveStatus, isNot(SaveStatus.saved));
       await Future<void>.delayed(const Duration(milliseconds: 80));
       await settle();
-      expect(remote.saveDraftCalls, 1);
+      expect(remote.autosaveCalls, 1);
       expect(c.serverRevision, 1);
       expect(c.saveStatus, SaveStatus.saved);
-      expect(remote.snapshot('demo-attempt-en').answers['q1']!.optionIds, [
-        'opt_B',
-      ]);
-      c.setAnswer('q4', const Answer(optionIds: ['l2']));
+      expect(serverOptions('q_single'), ['o_b']);
+      c.setAnswer('q_likert', const AnswerValue(optionIds: ['o2']));
       await Future<void>.delayed(const Duration(milliseconds: 80));
       await settle();
       expect(c.serverRevision, 2);
@@ -160,10 +173,11 @@ void main() {
     test('the local draft is encrypted and holds no plain answers', () async {
       final c = device();
       await c.load();
-      c.setAnswer('q5', const Answer(text: 'my private words'));
+      c.setAnswer('q_free_text', const AnswerValue(text: 'my private words'));
       await settle();
       final raw = box.rows.values.single;
       expect(raw, isNot(contains('my private words')));
+      expect(raw, isNot(contains(c.answerIds['q_free_text']!)));
       expect((jsonDecode(raw) as Map).keys.toSet(), {
         'uid',
         'attempt_id',
@@ -180,12 +194,13 @@ void main() {
     test('device B sees device A\'s saved answers and revision', () async {
       final a = device();
       await a.load();
-      a.setAnswer('q1', const Answer(optionIds: ['opt_C']));
+      a.setAnswer('q_single', const AnswerValue(optionIds: ['o_c']));
       await settle();
       expect(a.saveStatus, SaveStatus.saved);
       final b = device(store: draftsOn(MemoryDraftBox()));
       await b.load();
-      expect(b.answers['q1']!.optionIds, ['opt_C']);
+      expect(b.answers['q_single']!.optionIds, ['o_c']);
+      expect(b.answers['q_single']!.answerId, a.answerIds['q_single']);
       expect(b.serverRevision, a.serverRevision);
       a.dispose();
       b.dispose();
@@ -197,7 +212,7 @@ void main() {
       final a = device();
       await a.load();
       remote.offline = true;
-      a.setAnswer('q1', const Answer(optionIds: ['opt_A']));
+      a.setAnswer('q_single', const AnswerValue(optionIds: ['o_a']));
       await settle();
       expect(a.saveStatus, SaveStatus.offline);
       expect(a.hasUnsyncedChanges, isTrue);
@@ -206,24 +221,22 @@ void main() {
       remote.offline = false;
       final b = device(store: draftsOn(MemoryDraftBox()));
       await b.load();
-      b.setAnswer('q1', const Answer(optionIds: ['opt_B']));
+      b.setAnswer('q_single', const AnswerValue(optionIds: ['o_b']));
       await settle();
-      expect(remote.snapshot('demo-attempt-en').revision, 1);
+      expect(remote.revisionOf(_attempt), 1);
 
       // A comes back online: conflict, the server answer is untouched.
-      a.setAnswer('q3', const Answer(optionIds: ['yes']));
+      a.setAnswer('q_yes_no', const AnswerValue(optionIds: ['o_yes']));
       await settle();
       expect(a.saveStatus, SaveStatus.conflict);
-      expect(remote.snapshot('demo-attempt-en').answers['q1']!.optionIds, [
-        'opt_B',
-      ]);
+      expect(serverOptions('q_single'), ['o_b']);
       // While in conflict, edits are refused (nothing is merged).
-      a.setAnswer('q4', const Answer(optionIds: ['l1']));
-      expect(a.answers.containsKey('q4'), isFalse);
+      a.setAnswer('q_likert', const AnswerValue(optionIds: ['o1']));
+      expect(a.answers.containsKey('q_likert'), isFalse);
 
       await a.resolveUseServer();
       expect(a.saveStatus, isNot(SaveStatus.conflict));
-      expect(a.answers['q1']!.optionIds, ['opt_B']);
+      expect(a.answers['q_single']!.optionIds, ['o_b']);
       a.dispose();
       b.dispose();
     });
@@ -231,44 +244,46 @@ void main() {
       final a = device();
       await a.load();
       remote.offline = true;
-      a.setAnswer('q1', const Answer(optionIds: ['opt_A']));
+      a.setAnswer('q_single', const AnswerValue(optionIds: ['o_a']));
       await settle();
       a.dispose();
       remote.offline = false;
       final b = device(store: draftsOn(MemoryDraftBox()));
       await b.load();
-      b.setAnswer('q1', const Answer(optionIds: ['opt_C']));
+      b.setAnswer('q_single', const AnswerValue(optionIds: ['o_c']));
       await settle();
       b.dispose();
 
       final again = device(); // device A restarts with its stale draft
       await again.load();
       expect(again.saveStatus, SaveStatus.conflict);
-      expect(again.answers['q1']!.optionIds, [
-        'opt_C',
+      expect(again.answers['q_single']!.optionIds, [
+        'o_c',
       ], reason: 'server shown first');
       await again.resolveKeepMine();
       await settle();
-      expect(remote.snapshot('demo-attempt-en').answers['q1']!.optionIds, [
-        'opt_A',
-      ]);
+      expect(serverOptions('q_single'), ['o_a']);
       expect(again.saveStatus, SaveStatus.saved);
       again.dispose();
     });
   });
 
   group('MOB1-30 restart rules', () {
-    test('unfinished: cleared on the server, local draft dropped', () async {
-      final c = device();
-      await c.load();
-      c.setAnswer('q1', const Answer(optionIds: ['opt_A']));
-      await settle();
-      expect(await c.restart(), isTrue);
-      expect(c.answers, isEmpty);
-      expect(remote.snapshot('demo-attempt-en').answers, isEmpty);
-      expect(c.index, 0);
-      c.dispose();
-    });
+    test(
+      'unfinished: cleared on the server (empty PATCH), answers gone locally',
+      () async {
+        final c = device();
+        await c.load();
+        c.setAnswer('q_single', const AnswerValue(optionIds: ['o_a']));
+        await settle();
+        expect(await c.restart(), isTrue);
+        expect(c.answers, isEmpty);
+        expect(remote.answersOf(_attempt), isEmpty);
+        expect(remote.autosaveBodies.last['answers'], isEmpty);
+        expect(c.index, 0);
+        c.dispose();
+      },
+    );
     test('submitted: refused, nothing cleared', () async {
       final c = device();
       await c.load();
@@ -277,18 +292,15 @@ void main() {
       }
       expect(await c.submit(), isTrue);
       expect(await c.restart(), isFalse);
-      expect(
-        remote.snapshot('demo-attempt-en').status,
-        AttemptStatus.submitted,
-      );
-      expect(remote.snapshot('demo-attempt-en').answers, isNotEmpty);
+      expect(remote.isSubmitted(_attempt), isTrue);
+      expect(remote.answersOf(_attempt), isNotEmpty);
       c.dispose();
     });
   });
 
   group('MOB1-31 duplicate submit / timeout = exactly one submission', () {
     test(
-      'commit then timeout → status by idempotency key → success, 1 commit',
+      'commit then timeout → the assignment says submitted → success, 1 commit',
       () async {
         final c = device();
         await c.load();
@@ -355,10 +367,10 @@ void main() {
       () async {
         final c = device();
         await c.load();
-        c.setAnswer('q1', const Answer(optionIds: ['opt_A']));
+        c.setAnswer('q_single', const AnswerValue(optionIds: ['o_a']));
         expect(await c.submit(), isFalse);
         expect(c.submitProblem, SubmitProblem.incomplete);
-        expect(c.missing.first, 'q2');
+        expect(c.missing.first, 'q_multi');
         expect(c.index, 1);
         expect(remote.committedSubmissions, 0);
         c.dispose();
@@ -374,13 +386,11 @@ void main() {
         c.setAnswer(e.key, e.value);
       }
       await c.submit();
-      c.setAnswer('q1', const Answer(optionIds: ['opt_C']));
+      c.setAnswer('q_single', const AnswerValue(optionIds: ['o_c']));
       await settle();
-      expect(c.answers['q1']!.optionIds, ['opt_A']);
+      expect(c.answers['q_single']!.optionIds, ['o_a']);
       expect(box.rows, isEmpty);
-      expect(remote.snapshot('demo-attempt-en').answers['q1']!.optionIds, [
-        'opt_A',
-      ]);
+      expect(serverOptions('q_single'), ['o_a']);
       c.dispose();
     });
     test(
@@ -389,7 +399,7 @@ void main() {
         final a = device();
         await a.load();
         remote.offline = true;
-        a.setAnswer('q1', const Answer(optionIds: ['opt_C']));
+        a.setAnswer('q_single', const AnswerValue(optionIds: ['o_c']));
         await settle();
         a.dispose();
         remote.offline = false;
@@ -405,30 +415,29 @@ void main() {
         await back.load();
         expect(back.phase, AttemptPhase.submitted);
         expect(box.rows, isEmpty, reason: 'stale draft discarded');
-        expect(remote.snapshot('demo-attempt-en').answers['q1']!.optionIds, [
-          'opt_A',
-        ]);
+        expect(serverOptions('q_single'), ['o_a']);
         back.dispose();
       },
     );
-    test('the server saying attempt_submitted locks the open form', () async {
-      final a = device();
-      await a.load();
-      final b = device(store: draftsOn(MemoryDraftBox()));
-      await b.load();
-      for (final e in _complete.entries) {
-        b.setAnswer(e.key, e.value);
-      }
-      await b.submit();
-      a.setAnswer('q1', const Answer(optionIds: ['opt_C']));
-      await settle();
-      expect(a.phase, AttemptPhase.submitted);
-      expect(remote.snapshot('demo-attempt-en').answers['q1']!.optionIds, [
-        'opt_A',
-      ]);
-      a.dispose();
-      b.dispose();
-    });
+    test(
+      'the server refusing a save after submit locks the open form',
+      () async {
+        final a = device();
+        await a.load();
+        final b = device(store: draftsOn(MemoryDraftBox()));
+        await b.load();
+        for (final e in _complete.entries) {
+          b.setAnswer(e.key, e.value);
+        }
+        await b.submit();
+        a.setAnswer('q_single', const AnswerValue(optionIds: ['o_c']));
+        await settle();
+        expect(a.phase, AttemptPhase.submitted);
+        expect(serverOptions('q_single'), ['o_a']);
+        a.dispose();
+        b.dispose();
+      },
+    );
   });
 
   group('MOB1-40 offline before the form loads', () {
@@ -443,19 +452,25 @@ void main() {
         c.dispose();
       },
     );
-    test('mock remote follows the contract errors', () async {
+    test('mock remote follows the contract errors (flat ErrorDTO)', () async {
       await expectLater(
-        remote.saveDraft(
-          'demo-attempt-en',
+        remote.autosave(
+          _attempt,
           expectedRevision: 5,
-          answers: const {},
-          clientMutationId: 'm',
+          answers: const [],
+          idempotencyKey: 'k',
         ),
         throwsA(
           isA<PlatformException>()
-              .having((e) => e.code, 'code', PlatformErrorCode.revisionConflict)
-              .having((e) => e.currentRevision, 'current', 0),
+              .having((e) => e.code, 'code', PlatformErrorCode.conflict)
+              .having((e) => e.status, 'status', 409)
+              .having((e) => e.contractCode, 'contract code', 'conflict'),
         ),
+      );
+      // The demo fixtures parse with the app's own parser.
+      expect(
+        parsePublishedQuestionnaire(demoAllTypesEn()).questions,
+        hasLength(8),
       );
     });
   });

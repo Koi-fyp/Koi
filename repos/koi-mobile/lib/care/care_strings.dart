@@ -139,6 +139,52 @@ enum CareText {
   ok,
   // Debug.
   simulateTitle,
+  // Questionnaires (MOB-3).
+  qLoadingList,
+  qNothing,
+  qStateAssigned,
+  qStateInProgress,
+  qStateSubmitted,
+  qLoading,
+  qSubmitting,
+  qOfflineOpen,
+  qGone,
+  qUnsupported,
+  qConflictTitle,
+  qConflictBody,
+  qUseServer,
+  qKeepMine,
+  qPrevious,
+  qNext,
+  qCheckAnswers,
+  qStartAgain,
+  qRestartTitle,
+  qRestartBody,
+  qCancel,
+  qPleaseAnswer,
+  qOptional,
+  qNoAnswer,
+  qCheckYourAnswers,
+  qEdit,
+  qSubmit,
+  qBackToQuestions,
+  qProblemIncomplete,
+  qProblemOffline,
+  qProblemUnconfirmed,
+  qProblemConflict,
+  qProblemReauth,
+  qSaving,
+  qSaved,
+  qOfflineNotSynced,
+  qNotSaved,
+  qConflict,
+  qAckTitle,
+  qBackToList,
+  qNumberInvalid,
+  qPictureUnavailable,
+  qSources,
+  qIncrease,
+  qDecrease,
 }
 
 const Map<CareText, String> _en = {
@@ -281,6 +327,54 @@ const Map<CareText, String> _en = {
   CareText.kindApplication: 'Your application was updated',
   CareText.ok: 'OK',
   CareText.simulateTitle: 'Simulate psychologist (debug)',
+  CareText.qLoadingList: 'Loading questionnaires',
+  CareText.qNothing: 'Nothing to fill in right now.',
+  CareText.qStateAssigned: 'Not started',
+  CareText.qStateInProgress: 'In progress',
+  CareText.qStateSubmitted: 'Submitted',
+  CareText.qLoading: 'Loading questionnaire…',
+  CareText.qSubmitting: 'Submitting…',
+  CareText.qOfflineOpen:
+      'You seem to be offline. This questionnaire needs a connection to open.',
+  CareText.qGone: 'This questionnaire is no longer available.',
+  CareText.qUnsupported: 'This questionnaire cannot be shown in this version of the app. Please let your psychologist know.',
+  CareText.qConflictTitle: 'These answers were changed somewhere else.',
+  CareText.qConflictBody: 'Choose which answers to keep. Nothing is combined.',
+  CareText.qUseServer: 'Load the saved answers',
+  CareText.qKeepMine: 'Keep this device\'s answers',
+  CareText.qPrevious: 'Previous',
+  CareText.qNext: 'Next',
+  CareText.qCheckAnswers: 'Check answers',
+  CareText.qStartAgain: 'Start again',
+  CareText.qRestartTitle: 'Start again?',
+  CareText.qRestartBody: 'Your answers to this questionnaire will be cleared. This cannot be undone.',
+  CareText.qCancel: 'Cancel',
+  CareText.qPleaseAnswer: 'Please answer this question.',
+  CareText.qOptional: '(optional)',
+  CareText.qNoAnswer: 'No answer',
+  CareText.qCheckYourAnswers: 'Check your answers',
+  CareText.qEdit: 'Edit',
+  CareText.qSubmit: 'Submit',
+  CareText.qBackToQuestions: 'Back to questions',
+  CareText.qProblemIncomplete: 'Please answer the required questions.',
+  CareText.qProblemOffline:
+      'You seem to be offline. Your answers are kept; connect to submit.',
+  CareText.qProblemUnconfirmed: 'We could not confirm your submission. Tap Submit again: it will not be sent twice.',
+  CareText.qProblemConflict:
+      'These answers were changed somewhere else. Choose which to keep first.',
+  CareText.qProblemReauth: 'Please confirm your password to submit.',
+  CareText.qSaving: 'Saving…',
+  CareText.qSaved: 'Saved',
+  CareText.qOfflineNotSynced: 'Offline – not synced',
+  CareText.qNotSaved: 'Not saved',
+  CareText.qConflict: 'Conflict',
+  CareText.qAckTitle: 'Response submitted',
+  CareText.qBackToList: 'Back to questionnaires',
+  CareText.qNumberInvalid: 'Please enter a number.',
+  CareText.qPictureUnavailable: 'Picture unavailable',
+  CareText.qSources: 'Source',
+  CareText.qIncrease: 'Increase',
+  CareText.qDecrease: 'Decrease',
 };
 
 // URDU NEEDS NATIVE REVIEW (see the file header).
@@ -427,6 +521,55 @@ const Map<CareText, String> _ur = {
   CareText.kindApplication: 'آپ کی درخواست میں تبدیلی ہوئی',
   CareText.ok: 'ٹھیک ہے',
   CareText.simulateTitle: 'ماہرِ نفسیات کی نقل (ڈیبگ)',
+  CareText.qLoadingList: 'سوالنامے کھل رہے ہیں',
+  CareText.qNothing: 'ابھی بھرنے کے لیے کچھ نہیں ہے۔',
+  CareText.qStateAssigned: 'شروع نہیں ہوا',
+  CareText.qStateInProgress: 'جاری ہے',
+  CareText.qStateSubmitted: 'جمع ہو گیا',
+  CareText.qLoading: 'سوالنامہ کھل رہا ہے…',
+  CareText.qSubmitting: 'جمع ہو رہا ہے…',
+  CareText.qOfflineOpen:
+      'لگتا ہے آپ آف لائن ہیں۔ یہ سوالنامہ کھولنے کے لیے کنکشن ضروری ہے۔',
+  CareText.qGone: 'یہ سوالنامہ اب دستیاب نہیں ہے۔',
+  CareText.qUnsupported: 'یہ سوالنامہ ایپ کے اس ورژن میں نہیں دکھایا جا سکتا۔ براہِ کرم اپنے ماہرِ نفسیات کو بتائیں۔',
+  CareText.qConflictTitle: 'یہ جوابات کسی اور جگہ بدلے گئے ہیں۔',
+  CareText.qConflictBody:
+      'چنیں کہ کون سے جوابات رکھنے ہیں۔ کچھ ملایا نہیں جاتا۔',
+  CareText.qUseServer: 'محفوظ شدہ جوابات لائیں',
+  CareText.qKeepMine: 'اس فون کے جوابات رکھیں',
+  CareText.qPrevious: 'پچھلا',
+  CareText.qNext: 'اگلا',
+  CareText.qCheckAnswers: 'جوابات دیکھیں',
+  CareText.qStartAgain: 'دوبارہ شروع کریں',
+  CareText.qRestartTitle: 'دوبارہ شروع کریں؟',
+  CareText.qRestartBody:
+      'اس سوالنامے کے آپ کے جوابات مٹ جائیں گے۔ اسے واپس نہیں کیا جا سکتا۔',
+  CareText.qCancel: 'منسوخ کریں',
+  CareText.qPleaseAnswer: 'براہِ کرم اس سوال کا جواب دیں۔',
+  CareText.qOptional: '(اختیاری)',
+  CareText.qNoAnswer: 'کوئی جواب نہیں',
+  CareText.qCheckYourAnswers: 'اپنے جوابات دیکھیں',
+  CareText.qEdit: 'بدلیں',
+  CareText.qSubmit: 'جمع کریں',
+  CareText.qBackToQuestions: 'سوالات پر واپس',
+  CareText.qProblemIncomplete: 'براہِ کرم ضروری سوالات کے جواب دیں۔',
+  CareText.qProblemOffline: 'لگتا ہے آپ آف لائن ہیں۔ آپ کے جوابات رکھے گئے ہیں؛ جمع کرنے کے لیے کنکشن جوڑیں۔',
+  CareText.qProblemUnconfirmed: 'ہم آپ کے جمع کرانے کی تصدیق نہیں کر سکے۔ دوبارہ "جمع کریں" دبائیں: یہ دو بار نہیں بھیجا جائے گا۔',
+  CareText.qProblemConflict:
+      'یہ جوابات کسی اور جگہ بدلے گئے ہیں۔ پہلے چنیں کہ کون سے رکھنے ہیں۔',
+  CareText.qProblemReauth: 'جمع کرنے کے لیے براہِ کرم اپنا پاس ورڈ تصدیق کریں۔',
+  CareText.qSaving: 'محفوظ ہو رہا ہے…',
+  CareText.qSaved: 'محفوظ ہو گیا',
+  CareText.qOfflineNotSynced: 'آف لائن – ہم آہنگ نہیں',
+  CareText.qNotSaved: 'محفوظ نہیں ہوا',
+  CareText.qConflict: 'تضاد',
+  CareText.qAckTitle: 'جواب جمع ہو گیا',
+  CareText.qBackToList: 'سوالناموں پر واپس',
+  CareText.qNumberInvalid: 'براہِ کرم ایک عدد لکھیں۔',
+  CareText.qPictureUnavailable: 'تصویر دستیاب نہیں',
+  CareText.qSources: 'ماخذ',
+  CareText.qIncrease: 'بڑھائیں',
+  CareText.qDecrease: 'گھٹائیں',
 };
 
 /// The strings and direction of the new Care screens.
@@ -454,6 +597,29 @@ class CareStrings {
 
   String messageTo(String name) =>
       isUrdu ? '$name کو پیغام' : 'Message to $name';
+
+  /// "Question 3 of 7" (questionnaire progress).
+  String questionOf(int n, int total) =>
+      isUrdu ? 'سوال $n از $total' : 'Question $n of $total';
+
+  String charCount(int n, int max) => '$n / $max';
+
+  String numberBelowMin(String min) => isUrdu
+      ? 'سب سے کم اجازت شدہ عدد $min ہے۔'
+      : 'The lowest allowed number is $min.';
+
+  String numberAboveMax(String max) => isUrdu
+      ? 'سب سے زیادہ اجازت شدہ عدد $max ہے۔'
+      : 'The highest allowed number is $max.';
+
+  String numberStep(String step) =>
+      isUrdu ? '$step کے وقفے سے لکھیں۔' : 'Use steps of $step.';
+
+  String numberRange(String min, String max) =>
+      isUrdu ? '$min سے $max تک' : 'From $min to $max';
+
+  String submittedAt(String time) =>
+      isUrdu ? 'جمع کرنے کا وقت: $time' : 'Submitted at $time';
 
   String unreadCount(int n) => isUrdu ? '$n نہ پڑھے گئے' : '$n unread';
 

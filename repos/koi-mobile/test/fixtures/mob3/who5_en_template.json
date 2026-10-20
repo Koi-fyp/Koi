@@ -1,0 +1,207 @@
+{
+  "title": "The World Health Organization-Five Well-Being Index (WHO-5)",
+  "description": "Please indicate for each of the five statements which is closest to how you have been feeling over the last two weeks. Notice that higher numbers mean better well-being.",
+  "category": "fixed_instrument",
+  "validated": true,
+  "language": "en",
+  "rtl": false,
+  "version": {
+    "draft_id": "who5_v1",
+    "version": 1,
+    "revision_history": [],
+    "created_at": "2026-10-19T00:00:00Z"
+  },
+  "status": "draft",
+  "questions": [
+    {
+      "question_id": "who5_q1",
+      "type": "likert",
+      "text": "I have felt cheerful and in good spirits",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o5",
+          "label": "All of the time"
+        },
+        {
+          "option_id": "o4",
+          "label": "Most of the time"
+        },
+        {
+          "option_id": "o3",
+          "label": "More than half of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Less than half of the time"
+        },
+        {
+          "option_id": "o1",
+          "label": "Some of the time"
+        },
+        {
+          "option_id": "o0",
+          "label": "At no time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "who5_en_2024"
+    },
+    {
+      "question_id": "who5_q2",
+      "type": "likert",
+      "text": "I have felt calm and relaxed",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o5",
+          "label": "All of the time"
+        },
+        {
+          "option_id": "o4",
+          "label": "Most of the time"
+        },
+        {
+          "option_id": "o3",
+          "label": "More than half of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Less than half of the time"
+        },
+        {
+          "option_id": "o1",
+          "label": "Some of the time"
+        },
+        {
+          "option_id": "o0",
+          "label": "At no time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "who5_en_2024"
+    },
+    {
+      "question_id": "who5_q3",
+      "type": "likert",
+      "text": "I have felt active and vigorous",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o5",
+          "label": "All of the time"
+        },
+        {
+          "option_id": "o4",
+          "label": "Most of the time"
+        },
+        {
+          "option_id": "o3",
+          "label": "More than half of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Less than half of the time"
+        },
+        {
+          "option_id": "o1",
+          "label": "Some of the time"
+        },
+        {
+          "option_id": "o0",
+          "label": "At no time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "who5_en_2024"
+    },
+    {
+      "question_id": "who5_q4",
+      "type": "likert",
+      "text": "I woke up feeling fresh and rested",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o5",
+          "label": "All of the time"
+        },
+        {
+          "option_id": "o4",
+          "label": "Most of the time"
+        },
+        {
+          "option_id": "o3",
+          "label": "More than half of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Less than half of the time"
+        },
+        {
+          "option_id": "o1",
+          "label": "Some of the time"
+        },
+        {
+          "option_id": "o0",
+          "label": "At no time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "who5_en_2024"
+    },
+    {
+      "question_id": "who5_q5",
+      "type": "likert",
+      "text": "My daily life has been filled with things that interest me",
+      "required": true,
+      "options": [
+        {
+          "option_id": "o5",
+          "label": "All of the time"
+        },
+        {
+          "option_id": "o4",
+          "label": "Most of the time"
+        },
+        {
+          "option_id": "o3",
+          "label": "More than half of the time"
+        },
+        {
+          "option_id": "o2",
+          "label": "Less than half of the time"
+        },
+        {
+          "option_id": "o1",
+          "label": "Some of the time"
+        },
+        {
+          "option_id": "o0",
+          "label": "At no time"
+        }
+      ],
+      "source_kind": "fixed_instrument",
+      "source_id": "who5_en_2024"
+    }
+  ],
+  "review_warnings": [
+    {
+      "code": "fixed_instrument_immutable",
+      "severity": "info",
+      "message": "Validated instrument: wording, options and order must not be edited. Results are not a diagnosis."
+    }
+  ],
+  "sources": [
+    {
+      "source_id": "who5_en_2024",
+      "kind": "fixed_instrument",
+      "title": "The World Health Organization-Five Well-Being Index (WHO-5)",
+      "source_url": "https://www.who.int/publications/m/item/WHO-UCN-MSD-MHE-2024.01",
+      "version": "WHO/UCN/MSD/MHE/2024.1",
+      "license": "CC BY-NC-SA 3.0 IGO",
+      "citation": "World Health Organization. The World Health Organization-Five Well-Being Index (WHO-5). Geneva: World Health Organization; 2024. License: CC-BY-NC-SA 3.0 IGO",
+      "attribution_text": "© WHO, 2024. License: CC-BY-NC-SA 3.0 IGO",
+      "redistribution_reviewed": false
+    }
+  ]
+}

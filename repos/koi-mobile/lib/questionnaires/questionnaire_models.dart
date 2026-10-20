@@ -1,57 +1,63 @@
-import 'package:flutter/painting.dart' show TextDirection;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show TextDirection;
 
-import '../platform/platform_client.dart';
+// Patient-side questionnaire model (MOB-3). It follows the AI track's
+// QuestionnaireDraft (KOI-Psycholov contracts/schema/QuestionnaireDraft.json,
+// ai-contracts-draft-0.2/0.3, MOBILE_HANDOFF.md §2) and the AI Answer shape
+// (Submission.json). The JSON mapping lives ONLY in questionnaire_wire.dart.
+// These classes hold only what a patient may see: the published wording,
+// the patient's own answers and the attempt lifecycle. Nothing about how
+// answers are processed afterwards exists here (MOB1-33 scans this file).
 
-// PROVISIONAL patient-side DTOs (no web contract yet; field names from
-// KOI_MOBILE_TRACK_FINAL_REVIEWED.md §5-6, listed in
-// KOI_MOB1_PROVISIONAL_CONTRACTS.md). Patient DTOs carry ONLY what a patient
-// may see: the approved immutable questionnaire version, their own answers
-// and the attempt lifecycle. Parsers read a whitelist of keys, so any other
-// key the server might send is dropped and never stored, shown or logged.
-// test/questionnaires/forbidden_fields_test.dart scans this file.
+/// `^[A-Za-z0-9_-]{1,128}$`: question, option, source, asset and answer
+/// ids. Ids are compared and sent byte for byte, never trimmed or changed.
+final RegExp questionnaireIdPattern = RegExp(r'^[A-Za-z0-9_-]{1,128}$');
 
-/// The only schema this app renders. A version with another schema is
-/// refused (safe fallback), never guessed at.
-const int supportedSchemaVersion = 1;
+bool isQuestionnaireId(Object? v) =>
+    v is String && questionnaireIdPattern.hasMatch(v);
 
 enum QuestionType {
-  singleChoice('single_choice'),
-  multiChoice('multi_choice'),
+  single('single'),
+  multi('multi'),
   yesNo('yes_no'),
   likert('likert'),
-  shortText('short_text'),
-  imageSingleChoice('image_single_choice'),
-  imageMultiChoice('image_multi_choice');
+  freeText('free_text'),
+  numeric('numeric'),
+  imageSingle('image_single'),
+  imageMulti('image_multi');
 
   const QuestionType(this.wire);
   final String wire;
 
+  /// "rating" is the same type as likert (MOBILE_HANDOFF.md §2).
   static QuestionType? fromWire(Object? v) =>
-      values.where((t) => t.wire == v).firstOrNull;
+      v == 'rating' ? likert : values.where((t) => t.wire == v).firstOrNull;
 
-  bool get isMulti => this == multiChoice || this == imageMultiChoice;
-  bool get isImage => this == imageSingleChoice || this == imageMultiChoice;
-  bool get isText => this == shortText;
+  bool get isMulti => this == multi || this == imageMulti;
+  bool get isImage => this == imageSingle || this == imageMulti;
+
+  /// Answered with `option_ids`.
+  bool get isChoice => this != freeText && this != numeric;
 }
 
-/// The locale a version is written in. Urdu script is right-to-left at the
-/// question/answer block; Roman Urdu is left-to-right.
-enum QuestionnaireLocale {
-  en('en', TextDirection.ltr),
-  ur('ur', TextDirection.rtl),
-  romanUr('roman_ur', TextDirection.ltr);
+/// One questionnaire is written in exactly one language.
+enum QuestionnaireLanguage {
+  en('en'),
+  ur('ur'),
+  romanUr('roman_ur');
 
-  const QuestionnaireLocale(this.wire, this.direction);
+  const QuestionnaireLanguage(this.wire);
   final String wire;
-  final TextDirection direction;
 
-  static QuestionnaireLocale? fromWire(Object? v) =>
+  static QuestionnaireLanguage? fromWire(Object? v) =>
       values.where((l) => l.wire == v).firstOrNull;
+
+  /// Urdu script: shown in Noto Nastaliq Urdu.
+  bool get isUrduScript => this == ur;
 }
 
-/// A version the app must not show: unapproved, unknown schema, unknown
-/// question type, malformed. The screen shows a safe message instead.
+/// A questionnaire the app must not show (unknown type, malformed, not
+/// published). The screen shows a safe message instead, never a guess.
 class UnsupportedQuestionnaireException implements Exception {
   const UnsupportedQuestionnaireException(this.reason);
   final String reason;
@@ -61,28 +67,24 @@ class UnsupportedQuestionnaireException implements Exception {
 }
 
 @immutable
-class ChoiceOption {
-  const ChoiceOption({required this.id, this.label, this.assetId});
+class QuestionnaireOption {
+  const QuestionnaireOption({
+    required this.id,
+    required this.label,
+    this.assetId,
+    this.visualDescription,
+  });
 
   final String id;
 
-  /// The approved wording; null when the translation is missing (the
-  /// renderer shows a fallback, never other wording).
-  final String? label;
+  /// Exactly as published (fixed instruments are shown word for word).
+  final String label;
 
-  /// A bundled image from the shared asset manifest (image_* types).
+  /// A bundled picture (`assets/questionnaire/<asset_id>.png`); never a URL.
   final String? assetId;
 
-  factory ChoiceOption.fromJson(Object? v) {
-    final j = asJsonMap(v, 'option');
-    final label = j['label'];
-    final asset = j['asset_id'];
-    return ChoiceOption(
-      id: reqString(j, 'id'),
-      label: label is String && label.trim().isNotEmpty ? label : null,
-      assetId: asset is String && asset.isNotEmpty ? asset : null,
-    );
-  }
+  /// Text shown when there is no known picture.
+  final String? visualDescription;
 }
 
 @immutable
@@ -90,228 +92,289 @@ class Question {
   const Question({
     required this.id,
     required this.type,
-    required this.required,
-    this.prompt,
+    required this.text,
+    this.helpText,
+    this.required = true,
     this.options = const [],
-    this.maxLength = defaultMaxLength,
+    this.minValue,
+    this.maxValue,
+    this.step,
+    this.assetId,
+    this.visualDescription,
   });
 
-  static const int defaultMaxLength = 500;
+  static const int maxTextLength = 4000;
 
   final String id;
   final QuestionType type;
+  final String text;
+  final String? helpText;
   final bool required;
 
-  /// Null when this locale's wording is missing.
-  final String? prompt;
-  final List<ChoiceOption> options;
+  /// In the published order (likert: least → most as published).
+  final List<QuestionnaireOption> options;
 
-  /// short_text only.
-  final int maxLength;
+  /// numeric only.
+  final double? minValue;
+  final double? maxValue;
+  final double? step;
 
-  /// The wording (and every option label) exists in this version's locale.
-  /// Image options may rely on the manifest's alt label instead.
-  bool get hasWording =>
-      prompt != null &&
-      options.every(
-        (o) => o.label != null || (type.isImage && o.assetId != null),
-      );
+  /// A picture for the question itself.
+  final String? assetId;
+  final String? visualDescription;
 
-  bool hasOption(String id) => options.any((o) => o.id == id);
-
-  factory Question.fromJson(Object? v) {
-    final j = asJsonMap(v, 'question');
-    final type = QuestionType.fromWire(j['type']);
-    if (type == null) {
-      throw const UnsupportedQuestionnaireException('question type');
-    }
-    final prompt = j['prompt'];
-    final options = [
-      for (final o in (j['options'] as List?) ?? const [])
-        ChoiceOption.fromJson(o),
-    ];
-    final ids = {for (final o in options) o.id};
-    if (ids.length != options.length) {
-      throw const FormatException('duplicate option id');
-    }
-    if (!type.isText && options.isEmpty) {
-      throw const FormatException('choice question without options');
-    }
-    if (type.isImage && options.any((o) => o.assetId == null)) {
-      throw const FormatException('image option without asset_id');
-    }
-    final max = j['max_length'];
-    return Question(
-      id: reqString(j, 'id'),
-      type: type,
-      required: j['required'] == true,
-      prompt: prompt is String && prompt.trim().isNotEmpty ? prompt : null,
-      options: List.unmodifiable(options),
-      maxLength: max is int && max > 0 ? max : defaultMaxLength,
-    );
-  }
+  QuestionnaireOption? option(String id) =>
+      options.where((o) => o.id == id).firstOrNull;
 }
 
-/// An APPROVED, IMMUTABLE questionnaire version, pinned by [versionId].
+/// Attribution for the published wording (WHO-5 and the mhGAP-derived
+/// items need it: CC BY-NC-SA 3.0 IGO).
 @immutable
-class QuestionnaireVersion {
-  const QuestionnaireVersion({
-    required this.versionId,
-    required this.questionnaireId,
-    required this.locale,
-    required this.title,
-    required this.questions,
-    this.instructions,
-    this.assetManifestVersion,
+class QuestionnaireSource {
+  const QuestionnaireSource({
+    required this.sourceId,
+    this.citation,
+    this.attributionText,
   });
 
-  final String versionId;
+  final String sourceId;
+  final String? citation;
+  final String? attributionText;
+
+  bool get hasText => citation != null || attributionText != null;
+}
+
+/// A published, frozen questionnaire (`PublishedQuestionnaire.body`).
+@immutable
+class PublishedQuestionnaire {
+  const PublishedQuestionnaire({
+    required this.questionnaireId,
+    required this.version,
+    required this.title,
+    required this.language,
+    required this.rtl,
+    required this.questions,
+    this.description,
+    this.sources = const [],
+  });
+
   final String questionnaireId;
-  final QuestionnaireLocale locale;
+  final int version;
   final String title;
-  final String? instructions;
+  final String? description;
+  final QuestionnaireLanguage language;
 
-  /// Which shared asset manifest the image ids refer to.
-  final String? assetManifestVersion;
-
-  /// In the server's order (the ordered question ids).
+  /// `true` exactly when the language is Urdu: the screen is laid out
+  /// right-to-left. Roman Urdu and English are left-to-right.
+  final bool rtl;
   final List<Question> questions;
+  final List<QuestionnaireSource> sources;
+
+  TextDirection get direction => rtl ? TextDirection.rtl : TextDirection.ltr;
 
   Question? question(String id) =>
       questions.where((q) => q.id == id).firstOrNull;
-
-  factory QuestionnaireVersion.fromJson(Object? v) {
-    final j = asJsonMap(v, 'questionnaire version');
-    if (j['approved'] != true) {
-      // Never render a draft / unapproved version to a patient.
-      throw const UnsupportedQuestionnaireException('not approved');
-    }
-    if (j['schema_version'] != supportedSchemaVersion) {
-      throw const UnsupportedQuestionnaireException('schema version');
-    }
-    final locale = QuestionnaireLocale.fromWire(j['locale']);
-    if (locale == null) {
-      throw const UnsupportedQuestionnaireException('locale');
-    }
-    final questions = [
-      for (final q in asJsonList(j['questions'], 'questions'))
-        Question.fromJson(q),
-    ];
-    final ids = {for (final q in questions) q.id};
-    if (questions.isEmpty || ids.length != questions.length) {
-      throw const FormatException('question ids');
-    }
-    final manifest = j['asset_manifest_version'];
-    final instructions = j['instructions'];
-    return QuestionnaireVersion(
-      versionId: reqString(j, 'version_id'),
-      questionnaireId: reqString(j, 'questionnaire_id'),
-      locale: locale,
-      title: reqString(j, 'title'),
-      instructions: instructions is String && instructions.trim().isNotEmpty
-          ? instructions
-          : null,
-      assetManifestVersion: manifest is String ? manifest : null,
-      questions: List.unmodifiable(questions),
-    );
-  }
 }
 
-/// One answer: chosen option ids (choice types) or text (short_text).
+/// What the patient entered for one question, before it gets its stable
+/// answer id: chosen option ids, a number or a text.
 @immutable
-class Answer {
-  const Answer({this.optionIds = const [], this.text});
+class AnswerValue {
+  const AnswerValue({this.optionIds = const [], this.value, this.text});
+
+  static const AnswerValue none = AnswerValue();
 
   final List<String> optionIds;
+  final double? value;
   final String? text;
 
   bool get isEmpty =>
-      optionIds.isEmpty && (text == null || text!.trim().isEmpty);
+      optionIds.isEmpty && value == null && (text == null || text!.isEmpty);
+}
 
-  /// Whitelisted wire form: `{"option_ids": [...]}` or `{"text": "..."}`.
-  Map<String, Object?> toJson() => {
-    if (optionIds.isNotEmpty) 'option_ids': optionIds,
-    if (text != null) 'text': text,
-  };
+/// One answer, in the AI Answer shape: `{answer_id, question_id,
+/// option_ids, value, text}`. [answerId] is a uuid v4 made on this device
+/// once per question and kept across autosave, retry, resume and Restart.
+@immutable
+class Answer {
+  const Answer({
+    required this.answerId,
+    required this.questionId,
+    this.optionIds = const [],
+    this.value,
+    this.text,
+  });
 
-  static Answer? fromJson(Object? v) {
-    if (v is! Map) return null;
-    final ids = v['option_ids'];
-    final text = v['text'];
-    return Answer(
-      optionIds: [
-        if (ids is List)
-          for (final i in ids)
-            if (i is String) i,
-      ],
-      text: text is String ? text : null,
-    );
-  }
+  final String answerId;
+  final String questionId;
+  final List<String> optionIds;
+  final double? value;
+  final String? text;
+
+  bool get isEmpty =>
+      optionIds.isEmpty && value == null && (text == null || text!.isEmpty);
+
+  AnswerValue get input =>
+      AnswerValue(optionIds: optionIds, value: value, text: text);
 
   @override
   bool operator ==(Object other) =>
       other is Answer &&
+      other.answerId == answerId &&
+      other.questionId == questionId &&
       listEquals(other.optionIds, optionIds) &&
+      other.value == value &&
       other.text == text;
 
   @override
-  int get hashCode => Object.hash(Object.hashAll(optionIds), text);
+  int get hashCode =>
+      Object.hash(answerId, questionId, Object.hashAll(optionIds), value, text);
 }
 
-/// Keeps only answers that fit [version]: known question ids, option ids
-/// that exist in that question, one option for single-choice types, text
-/// within max length. Answers are NEVER carried across versions.
+/// Why a numeric entry is not accepted (null = fine).
+enum NumericProblem { belowMin, aboveMax, offStep }
+
+NumericProblem? numericProblem(Question q, double v) {
+  if (!v.isFinite) return NumericProblem.offStep;
+  final min = q.minValue;
+  final max = q.maxValue;
+  if (min != null && v < min) return NumericProblem.belowMin;
+  if (max != null && v > max) return NumericProblem.aboveMax;
+  final step = q.step;
+  if (step != null && step > 0) {
+    final k = (v - (min ?? 0)) / step;
+    if ((k - k.roundToDouble()).abs() > 1e-9 * (k.abs() < 1 ? 1 : k.abs())) {
+      return NumericProblem.offStep;
+    }
+  }
+  return null;
+}
+
+/// Keeps only answers that fit [q]: known question ids, a valid answer id,
+/// option ids that exist in that question (exactly as published), one
+/// option for single-choice types, a number within the rules, text within
+/// 4000 characters. Ids are never altered.
 Map<String, Answer> sanitizeAnswers(
-  QuestionnaireVersion version,
+  PublishedQuestionnaire q,
   Map<String, Answer> answers,
 ) {
   final out = <String, Answer>{};
-  for (final e in answers.entries) {
-    final q = version.question(e.key);
-    if (q == null) continue;
-    final a = e.value;
-    if (q.type.isText) {
-      final t = a.text;
-      if (t != null && t.length <= q.maxLength) out[q.id] = Answer(text: t);
-      continue;
-    }
-    final ids = [
-      for (final id in a.optionIds)
-        if (q.hasOption(id)) id,
-    ];
-    if (ids.isEmpty) continue;
-    out[q.id] = Answer(
-      optionIds: q.type.isMulti ? ids.toSet().toList() : [ids.first],
-    );
+  for (final a in answers.values) {
+    final question = q.question(a.questionId);
+    if (question == null || !isQuestionnaireId(a.answerId)) continue;
+    final clean = _clean(question, a);
+    if (clean != null && !clean.isEmpty) out[question.id] = clean;
   }
   return out;
 }
 
-/// Question ids that block submission: required + unanswered, or required
-/// with no wording in this locale (cannot be answered safely).
+Answer? _clean(Question q, Answer a) {
+  switch (q.type) {
+    case QuestionType.freeText:
+      final t = a.text;
+      if (t == null || t.isEmpty || t.length > Question.maxTextLength) {
+        return null;
+      }
+      return Answer(answerId: a.answerId, questionId: q.id, text: t);
+    case QuestionType.numeric:
+      final v = a.value;
+      if (v == null || numericProblem(q, v) != null) return null;
+      return Answer(answerId: a.answerId, questionId: q.id, value: v);
+    default:
+      final ids = <String>[];
+      for (final id in a.optionIds) {
+        if (q.option(id) != null && !ids.contains(id)) ids.add(id);
+      }
+      if (ids.isEmpty) return null;
+      return Answer(
+        answerId: a.answerId,
+        questionId: q.id,
+        optionIds: q.type.isMulti ? ids : [ids.first],
+      );
+  }
+}
+
+/// Required questions that are still unanswered, in questionnaire order.
 List<String> missingRequired(
-  QuestionnaireVersion version,
+  PublishedQuestionnaire q,
   Map<String, Answer> answers,
 ) => [
-  for (final q in version.questions)
-    if (q.required && (!q.hasWording || (answers[q.id]?.isEmpty ?? true))) q.id,
+  for (final question in q.questions)
+    if (question.required && (answers[question.id]?.isEmpty ?? true))
+      question.id,
 ];
 
-/// not_started → in_progress → submitted (terminal).
-enum AttemptStatus {
-  notStarted('not_started'),
+/// Answers in questionnaire order (the order they are sent in).
+List<Answer> orderedAnswers(
+  PublishedQuestionnaire q,
+  Map<String, Answer> answers,
+) => [
+  for (final question in q.questions)
+    if (answers[question.id] != null) answers[question.id]!,
+];
+
+// ── Assignments and attempts (contract v0.5.1 lifecycle) ─────────────────
+
+/// `PatientAssignmentDTO.state`.
+enum AssignmentState {
+  assigned('assigned'),
   inProgress('in_progress'),
   submitted('submitted');
+
+  const AssignmentState(this.wire);
+  final String wire;
+
+  static AssignmentState? fromWire(Object? v) =>
+      values.where((s) => s.wire == v).firstOrNull;
+}
+
+/// An assigned questionnaire in the patient's list
+/// (`PatientAssignmentDTO`). [title] is the contract's LocalizedText
+/// (`en`, `ur`, `ur-Latn`).
+@immutable
+class Assignment {
+  const Assignment({
+    required this.assignmentId,
+    required this.attemptId,
+    required this.versionId,
+    required this.title,
+    required this.state,
+    this.dueAt,
+  });
+
+  final String assignmentId;
+  final String attemptId;
+
+  /// `questionnaire_version_id`: the immutable version this attempt is
+  /// pinned to. Answers are never applied to another version.
+  final String versionId;
+  final Map<String, String> title;
+  final AssignmentState state;
+  final DateTime? dueAt;
+
+  /// The title in [preferred] ('en' | 'ur'), else English, else any.
+  String titleFor(String preferred) =>
+      title[preferred] ??
+      title['en'] ??
+      title['ur-Latn'] ??
+      title['ur'] ??
+      title.values.first;
+}
+
+/// `not_started` → `in_progress`; submitted attempts are never returned,
+/// only their acknowledgement.
+enum AttemptStatus {
+  notStarted('not_started'),
+  inProgress('in_progress');
 
   const AttemptStatus(this.wire);
   final String wire;
 
-  static AttemptStatus fromWire(Object? v) =>
-      values.where((s) => s.wire == v).firstOrNull ??
-      (throw const FormatException('attempt status'));
+  static AttemptStatus? fromWire(Object? v) =>
+      values.where((s) => s.wire == v).firstOrNull;
 }
 
-/// The server's attempt: lifecycle, revision and the patient's own answers.
+/// The server's unfinished attempt (`PatientAttemptDTO`).
 @immutable
 class Attempt {
   const Attempt({
@@ -320,8 +383,7 @@ class Attempt {
     required this.versionId,
     required this.status,
     required this.revision,
-    this.answers = const {},
-    this.submittedAt,
+    this.answers = const [],
   });
 
   final String attemptId;
@@ -329,89 +391,60 @@ class Attempt {
   final String versionId;
   final AttemptStatus status;
 
-  /// Monotonically increasing; every accepted autosave / restart bumps it.
+  /// Bumped by every accepted autosave (including a Restart).
   final int revision;
-  final Map<String, Answer> answers;
-  final DateTime? submittedAt;
+  final List<Answer> answers;
 
-  factory Attempt.fromJson(Object? v) {
-    final j = asJsonMap(v, 'attempt');
-    final raw = j['answers'];
-    final submitted = j['submitted_at'];
-    return Attempt(
-      attemptId: reqString(j, 'attempt_id'),
-      assignmentId: reqString(j, 'assignment_id'),
-      versionId: reqString(j, 'version_id'),
-      status: AttemptStatus.fromWire(j['status']),
-      revision: reqInt(j, 'revision'),
-      answers: {
-        if (raw is Map)
-          for (final e in raw.entries)
-            if (e.key is String && Answer.fromJson(e.value) != null)
-              e.key as String: Answer.fromJson(e.value)!,
-      },
-      submittedAt: submitted is String ? DateTime.tryParse(submitted) : null,
-    );
-  }
+  Map<String, Answer> get byQuestion => {
+    for (final a in answers) a.questionId: a,
+  };
 }
 
-/// An assigned questionnaire in the patient's list.
-@immutable
-class Assignment {
-  const Assignment({
-    required this.assignmentId,
-    required this.attemptId,
-    required this.versionId,
-    required this.title,
-    required this.status,
-    this.dueAt,
-  });
-
-  final String assignmentId;
-  final String attemptId;
-  final String versionId;
-  final String title;
-  final AttemptStatus status;
-  final DateTime? dueAt;
-
-  factory Assignment.fromJson(Object? v) {
-    final j = asJsonMap(v, 'assignment');
-    final due = j['due_at'];
-    return Assignment(
-      assignmentId: reqString(j, 'assignment_id'),
-      attemptId: reqString(j, 'attempt_id'),
-      versionId: reqString(j, 'version_id'),
-      title: reqString(j, 'title'),
-      status: AttemptStatus.fromWire(j['status']),
-      dueAt: due is String ? DateTime.tryParse(due) : null,
-    );
-  }
-}
-
-/// The server accepted an autosave.
-@immutable
-class DraftAck {
-  const DraftAck({required this.revision});
-  final int revision;
-}
-
-/// The submission acknowledgement: that it was received, and when. Nothing
-/// else exists on the patient side.
+/// The four-field submission acknowledgement (`PatientSubmitAckDTO`).
+/// Nothing else exists on the patient side.
 @immutable
 class SubmitAck {
-  const SubmitAck({required this.attemptId, this.submittedAt});
-  final String attemptId;
-  final DateTime? submittedAt;
+  const SubmitAck({
+    required this.attemptId,
+    required this.assignmentId,
+    required this.submittedAt,
+  });
 
-  factory SubmitAck.fromJson(Object? v) {
-    final j = asJsonMap(v, 'submission');
-    if (j['status'] != AttemptStatus.submitted.wire) {
-      throw const FormatException('not submitted');
-    }
-    final at = j['submitted_at'];
-    return SubmitAck(
-      attemptId: reqString(j, 'attempt_id'),
-      submittedAt: at is String ? DateTime.tryParse(at) : null,
-    );
-  }
+  final String attemptId;
+  final String assignmentId;
+  final DateTime submittedAt;
+}
+
+/// `PatientAssignmentDetailDTO`: either the form to fill in, or only the
+/// acknowledgement once submitted.
+sealed class AssignmentDetail {
+  const AssignmentDetail(this.assignment);
+  final Assignment assignment;
+}
+
+final class OpenAssignment extends AssignmentDetail {
+  const OpenAssignment(super.assignment, this.questionnaire, this.attempt);
+  final PublishedQuestionnaire questionnaire;
+  final Attempt attempt;
+}
+
+final class SubmittedAssignment extends AssignmentDetail {
+  const SubmittedAssignment(super.assignment, this.acknowledgement);
+  final SubmitAck acknowledgement;
+}
+
+/// `AutosaveAckDTO`.
+@immutable
+class AutosaveAck {
+  const AutosaveAck({required this.attemptId, required this.revision});
+  final String attemptId;
+  final int revision;
+}
+
+/// One page of `PatientAssignmentListDTO`.
+@immutable
+class AssignmentPage {
+  const AssignmentPage(this.items, this.nextCursor);
+  final List<Assignment> items;
+  final String? nextCursor;
 }

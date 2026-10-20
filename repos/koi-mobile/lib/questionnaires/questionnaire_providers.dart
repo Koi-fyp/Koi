@@ -10,6 +10,7 @@ import 'attempt_controller.dart';
 import 'draft_store.dart';
 import 'mock_questionnaire_api.dart';
 import 'questionnaire_api.dart';
+import 'questionnaire_flags.dart';
 import 'questionnaire_models.dart';
 
 /// Overridden in main.dart with the `koi_questionnaire_drafts` Hive box.
@@ -20,6 +21,7 @@ final draftRepositoryProvider = Provider<DraftRepository>(
     box: ref.read(draftBoxProvider),
     cipher: ref.read(messageCipherProvider),
     cryptoContext: ref.read(cryptoContextGetterProvider),
+    enabled: kQuestionnaireLocalDrafts,
   ),
 );
 
@@ -41,15 +43,31 @@ final questionnaireAssetManifestProvider =
       (ref) => QuestionnaireAssetManifest.load(),
     );
 
-/// The patient's assigned questionnaires; refused without the confirmed
+/// Most pages read for one list (100 items each): a runaway cursor can
+/// never loop forever.
+const int maxAssignmentPages = 10;
+
+/// The patient's assigned questionnaires (every page of
+/// `GET /patient/assignments`); refused without the confirmed
 /// questionnaire capability of the current uid.
-final assignmentsProvider = FutureProvider.autoDispose<List<Assignment>>((ref) {
+final assignmentsProvider = FutureProvider.autoDispose<List<Assignment>>((
+  ref,
+) async {
   final caps = ref.watch(effectiveCapabilitiesProvider);
   ref.watch(authServiceProvider.select((a) => a.user?.uid));
   if (!caps.canUseQuestionnaires) {
     throw const PlatformException(PlatformErrorCode.forbidden);
   }
-  return ref.watch(questionnaireApiProvider).assignments();
+  final api = ref.watch(questionnaireApiProvider);
+  final out = <Assignment>[];
+  String? cursor;
+  for (var i = 0; i < maxAssignmentPages; i++) {
+    final page = await api.assignments(cursor: cursor);
+    out.addAll(page.items);
+    cursor = page.nextCursor;
+    if (cursor == null) break;
+  }
+  return out;
 });
 
 /// Identifies one attempt of one account.

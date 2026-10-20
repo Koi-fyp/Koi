@@ -6,6 +6,7 @@ import 'package:hive/hive.dart';
 import '../chat/conversation_service.dart'
     show CryptoContextGetter, MessageCipher;
 import 'questionnaire_models.dart';
+import 'questionnaire_wire.dart';
 
 /// Rows of `koi_questionnaire_drafts`: JSON strings keyed `{uid}::{attempt}`.
 abstract class DraftBox {
@@ -56,97 +57,88 @@ class LocalDraft {
     required this.baseRevision,
     required this.dirty,
     required this.answers,
+    this.answerIds = const {},
     this.idempotencyKey,
   });
 
   final String attemptId;
 
-  /// The version these answers belong to; never applied to another.
+  /// The assignment's `questionnaire_version_id`; never applied to another.
   final String versionId;
 
-  /// The server revision these answers were based on.
+  /// The server revision these answers were based on (the next PATCH's
+  /// `expected_revision`).
   final int baseRevision;
 
-  /// Edited here and not yet acknowledged by the server ("Offline / Not
+  /// Edited here and not yet acknowledged by the server ("Offline – not
   /// synced"). Never claimed to be on another device.
   final bool dirty;
   final Map<String, Answer> answers;
 
+  /// question id → answer id, including questions answered before a
+  /// Restart: the same question keeps the same answer id.
+  final Map<String, String> answerIds;
+
   /// Set before the first submit is sent, so a retry after a timeout or a
   /// restart of the app re-uses the SAME key.
   final String? idempotencyKey;
-
-  LocalDraft copyWith({
-    int? baseRevision,
-    bool? dirty,
-    Map<String, Answer>? answers,
-    String? idempotencyKey,
-  }) => LocalDraft(
-    attemptId: attemptId,
-    versionId: versionId,
-    baseRevision: baseRevision ?? this.baseRevision,
-    dirty: dirty ?? this.dirty,
-    answers: answers ?? this.answers,
-    idempotencyKey: idempotencyKey ?? this.idempotencyKey,
-  );
 }
 
-/// Local drafts, per uid. The answers are encrypted with the account's
-/// Client-Side Encryption (CSE) at rest context (same path as check-ins);
-/// only ids, revision and flags are plaintext. Drafts are deleted on
-/// sign-out, on relationship removal and once an attempt is submitted.
+/// Local drafts, per uid. The answers and answer ids are encrypted with the
+/// account's Client-Side Encryption (CSE) at rest context (same path as
+/// check-ins); only ids, revision and flags are plaintext. Drafts are
+/// deleted on sign-out, on relationship removal and once an attempt is
+/// submitted.
 ///
-/// Cross-device compatibility (MOB-2 note, no behaviour change; the
-/// questionnaire realignment to contract v0.5.1 is a later batch):
-/// - This device copy never leaves the phone. The web resumes a mobile
-///   draft only from the SERVER copy written by autosave, never from this
-///   box, so the box format is mobile-private.
-/// - Assumption: every saved answer maps 1:1 to a contract v0.5.1 `Answer`
-///   (`{question_id, type, value}`): `option_ids` of one id →
-///   single_choice / likert / image_single_choice `value`; several →
-///   multi_choice / image_multi_choice `value` array; `text` → short_text
-///   `value`. yes_no is an option id here but a boolean in the contract,
-///   so the realignment must convert it using the pinned version's options.
-/// - `base_revision` is the contract's `expected_revision` of the next
-///   PATCH; `version_id` must equal the assignment's
-///   `questionnaire_version_id` or the draft is ignored (never merged across
-///   versions).
-/// - The contract freeze says "persistent protected offline caches are
-///   disabled in the MVP": keeping this encrypted device draft is an open
-///   question deferred with the realignment (decision A, 2026-10-19).
+/// [enabled] is `kQuestionnaireLocalDrafts` (questionnaire_flags.dart): when
+/// false nothing is read or written, only deleted.
+///
+/// The box format is mobile-private: the web resumes from the SERVER copy
+/// written by autosave, never from this box. A MOB-1 draft (older payload
+/// format) does not parse and is ignored.
 class DraftRepository {
   DraftRepository({
     required this.box,
     required this.cipher,
     required this.cryptoContext,
+    this.enabled = true,
   });
 
   final DraftBox box;
   final MessageCipher cipher;
   final CryptoContextGetter cryptoContext;
+  final bool enabled;
 
   static String keyFor(String uid, String attemptId) => '$uid::$attemptId';
 
   Future<LocalDraft?> load(String uid, String attemptId) async {
+    if (!enabled) return null;
     final raw = box.get(keyFor(uid, attemptId));
     if (raw == null) return null;
     try {
       final j = (jsonDecode(raw) as Map).cast<String, Object?>();
       if (j['uid'] != uid) return null;
       final ctx = await cryptoContext(uid);
-      final answers = (jsonDecode(
+      final payload = (jsonDecode(
         await cipher.decrypt(j['payload']! as String, ctx.secret),
       ) as Map).cast<String, Object?>();
+      final answers = <String, Answer>{
+        for (final a
+            in (payload['answers']! as List).map(decodeAnswer).nonNulls)
+          a.questionId: a,
+      };
+      final ids = (payload['answer_ids']! as Map).cast<String, Object?>();
       return LocalDraft(
         attemptId: attemptId,
         versionId: j['version_id']! as String,
         baseRevision: j['base_revision']! as int,
         dirty: j['dirty'] == true,
         idempotencyKey: j['idempotency_key'] as String?,
-        answers: {
-          for (final e in answers.entries)
-            if (Answer.fromJson(e.value) != null)
-              e.key: Answer.fromJson(e.value)!,
+        answers: answers,
+        answerIds: {
+          for (final e in ids.entries)
+            if (isQuestionnaireId(e.key) && isQuestionnaireId(e.value))
+              e.key: e.value! as String,
         },
       );
     } catch (e) {
@@ -156,6 +148,7 @@ class DraftRepository {
   }
 
   Future<void> save(String uid, LocalDraft d) async {
+    if (!enabled) return;
     final ctx = await cryptoContext(uid);
     await box.put(
       keyFor(uid, d.attemptId),
@@ -168,7 +161,8 @@ class DraftRepository {
         if (d.idempotencyKey != null) 'idempotency_key': d.idempotencyKey,
         'payload': await cipher.encrypt(
           jsonEncode({
-            for (final e in d.answers.entries) e.key: e.value.toJson(),
+            'answers': [for (final a in d.answers.values) encodeAnswer(a)],
+            'answer_ids': d.answerIds,
           }),
           ctx.secret,
           ctx.saltB64,

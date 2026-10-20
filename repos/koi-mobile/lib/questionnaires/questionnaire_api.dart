@@ -1,47 +1,43 @@
 import '../platform/platform_client.dart';
 import 'questionnaire_models.dart';
+import 'questionnaire_wire.dart';
 
-/// The patient's questionnaire endpoints. PROVISIONAL (no web contract yet;
-/// KOI_MOB1_PROVISIONAL_CONTRACTS.md). Every call is authenticated with the
-/// Firebase ID token; the server decides what this uid may see. The app
-/// never calls psychologist-only, review or AI endpoints.
+/// The patient's questionnaire endpoints. Paths and flow are REAL contract
+/// v0.5.1 (`listPatientAssignments`, `getPatientAssignment`,
+/// `autosavePatientAttempt`, `submitPatientAttempt`; `web2_implemented`,
+/// not deployed). The questionnaire body and answer items inside them are
+/// // PROVISIONAL CONTRACT (KOI_MOB1_PROVISIONAL_CONTRACTS.md §3; see
+/// questionnaire_wire.dart).
+///
+/// Every call carries the Firebase ID token; the server decides what this
+/// uid may see. The app never calls psychologist-only or AI endpoints and
+/// never holds an AI service URL.
 abstract interface class QuestionnaireApi {
   /// Demo data (KOI_MOCKS): the screens show the "Demo data" badge.
   bool get isMock;
 
-  Future<List<Assignment>> assignments();
+  Future<AssignmentPage> assignments({String? cursor});
 
-  /// An approved, immutable version. Throws
-  /// [UnsupportedQuestionnaireException] for anything else.
-  Future<QuestionnaireVersion> version(String versionId);
+  /// The open form (questionnaire + attempt) or, once submitted, only the
+  /// acknowledgement.
+  Future<AssignmentDetail> detail(String assignmentId);
 
-  Future<Attempt> attempt(String attemptId);
-
-  /// Autosave of whitelisted answer fields with the revision the client
-  /// last saw. 409 `revision_conflict` when the server is newer; 409/423
-  /// `attempt_submitted` once submitted.
-  Future<DraftAck> saveDraft(
+  /// PATCH with the revision last seen (compare-and-set). A Restart is an
+  /// autosave with no answers. A retry of the SAME save reuses
+  /// [idempotencyKey]. 409 `conflict` when the server is newer or the
+  /// attempt is already submitted.
+  Future<AutosaveAck> autosave(
     String attemptId, {
     required int expectedRevision,
-    required Map<String, Answer> answers,
-    required String clientMutationId,
+    required List<Answer> answers,
+    required String idempotencyKey,
   });
 
-  /// Clears an UNFINISHED attempt (server-authorized; refused once
-  /// submitted). Returns the fresh attempt with a new revision.
-  Future<Attempt> restart(String attemptId, {required int expectedRevision});
-
-  /// The ONLY way to submit. Same [idempotencyKey] = same submission.
+  /// The ONLY way to submit. Same [idempotencyKey] = same submission. Needs
+  /// a recent sign-in (401 `unauthenticated` → reauthRequired).
   Future<SubmitAck> submit(
     String attemptId, {
-    required String idempotencyKey,
     required int expectedRevision,
-  });
-
-  /// After a timeout: did the submission with [idempotencyKey] land? null =
-  /// not found (safe to send again with the SAME key).
-  Future<SubmitAck?> submissionStatus(
-    String attemptId, {
     required String idempotencyKey,
   });
 }
@@ -56,91 +52,50 @@ class HttpQuestionnaireApi implements QuestionnaireApi {
   bool get isMock => false;
 
   @override
-  Future<List<Assignment>> assignments() async {
-    final j = asJsonMap(await client.getJson('$_p/assignments'));
-    return [
-      for (final a in asJsonList(j['assignments'], 'assignments'))
-        Assignment.fromJson(a),
-    ];
-  }
-
-  @override
-  Future<QuestionnaireVersion> version(String versionId) async =>
-      QuestionnaireVersion.fromJson(
+  Future<AssignmentPage> assignments({String? cursor}) async =>
+      parseAssignmentPage(
         await client.getJson(
-          '$_p/questionnaire-versions/${Uri.encodeComponent(versionId)}',
+          '$_p/assignments',
+          query: {'limit': '100', 'cursor': ?cursor},
         ),
       );
 
   @override
-  Future<Attempt> attempt(String attemptId) async => Attempt.fromJson(
-    await client.getJson('$_p/attempts/${Uri.encodeComponent(attemptId)}'),
-  );
+  Future<AssignmentDetail> detail(String assignmentId) async =>
+      parseAssignmentDetail(
+        await client.getJson(
+          '$_p/assignments/${Uri.encodeComponent(assignmentId)}',
+        ),
+      );
 
   @override
-  Future<DraftAck> saveDraft(
+  Future<AutosaveAck> autosave(
     String attemptId, {
     required int expectedRevision,
-    required Map<String, Answer> answers,
-    required String clientMutationId,
-  }) async {
-    final j = asJsonMap(
-      await client.sendJson(
-        'PUT',
-        '$_p/attempts/${Uri.encodeComponent(attemptId)}/draft',
-        {
-          'expected_revision': expectedRevision,
-          'client_mutation_id': clientMutationId,
-          'answers': {for (final e in answers.entries) e.key: e.value.toJson()},
-        },
-      ),
-    );
-    return DraftAck(revision: reqInt(j, 'revision'));
-  }
-
-  @override
-  Future<Attempt> restart(
-    String attemptId, {
-    required int expectedRevision,
-  }) async => Attempt.fromJson(
+    required List<Answer> answers,
+    required String idempotencyKey,
+  }) async => parseAutosaveAck(
     await client.sendJson(
-      'POST',
-      '$_p/attempts/${Uri.encodeComponent(attemptId)}/restart',
-      {'expected_revision': expectedRevision},
+      'PATCH',
+      '$_p/attempts/${Uri.encodeComponent(attemptId)}',
+      encodeAutosave(expectedRevision, answers),
+      idempotencyKey: idempotencyKey,
     ),
   );
 
   @override
   Future<SubmitAck> submit(
     String attemptId, {
-    required String idempotencyKey,
     required int expectedRevision,
-  }) async => SubmitAck.fromJson(
+    required String idempotencyKey,
+  }) async => parseSubmitAck(
     await client.sendJson(
       'POST',
       '$_p/attempts/${Uri.encodeComponent(attemptId)}/submit',
-      {'expected_revision': expectedRevision},
-      headers: {'Idempotency-Key': idempotencyKey},
+      encodeSubmit(expectedRevision),
+      idempotencyKey: idempotencyKey,
     ),
   );
-
-  @override
-  Future<SubmitAck?> submissionStatus(
-    String attemptId, {
-    required String idempotencyKey,
-  }) async {
-    try {
-      return SubmitAck.fromJson(
-        await client.getJson(
-          '$_p/attempts/${Uri.encodeComponent(attemptId)}/submission',
-          query: {'idempotency_key': idempotencyKey},
-        ),
-      );
-    } on PlatformException catch (e) {
-      if (e.code == PlatformErrorCode.notFound) return null;
-      rethrow;
-    }
-  }
 }
 
 /// Used when the platform is not configured and mocks are off: every call
@@ -154,32 +109,20 @@ class UnavailableQuestionnaireApi implements QuestionnaireApi {
   @override
   bool get isMock => false;
   @override
-  Future<List<Assignment>> assignments() async => _no();
+  Future<AssignmentPage> assignments({String? cursor}) async => _no();
   @override
-  Future<QuestionnaireVersion> version(String versionId) async => _no();
+  Future<AssignmentDetail> detail(String assignmentId) async => _no();
   @override
-  Future<Attempt> attempt(String attemptId) async => _no();
-  @override
-  Future<DraftAck> saveDraft(
+  Future<AutosaveAck> autosave(
     String attemptId, {
     required int expectedRevision,
-    required Map<String, Answer> answers,
-    required String clientMutationId,
-  }) async => _no();
-  @override
-  Future<Attempt> restart(
-    String attemptId, {
-    required int expectedRevision,
+    required List<Answer> answers,
+    required String idempotencyKey,
   }) async => _no();
   @override
   Future<SubmitAck> submit(
     String attemptId, {
-    required String idempotencyKey,
     required int expectedRevision,
-  }) async => _no();
-  @override
-  Future<SubmitAck?> submissionStatus(
-    String attemptId, {
     required String idempotencyKey,
   }) async => _no();
 }

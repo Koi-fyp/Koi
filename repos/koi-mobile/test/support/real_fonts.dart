@@ -21,6 +21,8 @@ void useRealFonts() {
         FontWeight.w700,
       ])
         KoiText.body(fontWeight: w),
+      // MOB-3: Urdu questionnaire wording (Regular only).
+      KoiText.urduQuestionnaire(),
     ]);
   });
   // Restore the flutter_test_config.dart default.

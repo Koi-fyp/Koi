@@ -1,40 +1,31 @@
 import '../platform/platform_client.dart';
+import 'mock_fixtures.dart';
 import 'questionnaire_api.dart';
 import 'questionnaire_models.dart';
+import 'questionnaire_wire.dart';
 
 /// In-memory stand-in for the patient questionnaire endpoints: the demo
 /// adapter for `--dart-define=KOI_MOCKS=true` (screens show "Demo data")
-/// and the fake remote in tests. It follows the PROVISIONAL contract:
-/// revision checks, terminal submission, idempotency keys.
-///
-/// All wording is PLACEHOLDER text. No clinical instrument wording is in the
-/// app (decided MOB-1).
+/// and the fake remote in tests. It follows contract v0.5.1 behaviour
+/// (revision compare-and-set, terminal submission, idempotency keys, flat
+/// ErrorDTO) and answers with the raw JSON a server would send, run
+/// through the app's own parsers in questionnaire_wire.dart.
 class MockQuestionnaireRemote implements QuestionnaireApi {
   MockQuestionnaireRemote({
-    List<QuestionnaireVersion>? versions,
-    List<Assignment>? assignments,
+    List<MockAssignmentSeed>? seeds,
     DateTime Function()? now,
     this.latency = Duration.zero,
+    this.pageSize = 100,
   }) : _now = now ?? DateTime.now {
-    for (final v in versions ?? demoVersions()) {
-      _versions[v.versionId] = v;
-    }
-    for (final a in assignments ?? demoAssignments()) {
-      _assignments.add(a);
-      _attempts[a.attemptId] = _AttemptRow(
-        attemptId: a.attemptId,
-        assignmentId: a.assignmentId,
-        versionId: a.versionId,
-      );
+    for (final s in seeds ?? demoSeeds()) {
+      _rows[s.attemptId] = _Row(s);
     }
   }
 
   final DateTime Function() _now;
   final Duration latency;
-  final Map<String, QuestionnaireVersion> _versions = {};
-  final List<Assignment> _assignments = [];
-  final Map<String, _AttemptRow> _attempts = {};
-  final Map<String, SubmitAck> _byKey = {};
+  final int pageSize;
+  final Map<String, _Row> _rows = {};
 
   /// Test knob: every call fails like a dropped connection.
   bool offline = false;
@@ -43,9 +34,22 @@ class MockQuestionnaireRemote implements QuestionnaireApi {
   /// (timeout), like a reply that never reached the phone.
   bool commitThenTimeoutNextSubmit = false;
 
+  /// Test knob: the next submit answers 401 `unauthenticated` (the last
+  /// sign-in is older than 5 minutes).
+  bool requireRecentSignInNextSubmit = false;
+
+  /// Test knob: the next autosave COMMITS, then times out.
+  bool commitThenTimeoutNextAutosave = false;
+
   /// How many submissions were actually committed (must stay 1 per attempt).
   int committedSubmissions = 0;
-  int saveDraftCalls = 0;
+  int autosaveCalls = 0;
+
+  /// Every Idempotency-Key the autosave endpoint received, in order.
+  final List<String> autosaveKeys = [];
+
+  /// Every autosave body (the exact JSON the app sent), in order.
+  final List<Map<String, Object?>> autosaveBodies = [];
 
   @override
   bool get isMock => true;
@@ -55,346 +59,229 @@ class MockQuestionnaireRemote implements QuestionnaireApi {
     if (offline) throw const PlatformException(PlatformErrorCode.network);
   }
 
-  _AttemptRow _row(String id) =>
-      _attempts[id] ??
+  _Row _row(String attemptId) =>
+      _rows[attemptId] ??
       (throw const PlatformException(PlatformErrorCode.notFound));
 
-  static PlatformException _submitted() => const PlatformException(
-    PlatformErrorCode.attemptSubmitted,
-    status: 409,
-    body: {
-      'error': {'code': 'attempt_submitted'},
-    },
+  _Row _byAssignment(String assignmentId) =>
+      _rows.values
+          .where((r) => r.seed.assignmentId == assignmentId)
+          .firstOrNull ??
+      (throw const PlatformException(PlatformErrorCode.notFound));
+
+  static PlatformException _error(
+    PlatformErrorCode code,
+    int status,
+    String c,
+  ) => PlatformException(
+    code,
+    status: status,
+    body: {'code': c, 'request_id': 'mock_request', 'retryable': false},
   );
 
-  static PlatformException _conflict(int current) => PlatformException(
-    PlatformErrorCode.revisionConflict,
-    status: 409,
-    body: {
-      'error': {'code': 'revision_conflict', 'current_revision': current},
-    },
-  );
+  static PlatformException _conflict() =>
+      _error(PlatformErrorCode.conflict, 409, 'conflict');
 
-  /// Test helper: what the server holds now.
-  Attempt snapshot(String attemptId) => _row(attemptId).toAttempt();
+  /// Test helper: the server's answers now (decoded like the app would).
+  List<Answer> answersOf(String attemptId) => [
+    for (final a in _row(attemptId).answers) decodeAnswer(a)!,
+  ];
+
+  int revisionOf(String attemptId) => _row(attemptId).revision;
+  bool isSubmitted(String attemptId) => _row(attemptId).submittedAt != null;
+
+  Map<String, Object?> _assignmentJson(_Row r) => {
+    'id': r.seed.assignmentId,
+    'relationship_id': 'demo_relationship',
+    'organization_id': 'demo_org',
+    'questionnaire_version_id': r.seed.versionId,
+    'attempt_id': r.seed.attemptId,
+    'title': r.seed.title,
+    'state': r.submittedAt != null
+        ? 'submitted'
+        : r.revision == 0
+        ? 'assigned'
+        : 'in_progress',
+    'created_at': '2026-10-20T08:00:00Z',
+  };
+
+  Map<String, Object?> _ackJson(_Row r) => {
+    'attempt_id': r.seed.attemptId,
+    'assignment_id': r.seed.assignmentId,
+    'submitted_at': r.submittedAt!.toUtc().toIso8601String(),
+    'status': 'submitted',
+  };
 
   @override
-  Future<List<Assignment>> assignments() async {
+  Future<AssignmentPage> assignments({String? cursor}) async {
     await _wire();
-    return [
-      for (final a in _assignments)
-        Assignment(
-          assignmentId: a.assignmentId,
-          attemptId: a.attemptId,
-          versionId: a.versionId,
-          title: a.title,
-          status: _row(a.attemptId).status,
-          dueAt: a.dueAt,
-        ),
-    ];
+    final all = _rows.values.toList();
+    final start = int.tryParse(cursor ?? '0') ?? 0;
+    final end = (start + pageSize).clamp(0, all.length);
+    return parseAssignmentPage({
+      'items': [for (final r in all.sublist(start, end)) _assignmentJson(r)],
+      'next_cursor': end < all.length ? '$end' : null,
+    });
   }
 
   @override
-  Future<QuestionnaireVersion> version(String versionId) async {
+  Future<AssignmentDetail> detail(String assignmentId) async {
     await _wire();
-    return _versions[versionId] ??
-        (throw const PlatformException(PlatformErrorCode.notFound));
+    final r = _byAssignment(assignmentId);
+    if (r.submittedAt != null) {
+      return parseAssignmentDetail({
+        'assignment': _assignmentJson(r),
+        'acknowledgement': _ackJson(r),
+      });
+    }
+    return parseAssignmentDetail({
+      'assignment': _assignmentJson(r),
+      'questionnaire': r.seed.questionnaire,
+      'attempt': {
+        'id': r.seed.attemptId,
+        'assignment_id': r.seed.assignmentId,
+        'patient_uid': 'demo_patient',
+        'version_id': r.seed.versionId,
+        'status': r.revision == 0 ? 'not_started' : 'in_progress',
+        'answers': r.answers,
+        'revision': r.revision,
+        'server_updated_at': '2026-10-20T08:00:00Z',
+      },
+    });
   }
 
   @override
-  Future<Attempt> attempt(String attemptId) async {
-    await _wire();
-    return _row(attemptId).toAttempt();
-  }
-
-  @override
-  Future<DraftAck> saveDraft(
+  Future<AutosaveAck> autosave(
     String attemptId, {
     required int expectedRevision,
-    required Map<String, Answer> answers,
-    required String clientMutationId,
-  }) async {
-    await _wire();
-    saveDraftCalls++;
-    final r = _row(attemptId);
-    if (r.status == AttemptStatus.submitted) throw _submitted();
-    if (expectedRevision != r.revision) throw _conflict(r.revision);
-    final version = _versions[r.versionId]!;
-    r
-      ..answers = sanitizeAnswers(version, answers)
-      ..revision += 1
-      ..status = AttemptStatus.inProgress;
-    return DraftAck(revision: r.revision);
-  }
-
-  @override
-  Future<Attempt> restart(
-    String attemptId, {
-    required int expectedRevision,
-  }) async {
-    await _wire();
-    final r = _row(attemptId);
-    if (r.status == AttemptStatus.submitted) throw _submitted();
-    if (expectedRevision != r.revision) throw _conflict(r.revision);
-    r
-      ..answers = {}
-      ..revision += 1
-      ..status = AttemptStatus.notStarted;
-    return r.toAttempt();
-  }
-
-  @override
-  Future<SubmitAck> submit(
-    String attemptId, {
+    required List<Answer> answers,
     required String idempotencyKey,
-    required int expectedRevision,
   }) async {
     await _wire();
-    final again = _byKey[idempotencyKey];
-    if (again != null) return again; // same key = the same submission
+    autosaveCalls++;
+    autosaveKeys.add(idempotencyKey);
+    final body = encodeAutosave(expectedRevision, answers);
+    autosaveBodies.add(body);
     final r = _row(attemptId);
-    if (r.status == AttemptStatus.submitted) throw _submitted();
-    if (expectedRevision != r.revision) throw _conflict(r.revision);
-    final version = _versions[r.versionId]!;
-    if (missingRequired(version, r.answers).isNotEmpty) {
-      throw const PlatformException(PlatformErrorCode.conflict, status: 422);
+    final replay = r.autosaveByKey[idempotencyKey];
+    if (replay != null) return replay; // same key = the same save
+    if (r.submittedAt != null) throw _conflict();
+    if (expectedRevision != r.revision) throw _conflict();
+    final q = parsePublishedQuestionnaire(r.seed.questionnaire);
+    final decoded = {
+      for (final a in (body['answers']! as List).map(decodeAnswer).nonNulls)
+        a.questionId: a,
+    };
+    if (decoded.length != answers.length) {
+      throw _error(PlatformErrorCode.invalid, 400, 'invalid_request');
     }
     r
-      ..status = AttemptStatus.submitted
-      ..submittedAt = _now()
+      ..answers = [
+        for (final a in orderedAnswers(q, sanitizeAnswers(q, decoded)))
+          encodeAnswer(a),
+      ]
       ..revision += 1;
-    final ack = SubmitAck(attemptId: attemptId, submittedAt: r.submittedAt);
-    _byKey[idempotencyKey] = ack;
-    committedSubmissions++;
-    if (commitThenTimeoutNextSubmit) {
-      commitThenTimeoutNextSubmit = false;
+    final ack = parseAutosaveAck({
+      'attempt_id': attemptId,
+      'revision': r.revision,
+      'server_updated_at': '2026-10-20T08:00:00Z',
+      'status': 'in_progress',
+    });
+    r.autosaveByKey[idempotencyKey] = ack;
+    if (commitThenTimeoutNextAutosave) {
+      commitThenTimeoutNextAutosave = false;
       throw const PlatformException(PlatformErrorCode.timeout);
     }
     return ack;
   }
 
   @override
-  Future<SubmitAck?> submissionStatus(
+  Future<SubmitAck> submit(
     String attemptId, {
+    required int expectedRevision,
     required String idempotencyKey,
   }) async {
     await _wire();
-    return _byKey[idempotencyKey];
+    if (requireRecentSignInNextSubmit) {
+      requireRecentSignInNextSubmit = false;
+      throw _error(PlatformErrorCode.reauthRequired, 401, 'unauthenticated');
+    }
+    final r = _row(attemptId);
+    final again = r.submitKey == idempotencyKey && r.submittedAt != null;
+    if (again) return parseSubmitAck(_ackJson(r)); // same key, same answer
+    if (r.submittedAt != null) throw _conflict();
+    if (expectedRevision != r.revision) throw _conflict();
+    final q = parsePublishedQuestionnaire(r.seed.questionnaire);
+    final held = {
+      for (final a in r.answers.map(decodeAnswer)) a!.questionId: a,
+    };
+    if (missingRequired(q, held).isNotEmpty) {
+      throw _error(PlatformErrorCode.invalid, 400, 'invalid_request');
+    }
+    r
+      ..submittedAt = _now().toUtc()
+      ..submitKey = idempotencyKey;
+    committedSubmissions++;
+    if (commitThenTimeoutNextSubmit) {
+      commitThenTimeoutNextSubmit = false;
+      throw const PlatformException(PlatformErrorCode.timeout);
+    }
+    return parseSubmitAck(_ackJson(r));
   }
 
   // ── Demo content: PLACEHOLDER wording only ────────────────────────────
 
-  static List<Assignment> demoAssignments() => const [
-    Assignment(
-      assignmentId: 'demo-assignment-en',
-      attemptId: 'demo-attempt-en',
-      versionId: 'demo-form-en-v1',
-      title: 'Placeholder form (English)',
-      status: AttemptStatus.notStarted,
+  static List<MockAssignmentSeed> demoSeeds() => [
+    MockAssignmentSeed(
+      assignmentId: 'demo_assignment_en',
+      attemptId: 'demo_attempt_en',
+      versionId: 'demo_version_en',
+      title: const {'en': 'Placeholder form (English)'},
+      questionnaire: demoAllTypesEn(),
     ),
-    Assignment(
-      assignmentId: 'demo-assignment-ur',
-      attemptId: 'demo-attempt-ur',
-      versionId: 'demo-form-ur-v1',
-      title: 'نمونہ فارم (اردو)',
-      status: AttemptStatus.notStarted,
+    MockAssignmentSeed(
+      assignmentId: 'demo_assignment_ur',
+      attemptId: 'demo_attempt_ur',
+      versionId: 'demo_version_ur',
+      title: const {'ur': 'نمونہ فارم (اردو)'},
+      questionnaire: demoUrdu(),
     ),
-    Assignment(
-      assignmentId: 'demo-assignment-roman',
-      attemptId: 'demo-attempt-roman',
-      versionId: 'demo-form-roman-v1',
-      title: 'Namoona form (Roman Urdu)',
-      status: AttemptStatus.notStarted,
-    ),
-  ];
-
-  static List<QuestionnaireVersion> demoVersions() => [
-    _demo(
-      'demo-form-en-v1',
-      QuestionnaireLocale.en,
-      const _Words(
-        title: 'Placeholder form (English)',
-        instructions: 'Placeholder instructions. Answer each item.',
-        question: 'Placeholder question',
-        option: 'Option',
-        yes: 'Yes',
-        no: 'No',
-        low: 'Placeholder low',
-        high: 'Placeholder high',
-        text: 'Placeholder short answer (optional)',
-      ),
-    ),
-    _demo(
-      'demo-form-ur-v1',
-      QuestionnaireLocale.ur,
-      const _Words(
-        title: 'نمونہ فارم (اردو)',
-        instructions: 'نمونہ ہدایات۔ ہر سوال کا جواب دیں۔',
-        question: 'نمونہ سوال',
-        option: 'اختیار',
-        yes: 'ہاں',
-        no: 'نہیں',
-        low: 'نمونہ کم',
-        high: 'نمونہ زیادہ',
-        text: 'نمونہ مختصر جواب (اختیاری)',
-      ),
-    ),
-    _demo(
-      'demo-form-roman-v1',
-      QuestionnaireLocale.romanUr,
-      const _Words(
-        title: 'Namoona form (Roman Urdu)',
-        instructions: 'Namoona hidayat. Har sawal ka jawab dein.',
-        question: 'Namoona sawal',
-        option: 'Ikhtiyar',
-        yes: 'Haan',
-        no: 'Nahin',
-        low: 'Namoona kam',
-        high: 'Namoona zyada',
-        text: 'Namoona mukhtasar jawab (ikhtiyari)',
-      ),
+    MockAssignmentSeed(
+      assignmentId: 'demo_assignment_roman',
+      attemptId: 'demo_attempt_roman',
+      versionId: 'demo_version_roman',
+      title: const {'ur-Latn': 'Namoona form (Roman Urdu)'},
+      questionnaire: demoRomanUrdu(),
     ),
   ];
-
-  static QuestionnaireVersion _demo(
-    String id,
-    QuestionnaireLocale locale,
-    _Words w,
-  ) {
-    List<ChoiceOption> abc() => [
-      for (final l in ['A', 'B', 'C'])
-        ChoiceOption(id: 'opt_$l', label: '${w.option} $l'),
-    ];
-    return QuestionnaireVersion(
-      versionId: id,
-      questionnaireId: 'demo-form',
-      locale: locale,
-      title: w.title,
-      instructions: w.instructions,
-      assetManifestVersion: 'v0-placeholder',
-      questions: [
-        Question(
-          id: 'q1',
-          type: QuestionType.singleChoice,
-          required: true,
-          prompt: '${w.question} 1',
-          options: abc(),
-        ),
-        Question(
-          id: 'q2',
-          type: QuestionType.multiChoice,
-          required: true,
-          prompt: '${w.question} 2',
-          options: abc(),
-        ),
-        Question(
-          id: 'q3',
-          type: QuestionType.yesNo,
-          required: true,
-          prompt: '${w.question} 3',
-          options: [
-            ChoiceOption(id: 'yes', label: w.yes),
-            ChoiceOption(id: 'no', label: w.no),
-          ],
-        ),
-        Question(
-          id: 'q4',
-          type: QuestionType.likert,
-          required: true,
-          prompt: '${w.question} 4',
-          options: [
-            ChoiceOption(id: 'l1', label: '1 · ${w.low}'),
-            const ChoiceOption(id: 'l2', label: '2'),
-            const ChoiceOption(id: 'l3', label: '3'),
-            const ChoiceOption(id: 'l4', label: '4'),
-            ChoiceOption(id: 'l5', label: '5 · ${w.high}'),
-          ],
-        ),
-        Question(
-          id: 'q5',
-          type: QuestionType.shortText,
-          required: false,
-          prompt: w.text,
-          maxLength: 200,
-        ),
-        Question(
-          id: 'q6',
-          type: QuestionType.imageSingleChoice,
-          required: true,
-          prompt: '${w.question} 6',
-          options: const [
-            ChoiceOption(id: 'img_circle', assetId: 'placeholder.circle.v1'),
-            ChoiceOption(id: 'img_square', assetId: 'placeholder.square.v1'),
-            ChoiceOption(
-              id: 'img_triangle',
-              assetId: 'placeholder.triangle.v1',
-            ),
-          ],
-        ),
-        Question(
-          id: 'q7',
-          type: QuestionType.imageMultiChoice,
-          required: false,
-          prompt: '${w.question} 7',
-          options: [
-            const ChoiceOption(
-              id: 'img_circle',
-              assetId: 'placeholder.circle.v1',
-            ),
-            const ChoiceOption(
-              id: 'img_square',
-              assetId: 'placeholder.square.v1',
-            ),
-            // Not in the manifest: shows the accessible fallback.
-            ChoiceOption(
-              id: 'img_missing',
-              assetId: 'placeholder.missing.v1',
-              label: '${w.option} D',
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 }
 
-class _Words {
-  const _Words({
-    required this.title,
-    required this.instructions,
-    required this.question,
-    required this.option,
-    required this.yes,
-    required this.no,
-    required this.low,
-    required this.high,
-    required this.text,
-  });
-  final String title, instructions, question, option, yes, no, low, high, text;
-}
-
-class _AttemptRow {
-  _AttemptRow({
-    required this.attemptId,
+/// One demo assignment: its ids, LocalizedText title and the raw
+/// PublishedQuestionnaire JSON.
+class MockAssignmentSeed {
+  const MockAssignmentSeed({
     required this.assignmentId,
+    required this.attemptId,
     required this.versionId,
+    required this.title,
+    required this.questionnaire,
   });
 
-  final String attemptId;
   final String assignmentId;
+  final String attemptId;
   final String versionId;
-  AttemptStatus status = AttemptStatus.notStarted;
-  int revision = 0;
-  Map<String, Answer> answers = {};
-  DateTime? submittedAt;
+  final Map<String, String> title;
+  final Map<String, Object?> questionnaire;
+}
 
-  Attempt toAttempt() => Attempt(
-    attemptId: attemptId,
-    assignmentId: assignmentId,
-    versionId: versionId,
-    status: status,
-    revision: revision,
-    answers: Map.unmodifiable(answers),
-    submittedAt: submittedAt,
-  );
+class _Row {
+  _Row(this.seed);
+  final MockAssignmentSeed seed;
+  int revision = 0;
+
+  /// Stored exactly as the wire carries them.
+  List<Map<String, Object?>> answers = [];
+  DateTime? submittedAt;
+  String? submitKey;
+  final Map<String, AutosaveAck> autosaveByKey = {};
 }

@@ -106,11 +106,16 @@ flutter:
     - assets/avatar_local/models/
     # Bricolage Grotesque + DM Sans (SIL OFL 1.1), bundled so google_fonts
     # works offline. Exact files google_fonts 6.3.3 fetches (hash-verified).
+    # MOB-3: Noto Nastaliq Urdu Regular (SIL OFL 1.1; the static file
+    # google_fonts 6.3.3 fetches, sha256 d2aacf11…, licence text from
+    # github.com/google/fonts ofl/notonastaliqurdu/OFL.txt), used ONLY for
+    # Urdu questionnaire wording.
     - assets/google_fonts/
-    # MOB-1 questionnaire pictures: the shared asset manifest (PLACEHOLDER
-    # "v0-placeholder" shapes from tool/make_questionnaire_placeholders.mjs
-    # until the platform ships the approved, versioned manifest).
-    - assets/questionnaire_assets/
+    # Questionnaire pictures (MOB-3): assets/questionnaire/<asset_id>.png +
+    # manifest.json in the AI repo's manifest format
+    # (contracts/schema/AssetManifestEntry.json). The three files are
+    # PLACEHOLDER shapes until the platform ships the approved library.
+    - assets/questionnaire/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

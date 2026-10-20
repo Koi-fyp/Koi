@@ -2,320 +2,378 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:koi_mobile/care/care_strings.dart';
 import 'package:koi_mobile/questionnaires/asset_manifest.dart';
 import 'package:koi_mobile/questionnaires/attempt_controller.dart';
+import 'package:koi_mobile/questionnaires/mock_fixtures.dart';
 import 'package:koi_mobile/questionnaires/mock_questionnaire_api.dart';
 import 'package:koi_mobile/questionnaires/question_view.dart';
 import 'package:koi_mobile/questionnaires/questionnaire_models.dart';
 import 'package:koi_mobile/questionnaires/questionnaire_screens.dart';
+import 'package:koi_mobile/questionnaires/questionnaire_wire.dart';
 import 'package:koi_mobile/theme/koi_text.dart';
 import 'package:koi_mobile/widgets/koi_loader.dart';
 
 import '../support/mob1_fakes.dart';
 import '../support/real_fonts.dart';
 
-final _versions = {
-  for (final v in MockQuestionnaireRemote.demoVersions()) v.locale: v,
-};
+// MOB-3 rewrite: same MOB-1 IDs, now rendering the AI QuestionnaireDraft
+// body (PROVISIONAL) with the MOB-2 string table.
+
+final _en = parsePublishedQuestionnaire(demoAllTypesEn());
 
 const _manifest = QuestionnaireAssetManifest(
-  version: 'v0-placeholder',
   assets: {
-    'placeholder.circle.v1': QuestionnaireAsset(
-      path: 'assets/questionnaire_assets/placeholder_circle_v1.png',
-      alt: {'en': 'Blue circle', 'ur': 'نیلا دائرہ', 'roman_ur': 'Neela daira'},
+    'placeholder_circle_v1': QuestionnaireAsset(
+      assetId: 'placeholder_circle_v1',
+      kind: 'placeholder',
+      visualDescription: 'Blue circle',
     ),
-    'placeholder.square.v1': QuestionnaireAsset(
-      path: 'assets/questionnaire_assets/placeholder_square_v1.png',
-      alt: {'en': 'Yellow square'},
+    'placeholder_square_v1': QuestionnaireAsset(
+      assetId: 'placeholder_square_v1',
+      kind: 'placeholder',
+      visualDescription: 'Yellow square',
     ),
-    'placeholder.triangle.v1': QuestionnaireAsset(
-      path: 'assets/questionnaire_assets/placeholder_triangle_v1.png',
-      alt: {'en': 'Green triangle'},
+    'placeholder_triangle_v1': QuestionnaireAsset(
+      assetId: 'placeholder_triangle_v1',
+      kind: 'placeholder',
+      visualDescription: 'Green triangle',
     ),
   },
 );
 
-Future<Answer?> _pumpQuestion(
+Future<void> _pumpQuestion(
   WidgetTester tester,
   Question q, {
-  QuestionnaireLocale locale = QuestionnaireLocale.en,
+  QuestionnaireLanguage language = QuestionnaireLanguage.en,
   Answer? answer,
   QuestionnaireAssetManifest manifest = _manifest,
-  String? manifestVersion = 'v0-placeholder',
-  void Function(Answer)? onChanged,
+  void Function(AnswerValue)? onChanged,
 }) async {
-  Answer? last;
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
         body: SingleChildScrollView(
           child: QuestionView(
             question: q,
-            locale: locale,
+            language: language,
             answer: answer,
             manifest: manifest,
-            manifestVersion: manifestVersion,
-            onChanged: onChanged ?? (a) => last = a,
+            strings: CareStrings.en,
+            onChanged: onChanged ?? (_) {},
           ),
         ),
       ),
     ),
   );
   await tester.pump();
-  return last;
+}
+
+/// The runner for one demo assignment, on a 360dp phone.
+Future<MockQuestionnaireRemote> _pumpRunner(
+  WidgetTester tester, {
+  int assignment = 0,
+  Duration latency = Duration.zero,
+}) async {
+  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  final remote = MockQuestionnaireRemote(latency: latency);
+  final seed = MockQuestionnaireRemote.demoSeeds()[assignment];
+  final h = Mob1Harness(
+    user: AccountFakeAuth.registered('p1', 'p@x'),
+    caps: {'p1': patientCaps},
+    questionnaires: remote,
+  );
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: h.overrides,
+      child: MaterialApp(
+        home: QuestionnaireRunnerScreen(
+          assignment: Assignment(
+            assignmentId: seed.assignmentId,
+            attemptId: seed.attemptId,
+            versionId: seed.versionId,
+            title: seed.title,
+            state: AssignmentState.assigned,
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 20));
+  return remote;
 }
 
 void main() {
   useRealFonts();
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
-  final en = _versions[QuestionnaireLocale.en]!;
-  Question q(String id) => en.question(id)!;
+  Question q(String id) => _en.question(id)!;
 
   group('MOB1-22 every question type renders and answers', () {
-    testWidgets('single_choice / yes_no / likert choose one option', (
-      tester,
-    ) async {
-      for (final id in ['q1', 'q3', 'q4']) {
-        Answer? got;
+    testWidgets('single / yes_no / likert choose one option', (tester) async {
+      for (final id in ['q_single', 'q_yes_no', 'q_likert']) {
+        AnswerValue? got;
         await _pumpQuestion(tester, q(id), onChanged: (a) => got = a);
         final option = q(id).options[1];
         await tester.tap(find.byKey(Key('option-${option.id}')));
         expect(got!.optionIds, [option.id], reason: id);
       }
     });
-    testWidgets('multi_choice toggles several options', (tester) async {
-      Answer? got;
+    testWidgets('multi toggles several options', (tester) async {
+      AnswerValue? got;
       await _pumpQuestion(
         tester,
-        q('q2'),
-        answer: const Answer(optionIds: ['opt_A']),
+        q('q_multi'),
+        answer: const Answer(
+          answerId: 'a1',
+          questionId: 'q_multi',
+          optionIds: ['o_a'],
+        ),
         onChanged: (a) => got = a,
       );
-      await tester.tap(find.byKey(const Key('option-opt_C')));
-      expect(got!.optionIds, ['opt_A', 'opt_C']);
+      await tester.tap(find.byKey(const Key('option-o_c')));
+      expect(got!.optionIds, ['o_a', 'o_c']);
       await _pumpQuestion(
         tester,
-        q('q2'),
-        answer: const Answer(optionIds: ['opt_A', 'opt_C']),
+        q('q_multi'),
+        answer: const Answer(
+          answerId: 'a1',
+          questionId: 'q_multi',
+          optionIds: ['o_a', 'o_c'],
+        ),
         onChanged: (a) => got = a,
       );
-      await tester.tap(find.byKey(const Key('option-opt_A')));
-      expect(got!.optionIds, ['opt_C']);
+      await tester.tap(find.byKey(const Key('option-o_a')));
+      expect(got!.optionIds, ['o_c']);
     });
-    testWidgets('short_text keeps within max length', (tester) async {
-      Answer? got;
-      await _pumpQuestion(tester, q('q5'), onChanged: (a) => got = a);
+    testWidgets('free_text keeps within 4000 characters', (tester) async {
+      AnswerValue? got;
+      await _pumpQuestion(tester, q('q_free_text'), onChanged: (a) => got = a);
       await tester.enterText(
         find.descendant(
-          of: find.byKey(const Key('short-text')),
+          of: find.byKey(const Key('free-text')),
           matching: find.byType(TextField),
         ),
-        'x' * 250,
+        'x' * 4100,
       );
-      expect(got!.text!.length, 200);
+      expect(got!.text!.length, 4000);
     });
     testWidgets(
-      'image_single / image_multi use bundled asset ids with alt labels',
+      'image_single / image_multi use bundled asset ids with their descriptions',
       (tester) async {
-        Answer? got;
-        await _pumpQuestion(tester, q('q6'), onChanged: (a) => got = a);
+        AnswerValue? got;
+        await _pumpQuestion(
+          tester,
+          q('q_image_single'),
+          onChanged: (a) => got = a,
+        );
         expect(find.byKey(const Key('image-img_circle')), findsOneWidget);
-        expect(find.bySemanticsLabel('Blue circle'), findsOneWidget);
+        expect(find.bySemanticsLabel('Circle. Blue circle'), findsOneWidget);
         await tester.tap(find.byKey(const Key('option-img_square')));
         expect(got!.optionIds, ['img_square']);
-        await _pumpQuestion(tester, q('q7'), onChanged: (a) => got = a);
+        await _pumpQuestion(
+          tester,
+          q('q_image_multi'),
+          onChanged: (a) => got = a,
+        );
         await tester.tap(find.byKey(const Key('option-img_circle')));
         expect(got!.optionIds, ['img_circle']);
       },
     );
     testWidgets('choice tiles are at least 48dp tall', (tester) async {
-      await _pumpQuestion(tester, q('q1'));
+      await _pumpQuestion(tester, q('q_single'));
       expect(
-        tester.getSize(find.byKey(const Key('option-opt_A'))).height,
+        tester.getSize(find.byKey(const Key('option-o_a'))).height,
         greaterThanOrEqualTo(48),
       );
     });
   });
 
-  group('MOB1-23 Urdu RTL, Roman Urdu LTR, no new font family', () {
-    testWidgets('Urdu question/answer block is RTL', (tester) async {
-      final ur = _versions[QuestionnaireLocale.ur]!;
-      await _pumpQuestion(
-        tester,
-        ur.question('q1')!,
-        locale: QuestionnaireLocale.ur,
-      );
-      final dir = tester.widget<Directionality>(
-        find
-            .ancestor(
-              of: find.byKey(const Key('question-q1')),
-              matching: find.byType(Directionality),
-            )
-            .first,
-      );
-      expect(dir.textDirection, TextDirection.rtl);
-      expect(find.text('نمونہ سوال 1'), findsOneWidget);
-      // Option A sits to the RIGHT of the screen in RTL.
-      final box = tester.getRect(find.byKey(const Key('option-opt_A')));
-      final text = tester.getRect(find.text('اختیار A'));
+  group('MOB1-23 Urdu RTL, Roman Urdu LTR, Nastaliq for Urdu wording only', () {
+    TextDirection directionOf(WidgetTester tester, String questionId) => tester
+        .widget<Directionality>(
+          find
+              .ancestor(
+                of: find.byKey(Key('question-$questionId')),
+                matching: find.byType(Directionality),
+              )
+              .first,
+        )
+        .textDirection;
+
+    testWidgets('an Urdu (rtl) questionnaire is laid out right-to-left', (
+      tester,
+    ) async {
+      await _pumpRunner(tester, assignment: 1);
+      await tester.pumpAndSettle();
+      expect(directionOf(tester, 'q_single'), TextDirection.rtl);
+      expect(find.text('نمونہ سوال ایک'), findsOneWidget);
+      // Option text sits on the RIGHT of its tile in RTL.
+      final box = tester.getRect(find.byKey(const Key('option-o_a')));
+      final text = tester.getRect(find.text('اختیار الف'));
       expect(text.right, greaterThan(box.center.dx));
     });
-    testWidgets('Roman Urdu is LTR', (tester) async {
-      final roman = _versions[QuestionnaireLocale.romanUr]!;
-      await _pumpQuestion(
-        tester,
-        roman.question('q1')!,
-        locale: QuestionnaireLocale.romanUr,
-      );
-      final dir = tester.widget<Directionality>(
-        find
-            .ancestor(
-              of: find.byKey(const Key('question-q1')),
-              matching: find.byType(Directionality),
-            )
-            .first,
-      );
-      expect(dir.textDirection, TextDirection.ltr);
-      expect(find.text('Namoona sawal 1'), findsOneWidget);
+    testWidgets('a Roman Urdu questionnaire is left-to-right', (tester) async {
+      await _pumpRunner(tester, assignment: 2);
+      await tester.pumpAndSettle();
+      expect(directionOf(tester, 'q_single'), TextDirection.ltr);
+      expect(find.text('Namoona sawal ek'), findsOneWidget);
     });
-    test('Urdu text uses the theme family (system fallback for glyphs)', () {
-      final style = questionnaireTextStyle(QuestionnaireLocale.ur);
-      expect(style.fontFamily, KoiText.body().fontFamily);
-      expect(
-        style.fontFamilyFallback,
-        KoiText.body().fontFamilyFallback,
-        reason: 'no extra (Urdu) family added',
-      );
-      expect(style.height, greaterThan(1.5));
+    test('Urdu wording uses Noto Nastaliq Urdu; English and Roman Urdu keep '
+        'the theme family', () {
+      final ur = questionnaireTextStyle(QuestionnaireLanguage.ur);
+      expect(ur.fontFamily, KoiText.urduQuestionnaire().fontFamily);
+      expect(ur.fontFamily, isNot(KoiText.body().fontFamily));
+      for (final l in [
+        QuestionnaireLanguage.en,
+        QuestionnaireLanguage.romanUr,
+      ]) {
+        expect(
+          questionnaireTextStyle(l).fontFamily,
+          KoiText.body().fontFamily,
+          reason: l.name,
+        );
+      }
     });
   });
 
-  group('MOB1-24 missing picture → accessible fallback, wording unchanged', () {
-    testWidgets('unknown asset id shows the fallback with its label', (
+  group('MOB1-24 missing picture → its description, wording unchanged', () {
+    testWidgets('unknown asset id / no asset id show the visual description', (
       tester,
     ) async {
-      await _pumpQuestion(tester, q('q7'));
+      await _pumpQuestion(tester, q('q_image_multi'));
       expect(
         find.byKey(const Key('image-fallback-img_missing')),
         findsOneWidget,
       );
+      expect(find.text('A five-pointed star'), findsOneWidget);
+      expect(find.text('A crescent moon'), findsOneWidget);
       expect(
-        find.bySemanticsLabel(RegExp('Option D.*Picture unavailable')),
+        find.bySemanticsLabel('Star. A five-pointed star'),
         findsOneWidget,
       );
-      expect(find.text('Placeholder question 7'), findsOneWidget);
+      expect(find.text('Placeholder pictures (choose any)'), findsOneWidget);
     });
-    testWidgets('another manifest version → every picture falls back', (
+    testWidgets('no manifest → every picture falls back to text', (
       tester,
     ) async {
-      await _pumpQuestion(tester, q('q6'), manifestVersion: 'v9');
+      await _pumpQuestion(
+        tester,
+        q('q_image_single'),
+        manifest: QuestionnaireAssetManifest.empty,
+      );
       expect(
         find.byKey(const Key('image-fallback-img_circle')),
         findsOneWidget,
       );
       expect(find.byKey(const Key('image-img_circle')), findsNothing);
+      expect(find.text('Picture unavailable'), findsNWidgets(3));
     });
   });
 
-  group('MOB1-25 missing translation → fallback, never other wording', () {
-    testWidgets('no prompt in this locale shows the safe message', (
-      tester,
-    ) async {
-      const missing = Question(
-        id: 'qx',
-        type: QuestionType.singleChoice,
-        required: true,
-        options: [ChoiceOption(id: 'a', label: 'A')],
-      );
-      await _pumpQuestion(tester, missing, locale: QuestionnaireLocale.ur);
-      expect(find.byKey(const Key('question-missing-wording')), findsOneWidget);
-      expect(find.text(missingWordingText), findsOneWidget);
-      final v = QuestionnaireVersion(
-        versionId: 'v',
-        questionnaireId: 'q',
-        locale: QuestionnaireLocale.ur,
-        title: 't',
-        questions: const [missing],
-      );
-      expect(
-        missingRequired(v, const {
-          'qx': Answer(optionIds: ['a']),
-        }),
-        ['qx'],
-      );
-    });
+  group('MOB1-25 missing wording → refused, never other wording', () {
+    test(
+      'an empty question text or option label refuses the questionnaire',
+      () {
+        Map<String, Object?> withText(String text, String label) => {
+          'questionnaire_id': 'q',
+          'version': 1,
+          'status': 'published',
+          'body': {
+            'title': 'T',
+            'language': 'ur',
+            'rtl': true,
+            'questions': [
+              {
+                'question_id': 'q1',
+                'type': 'single',
+                'text': text,
+                'options': [
+                  {'option_id': 'a', 'label': label},
+                ],
+              },
+            ],
+          },
+        };
+        expect(
+          () => parsePublishedQuestionnaire(withText('', 'A')),
+          throwsFormatException,
+        );
+        expect(
+          () => parsePublishedQuestionnaire(withText('سوال', '')),
+          throwsFormatException,
+        );
+        expect(
+          parsePublishedQuestionnaire(withText('سوال', 'A'))
+              .questions
+              .single
+              .text,
+          'سوال',
+        );
+      },
+    );
   });
 
   group('MOB1-34 runner: loaders, progress, validation, check answers, acknowledgement', () {
     testWidgets(
       'load → answer → check answers → submit → "Response submitted"',
       (tester) async {
-        tester.view.physicalSize = const Size(1080, 2400);
-        tester.view.devicePixelRatio = 3;
-        addTearDown(tester.view.reset);
-        final remote = MockQuestionnaireRemote(
+        final remote = await _pumpRunner(
+          tester,
           latency: const Duration(milliseconds: 100),
         );
-        final h = Mob1Harness(
-          user: AccountFakeAuth.registered('p1', 'p@x'),
-          caps: {'p1': patientCaps},
-          questionnaires: remote,
-        );
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: h.overrides,
-            child: MaterialApp(
-              home: Builder(
-                builder: (context) => QuestionnaireRunnerScreen(
-                  assignment: MockQuestionnaireRemote.demoAssignments().first,
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-        // Capabilities first (default-deny), then the questionnaire loader.
-        await tester.pump(const Duration(milliseconds: 20));
         expect(find.byType(KoiLoader), findsOneWidget);
         await tester.pump(const Duration(milliseconds: 300));
         await tester.pumpAndSettle();
         expect(find.byType(KoiLoader), findsNothing);
-        expect(find.bySemanticsLabel('Question 1 of 7'), findsOneWidget);
+        expect(find.bySemanticsLabel('Question 1 of 8'), findsOneWidget);
 
         // Next without an answer → validation on this question.
         await tester.tap(find.byKey(const Key('q-next')));
         await tester.pump();
         expect(find.text('Please answer this question.'), findsOneWidget);
 
-        Future<void> choose(String option) async {
-          await tester.ensureVisible(find.byKey(Key('option-$option')));
-          await tester.tap(find.byKey(Key('option-$option')));
-          await tester.pump();
+        Future<void> next() async {
           await tester.ensureVisible(find.byKey(const Key('q-next')));
           await tester.tap(find.byKey(const Key('q-next')));
           await tester.pumpAndSettle();
         }
 
-        await choose('opt_A');
-        await choose('opt_B');
-        await choose('yes');
-        await choose('l3');
-        await tester.tap(find.byKey(const Key('q-next'))); // q5 optional
-        await tester.pumpAndSettle();
+        Future<void> choose(String option) async {
+          await tester.ensureVisible(find.byKey(Key('option-$option')));
+          await tester.tap(find.byKey(Key('option-$option')));
+          await tester.pump();
+          await next();
+        }
+
+        await choose('o_a');
+        await choose('o_b');
+        await choose('o_yes');
+        await choose('o3');
+        await next(); // free text is optional
+        await tester.enterText(
+          find.descendant(
+            of: find.byKey(const Key('numeric-input')),
+            matching: find.byType(TextField),
+          ),
+          '4',
+        );
+        await tester.pump();
+        await next();
         await choose('img_square');
-        // q7 optional, last: Check answers.
+        // Image multi is optional and last: Check answers.
         await tester.ensureVisible(find.byKey(const Key('q-previous')));
         await tester.tap(find.byKey(const Key('q-previous')));
         await tester.pumpAndSettle();
-        expect(find.bySemanticsLabel('Question 6 of 7'), findsOneWidget);
-        await tester.tap(find.byKey(const Key('q-next')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('q-next')));
-        await tester.pumpAndSettle();
+        expect(find.bySemanticsLabel('Question 7 of 8'), findsOneWidget);
+        await next();
+        await next();
         expect(find.text('Check your answers'), findsOneWidget);
         expect(find.text('Option A'), findsOneWidget);
-        expect(find.text('Yellow square'), findsOneWidget);
+        expect(find.text('Square'), findsOneWidget);
+        expect(find.text('4'), findsOneWidget);
 
         await tester.ensureVisible(find.byKey(const Key('q-submit')));
         await tester.tap(find.byKey(const Key('q-submit')));
@@ -348,26 +406,21 @@ void main() {
     testWidgets(
       'autosave shows the KoiLoader "Saving…" indicator, then "Saved"',
       (tester) async {
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(body: SaveIndicator(status: SaveStatus.saving)),
+        Future<void> show(SaveStatus s) => tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(body: SaveIndicator(status: s)),
           ),
         );
+        await show(SaveStatus.saving);
         expect(find.byType(KoiLoader), findsOneWidget);
         expect(find.bySemanticsLabel('Saving…'), findsOneWidget);
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(body: SaveIndicator(status: SaveStatus.saved)),
-          ),
-        );
+        await show(SaveStatus.saved);
         expect(find.byType(KoiLoader), findsNothing);
         expect(find.text('Saved'), findsOneWidget);
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(body: SaveIndicator(status: SaveStatus.offline)),
-          ),
-        );
+        await show(SaveStatus.offline);
         expect(find.text('Offline – not synced'), findsOneWidget);
+        await show(SaveStatus.notSaved);
+        expect(find.text('Not saved'), findsOneWidget);
       },
     );
   });

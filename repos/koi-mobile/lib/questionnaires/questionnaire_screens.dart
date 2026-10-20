@@ -5,7 +5,9 @@ import '../account/account_widgets.dart';
 import '../account/capability_gate.dart';
 import '../account/destinations.dart';
 import '../app/providers.dart';
-import '../experts/expert_screens.dart' show platformErrorText;
+import '../care/care_api_support.dart' show careFailureText;
+import '../care/care_strings.dart';
+import '../care/care_widgets.dart' show CareButtonLabel, showReauthSheet;
 import '../platform/demo_badge.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_motion.dart';
@@ -19,11 +21,12 @@ import 'question_view.dart';
 import 'questionnaire_models.dart';
 import 'questionnaire_providers.dart';
 
-String attemptStatusLabel(AttemptStatus s) => switch (s) {
-  AttemptStatus.notStarted => 'Not started',
-  AttemptStatus.inProgress => 'In progress',
-  AttemptStatus.submitted => 'Submitted',
-};
+String assignmentStateLabel(CareStrings s, AssignmentState state) =>
+    s.t(switch (state) {
+      AssignmentState.assigned => CareText.qStateAssigned,
+      AssignmentState.inProgress => CareText.qStateInProgress,
+      AssignmentState.submitted => CareText.qStateSubmitted,
+    });
 
 /// The patient's assigned questionnaires.
 class QuestionnaireListScreen extends StatelessWidget {
@@ -41,70 +44,79 @@ class _QuestionnaireList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(careStringsProvider);
     final list = ref.watch(assignmentsProvider);
     final demo = ref.watch(questionnaireApiProvider).isMock;
-    return KoiPage(
-      back: true,
-      demo: demo,
-      title: 'Questionnaires',
-      children: list.when(
-        loading: () => const [NeoSkeletonList(label: 'Loading questionnaires')],
-        error: (e, _) => [
-          KoiNoticeCard(
-            message: platformErrorText(e),
-            action: () => ref.invalidate(assignmentsProvider),
-            actionLabel: 'Try again',
-          ),
-        ],
-        data: (items) => items.isEmpty
-            ? const [KoiNoticeCard(message: 'Nothing to fill in right now.')]
-            : [
-                for (final a in items)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Semantics(
-                      button: true,
-                      label: '${a.title}. ${attemptStatusLabel(a.status)}',
-                      excludeSemantics: true,
-                      child: GestureDetector(
-                        key: Key('assignment-${a.assignmentId}'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () async {
-                          await pushKoiPage<void>(
-                            context,
-                            QuestionnaireRunnerScreen(assignment: a),
-                          );
-                          ref.invalidate(assignmentsProvider);
-                        },
-                        child: NeoCard(
-                          padding: const EdgeInsets.all(16),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                              minHeight: koiMinTouch,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  a.title,
-                                  style: koiBodyStyle(
-                                    size: 17,
-                                    weight: FontWeight.w700,
+    final lang = s.isUrdu ? 'ur' : 'en';
+    return Directionality(
+      textDirection: s.direction,
+      child: KoiPage(
+        back: true,
+        demo: demo,
+        title: s.t(CareText.questionnaires),
+        children: list.when(
+          loading: () => [NeoSkeletonList(label: s.t(CareText.qLoadingList))],
+          error: (e, _) => [
+            KoiNoticeCard(
+              message: careFailureText(s, e),
+              action: () => ref.invalidate(assignmentsProvider),
+              actionLabel: s.t(CareText.retry),
+            ),
+          ],
+          data: (items) => items.isEmpty
+              ? [KoiNoticeCard(message: s.t(CareText.qNothing))]
+              : [
+                  for (final a in items)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Semantics(
+                        button: true,
+                        label:
+                            '${a.titleFor(lang)}. '
+                            '${assignmentStateLabel(s, a.state)}',
+                        excludeSemantics: true,
+                        child: GestureDetector(
+                          key: Key('assignment-${a.assignmentId}'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () async {
+                            await pushKoiPage<void>(
+                              context,
+                              QuestionnaireRunnerScreen(assignment: a),
+                            );
+                            ref.invalidate(assignmentsProvider);
+                          },
+                          child: NeoCard(
+                            padding: const EdgeInsets.all(16),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                minHeight: koiMinTouch,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    a.titleFor(lang),
+                                    style: koiBodyStyle(
+                                      size: 17,
+                                      weight: FontWeight.w700,
+                                    ).copyWith(height: s.lineHeight),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  attemptStatusLabel(a.status),
-                                  style: koiMutedStyle(),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    assignmentStateLabel(s, a.state),
+                                    style: koiMutedStyle().copyWith(
+                                      height: s.lineHeight,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+        ),
       ),
     );
   }
@@ -141,15 +153,21 @@ class _RunnerState extends ConsumerState<_Runner> {
   AttemptController get _c =>
       ref.read(attemptControllerProvider(widget.attemptRef));
 
+  CareStrings get _s => ref.read(careStringsProvider);
+
   Future<void> _confirmRestart() async {
+    final s = _s;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => const _ConfirmDialog(
-        title: 'Start again?',
-        message:
-            'Your answers to this questionnaire will be cleared. This cannot '
-            'be undone.',
-        confirm: 'Start again',
+      builder: (context) => Directionality(
+        textDirection: s.direction,
+        child: _ConfirmDialog(
+          title: s.t(CareText.qRestartTitle),
+          message: s.t(CareText.qRestartBody),
+          confirm: s.t(CareText.qStartAgain),
+          cancel: s.t(CareText.qCancel),
+          strings: s,
+        ),
       ),
     );
     if (ok != true || !mounted) return;
@@ -160,7 +178,12 @@ class _RunnerState extends ConsumerState<_Runner> {
   }
 
   Future<void> _submit() async {
-    final ok = await _c.submit();
+    var ok = await _c.submit();
+    if (!ok && mounted && _c.submitProblem == SubmitProblem.reauth) {
+      // Recent sign-in needed: ask for the password, then submit again
+      // with the SAME idempotency key (kept by the controller).
+      if (await showReauthSheet(context, ref)) ok = await _c.submit();
+    }
     if (!ok && mounted && _c.submitProblem == SubmitProblem.incomplete) {
       setState(() => _summary = false);
     }
@@ -169,41 +192,49 @@ class _RunnerState extends ConsumerState<_Runner> {
   @override
   Widget build(BuildContext context) {
     final c = ref.watch(attemptControllerProvider(widget.attemptRef));
+    final s = ref.watch(careStringsProvider);
     final demo = ref.watch(questionnaireApiProvider).isMock;
     final manifest =
         ref.watch(questionnaireAssetManifestProvider).valueOrNull ??
         QuestionnaireAssetManifest.empty;
     final reduce = koiReduceMotion(context);
     final Widget page = switch (c.phase) {
-      AttemptPhase.loading => const Scaffold(
-        key: ValueKey('loading'),
-        body: KoiLoadingPage(label: 'Loading questionnaire…'),
+      AttemptPhase.loading => Scaffold(
+        key: const ValueKey('loading'),
+        body: KoiLoadingPage(label: s.t(CareText.qLoading)),
       ),
-      AttemptPhase.submitting => const Scaffold(
-        key: ValueKey('submitting'),
-        body: KoiLoadingPage(label: 'Submitting…'),
+      AttemptPhase.submitting => Scaffold(
+        key: const ValueKey('submitting'),
+        body: KoiLoadingPage(label: s.t(CareText.qSubmitting)),
       ),
-      AttemptPhase.unavailable => KoiPage(
+      AttemptPhase.unavailable => Directionality(
         key: const ValueKey('unavailable'),
-        back: true,
-        demo: demo,
-        children: [
-          KoiNoticeCard(
-            message: _loadErrorText(c.loadError),
-            action: c.load,
-            actionLabel: 'Try again',
-          ),
-        ],
+        textDirection: s.direction,
+        child: KoiPage(
+          back: true,
+          demo: demo,
+          children: [
+            KoiNoticeCard(
+              message: _loadErrorText(s, c.loadError),
+              action: c.load,
+              actionLabel: s.t(CareText.retry),
+            ),
+          ],
+        ),
       ),
       AttemptPhase.submitted => AcknowledgementView(
         key: const ValueKey('submitted'),
         submittedAt: c.submittedAt,
         demo: demo,
+        strings: s,
       ),
-      AttemptPhase.answering =>
-        _summary
-            ? _summaryPage(c, demo, manifest)
-            : _questionPage(c, demo, manifest),
+      AttemptPhase.answering => Directionality(
+        key: ValueKey(_summary ? 'summary' : 'question'),
+        textDirection: c.questionnaire!.direction,
+        child: _summary
+            ? _summaryPage(c, s, demo, manifest)
+            : _questionPage(c, s, demo, manifest),
+      ),
     };
     return AnimatedSwitcher(
       duration: reduce ? Duration.zero : KoiMotion.fadeUp.duration,
@@ -212,32 +243,28 @@ class _RunnerState extends ConsumerState<_Runner> {
     );
   }
 
-  static String _loadErrorText(AttemptLoadError? e) => switch (e) {
-    AttemptLoadError.offline =>
-      'You seem to be offline. This questionnaire needs a connection to '
-          'open.',
-    AttemptLoadError.notFound => 'This questionnaire is no longer available.',
-    AttemptLoadError.forbidden => CapabilityGate.deniedText,
-    AttemptLoadError.unsupported =>
-      'This questionnaire cannot be shown in this version of the app. Please '
-          'let your psychologist know.',
-    _ => 'Something went wrong. Please try again.',
-  };
+  static String _loadErrorText(CareStrings s, AttemptLoadError? e) =>
+      switch (e) {
+        AttemptLoadError.offline => s.t(CareText.qOfflineOpen),
+        AttemptLoadError.notFound => s.t(CareText.qGone),
+        AttemptLoadError.forbidden => CapabilityGate.deniedText,
+        AttemptLoadError.unsupported => s.t(CareText.qUnsupported),
+        _ => s.t(CareText.genericError),
+      };
 
-  Widget _header(AttemptController c, bool demo) => Padding(
+  Widget _header(AttemptController c, CareStrings s, bool demo) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
     child: Row(
       children: [
         const KoiBackButton(),
         const Spacer(),
-        SaveIndicator(status: c.saveStatus),
+        SaveIndicator(status: c.saveStatus, strings: s),
         if (demo) ...[const SizedBox(width: 8), const DemoDataBadge()],
       ],
     ),
   );
 
-  Widget _scaffold(Key key, List<Widget> children) => Scaffold(
-    key: key,
+  Widget _scaffold(List<Widget> children) => Scaffold(
     backgroundColor: KoiColors.background,
     body: SafeArea(
       child: SingleChildScrollView(
@@ -250,7 +277,9 @@ class _RunnerState extends ConsumerState<_Runner> {
     ),
   );
 
-  Widget _conflictBanner(AttemptController c) => Padding(
+  Widget _label(String text, CareStrings s) => CareButtonLabel(text);
+
+  Widget _conflictBanner(AttemptController c, CareStrings s) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
     child: NeoCard(
       key: const Key('conflict-banner'),
@@ -260,27 +289,28 @@ class _RunnerState extends ConsumerState<_Runner> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'These answers were changed somewhere else.',
-            style: koiBodyStyle(weight: FontWeight.w700),
+            s.t(CareText.qConflictTitle),
+            style: koiBodyStyle(weight: FontWeight.w700)
+                .copyWith(height: s.lineHeight),
           ),
           const SizedBox(height: 6),
           Text(
-            'Choose which answers to keep. Nothing is combined.',
-            style: koiBodyStyle(size: 14),
+            s.t(CareText.qConflictBody),
+            style: koiBodyStyle(size: 14).copyWith(height: s.lineHeight),
           ),
           const SizedBox(height: 12),
           NeoButton(
             key: const Key('conflict-use-server'),
             variant: NeoButtonVariant.ghost,
             onPressed: c.resolveUseServer,
-            child: const Text('Load the saved answers'),
+            child: _label(s.t(CareText.qUseServer), s),
           ),
           const SizedBox(height: 10),
           NeoButton(
             key: const Key('conflict-keep-mine'),
             variant: NeoButtonVariant.ghost,
             onPressed: c.resolveKeepMine,
-            child: const Text('Keep this device\'s answers'),
+            child: _label(s.t(CareText.qKeepMine), s),
           ),
         ],
       ),
@@ -289,54 +319,59 @@ class _RunnerState extends ConsumerState<_Runner> {
 
   Widget _questionPage(
     AttemptController c,
+    CareStrings s,
     bool demo,
     QuestionnaireAssetManifest manifest,
   ) {
-    final v = c.version!;
+    final v = c.questionnaire!;
     final q = v.questions[c.index];
     final last = c.index == v.questions.length - 1;
     final showMissing =
         c.submitProblem == SubmitProblem.incomplete && c.missing.contains(q.id);
-    return _scaffold(const ValueKey('question'), [
-      _header(c, demo),
-      Directionality(
-        textDirection: v.locale.direction,
-        child: Text(
-          v.title,
-          style: questionnaireTextStyle(
-            v.locale,
-            size: 22,
-            weight: FontWeight.w700,
-          ),
+    return _scaffold([
+      _header(c, s, demo),
+      Text(
+        v.title,
+        key: const Key('questionnaire-title'),
+        style: questionnaireTextStyle(
+          v.language,
+          size: 22,
+          weight: FontWeight.w700,
         ),
       ),
-      if (c.index == 0 && v.instructions != null) ...[
+      if (c.index == 0 && v.description != null) ...[
         const SizedBox(height: 8),
-        Directionality(
-          textDirection: v.locale.direction,
-          child: Text(
-            v.instructions!,
-            style: questionnaireTextStyle(v.locale, size: 15),
-          ),
+        Text(
+          v.description!,
+          key: const Key('questionnaire-description'),
+          style: questionnaireTextStyle(v.language, size: 15),
         ),
       ],
+      if (c.index == 0 && v.sources.any((x) => x.hasText)) ...[
+        const SizedBox(height: 12),
+        QuestionnaireSources(questionnaire: v, strings: s),
+      ],
       const SizedBox(height: 16),
-      QuestionnaireProgress(index: c.index, total: v.questions.length),
+      QuestionnaireProgress(
+        index: c.index,
+        total: v.questions.length,
+        strings: s,
+      ),
       const SizedBox(height: 20),
-      if (c.saveStatus == SaveStatus.conflict) _conflictBanner(c),
+      if (c.saveStatus == SaveStatus.conflict) _conflictBanner(c, s),
       QuestionView(
         key: ValueKey('qv-${q.id}'),
         question: q,
-        locale: v.locale,
+        language: v.language,
         answer: c.answers[q.id],
         enabled: c.saveStatus != SaveStatus.conflict,
         manifest: manifest,
-        manifestVersion: v.assetManifestVersion,
+        strings: s,
         onChanged: (a) => c.setAnswer(q.id, a),
       ),
       if (showMissing) ...[
         const SizedBox(height: 8),
-        const KoiErrorText('Please answer this question.'),
+        KoiErrorText(s.t(CareText.qPleaseAnswer)),
       ],
       const SizedBox(height: 24),
       Row(
@@ -348,7 +383,7 @@ class _RunnerState extends ConsumerState<_Runner> {
               fullWidth: true,
               customPadding: const EdgeInsets.symmetric(vertical: 14),
               onPressed: c.index == 0 ? null : () => c.goTo(c.index - 1),
-              child: const Text('Previous'),
+              child: _label(s.t(CareText.qPrevious), s),
             ),
           ),
           const SizedBox(width: 12),
@@ -358,9 +393,7 @@ class _RunnerState extends ConsumerState<_Runner> {
               fullWidth: true,
               customPadding: const EdgeInsets.symmetric(vertical: 14),
               onPressed: () {
-                if (q.required &&
-                    q.hasWording &&
-                    (c.answers[q.id]?.isEmpty ?? true)) {
+                if (q.required && (c.answers[q.id]?.isEmpty ?? true)) {
                   c.markUnanswered(q.id);
                   return;
                 }
@@ -370,7 +403,10 @@ class _RunnerState extends ConsumerState<_Runner> {
                   c.goTo(c.index + 1);
                 }
               },
-              child: Text(last ? 'Check answers' : 'Next'),
+              child: _label(
+                s.t(last ? CareText.qCheckAnswers : CareText.qNext),
+                s,
+              ),
             ),
           ),
         ],
@@ -381,7 +417,7 @@ class _RunnerState extends ConsumerState<_Runner> {
           key: const Key('q-restart'),
           variant: NeoButtonVariant.ghost,
           onPressed: _confirmRestart,
-          child: const Text('Start again'),
+          child: _label(s.t(CareText.qStartAgain), s),
         ),
       ),
     ]);
@@ -390,107 +426,104 @@ class _RunnerState extends ConsumerState<_Runner> {
   String _answerText(
     Question q,
     Answer? a,
-    QuestionnaireLocale locale,
+    CareStrings s,
     QuestionnaireAssetManifest manifest,
-    String? manifestVersion,
   ) {
-    if (a == null || a.isEmpty) return 'No answer';
-    if (q.type.isText) return a.text!;
+    if (a == null || a.isEmpty) return s.t(CareText.qNoAnswer);
+    if (q.type == QuestionType.freeText) return a.text!;
+    if (q.type == QuestionType.numeric) {
+      return formatQuestionnaireNumber(a.value!);
+    }
     return [
       for (final id in a.optionIds)
-        for (final o in q.options.where((o) => o.id == id))
-          o.label ??
-              (o.assetId == null
-                  ? null
-                  : manifest
-                        .resolve(
-                          o.assetId!,
-                          forManifestVersion: manifestVersion,
-                        )
-                        ?.altFor(locale)) ??
-              'Picture',
+        if (q.option(id) case final o?) o.label,
     ].join(', ');
   }
 
   Widget _summaryPage(
     AttemptController c,
+    CareStrings s,
     bool demo,
     QuestionnaireAssetManifest manifest,
   ) {
-    final v = c.version!;
-    return _scaffold(const ValueKey('summary'), [
-      _header(c, demo),
+    final v = c.questionnaire!;
+    return _scaffold([
+      _header(c, s, demo),
       Semantics(
         header: true,
-        child: Text('Check your answers', style: koiTitleStyle(24)),
+        child: Text(
+          s.t(CareText.qCheckYourAnswers),
+          style: koiTitleStyle(24).copyWith(height: s.isUrdu ? 1.6 : null),
+        ),
       ),
       const SizedBox(height: 16),
-      if (c.saveStatus == SaveStatus.conflict) _conflictBanner(c),
+      if (c.saveStatus == SaveStatus.conflict) _conflictBanner(c, s),
       for (var i = 0; i < v.questions.length; i++)
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: NeoCard(
             padding: const EdgeInsets.all(14),
-            child: Directionality(
-              textDirection: v.locale.direction,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          v.questions[i].prompt ?? missingWordingText,
-                          style: questionnaireTextStyle(
-                            v.locale,
-                            size: 14.5,
-                            weight: FontWeight.w700,
-                          ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        v.questions[i].text,
+                        style: questionnaireTextStyle(
+                          v.language,
+                          size: 14.5,
+                          weight: FontWeight.w700,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _answerText(
-                            v.questions[i],
-                            c.answers[v.questions[i].id],
-                            v.locale,
-                            manifest,
-                            v.assetManifestVersion,
-                          ),
-                          key: Key('summary-${v.questions[i].id}'),
-                          style: questionnaireTextStyle(v.locale, size: 14.5),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _answerText(
+                          v.questions[i],
+                          c.answers[v.questions[i].id],
+                          s,
+                          manifest,
                         ),
-                      ],
-                    ),
+                        key: Key('summary-${v.questions[i].id}'),
+                        style: questionnaireTextStyle(v.language, size: 14.5),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  NeoButton(
-                    key: Key('edit-${v.questions[i].id}'),
-                    variant: NeoButtonVariant.ghost,
-                    customPadding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 14,
-                    ),
-                    onPressed: () {
-                      c.goTo(i);
-                      setState(() => _summary = false);
-                    },
-                    child: const Text('Edit'),
+                ),
+                const SizedBox(width: 8),
+                NeoButton(
+                  key: Key('edit-${v.questions[i].id}'),
+                  variant: NeoButtonVariant.ghost,
+                  customPadding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 14,
                   ),
-                ],
-              ),
+                  onPressed: () {
+                    c.goTo(i);
+                    setState(() => _summary = false);
+                  },
+                  child: Text(s.t(CareText.qEdit)),
+                ),
+              ],
             ),
           ),
         ),
+      if (v.sources.any((x) => x.hasText)) ...[
+        const SizedBox(height: 4),
+        QuestionnaireSources(questionnaire: v, strings: s),
+        const SizedBox(height: 12),
+      ],
       if (c.submitProblem != null) ...[
         const SizedBox(height: 4),
-        KoiErrorText(_submitProblemText(c.submitProblem!)),
+        KoiErrorText(_submitProblemText(s, c.submitProblem!)),
       ],
       const SizedBox(height: 20),
       NeoButton(
         key: const Key('q-submit'),
         fullWidth: true,
         onPressed: c.saveStatus == SaveStatus.conflict ? null : _submit,
-        child: const Text('Submit'),
+        child: _label(s.t(CareText.qSubmit), s),
       ),
       const SizedBox(height: 12),
       NeoButton(
@@ -498,24 +531,81 @@ class _RunnerState extends ConsumerState<_Runner> {
         variant: NeoButtonVariant.ghost,
         fullWidth: true,
         onPressed: () => setState(() => _summary = false),
-        child: const Text('Back to questions'),
+        child: _label(s.t(CareText.qBackToQuestions), s),
       ),
     ]);
   }
 
-  static String _submitProblemText(SubmitProblem p) => switch (p) {
-    SubmitProblem.incomplete => 'Please answer the required questions.',
-    SubmitProblem.offline =>
-      'You seem to be offline. Your answers are saved on this device; '
-          'connect to submit.',
-    SubmitProblem.unconfirmed =>
-      'We could not confirm your submission. Tap Submit again: it will not '
-          'be sent twice.',
-    SubmitProblem.conflict =>
-      'These answers were changed somewhere else. Choose which to keep '
-          'first.',
-    SubmitProblem.other => 'Something went wrong. Please try again.',
-  };
+  static String _submitProblemText(CareStrings s, SubmitProblem p) =>
+      s.t(switch (p) {
+        SubmitProblem.incomplete => CareText.qProblemIncomplete,
+        SubmitProblem.offline => CareText.qProblemOffline,
+        SubmitProblem.unconfirmed => CareText.qProblemUnconfirmed,
+        SubmitProblem.conflict => CareText.qProblemConflict,
+        SubmitProblem.reauth => CareText.qProblemReauth,
+        SubmitProblem.other => CareText.genericError,
+      });
+}
+
+/// The `sources[]` attribution: citation and attribution text, word for
+/// word (WHO-5 and the mhGAP-derived items require it).
+class QuestionnaireSources extends StatelessWidget {
+  const QuestionnaireSources({
+    super.key,
+    required this.questionnaire,
+    required this.strings,
+  });
+
+  final PublishedQuestionnaire questionnaire;
+  final CareStrings strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = questionnaireTextStyle(
+      questionnaire.language,
+      size: 12.5,
+      color: KoiColors.koiDark,
+    );
+    return Container(
+      key: const Key('questionnaire-sources'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: KoiColors.neoWhite,
+        border: Border.all(width: 2),
+        borderRadius: KoiRadii.inputAll,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            strings.t(CareText.qSources),
+            style: koiBodyStyle(
+              size: 12.5,
+              weight: FontWeight.w700,
+            ).copyWith(height: strings.lineHeight),
+          ),
+          for (final src in questionnaire.sources) ...[
+            if (src.citation != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                src.citation!,
+                key: Key('source-citation-${src.sourceId}'),
+                style: style,
+              ),
+            ],
+            if (src.attributionText != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                src.attributionText!,
+                key: Key('source-attribution-${src.sourceId}'),
+                style: style,
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 /// "Question 3 of 7" with a Neo progress bar.
@@ -524,14 +614,16 @@ class QuestionnaireProgress extends StatelessWidget {
     super.key,
     required this.index,
     required this.total,
+    required this.strings,
   });
 
   final int index;
   final int total;
+  final CareStrings strings;
 
   @override
   Widget build(BuildContext context) {
-    final label = 'Question ${index + 1} of $total';
+    final label = strings.questionOf(index + 1, total);
     return Semantics(
       key: const Key('q-progress'),
       label: label,
@@ -540,7 +632,13 @@ class QuestionnaireProgress extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: koiBodyStyle(size: 13.5, weight: FontWeight.w700)),
+          Text(
+            label,
+            style: koiBodyStyle(
+              size: 13.5,
+              weight: FontWeight.w700,
+            ).copyWith(height: strings.lineHeight),
+          ),
           const SizedBox(height: 6),
           Container(
             height: 12,
@@ -566,23 +664,30 @@ class QuestionnaireProgress extends StatelessWidget {
   }
 }
 
-/// Saving… / Saved / Offline – not synced / Conflict.
+/// Saving… / Saved / Offline – not synced / Not saved / Conflict.
 class SaveIndicator extends StatelessWidget {
-  const SaveIndicator({super.key, required this.status});
+  const SaveIndicator({
+    super.key,
+    required this.status,
+    this.strings = CareStrings.en,
+  });
   final SaveStatus status;
+  final CareStrings strings;
 
-  static String? textFor(SaveStatus s) => switch (s) {
+  static CareText? textFor(SaveStatus s) => switch (s) {
     SaveStatus.idle => null,
-    SaveStatus.saving => 'Saving…',
-    SaveStatus.saved => 'Saved',
-    SaveStatus.offline => 'Offline – not synced',
-    SaveStatus.conflict => 'Conflict',
+    SaveStatus.saving => CareText.qSaving,
+    SaveStatus.saved => CareText.qSaved,
+    SaveStatus.offline => CareText.qOfflineNotSynced,
+    SaveStatus.notSaved => CareText.qNotSaved,
+    SaveStatus.conflict => CareText.qConflict,
   };
 
   @override
   Widget build(BuildContext context) {
-    final text = textFor(status);
-    if (text == null) return const SizedBox.shrink();
+    final key = textFor(status);
+    if (key == null) return const SizedBox.shrink();
+    final text = strings.t(key);
     return Semantics(
       liveRegion: true,
       label: text,
@@ -591,73 +696,94 @@ class SaveIndicator extends StatelessWidget {
         key: const Key('save-indicator'),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: status == SaveStatus.conflict
+          color: status == SaveStatus.conflict || status == SaveStatus.notSaved
               ? KoiColors.neoYellow
               : KoiColors.neoWhite,
           border: Border.all(width: 2),
           borderRadius: KoiRadii.pillAll,
         ),
         child: status == SaveStatus.saving
-            ? const KoiLoader(compact: true, label: 'Saving…')
+            ? KoiLoader(compact: true, label: text)
             : Text(
                 text,
-                style: koiBodyStyle(size: 12.5, weight: FontWeight.w700),
+                style: koiBodyStyle(
+                  size: 12.5,
+                  weight: FontWeight.w700,
+                ).copyWith(height: strings.isUrdu ? 1.6 : null),
               ),
       ),
     );
   }
 }
 
-/// The ONLY thing a patient sees after submitting.
+/// The ONLY thing a patient sees after submitting: "Response submitted"
+/// and the time, from the Web's write confirmation. Nothing about what
+/// happens to the answers afterwards is fetched or shown.
 class AcknowledgementView extends StatelessWidget {
-  const AcknowledgementView({super.key, this.submittedAt, this.demo = false});
+  const AcknowledgementView({
+    super.key,
+    this.submittedAt,
+    this.demo = false,
+    this.strings = CareStrings.en,
+  });
 
   final DateTime? submittedAt;
   final bool demo;
+  final CareStrings strings;
 
   static const String title = 'Response submitted';
 
   @override
   Widget build(BuildContext context) {
     final at = submittedAt;
-    return KoiPage(
-      demo: demo,
-      children: [
-        const SizedBox(height: 24),
-        NeoCard(
-          variant: NeoCardVariant.yellow,
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            children: [
-              Semantics(
-                header: true,
-                liveRegion: true,
-                child: Text(
-                  title,
-                  key: const Key('ack-title'),
-                  textAlign: TextAlign.center,
-                  style: koiTitleStyle(26),
+    final s = strings;
+    return Directionality(
+      textDirection: s.direction,
+      child: KoiPage(
+        demo: demo,
+        children: [
+          const SizedBox(height: 24),
+          NeoCard(
+            variant: NeoCardVariant.yellow,
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              children: [
+                Semantics(
+                  header: true,
+                  liveRegion: true,
+                  child: Text(
+                    s.t(CareText.qAckTitle),
+                    key: const Key('ack-title'),
+                    textAlign: TextAlign.center,
+                    style: koiTitleStyle(26)
+                        .copyWith(height: s.isUrdu ? 1.6 : null),
+                  ),
                 ),
-              ),
-              if (at != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Submitted at ${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(at.toLocal()))}',
-                  key: const Key('ack-time'),
-                  style: koiBodyStyle(size: 14.5),
-                ),
+                if (at != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    s.submittedAt(
+                      MaterialLocalizations.of(
+                        context,
+                      ).formatTimeOfDay(TimeOfDay.fromDateTime(at.toLocal())),
+                    ),
+                    key: const Key('ack-time'),
+                    style: koiBodyStyle(size: 14.5)
+                        .copyWith(height: s.lineHeight),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: 24),
-        NeoButton(
-          key: const Key('ack-done'),
-          fullWidth: true,
-          onPressed: () => Navigator.of(context).maybePop(),
-          child: const Text('Back to questionnaires'),
-        ),
-      ],
+          const SizedBox(height: 24),
+          NeoButton(
+            key: const Key('ack-done'),
+            fullWidth: true,
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: CareButtonLabel(s.t(CareText.qBackToList)),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -667,11 +793,15 @@ class _ConfirmDialog extends StatelessWidget {
     required this.title,
     required this.message,
     required this.confirm,
+    required this.cancel,
+    required this.strings,
   });
 
   final String title;
   final String message;
   final String confirm;
+  final String cancel;
+  final CareStrings strings;
 
   @override
   Widget build(BuildContext context) => Dialog(
@@ -686,16 +816,23 @@ class _ConfirmDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(title, style: koiTitleStyle(22)),
+          Text(
+            title,
+            style: koiTitleStyle(22)
+                .copyWith(height: strings.isUrdu ? 1.6 : null),
+          ),
           const SizedBox(height: 8),
-          Text(message, style: koiBodyStyle()),
+          Text(
+            message,
+            style: koiBodyStyle().copyWith(height: strings.lineHeight),
+          ),
           const SizedBox(height: 20),
           NeoButton(
             key: const Key('confirm-yes'),
             variant: NeoButtonVariant.danger,
             fullWidth: true,
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(confirm),
+            child: CareButtonLabel(confirm),
           ),
           const SizedBox(height: 10),
           NeoButton(
@@ -703,7 +840,7 @@ class _ConfirmDialog extends StatelessWidget {
             variant: NeoButtonVariant.ghost,
             fullWidth: true,
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: CareButtonLabel(cancel),
           ),
         ],
       ),

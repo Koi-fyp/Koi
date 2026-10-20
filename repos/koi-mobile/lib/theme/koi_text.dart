@@ -67,6 +67,29 @@ abstract final class KoiText {
         : base.copyWith(fontFamily: bodyFamily);
   }
 
+  static const String urduQuestionnaireFamily = 'Noto Nastaliq Urdu';
+
+  /// Noto Nastaliq Urdu (SIL OFL 1.1), ONLY for the wording of Urdu
+  /// questionnaires (MOB-3). Every other screen keeps DM Sans / Bricolage
+  /// (Urdu glyphs there come from the system font). Only the Regular file is
+  /// bundled, so the weight is always 400: another weight would make
+  /// google_fonts look for a file that is not bundled.
+  static TextStyle urduQuestionnaire({
+    double? fontSize,
+    Color? color,
+    double? height,
+  }) {
+    final base = TextStyle(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w400,
+      color: color,
+      height: height,
+    );
+    return useGoogleFonts
+        ? GoogleFonts.notoNastaliqUrdu(textStyle: base)
+        : base.copyWith(fontFamily: urduQuestionnaireFamily);
+  }
+
   /// Clamps [w] to the bundled weight range. A weight outside it (e.g. web's
   /// font-weight 800/900 on DM Sans text) would make google_fonts look for a
   /// font file that isn't bundled, fail, and fall back to the system font.

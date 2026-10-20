@@ -28,6 +28,8 @@ void main() {
         KoiText.body(fontWeight: FontWeight.values[w ~/ 100 - 1]),
       GoogleFonts.dmSans(fontWeight: FontWeight.w300, fontStyle: FontStyle.italic),
       GoogleFonts.dmSans(fontWeight: FontWeight.w400, fontStyle: FontStyle.italic),
+      // MOB-3: Urdu questionnaire wording.
+      KoiText.urduQuestionnaire(),
     ];
     await GoogleFonts.pendingFonts(styles);
   });
@@ -55,7 +57,8 @@ void main() {
   // Reads assets/google_fonts/ on disk (flutter test's own asset copy in
   // build/ can be stale). Hashes are the expectedFileHash values in
   // google_fonts 6.3.3 lib/src/google_fonts_parts/part_b.g.dart (Bricolage)
-  // and part_d.g.dart (DM Sans).
+  // and part_d.g.dart (DM Sans); MOB-3 Noto Nastaliq Urdu Regular from
+  // part_n.g.dart (notoNastaliqUrdu, w400).
   test('ATC-M0-12 bundled .ttf files are the exact google_fonts files', () async {
     const expected = {
       'BricolageGrotesque-ExtraLight.ttf': '749a547b99e0f8b0c40c705460dfec9883f970a58c8b30c6f0e4c748068d5e5d',
@@ -72,6 +75,7 @@ void main() {
       'DMSans-Bold.ttf': '9909c4fcfbfe7b2c4a658b8d74eeb3ed38401a31cd4a3854546369c174f41440',
       'DMSans-LightItalic.ttf': 'd8723f525f666d25b045dbc192d20d1c10743a75761ed84dc5ec5da1bea72bc6',
       'DMSans-Italic.ttf': '7693a13cb485db129b413d4bd1b2a18f408dd966fa88d406598d951fa11f8aed',
+      'NotoNastaliqUrdu-Regular.ttf': 'd2aacf1112ffb91ed5fd97d9326dfbb3358dbeede2fb1d720b6b740e378c1a72',
     };
     final onDisk = Directory('assets/google_fonts')
         .listSync()
@@ -90,7 +94,11 @@ void main() {
   });
 
   test('ATC-M0-12 OFL license files are bundled', () async {
-    for (final file in ['OFL-BricolageGrotesque.txt', 'OFL-DMSans.txt']) {
+    for (final file in [
+      'OFL-BricolageGrotesque.txt',
+      'OFL-DMSans.txt',
+      'OFL-NotoNastaliqUrdu.txt',
+    ]) {
       final text = await rootBundle.loadString('assets/google_fonts/$file');
       expect(text, contains('SIL OPEN FONT LICENSE Version 1.1'));
     }
