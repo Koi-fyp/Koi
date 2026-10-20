@@ -23,7 +23,7 @@ const reviewDTO = (r: Review) => pick(r, ['id', 'organization_id', 'evaluation_i
 const relationDTO = (r: Relationship) => pick(r, ['id', 'organization_id', 'patient_uid', 'psychologist_uid', 'state', 'consent_version', 'activated_at', 'closed_at', 'revision']);
 
 export class LifecycleService extends PlatformService {
-  private async general(tx: PlatformTransaction, actor: Actor) {
+  protected async general(tx: PlatformTransaction, actor: Actor) {
     const a = await tx.get<AccountRecord>('accounts', actor.uid);
     if (!a || a.uid !== actor.uid || a.state !== 'registered' || !a.general_access) throw denied();
     return a;
@@ -37,7 +37,7 @@ export class LifecycleService extends PlatformService {
       return true;
     });
   }
-  private async patientRelation(tx: PlatformTransaction, actor: Actor, id: string) {
+  protected async patientRelation(tx: PlatformTransaction, actor: Actor, id: string) {
     await this.general(tx, actor);
     const r = await tx.get<Relationship>('patient_relationships', id);
     if (!r || r.id !== id || r.patient_uid !== actor.uid) throw notFound();
@@ -156,6 +156,8 @@ export class LifecycleService extends PlatformService {
       if (!owner) throw notFound();
       await this.authority(tx, { uid: body.psychologist_uid, authTime: actor.authTime }, owner.organization_id);
       const old = await this.receipt<Connection>(tx, rid, actor, op, body.psychologist_uid, body); if (old) return this.output('ConnectionRequestDTO', connectionDTO(old));
+      const profile = await tx.get<{ organization_id: string; discoverable: boolean; accepting_new_patients: boolean }>('psychologist_profiles', body.psychologist_uid);
+      if (!profile || profile.organization_id !== owner.organization_id || !profile.discoverable || !profile.accepting_new_patients) throw denied();
       const relation = await tx.get<Relationship>('patient_relationships', relationshipId(owner.organization_id, actor.uid));
       if (relation) throw conflict();
       const id = `request_${hash([actor.uid, owner.organization_id])}`, existing = await tx.get<RequestRecord>('connection_requests', id);
@@ -166,6 +168,7 @@ export class LifecycleService extends PlatformService {
       }
       const at = this.time(), record: RequestRecord = { id, organization_id: owner.organization_id, applicant_uid: actor.uid, psychologist_uid: body.psychologist_uid, state: 'requested', demo_payment_state: 'demo_pending', revision: 1, created_at: at, updated_at: at, consent_version: body.consent_version };
       tx.create('connection_requests', id, record);
+      tx.create('notifications', `notice_${hash([id, 1])}`, { id: `notice_${hash([id, 1])}`, event_id: `${id}_1`, recipient_uid: body.psychologist_uid, organization_id: owner.organization_id, kind: 'application_state', reference: { connection_request_id: id }, created_at: at });
       this.record(tx, rid, actor, op, body.psychologist_uid, body, connectionDTO(record), at, owner.organization_id);
       return this.output('ConnectionRequestDTO', connectionDTO(record));
     });
@@ -191,6 +194,8 @@ export class LifecycleService extends PlatformService {
       const result: RequestRecord = { ...r, state: next!, revision: r.revision + 1, updated_at: this.time(), demo_payment_state: demo ? 'demo_completed' : r.demo_payment_state };
       if (plan && !plan.existing) { tx.create('patient_relationships', plan.relationship.id, plan.relationship); this.bump(tx, plan.account, r.organization_id, rid); }
       tx.set('connection_requests', id, result);
+      tx.create('notifications', `notice_${hash([id, result.revision])}`, { id: `notice_${hash([id, result.revision])}`, event_id: `${id}_${result.revision}`, recipient_uid: applicant ? r.psychologist_uid : r.applicant_uid, organization_id: r.organization_id, kind: 'application_state', reference: { connection_request_id: id }, created_at: this.time() });
+      if (demo) tx.create('demo_payments', `demo_${id}`, { id: `demo_${id}`, connection_request_id: id, organization_id: r.organization_id, applicant_uid: r.applicant_uid, state: 'demo_completed', created_at: this.time() });
       this.record(tx, rid, actor, op, id, body, connectionDTO(result), this.time(), r.organization_id);
       return this.output('ConnectionRequestDTO', connectionDTO(result));
     });
@@ -279,6 +284,7 @@ export class LifecycleService extends PlatformService {
         checkSchema('ProfessionalSubmissionDTO', submission); checkSchema('ProfessionalEvaluationDTO', evaluation);
         const jobRecord = { job, submission_id: sid, attempt_count: 0, idempotency_key: sid, revision: 1 }; checkSchema('AIJobRecord', jobRecord);
         tx.create('submissions', sid, { ...submission, psychologist_uid: a.psychologist_uid });
+        tx.create('professional_notifications', `notice_${sid}`, { id: `notice_${sid}`, event_id: sid, submission_id: sid, organization_id: a.organization_id, recipient_uid: a.psychologist_uid, created_at: at });
         tx.create('ai_jobs', jid, jobRecord); tx.create('clinician_evaluations', eid, evaluation);
         result = this.ack(updated);
       } else result = this.output('AutosaveAckDTO', { attempt_id: id, revision: updated.revision, server_updated_at: at, status: 'in_progress' });

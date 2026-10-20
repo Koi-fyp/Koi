@@ -16,6 +16,7 @@ beforeEach(async () => {
   registered(store, pro.uid); registered(store, otherPro.uid);
   for (const p of [patient, otherPatient]) { registered(store, p.uid, 'pending'); store.seed('accounts', p.uid, { ...store.read<any>('accounts', p.uid), general_access: true }); }
   org = (await service.createOrganization(pro, { name: 'Practice' }, 'organization')).id;
+  store.seed('psychologist_profiles', pro.uid, { organization_id: org, discoverable: true, accepting_new_patients: true });
   const content = manualContent(), draft = await service.createDraft(pro, { organization_id: org, content }, 'draft');
   version = await service.publish(pro, draft.id, { expected_revision: 1, expected_content_sha256: hash(content) }, 'publish');
 });

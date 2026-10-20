@@ -1,0 +1,3 @@
+export interface HumanMessage { id: string; relationship_id: string; sender_uid: string; body: string; created_at: string }
+export interface Appointment { id: string; relationship_id: string; state: 'requested' | 'proposed' | 'confirmed' | 'completed' | 'rejected' | 'cancelled'; starts_at?: string; ends_at?: string; revision: number; updated_at: string }
+export interface CareNotification { id: string; event_id: string; kind: 'new_message' | 'appointment_change' | 'assignment' | 'application_state'; reference: { message_id: string } | { appointment_id: string } | { assignment_id: string } | { connection_request_id: string }; created_at: string; read_at?: string }

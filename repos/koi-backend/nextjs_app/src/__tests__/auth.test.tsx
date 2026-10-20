@@ -1,10 +1,11 @@
 /** @jest-environment jsdom */
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react';
-const mockAuthInstance = { currentUser: null, app: { options: { projectId: 'koi-companion-fyp' } } };
+const mockAuthInstance = { currentUser: null, app: { options: { projectId: 'koi-companion-fyp' } }, emulatorConfig: null as { host: string; port: number } | null };
 let configuredAuth: typeof mockAuthInstance | null = null;
 let configurationError: Error | null = new Error('Firebase is not configured for this test.');
 let localAnonymousMode = false;
+let demoEmulator = false;
 const mockOnAuthStateChanged = jest.fn();
 const mockClientAnonymousSignIn = jest.fn();
 const mockCustomTokenSignIn = jest.fn();
@@ -13,6 +14,7 @@ const mockFirebaseSignOut = jest.fn();
 jest.doMock('@/lib/firebase', () => ({
   get auth() { return configuredAuth; },
   get firebaseConfigurationError() { return configurationError; },
+  get isCompanionDemoEmulator() { return demoEmulator; },
 }));
 jest.doMock('@/lib/auth/anonymousSignInMode', () => ({
   isLocalTestAnonymousSignInEnabled: () => localAnonymousMode,
@@ -40,6 +42,9 @@ beforeEach(() => {
   configuredAuth = mockAuthInstance;
   configurationError = null;
   localAnonymousMode = false;
+  demoEmulator = false;
+  mockAuthInstance.app.options.projectId = 'koi-companion-fyp';
+  mockAuthInstance.emulatorConfig = null;
   mockClientAnonymousSignIn.mockReset().mockResolvedValue({ user: { uid: 'genuine-sdk-user' } });
   mockCustomTokenSignIn.mockReset().mockResolvedValue(undefined);
   mockFirebaseSignOut.mockReset().mockResolvedValue(undefined);
@@ -94,6 +99,20 @@ describe('AuthContext basic', () => {
     await waitFor(() => expect(mockCustomTokenSignIn).toHaveBeenCalledWith(mockAuthInstance, 'custom-token'));
     expect(global.fetch).toHaveBeenCalledWith('/api/auth/anonymous', { method: 'POST' });
     expect(mockClientAnonymousSignIn).not.toHaveBeenCalled();
+  });
+
+  it('permits the isolated demo only after Firebase connects to the exact Auth emulator', async () => {
+    localAnonymousMode = true; demoEmulator = true;
+    mockAuthInstance.app.options.projectId = 'demo-koi-platform-web1';
+    const view = render(<AuthProvider><Tester /></AuthProvider>);
+    fireEvent.click(view.getByRole('button', { name: 'sign in' }));
+    await waitFor(() => expect(view.getByTestId('error')).toHaveTextContent(/requires/));
+    expect(mockClientAnonymousSignIn).not.toHaveBeenCalled();
+    mockAuthInstance.emulatorConfig = { host: '127.0.0.1', port: 5199 };
+    fireEvent.click(view.getByRole('button', { name: 'sign in' }));
+    await waitFor(() => expect(mockClientAnonymousSignIn).toHaveBeenCalledWith(mockAuthInstance));
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockCustomTokenSignIn).not.toHaveBeenCalled();
   });
 
   it('rejects local mode if the initialized Auth belongs to another Firebase project', async () => {

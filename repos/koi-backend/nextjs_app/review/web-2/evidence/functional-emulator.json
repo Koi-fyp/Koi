@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-10-19T16:35:49.510Z",
+  "run_at": "2026-10-19T17:05:43.215Z",
   "project": "demo-koi-platform-web1",
   "checks": [
     "verified clinician creates organization and publishes a text/picture EN/UR questionnaire",

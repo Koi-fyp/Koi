@@ -1,0 +1,5 @@
+{
+  "passed": true,
+  "scope": "Auth password hash fingerprints, deterministic fixture references and all ten domain collection counts match across actual emulator export/restart/import",
+  "fictional": true
+}

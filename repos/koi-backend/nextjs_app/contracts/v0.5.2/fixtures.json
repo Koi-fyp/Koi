@@ -1,0 +1,865 @@
+{
+  "valid": [
+    {
+      "name": "manual_bilingual",
+      "schema": "CustomQuestionnaireContent",
+      "value": {
+        "kind": "custom_questionnaire",
+        "validation_status": "not_validated",
+        "title": {
+          "en": "Fictional demo form",
+          "ur": "????? ????"
+        },
+        "locales": [
+          "en",
+          "ur"
+        ],
+        "origin": "manual",
+        "questions": [
+          {
+            "id": "q_1",
+            "type": "single_choice",
+            "prompt": {
+              "en": "Choose one",
+              "ur": "??? ????? ????"
+            },
+            "required": true,
+            "options": [
+              {
+                "id": "option_1",
+                "label": {
+                  "en": "One",
+                  "ur": "???"
+                }
+              },
+              {
+                "id": "option_2",
+                "label": {
+                  "en": "Two",
+                  "ur": "??"
+                }
+              }
+            ]
+          },
+          {
+            "id": "q_2",
+            "type": "yes_no",
+            "prompt": {
+              "en": "Continue?",
+              "ur": "???? ??????"
+            },
+            "required": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "published_snapshot",
+      "schema": "QuestionnaireVersionDTO",
+      "value": {
+        "id": "version_1",
+        "questionnaire_id": "questionnaire_1",
+        "organization_id": "organization_1",
+        "psychologist_uid": "synthetic_clinician",
+        "source_revision": 1,
+        "content": {
+          "kind": "custom_questionnaire",
+          "validation_status": "not_validated",
+          "title": {
+            "en": "Fictional demo form",
+            "ur": "????? ????"
+          },
+          "locales": [
+            "en",
+            "ur"
+          ],
+          "origin": "manual",
+          "questions": [
+            {
+              "id": "q_1",
+              "type": "single_choice",
+              "prompt": {
+                "en": "Choose one",
+                "ur": "??? ????? ????"
+              },
+              "required": true,
+              "options": [
+                {
+                  "id": "option_1",
+                  "label": {
+                    "en": "One",
+                    "ur": "???"
+                  }
+                },
+                {
+                  "id": "option_2",
+                  "label": {
+                    "en": "Two",
+                    "ur": "??"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "q_2",
+              "type": "yes_no",
+              "prompt": {
+                "en": "Continue?",
+                "ur": "???? ??????"
+              },
+              "required": false
+            }
+          ]
+        },
+        "content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "published_at": "2026-10-19T12:00:00Z",
+        "schema_version": "0.5.0"
+      }
+    },
+    {
+      "name": "autosave",
+      "schema": "AutosaveRequest",
+      "value": {
+        "expected_revision": 1,
+        "answers": [
+          {
+            "question_id": "q_1",
+            "type": "single_choice",
+            "value": "option_1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "patient_detail",
+      "schema": "PatientAssignmentDetailDTO",
+      "value": {
+        "assignment": {
+          "id": "assignment_1",
+          "relationship_id": "relationship_1",
+          "organization_id": "organization_1",
+          "questionnaire_version_id": "version_1",
+          "attempt_id": "attempt_1",
+          "title": {
+            "en": "Fictional demo form"
+          },
+          "state": "in_progress",
+          "created_at": "2026-10-19T12:00:00Z"
+        },
+        "questionnaire": {
+          "version_id": "version_1",
+          "schema_version": "0.5.0",
+          "title": {
+            "en": "Fictional demo form",
+            "ur": "????? ????"
+          },
+          "locales": [
+            "en",
+            "ur"
+          ],
+          "questions": [
+            {
+              "id": "q_1",
+              "type": "single_choice",
+              "prompt": {
+                "en": "Choose one",
+                "ur": "??? ????? ????"
+              },
+              "required": true,
+              "options": [
+                {
+                  "id": "option_1",
+                  "label": {
+                    "en": "One",
+                    "ur": "???"
+                  }
+                },
+                {
+                  "id": "option_2",
+                  "label": {
+                    "en": "Two",
+                    "ur": "??"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "q_2",
+              "type": "yes_no",
+              "prompt": {
+                "en": "Continue?",
+                "ur": "???? ??????"
+              },
+              "required": false
+            }
+          ]
+        },
+        "attempt": {
+          "id": "attempt_1",
+          "assignment_id": "assignment_1",
+          "patient_uid": "synthetic_patient",
+          "version_id": "version_1",
+          "status": "in_progress",
+          "answers": [
+            {
+              "question_id": "q_1",
+              "type": "single_choice",
+              "value": "option_1"
+            }
+          ],
+          "revision": 1,
+          "server_updated_at": "2026-10-19T12:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "submit_ack",
+      "schema": "PatientSubmitAckDTO",
+      "value": {
+        "attempt_id": "attempt_1",
+        "assignment_id": "assignment_1",
+        "submitted_at": "2026-10-19T12:00:00Z",
+        "status": "submitted"
+      }
+    },
+    {
+      "name": "submitted_detail",
+      "schema": "PatientAssignmentDetailDTO",
+      "value": {
+        "assignment": {
+          "id": "assignment_1",
+          "relationship_id": "relationship_1",
+          "organization_id": "organization_1",
+          "questionnaire_version_id": "version_1",
+          "attempt_id": "attempt_1",
+          "title": {
+            "en": "Fictional demo form"
+          },
+          "state": "submitted",
+          "created_at": "2026-10-19T12:00:00Z"
+        },
+        "acknowledgement": {
+          "attempt_id": "attempt_1",
+          "assignment_id": "assignment_1",
+          "submitted_at": "2026-10-19T12:00:00Z",
+          "status": "submitted"
+        }
+      }
+    },
+    {
+      "name": "notification",
+      "schema": "NotificationDTO",
+      "value": {
+        "id": "notification_1",
+        "event_id": "event_1",
+        "kind": "assignment",
+        "reference": {
+          "assignment_id": "assignment_1"
+        },
+        "created_at": "2026-10-19T12:00:00Z"
+      }
+    },
+    {
+      "name": "general_capabilities",
+      "schema": "CapabilitiesDTO",
+      "value": {
+        "contract_version": "0.5.0",
+        "uid": "synthetic_general",
+        "account_state": "registered",
+        "authorization_revision": 1,
+        "capabilities": {
+          "companion_account_sync": true,
+          "expert_directory": true,
+          "professional_workspace": false,
+          "create_organization": false
+        },
+        "professional_organization_ids": [],
+        "active_patient_relationships": []
+      }
+    },
+    {
+      "name": "unregistered_custom_session",
+      "schema": "CapabilitiesDTO",
+      "value": {
+        "contract_version": "0.5.0",
+        "uid": "synthetic_custom_guest",
+        "account_state": "unregistered",
+        "authorization_revision": 0,
+        "capabilities": {
+          "companion_account_sync": false,
+          "expert_directory": false,
+          "professional_workspace": false,
+          "create_organization": false
+        },
+        "professional_organization_ids": [],
+        "active_patient_relationships": []
+      }
+    },
+    {
+      "name": "professional_evaluation",
+      "schema": "ProfessionalEvaluationDTO",
+      "value": {
+        "id": "evaluation_1",
+        "organization_id": "organization_1",
+        "submission_id": "submission_1",
+        "questionnaire_version_id": "version_1",
+        "validated_scores": [],
+        "evidence": [],
+        "review_status": "unreviewed",
+        "created_at": "2026-10-19T12:00:00Z"
+      }
+    },
+    {
+      "name": "closed_relationship",
+      "schema": "PatientRelationshipRecord",
+      "value": {
+        "id": "relationship_1",
+        "organization_id": "organization_1",
+        "patient_uid": "synthetic_patient",
+        "psychologist_uid": "synthetic_clinician",
+        "state": "closed",
+        "consent_version": "consent_1",
+        "activated_at": "2026-10-19T12:00:00Z",
+        "closed_at": "2026-10-19T12:00:00Z",
+        "revision": 2
+      }
+    },
+    {
+      "name": "migration_manifest",
+      "schema": "MigrationManifestRecord",
+      "value": {
+        "id": "migration_1",
+        "record_id": "message_1",
+        "source_store": "messages",
+        "original_owner_uid": "synthetic_guest",
+        "destination_uid": "synthetic_general",
+        "schema_version": "dexie_v4",
+        "content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "destination_record_id": "message_1",
+        "status": "pending",
+        "conflict_policy": "preserve_both_require_review"
+      }
+    },
+    {
+      "name": "manifest_empty_before_approval",
+      "schema": "IllustrationManifest",
+      "value": {
+        "manifest_version": 1,
+        "assets": []
+      }
+    },
+    {
+      "name": "review_decision_request",
+      "schema": "ReviewDecisionRequest",
+      "value": {
+        "organization_id": "org_1",
+        "evaluation_id": "evaluation_1",
+        "expected_review_revision": 0,
+        "conclusion": "Fictional manual observation",
+        "decision": "approve"
+      }
+    },
+    {
+      "name": "review_decision_response",
+      "schema": "ReviewDecisionDTO",
+      "value": {
+        "review": {
+          "id": "review_1",
+          "organization_id": "org_1",
+          "evaluation_id": "evaluation_1",
+          "reviewer_uid": "clinician_1",
+          "revision": 1,
+          "conclusion": "Fictional manual observation",
+          "created_at": "2026-10-19T12:00:00Z"
+        },
+        "decision": "approve"
+      }
+    },
+    {
+      "name": "empty_patient_roster",
+      "schema": "PatientRelationshipListDTO",
+      "value": {
+        "items": [],
+        "next_cursor": null
+      }
+    },
+    {
+      "name": "empty_submission_list",
+      "schema": "ProfessionalSubmissionListDTO",
+      "value": {
+        "items": [],
+        "next_cursor": null
+      }
+    },
+    {
+      "name": "profile-write",
+      "schema": "UpdateProfessionalProfileRequest",
+      "value": {
+        "organization_id": "org_demo",
+        "display_name": "Fictional expert",
+        "bio": "Fictional practice",
+        "discoverable": true,
+        "accepting_new_patients": false,
+        "expected_revision": 0
+      }
+    },
+    {
+      "name": "profile-read",
+      "schema": "ProfessionalProfileDTO",
+      "value": {
+        "organization_id": "org_demo",
+        "id": "clinician_demo",
+        "display_name": "Fictional expert",
+        "bio": "Fictional practice",
+        "discoverable": true,
+        "accepting_new_patients": false,
+        "revision": 1
+      }
+    },
+    {
+      "name": "archive",
+      "schema": "ArchivePatientRequest",
+      "value": {
+        "expected_revision": 0,
+        "archived": true
+      }
+    },
+    {
+      "name": "archive-read",
+      "schema": "PatientArchiveDTO",
+      "value": {
+        "relationship_id": "rel_demo",
+        "archived": true,
+        "revision": 1
+      }
+    },
+    {
+      "name": "submission-updates",
+      "schema": "ProfessionalSubmissionNoticeListDTO",
+      "value": {
+        "items": [
+          {
+            "id": "notice_demo",
+            "event_id": "submission_demo",
+            "submission_id": "submission_demo",
+            "created_at": "2026-10-20T00:00:00Z"
+          }
+        ],
+        "next_cursor": null
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "ack_score_leak",
+      "schema": "PatientSubmitAckDTO",
+      "value": {
+        "attempt_id": "attempt_1",
+        "assignment_id": "assignment_1",
+        "submitted_at": "2026-10-19T12:00:00Z",
+        "status": "submitted",
+        "score": 5
+      }
+    },
+    {
+      "name": "ack_job_leak",
+      "schema": "PatientSubmitAckDTO",
+      "value": {
+        "attempt_id": "attempt_1",
+        "assignment_id": "assignment_1",
+        "submitted_at": "2026-10-19T12:00:00Z",
+        "status": "submitted",
+        "job_id": "job_1"
+      }
+    },
+    {
+      "name": "assignment_evaluation_leak",
+      "schema": "PatientAssignmentDTO",
+      "value": {
+        "id": "assignment_1",
+        "relationship_id": "relationship_1",
+        "organization_id": "organization_1",
+        "questionnaire_version_id": "version_1",
+        "attempt_id": "attempt_1",
+        "title": {
+          "en": "Fictional demo form"
+        },
+        "state": "in_progress",
+        "created_at": "2026-10-19T12:00:00Z",
+        "evaluation": {
+          "score": 5
+        }
+      }
+    },
+    {
+      "name": "attempt_score_leak",
+      "schema": "PatientAttemptDTO",
+      "value": {
+        "id": "attempt_1",
+        "assignment_id": "assignment_1",
+        "patient_uid": "synthetic_patient",
+        "version_id": "version_1",
+        "status": "in_progress",
+        "answers": [
+          {
+            "question_id": "q_1",
+            "type": "single_choice",
+            "value": "option_1"
+          }
+        ],
+        "revision": 1,
+        "server_updated_at": "2026-10-19T12:00:00Z",
+        "scores": []
+      }
+    },
+    {
+      "name": "submitted_answers_feature_disabled",
+      "schema": "PatientAttemptDTO",
+      "value": {
+        "id": "attempt_1",
+        "assignment_id": "assignment_1",
+        "patient_uid": "synthetic_patient",
+        "version_id": "version_1",
+        "status": "submitted",
+        "answers": [
+          {
+            "question_id": "q_1",
+            "type": "single_choice",
+            "value": "option_1"
+          }
+        ],
+        "revision": 1,
+        "server_updated_at": "2026-10-19T12:00:00Z"
+      }
+    },
+    {
+      "name": "notification_job_status_leak",
+      "schema": "NotificationDTO",
+      "value": {
+        "id": "notification_1",
+        "event_id": "event_1",
+        "kind": "assignment",
+        "reference": {
+          "assignment_id": "assignment_1",
+          "job_status": "completed"
+        },
+        "created_at": "2026-10-19T12:00:00Z"
+      }
+    },
+    {
+      "name": "external_image_url",
+      "schema": "Question",
+      "value": {
+        "id": "q_image",
+        "type": "image_single_choice",
+        "prompt": {
+          "en": "Choose"
+        },
+        "required": true,
+        "options": [
+          {
+            "id": "a",
+            "label": {
+              "en": "A"
+            },
+            "image_url": "https://example.invalid/image.png"
+          },
+          {
+            "id": "b",
+            "label": {
+              "en": "B"
+            },
+            "image_url": "https://example.invalid/image2.png"
+          }
+        ]
+      }
+    },
+    {
+      "name": "numeric_not_supported",
+      "schema": "Question",
+      "value": {
+        "id": "q_number",
+        "type": "numeric",
+        "prompt": {
+          "en": "Number"
+        },
+        "required": true
+      }
+    },
+    {
+      "name": "attempt_identity_forgery",
+      "schema": "AutosaveRequest",
+      "value": {
+        "expected_revision": 1,
+        "answers": [],
+        "patient_uid": "other_patient"
+      }
+    },
+    {
+      "name": "validated_custom_claim",
+      "schema": "CustomQuestionnaireContent",
+      "value": {
+        "kind": "custom_questionnaire",
+        "validation_status": "validated",
+        "title": {
+          "en": "Fictional demo form",
+          "ur": "????? ????"
+        },
+        "locales": [
+          "en",
+          "ur"
+        ],
+        "origin": "manual",
+        "questions": [
+          {
+            "id": "q_1",
+            "type": "single_choice",
+            "prompt": {
+              "en": "Choose one",
+              "ur": "??? ????? ????"
+            },
+            "required": true,
+            "options": [
+              {
+                "id": "option_1",
+                "label": {
+                  "en": "One",
+                  "ur": "???"
+                }
+              },
+              {
+                "id": "option_2",
+                "label": {
+                  "en": "Two",
+                  "ur": "??"
+                }
+              }
+            ]
+          },
+          {
+            "id": "q_2",
+            "type": "yes_no",
+            "prompt": {
+              "en": "Continue?",
+              "ur": "???? ??????"
+            },
+            "required": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "draft_publish_identity_forgery",
+      "schema": "PublishRequest",
+      "value": {
+        "expected_revision": 1,
+        "expected_content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "organization_id": "foreign_org"
+      }
+    },
+    {
+      "name": "fixed_roman_urdu",
+      "schema": "InstrumentTemplateRecord",
+      "value": {
+        "id": "instrument_1",
+        "source_url": "https://example.invalid/source",
+        "usage_evidence_url": "https://example.invalid/permission",
+        "permission_checked_by": "synthetic_clinician",
+        "permission_checked_at": "2026-10-19T12:00:00Z",
+        "item_version": "v1",
+        "translation_version": "v1",
+        "scoring_version": "v1",
+        "locale": "ur-Latn",
+        "restrictions": "fictional only",
+        "item_snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "submitted_detail_cannot_include_original_answers",
+      "schema": "PatientAssignmentDetailDTO",
+      "value": {
+        "assignment": {
+          "id": "assignment_1",
+          "relationship_id": "relationship_1",
+          "organization_id": "organization_1",
+          "questionnaire_version_id": "version_1",
+          "attempt_id": "attempt_1",
+          "title": {
+            "en": "Fictional demo form"
+          },
+          "state": "submitted",
+          "created_at": "2026-10-19T12:00:00Z"
+        },
+        "questionnaire": {
+          "version_id": "version_1",
+          "schema_version": "0.5.0",
+          "title": {
+            "en": "Fictional demo form",
+            "ur": "????? ????"
+          },
+          "locales": [
+            "en",
+            "ur"
+          ],
+          "questions": [
+            {
+              "id": "q_1",
+              "type": "single_choice",
+              "prompt": {
+                "en": "Choose one",
+                "ur": "??? ????? ????"
+              },
+              "required": true,
+              "options": [
+                {
+                  "id": "option_1",
+                  "label": {
+                    "en": "One",
+                    "ur": "???"
+                  }
+                },
+                {
+                  "id": "option_2",
+                  "label": {
+                    "en": "Two",
+                    "ur": "??"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "q_2",
+              "type": "yes_no",
+              "prompt": {
+                "en": "Continue?",
+                "ur": "???? ??????"
+              },
+              "required": false
+            }
+          ]
+        },
+        "attempt": {
+          "id": "attempt_1",
+          "assignment_id": "assignment_1",
+          "patient_uid": "synthetic_patient",
+          "version_id": "version_1",
+          "status": "in_progress",
+          "answers": [
+            {
+              "question_id": "q_1",
+              "type": "single_choice",
+              "value": "option_1"
+            }
+          ],
+          "revision": 1,
+          "server_updated_at": "2026-10-19T12:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "migration_requires_server_ack",
+      "schema": "MigrationManifestRecord",
+      "value": {
+        "id": "migration_1",
+        "record_id": "message_1",
+        "source_store": "messages",
+        "original_owner_uid": "synthetic_guest",
+        "destination_uid": "synthetic_general",
+        "schema_version": "dexie_v4",
+        "content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "destination_record_id": "message_1",
+        "status": "verified",
+        "conflict_policy": "preserve_both_require_review"
+      }
+    },
+    {
+      "name": "decision_required",
+      "schema": "ReviewDecisionRequest",
+      "value": {
+        "organization_id": "org_1",
+        "evaluation_id": "evaluation_1",
+        "expected_review_revision": 0,
+        "conclusion": "Fictional manual observation"
+      }
+    },
+    {
+      "name": "no_result_sharing_toggle",
+      "schema": "ReviewDecisionRequest",
+      "value": {
+        "organization_id": "org_1",
+        "evaluation_id": "evaluation_1",
+        "expected_review_revision": 0,
+        "conclusion": "Fictional manual observation",
+        "decision": "approve",
+        "patient_visible": true
+      }
+    },
+    {
+      "name": "no_extra_nested_review_data",
+      "schema": "ReviewDecisionDTO",
+      "value": {
+        "review": {
+          "id": "review_1",
+          "organization_id": "org_1",
+          "evaluation_id": "evaluation_1",
+          "reviewer_uid": "clinician_1",
+          "revision": 1,
+          "conclusion": "Fictional manual observation",
+          "created_at": "2026-10-19T12:00:00Z",
+          "provider_secret": "forbidden"
+        },
+        "decision": "approve"
+      }
+    },
+    {
+      "name": "no_array_request",
+      "schema": "ReviewDecisionRequest",
+      "value": [
+        {
+          "organization_id": "org_1",
+          "evaluation_id": "evaluation_1",
+          "expected_review_revision": 0,
+          "conclusion": "Fictional manual observation",
+          "decision": "approve"
+        }
+      ]
+    },
+    {
+      "name": "patient-cannot-receive-submission-notice",
+      "schema": "NotificationListDTO",
+      "value": {
+        "items": [
+          {
+            "id": "notice_demo",
+            "event_id": "submission_demo",
+            "submission_id": "submission_demo",
+            "created_at": "2026-10-20T00:00:00Z"
+          }
+        ],
+        "next_cursor": null
+      }
+    },
+    {
+      "name": "profile-cannot-set-verification",
+      "schema": "UpdateProfessionalProfileRequest",
+      "value": {
+        "organization_id": "org_demo",
+        "display_name": "Fictional expert",
+        "bio": "Fictional practice",
+        "discoverable": true,
+        "accepting_new_patients": false,
+        "expected_revision": 0,
+        "verified": true
+      }
+    },
+    {
+      "name": "archive-cannot-replace-membership",
+      "schema": "ArchivePatientRequest",
+      "value": {
+        "expected_revision": 0,
+        "archived": true,
+        "state": "active"
+      }
+    }
+  ]
+}

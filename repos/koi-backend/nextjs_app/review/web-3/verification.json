@@ -1,0 +1,35 @@
+{
+  "baseline": "f2b9c80",
+  "branch": "feat/web-1-professional-publishing",
+  "build": "pass",
+  "typecheck": "pass after additional HTTP test",
+  "full_suite": {
+    "suites": 79,
+    "tests": 668,
+    "failed": 0
+  },
+  "additional_route_suite": {
+    "suites": 1,
+    "tests": 2,
+    "failed": 0
+  },
+  "contracts": {
+    "versions": [
+      "0.5.0",
+      "0.5.1",
+      "0.5.2"
+    ],
+    "result": "pass",
+    "new_definitions": 108,
+    "new_operations": 58
+  },
+  "emulator": "See evidence/functional-emulator.json",
+  "deployments": 0,
+  "commits": 0,
+  "emulator_security": {
+    "direct_rule_denials": 28,
+    "anonymous_directory_denials": 1,
+    "passed": true
+  },
+  "local_test_services": "Stopped after verification; no live services modified"
+}

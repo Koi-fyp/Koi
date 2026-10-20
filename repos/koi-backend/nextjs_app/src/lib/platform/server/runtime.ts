@@ -4,7 +4,7 @@ import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import { firestoreStore } from './firestore-store';
 import { PlatformService, type Actor } from './service';
-import { LifecycleService } from './lifecycle';
+import { CommunityService } from './community';
 import { PlatformError, unavailable } from './errors';
 import { checkSchema } from './contract';
 
@@ -14,7 +14,7 @@ export function getPlatformRuntime(): Runtime {
   try { services = require('./admin-config.cjs').getPlatformAdmin(); } catch { throw unavailable(); }
   const { auth, db, config } = services;
   return {
-    service: new LifecycleService(firestoreStore(db), config.cursorKey),
+    service: new CommunityService(firestoreStore(db), config.cursorKey),
     authenticate: async req => {
       const bearer = req.headers.get('authorization')?.match(/^Bearer ([^\s]+)$/);
       if (!bearer || bearer[1].length > 16000) throw new PlatformError(401, 'unauthenticated');

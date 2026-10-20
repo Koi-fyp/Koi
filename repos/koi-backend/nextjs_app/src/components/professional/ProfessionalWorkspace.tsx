@@ -24,6 +24,7 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
   const [issues, setIssues] = useState<string[]>([]);
   const [showPatients, setShowPatients] = useState(false);
+  useEffect(() => { const view = new URLSearchParams(window.location.search).get('view'); if (view && view !== 'questionnaires') setShowPatients(true); }, []);
   const busyRef = useRef(false), alive = useRef(true);
   const clearProtected = () => { setContent(null); setDraft(null); setVersion(null); setItems([]); setOrg(null); setCursor(null); };
   const handleError = (failure: unknown) => {
@@ -103,7 +104,7 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
         setOrg(result.id); setOrgName(result.name); setMessage('Organization created.'); await loadList(result.id);
       }); }}><NeoInput label="Organization name" aria-label="Organization name" value={organizationName} maxLength={160} required disabled={busy} onChange={event => setOrganizationName(event.target.value)} /><NeoButton type="submit" loading={busy} disabled={!organizationName.trim()}>Create organization</NeoButton></form>
     </NeoCard> : <>
-      <NeoCard className="professional-card"><div className="professional-row professional-between"><h2>Your questionnaires</h2><NeoButton disabled={busy} onClick={() => { if (discard()) { setDraft(null); setContent(emptyContent()); setVersion(null); setIssues([]); setError(''); setMessage(''); } }}>New questionnaire</NeoButton></div>
+      <NeoCard className="professional-card"><div className="professional-row professional-between"><h2 id="professional-questionnaires">Your questionnaires</h2><NeoButton disabled={busy} onClick={() => { if (discard()) { setDraft(null); setContent(emptyContent()); setVersion(null); setIssues([]); setError(''); setMessage(''); } }}>New questionnaire</NeoButton></div>
         {!items.length && <p className="professional-muted">No saved drafts yet. Create your first manual questionnaire.</p>}
         <ul className="professional-stack">{items.map(item => <li key={item.id} className="professional-row professional-between"><div><strong>{item.content.title[item.content.locales[0]]}</strong><p className="professional-muted">Draft revision {item.revision}</p></div><NeoButton variant="ghost" disabled={busy} onClick={() => { if (discard()) void run(() => openDraft(item.id)); }}>Open draft: {item.content.title[item.content.locales[0]]}</NeoButton></li>)}</ul>
         {cursor && <NeoButton variant="ghost" disabled={busy} onClick={() => void run(() => loadList(org, cursor))}>Load more questionnaires</NeoButton>}

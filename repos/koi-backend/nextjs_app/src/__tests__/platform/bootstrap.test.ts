@@ -31,5 +31,5 @@ it('requires explicit isolated emulator configuration or reviewed/pinned product
   expect(configuration(demo).mode).toBe('emulator');
   expect(() => configuration({ ...demo, KOI_PLATFORM_FIREBASE_PROJECT_ID: 'koi-companion-fyp' })).toThrow();
   expect(() => configuration({ ...demo, FIRESTORE_EMULATOR_HOST: 'remote.invalid:8080' })).toThrow();
-  expect(() => configuration({ KOI_PLATFORM_FIREBASE_PROJECT_ID: 'project-a', KOI_PLATFORM_MODE: 'reviewed-production', KOI_PLATFORM_RULESET_SHA256: 'a'.repeat(64), FIREBASE_ADMIN_SDK: JSON.stringify({ project_id: 'project-b' }), KOI_PLATFORM_CURSOR_SIGNING_KEY: 'cursor-key-with-more-than-32-characters' })).toThrow('mismatch');
+  expect(() => configuration({ KOI_PLATFORM_FIREBASE_PROJECT_ID: 'koi-companion-fyp', KOI_PLATFORM_MODE: 'reviewed-production', KOI_PLATFORM_RULESET_SHA256: 'a'.repeat(64), FIREBASE_ADMIN_SDK: JSON.stringify({ project_id: 'project-b' }), KOI_PLATFORM_CURSOR_SIGNING_KEY: 'cursor-key-with-more-than-32-characters' })).toThrow('mismatch');
 });

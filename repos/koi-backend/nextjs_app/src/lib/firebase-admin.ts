@@ -1,7 +1,8 @@
 import admin from 'firebase-admin';
 
 function getAdminApp(): admin.app.App {
-  if (admin.apps.length > 0) return admin.app();
+  const existing = admin.apps.find(app => app?.name === '[DEFAULT]');
+  if (existing) return existing;
   const raw = process.env.FIREBASE_ADMIN_SDK;
   if (!raw) throw new Error('FIREBASE_ADMIN_SDK env var is required (JSON string)');
   const cred = JSON.parse(raw) as admin.ServiceAccount;

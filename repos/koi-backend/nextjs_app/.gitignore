@@ -6,3 +6,12 @@
 
 # Dev server output (kept apart from `next build` output in .next).
 .next-dev/
+
+# Fictional emulator Auth exports still contain password hashes; keep them local.
+.local/koi-demo/
+
+# Private cloud operator manifests/evidence and local credentials.
+.local/koi-web5/
+
+# Handoff packaging: local Auth/Firestore exports stay on disk, never in Git.
+.local-emulator-data/

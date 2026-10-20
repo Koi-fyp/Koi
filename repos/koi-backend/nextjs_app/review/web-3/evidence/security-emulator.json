@@ -1,0 +1,17 @@
+{
+  "run_at": "2026-10-19T21:31:22.823Z",
+  "checks": [
+    "psychologist_profiles: direct read, write, query and collection-group denied",
+    "messages: direct read, write, query and collection-group denied",
+    "appointments: direct read, write, query and collection-group denied",
+    "notifications: direct read, write, query and collection-group denied",
+    "professional_notifications: direct read, write, query and collection-group denied",
+    "demo_payments: direct read, write, query and collection-group denied",
+    "patient_archives: direct read, write, query and collection-group denied",
+    "Real Firebase anonymous UID cannot access expert directory"
+  ],
+  "direct_rule_assertions": 28,
+  "anonymous_api_assertions": 1,
+  "passed": true,
+  "project": "demo-koi-platform-web1"
+}

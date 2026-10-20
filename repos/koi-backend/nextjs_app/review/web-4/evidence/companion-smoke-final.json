@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "real_anonymous_emulator_login": true,
+  "original_onboarding_local_save": true,
+  "mobile_navigation": true,
+  "existing_mode_selector_visible": true,
+  "companion_provider_calls": 0,
+  "live_firebase_calls": 0,
+  "limits": "Chat replies and live voice/3D provider output are not exercised. Existing transport/avatar regression suites remain required."
+}

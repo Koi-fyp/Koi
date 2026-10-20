@@ -1,0 +1,10 @@
+{
+  "project": "koi-companion-fyp",
+  "inspected_at": "2026-10-20T11:48:52.019Z",
+  "live_release_verified": false,
+  "writes": 0,
+  "ai_requests": 0,
+  "blockers": [
+    "No Admin SDK credential or Firebase CLI login is available; published rules, indexes, IAM and Auth provider configuration cannot be verified."
+  ]
+}

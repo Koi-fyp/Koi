@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "checks": [
+    "Actual restricted provisioning services, immutable fixture/review records, complete ledger and idempotent replay",
+    "Real ID-token validation, authoritative capabilities, anonymous/password-only directory denial and ignored profile role spoofing",
+    "Patient/General/anonymous professional-result denial and cross-patient/cross-organization isolation",
+    "Pinned schemas, revision autosave/resume, multi-device atomic duplicate submission, immutable answers and one queued job without inference",
+    "Safe patient DTO traversal, human messages, appointment transitions, in-app notifications and actual-data professional analytics",
+    "Relationship revocation and disabled identity deny subsequent real HTTP access"
+  ],
+  "real": [
+    "Auth emulator",
+    "Firestore transactions and complete policy",
+    "Next production HTTP routes"
+  ],
+  "live_firebase_writes": 0,
+  "companion_requests": 0,
+  "crisis_requests": 0,
+  "paid_provider_requests": 0,
+  "ai_jobs": "Queued only; no worker invoked",
+  "fixture_ledger_records": 66
+}

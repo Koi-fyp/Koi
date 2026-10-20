@@ -1,0 +1,40 @@
+
+    // WEB-5 platform: backend-only. Admin SDK authorization is enforced in Next.
+    match /accounts/{platformDocument=**} { allow read, write: if false; }
+    match /registration_challenges/{platformDocument=**} { allow read, write: if false; }
+    match /psychologist_verifications/{platformDocument=**} { allow read, write: if false; }
+    match /organization_owners/{platformDocument=**} { allow read, write: if false; }
+    match /organizations/{platformDocument=**} { allow read, write: if false; }
+    match /organization_memberships/{platformDocument=**} { allow read, write: if false; }
+    match /psychologist_profiles/{platformDocument=**} { allow read, write: if false; }
+    match /patient_relationships/{platformDocument=**} { allow read, write: if false; }
+    match /connection_requests/{platformDocument=**} { allow read, write: if false; }
+    match /demo_payments/{platformDocument=**} { allow read, write: if false; }
+    match /patient_invitations/{platformDocument=**} { allow read, write: if false; }
+    match /invitation_token_lookup/{platformDocument=**} { allow read, write: if false; }
+    match /instrument_templates/{platformDocument=**} { allow read, write: if false; }
+    match /questionnaires/{platformDocument=**} { allow read, write: if false; }
+    match /questionnaire_versions/{platformDocument=**} { allow read, write: if false; }
+    match /assignments/{platformDocument=**} { allow read, write: if false; }
+    match /attempts/{platformDocument=**} { allow read, write: if false; }
+    match /submissions/{platformDocument=**} { allow read, write: if false; }
+    match /clinician_evaluations/{platformDocument=**} { allow read, write: if false; }
+    match /review_records/{platformDocument=**} { allow read, write: if false; }
+    match /review_heads/{platformDocument=**} { allow read, write: if false; }
+    match /ai_jobs/{platformDocument=**} { allow read, write: if false; }
+    match /ai_results/{platformDocument=**} { allow read, write: if false; }
+    match /messages/{platformDocument=**} { allow read, write: if false; }
+    match /appointments/{platformDocument=**} { allow read, write: if false; }
+    match /notifications/{platformDocument=**} { allow read, write: if false; }
+    match /professional_notifications/{platformDocument=**} { allow read, write: if false; }
+    match /patient_archives/{platformDocument=**} { allow read, write: if false; }
+    match /audit_events/{platformDocument=**} { allow read, write: if false; }
+    match /idempotency_records/{platformDocument=**} { allow read, write: if false; }
+    match /platform_outbox/{platformDocument=**} { allow read, write: if false; }
+    match /platform_rate_limits/{platformDocument=**} { allow read, write: if false; }
+    match /access_invalidation_outbox/{platformDocument=**} { allow read, write: if false; }
+    match /migration_manifests/{platformDocument=**} { allow read, write: if false; }
+    match /demo_provision_runs/{platformDocument=**} { allow read, write: if false; }
+    match /demo_provision_records/{platformDocument=**} { allow read, write: if false; }
+    match /demo_seed_manifests/{platformDocument=**} { allow read, write: if false; }
+    // END WEB-5 platform

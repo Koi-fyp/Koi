@@ -1,5 +1,7 @@
 # KOI application platform contracts
 
+WEB-3 additive package: [0.5.2 changes](v0.5.2/CHANGELOG.md), [OpenAPI](v0.5.2/openapi.json), [semantics](v0.5.2/semantics.md), [authorization matrix](v0.5.2/authorization-matrix.md). Original frozen versions remain unchanged. Cross-track acknowledgement and production deployment verification remain pending.
+
 Canonical location for this workspace: `repos/koi-backend/nextjs_app/contracts/`.
 This is a **local contract freeze proposal**, version **0.5.0**, prepared for Web,
 Flutter and AI review. It is not an implemented API, a deployed security policy,

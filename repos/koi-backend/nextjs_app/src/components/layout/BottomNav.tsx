@@ -1,4 +1,5 @@
 'use client';
+import PlatformNavigation from '@/components/platform/PlatformNavigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ModeSelector from './ModeSelector';
@@ -110,6 +111,7 @@ export default function BottomNav() {
           );
         })}
 
+        <PlatformNavigation compact />
         {/* Mode Selector - Right */}
         <ModeSelector />
       </div>

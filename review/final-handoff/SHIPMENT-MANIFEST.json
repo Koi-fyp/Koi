@@ -1,0 +1,669 @@
+{
+  "created_at": "2026-10-20T14:16:33.740Z",
+  "repository": "https://github.com/Koi-fyp/Koi",
+  "public_repository_read_access_verified": true,
+  "ahmad_write_admin_access": "Not queried or changed; repository administrators retain responsibility",
+  "branch": "handoff/koi-web-1-to-5-2026-10-20",
+  "planned_branch_url": "https://github.com/Koi-fyp/Koi/tree/handoff/koi-web-1-to-5-2026-10-20",
+  "baseline_commit": "f2b9c80f3390e7828131e98d943322f6d1694bfb",
+  "ai_comparison": {
+    "repository": "Koi-fyp/KOI-Psycholov",
+    "branch": "master",
+    "commit": "59e90ddba505ea07adbf7f92121ffc3eac0d89db",
+    "default_branch": "main",
+    "default_head": "52728363231731fe3f7477167ea176bc3068b571",
+    "requested_five_docs_absent_on_default_head": true
+  },
+  "included_changed_files": [
+    {
+      "path": "repos/koi-backend/nextjs_app/.gitignore",
+      "index_blob": "a04640f12a9396d6e2e997f94cc874e89c244d17"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/contracts/README.md",
+      "index_blob": "59bf2629f21fa3e0ee85b3b45fedbf0e2944e901"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/contracts/v0.5.2/CHANGELOG.md",
+      "index_blob": "18c22f754f6410be4f8e82bc628639e9cf229316"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/contracts/v0.5.2/authorization-matrix.md",
+      "index_blob": "1f845fa8430f5fa55d2d3ae2df382bbbe60392b1"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/contracts/v0.5.2/contracts.schema.json",
+      "index_blob": "7396e1b8b97cda5df6df9fa23237d7b748f3cea6"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/contracts/v0.5.2/fixtures.json",
+      "index_blob": "c21f78d41d1b02bc1dd7b2193c4e1e9d942c3b68"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/contracts/v0.5.2/freeze-manifest.json",
+      "index_blob": "06e67d21d506e4c256f4a2d342db530861b4d397"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/contracts/v0.5.2/openapi.json",
+      "index_blob": "d25a00b0bb1636d9e663a3a2c3c693c9fa1307c4"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/contracts/v0.5.2/semantics.md",
+      "index_blob": "8bac123ecf5df5cb1ba1a02d74291e431670b375"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/dev/web5-reference/firebase.json",
+      "index_blob": "586f08a601420553f951b1330b65aea256937945"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/dev/web5-reference/firestore.indexes.json",
+      "index_blob": "4d840dd13a35be5d833c95754d8a74da4d36ba5b"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/dev/web5-reference/firestore.rules",
+      "index_blob": "8356f02b1feba8cbeaaa591c4a4bfdc89dc642b4"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/dev/web5-reference/platform-deny.patch.rules",
+      "index_blob": "8bb89aaac025eb34fcba7f104a54873598362703"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/dev/web5-reference/source-manifest.json",
+      "index_blob": "9964d30ee78c5650892b695a128ca8c6c19b325a"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-2/evidence/functional-emulator.json",
+      "index_blob": "0b4ebbac318928b92a42e539960d5c7c134acf39"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-2/evidence/patient-acknowledgement.png",
+      "index_blob": "530bcc7a36d7ad32274058f7691f7e2648efb569"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-2/evidence/professional-review.png",
+      "index_blob": "2d45d894a89c37782499111aff9d207b067ee564"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/CHANGED-FILES.md",
+      "index_blob": "92248508b0ea018a248aa98d10c84b22c491fcc2"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/SETUP.md",
+      "index_blob": "ef5f0993b2246c84694d1be52a2e3e32da74c7da"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/WEB-3-COMPLETION.md",
+      "index_blob": "38340cb695aa07a8c0d916d3ce1f2d69fddb76e0"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/evidence/failure-0.png",
+      "index_blob": "bed67ec80ec13a3360974c43590de38d1b9df208"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/evidence/failure-1.png",
+      "index_blob": "b4d38954aa6672bcd8f1e752d6772166d5fdf5ae"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/evidence/functional-emulator.json",
+      "index_blob": "fb34d998bf7e4c44d255594e1b644eacfe217e86"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/evidence/patient-acknowledgement.png",
+      "index_blob": "9e5ba29749475773aee4a444dcff959821e2ea28"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/evidence/patient-urdu-mobile.png",
+      "index_blob": "9626f76feafb9b889a16143694082a7b5c3abb3d"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/evidence/professional-community.png",
+      "index_blob": "525796be58a2f38ddeb192b499837a9e45f60fa4"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/evidence/professional-review.png",
+      "index_blob": "32022b6cf7470590ddaedafbe4dededdb5a04cf2"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/evidence/security-emulator.json",
+      "index_blob": "d315b5cb72c408a9d59cd93f8823f647ba15eae8"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-3/verification.json",
+      "index_blob": "829a1bdb779010f2da822f2848bb8f5f5f493181"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/CHANGED-FILES.md",
+      "index_blob": "418ab0b0f87eb912aeb78bc39f29b0ff1895a20e"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/DEMO-LOGIN-GUIDE.md",
+      "index_blob": "b61c0a2f2c588cd00409039204cf63d709353aff"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/SCREEN-ROUTES.md",
+      "index_blob": "921f08f2bb22f115e0adb7cf1486774d85494790"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/TEST-EVIDENCE.md",
+      "index_blob": "07af3cbf06b00e49bee69efe50171e57d0b30861"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/WEB-4-COMPLETION.md",
+      "index_blob": "6ccbc4d3599794bf1c48be8b1ad11f3de0abee5c"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/baseline.json",
+      "index_blob": "55399ea37b797b3065131c76b4c5e74a7fca2f3a"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/companion-mobile-final.png",
+      "index_blob": "39b27283736816172f2f9fc61a9352c21ce53ed8"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/companion-mobile.png",
+      "index_blob": "f5010ea57b666951a733edc9ef4a0c2ddbf6956d"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/companion-smoke-failure.png",
+      "index_blob": "d2006ee97172619d4b7bb03501de2aadd57ecd80"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/companion-smoke-final.json",
+      "index_blob": "8e9ce17168380a2ed04c7d7ce3795eca1f3b25ed"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/companion-smoke.json",
+      "index_blob": "98b7d3a5ec1ec550a851184c93b0e445d2756cee"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/companion-start-diagnostic.png",
+      "index_blob": "c0b20999d349570ce9c5d86cb524d8b6a45bf44b"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/failure-0.png",
+      "index_blob": "d4c327f09e5f98604864bd4e4fd409bb91abf956"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/failure-1.png",
+      "index_blob": "b703186ff918ad1b7697c80a2532a42b4a46ba01"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/failure-2.png",
+      "index_blob": "b703186ff918ad1b7697c80a2532a42b4a46ba01"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/functional.json",
+      "index_blob": "38c21e7cb1fa5d16169afc9e0d18dcd245b70482"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/jest-results.json",
+      "index_blob": "62c5691605051c75ccad7172d6895f89cb218339"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/patient-account-mobile.png",
+      "index_blob": "2078f0150b101003270ad0ed81db1a91c9aca609"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/patient-ack.png",
+      "index_blob": "11ee834cff549cf14b1cab97c2d56ff0354e53a9"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/persistence.json",
+      "index_blob": "dbfc76d5dc67523ec7f6ec17d27814321a78ce3e"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/professional-dashboard.png",
+      "index_blob": "2eda321c307018d333eb2f1ed163bc73fc89a2a0"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-1-regression/functional-emulator.json",
+      "index_blob": "59aeb06c4618fba257bb4583e9a717ffd5d0e1bd"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-1-regression/published-desktop.png",
+      "index_blob": "891a4d7b3dd6bd2d39025a74ff0633cbb796079e"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-1-regression/published-mobile.png",
+      "index_blob": "d5eb59db14b234207fc408d510ed799bfcea1651"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-2-regression/functional-emulator.json",
+      "index_blob": "9cf26bfd26a582234cb0ad8b4569028691e8fa00"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-2-regression/patient-acknowledgement.png",
+      "index_blob": "1819b306a887bf43d3a32b22de2ce4bd650807a9"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-2-regression/patient-urdu-mobile.png",
+      "index_blob": "0a9c37ba97ebea909308bb1e5264f52f4b9573f1"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-2-regression/professional-review.png",
+      "index_blob": "6e7fa61f2bcffeadba8771bdb50ec6b66ce221b4"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-3-regression/functional-emulator.json",
+      "index_blob": "7c9ab403b5fd06cac09ef8e627c30982fcd8b280"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-3-regression/patient-acknowledgement.png",
+      "index_blob": "6f5c413d3b418365eb13d46400f38fedebc29d1d"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-3-regression/patient-urdu-mobile.png",
+      "index_blob": "0a9c37ba97ebea909308bb1e5264f52f4b9573f1"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-3-regression/professional-community.png",
+      "index_blob": "00a68f91f2370b089ce8fe5e2cf9db537f9ee3a6"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-4/evidence/web-3-regression/professional-review.png",
+      "index_blob": "1470fd8046424e897fd36f8c4b8433f0d4f9b5b2"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/CHANGED-FILES.md",
+      "index_blob": "3341740c5bafdcf31698fe8e2b19a3087756590b"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/DEMO-DEPLOYMENT.md",
+      "index_blob": "01b01afc44bab95bea3a22ca7763b2a8a23a0d0e"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/EXISTING-FIREBASE-INTEGRATION.md",
+      "index_blob": "dd9740f655cd9fbc5466810259c66b3efd3e5b98"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/SECURITY-VERIFICATION.md",
+      "index_blob": "89afd72151bbe37ef7411c4c161a82c2016794c6"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/WEB-5-COMPLETION.md",
+      "index_blob": "2b1ac91b46b2901da43199f032749698a1ca0458"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/baseline.json",
+      "index_blob": "83a4457beb2b88fc71b0abe6814f3378415f56e6"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/changed-files.json",
+      "index_blob": "dde6f8d7c5f1e354e484e2e29aff3b33cd564910"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/evidence/artifacts.json",
+      "index_blob": "6100bb507f7a81a4b4b1edf99f72383d21fbb904"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/evidence/backend-functional.json",
+      "index_blob": "0df6b3b8582e87f9598caf62dcc281feba578eac"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/evidence/cloud-inspection/audit.json",
+      "index_blob": "af7358ccfe41563ff1baec425b59560457d3bb56"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/evidence/jest-results.json",
+      "index_blob": "f7ddb3d2c4c86293e82ff397c207b7580bcbf3a8"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/evidence/preservation.json",
+      "index_blob": "4c0541dfd2ca563e47221c8b39a5f29dbd9fbad7"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/review/web-5/evidence/rules-security.json",
+      "index_blob": "527e0550b43bd79c0111fe91a05973832d38cd0f"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/demo-env.ps1",
+      "index_blob": "5f7cfa9b47431ffd27ca79283f14c0e0e5c43dca"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/koi-demo-guard.cjs",
+      "index_blob": "1cec1160beb40bf3e8324460b0e0f5be67c94513"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/koi-demo-preflight.cjs",
+      "index_blob": "ee4af404db050941ef0272dd40f4048441120b68"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/seed-koi-demo.cjs",
+      "index_blob": "74b2f786d15a6dda8b57ca98fca0563e50bf6bb5"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/start-demo-emulators.ps1",
+      "index_blob": "5370e1127158b53e0914e436bd91acecf2fad3e4"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/validate-web3-contract.cjs",
+      "index_blob": "2972096ddbf26637da5960a8c44f1843fb98301f"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web3-emulator-functional.cjs",
+      "index_blob": "ac673f0f112587abf49b01c3f20cbf81d55440f0"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web3-emulator-security.cjs",
+      "index_blob": "324655d7685e2c09b11c7f1a0213846b40409097"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web4-companion-smoke.cjs",
+      "index_blob": "685c8073246724824a75a46fec7de8eae37773eb"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web4-demo-functional.cjs",
+      "index_blob": "936d38b58aea6f5a5c19dd720fdd135bebe9a5e2"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web4-persistence-check.cjs",
+      "index_blob": "acf05b3b5556be8095a8b283d2027008a8b3a8f5"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web4-regression-functional.cjs",
+      "index_blob": "4a001e1248d5990fc7768a5e9cd35f62b1b3240c"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-artifacts.cjs",
+      "index_blob": "b9a351ed9c87db8ba911692ee6635f9b80ddc07f"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-backend-functional.cjs",
+      "index_blob": "230bea9dfdf7c93c41bf0e501d1577a8893c1d27"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-cloud-audit.cjs",
+      "index_blob": "7656567c8214d7e9f7785c7d96d1352b19fca186"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-cloud-env.ps1",
+      "index_blob": "d4abc3f97eec8366d76950d28d9daa2f180bbbdc"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-load-platform.cjs",
+      "index_blob": "1a9da36e1824e73507598c423e9b929077c25876"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-network-guard.cjs",
+      "index_blob": "8924d1ec58d692dfea69b5f1533910681c50c9a7"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-provision-core.cjs",
+      "index_blob": "614aec83847c4f52018634a7ac6b214c1f04d088"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-provision.cjs",
+      "index_blob": "914d858796a9cb88815ef87b2ee8bd8c9f823ba6"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-provision.ps1",
+      "index_blob": "fc5c22bfebe6f48a227cdbd7b0d44ca5d4fcfcc2"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-rules-evidence.cjs",
+      "index_blob": "3de20701b25bb688f6bba357be56c6b72035e6c2"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/scripts/web5-rules-security.cjs",
+      "index_blob": "c190e722193e56f69d2afe30692b883f91f381c4"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/auth.test.tsx",
+      "index_blob": "6bd2e5076ba5163cd437951b502c5ef1c70b6715"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/firebase-admin-coexistence.test.ts",
+      "index_blob": "82ad36f658cf3c5ef3e6df37cabf8a7764a1fdce"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/platform/bootstrap.test.ts",
+      "index_blob": "1ccda72e7d099d504e481c8ad0d917e2f6348184"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/platform/community-routes.test.ts",
+      "index_blob": "1f0c84c9303bfe72353f3223530bed713663a7b7"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/platform/community.test.ts",
+      "index_blob": "d1d04eb86be29f2bd2088c676ae70b987b820dcc"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/platform/demo-companion-mode.test.ts",
+      "index_blob": "879f64045e71d69cf5a2111c491641eae7a7dff0"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/platform/demo-guard.test.ts",
+      "index_blob": "896ced6dc8e95ba73b88d77520bccdccaad3dfe4"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/platform/lifecycle.test.ts",
+      "index_blob": "2e00dde3eb756978df7174c3700e3c6d5d1172f7"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/platform/navigation.test.tsx",
+      "index_blob": "3d0d8ceba9241c4dc41967fb0d1ad0e26a45463b"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/platform/web5-production.test.ts",
+      "index_blob": "ea5ca5f9f3fde23be1a23800e3346be2f4829515"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/__tests__/platform/web5-provision.test.ts",
+      "index_blob": "c68273a5b43d996ac5d4eb302fa122c1220bf763"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/account/layout.tsx",
+      "index_blob": "9faf108a904df99201fdfa4724cc2dc55562867b"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/account/page.tsx",
+      "index_blob": "3ea58d3ed2b20a94839da35ade65f97dac2af6e9"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/appointments/[id]/transition/route.ts",
+      "index_blob": "23d68c43dc3e9fb889f4489a7293e9e1c0517a4f"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/appointments/route.ts",
+      "index_blob": "f1ad5c4ec24fc6b5a01228a5b5dd57140ec5ecc5"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/experts/[id]/route.ts",
+      "index_blob": "daf6e128be7a5cf1bdd58f86cd5e8e3bfff9de62"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/experts/route.ts",
+      "index_blob": "a5a0579ff4d1eedbecddfba4b082e5e298cfd767"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/messages/route.ts",
+      "index_blob": "151043363fe78f833a20101f999c7002b1240630"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/notifications/[id]/read/route.ts",
+      "index_blob": "402031f17df2ee5d88bea4edd03768584db4131f"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/notifications/route.ts",
+      "index_blob": "a06350acd150b4e0fced7f559f369a84b1d8b1cc"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/professional/analytics/route.ts",
+      "index_blob": "ba878a271f9071ee5e90cb06b5d2f43eda5cde23"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/professional/patient-relationships/[id]/archive/route.ts",
+      "index_blob": "2c0a039f90e44e1a3f57115e03f2d9db3563ac39"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/professional/patient-relationships/[id]/submissions/route.ts",
+      "index_blob": "5c6fc867069ad280acc111c949a3aed43842cec7"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/professional/profile/route.ts",
+      "index_blob": "cb1420bcebd6b32affc2421175e073fba1f59da8"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/professional/submission-notifications/route.ts",
+      "index_blob": "0ce40e163f44c8beb399a2e8979b8b81befc7a30"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/relationships/[id]/appointments/route.ts",
+      "index_blob": "fe10b27133af157071615ce0f8b8a5248903ed43"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/api/v1/relationships/[id]/messages/route.ts",
+      "index_blob": "612255e1597472e005d1c709178cd4ce2f2019ba"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/page.tsx",
+      "index_blob": "a2f087e5d244586e6d410cb026a0ced300e69117"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/patient/layout.tsx",
+      "index_blob": "810f233ecf0959d7a1fde5564f4144f12f999ad4"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/app/professional/layout.tsx",
+      "index_blob": "011671adb97c04f5b12650420c5af9cbd6210d3a"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/layout/BottomNav.tsx",
+      "index_blob": "dec17093cfcba79a604e4193b9425099033a54d7"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/patient/CareConversation.tsx",
+      "index_blob": "18488a1ca7ff3ea7935f5629e36bc184c908865d"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/patient/CareNotifications.tsx",
+      "index_blob": "1704cc40989345ed619ea19171b9255795a9d218"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/patient/ExpertDirectory.tsx",
+      "index_blob": "4fdbd1985b627f052e0dffd9097104b5c6cafcf5"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/patient/PatientWorkspace.tsx",
+      "index_blob": "236de76c9a9d54007e8f4b371ecfe4cf45009e22"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/platform/AccountApp.tsx",
+      "index_blob": "b23e0cf518252ce779d665d81d6597e1a6a4cd32"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/platform/PlatformNavigation.tsx",
+      "index_blob": "1045b56ec8e291e63121d0d5f3675e690490f2a5"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/professional/PatientHistory.tsx",
+      "index_blob": "9aa91080a1021b694a9d610fc64a0ef8744033a0"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/professional/PatientManagement.tsx",
+      "index_blob": "9672952a7455eabfb521889b6375d37b1ae1f6cd"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/professional/PracticeOverview.tsx",
+      "index_blob": "71b9031d0752dc4ecc1ccff25ba91dfca85fe4c6"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/professional/ProfessionalWorkspace.tsx",
+      "index_blob": "99131ffea2824478e13d39b084a6c152e13f5b61"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/components/professional/SubmissionNotifications.tsx",
+      "index_blob": "82cedcca1330a42fd4734fd82d4379998a0e81fa"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/contexts/AuthContext.tsx",
+      "index_blob": "9893ab603f6378618c7a9e3964a484667e999c2d"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/auth/demoEmulatorMode.ts",
+      "index_blob": "9904ba3963fbb7188d6c4f5387ba9c83c862c2f7"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/firebase-admin.ts",
+      "index_blob": "f5b33fe58952179bb45d6d1897ff9ce6c73deba2"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/firebase.ts",
+      "index_blob": "b01509705116b5c51f182ab01282e58e405752e6"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/platform/community-types.ts",
+      "index_blob": "866d269085afeaf25d5f2b4beca2a89ba3a927fc"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/platform/navigation.ts",
+      "index_blob": "9ccb85b13c846d1e752f8c27bc9d7e53e0256ecd"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/platform/server/admin-config.cjs",
+      "index_blob": "69543e0da22ff43fbefff94ac507a3badb704af1"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/platform/server/community-http.ts",
+      "index_blob": "b7c15b46b5ddb7656aec08b8508ebd73362f2d12"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/platform/server/community.ts",
+      "index_blob": "65a3d635530598f4db7c4e28e8b8bb0e590d35ad"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/platform/server/contract.ts",
+      "index_blob": "09518217148275a70e4f3892f76e83e82082221a"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/platform/server/lifecycle.ts",
+      "index_blob": "d23f8dd9d2732a0f2bb70c9ca955d32fc7c7d7cd"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/platform/server/production-evidence.cjs",
+      "index_blob": "29cdc1cf6614a1ac9d7cb2863aad97351e8ad780"
+    },
+    {
+      "path": "repos/koi-backend/nextjs_app/src/lib/platform/server/runtime.ts",
+      "index_blob": "63ee995dda1d0a6a7809b5835923aeed30c686a6"
+    },
+    {
+      "path": "review/final-handoff/AHMAD_START_HERE.md",
+      "index_blob": "e385b461a453e6cf264251efc4b8f0cdc9838755"
+    },
+    {
+      "path": "review/final-handoff/KOI_WEB_1_TO_5_AHMAD_HANDOFF.md",
+      "index_blob": "f616dc88ab21bd93cd34afa157ed8b3771cee878"
+    }
+  ],
+  "additional_packaging_metadata": [
+    "review/final-handoff/SECRET-SCAN.json",
+    "review/final-handoff/SHIPMENT-MANIFEST.json"
+  ],
+  "expected_changed_file_count": 157,
+  "excluded_preserved_on_disk": [
+    "repos/koi-backend/nextjs_app/.env.local",
+    "repos/koi-backend/nextjs_app/.local-emulator-data/",
+    "repos/koi-backend/nextjs_app/.local/",
+    "service-account JSON and all real credentials/API keys",
+    "Auth/Firestore exports and private provisioning manifests",
+    "generated build/dependency caches and ignored logs",
+    ".idea/",
+    "repos/koi-mobile/android/"
+  ],
+  "web_1_2": "Included through existing f2b9c80 ancestry; not rebuilt or rewritten",
+  "evidence": "Existing reports/JSON and fictional local screenshots, not live integration proof",
+  "secret_scan": "SECRET-SCAN.json; no secret values printed",
+  "ci_and_hooks": "No active repository Git hooks/workflows found; commit uses [skip ci] and command-scoped empty hooks path",
+  "activities": {
+    "rebuilds": 0,
+    "regression_reruns": 0,
+    "modal_calls": 0,
+    "paid_ai_calls": 0,
+    "live_firebase_writes": 0,
+    "deployments": 0,
+    "merges": 0,
+    "force_pushes": 0
+  },
+  "status": "Pre-commit packaging inventory. Remote commit existence must be verified after push; no cloud activation is implied."
+}

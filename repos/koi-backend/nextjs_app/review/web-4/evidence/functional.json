@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "checks": [
+    "repeat seeding preserves identifiers and collection counts",
+    "persistent fixtures include open and submitted assignments; patient evaluation HTTP access denied",
+    "homepage account entry, capability menus and unauthorized deep-link guards",
+    "real GUI manual creation, immutable publish and assignment",
+    "separate patient profile autosaves, reloads, resumes and receives acknowledgement without results",
+    "protected review, human messages, appointment response, notifications and actual fictional-data analytics",
+    "Firebase session survives reload; sign-out removes privileged links; mobile account screen fits"
+  ],
+  "page_errors": 0,
+  "companion_requests": 0,
+  "nonlocal_requests": 0,
+  "fictional": true,
+  "real": [
+    "Auth emulator",
+    "Firestore emulator",
+    "Next routes",
+    "Chrome"
+  ],
+  "provider_calls": 0
+}

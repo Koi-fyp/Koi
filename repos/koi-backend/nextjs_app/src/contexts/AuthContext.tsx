@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth, firebaseConfigurationError } from '@/lib/firebase';
+import { auth, firebaseConfigurationError, isCompanionDemoEmulator } from '@/lib/firebase';
 import { isLocalTestAnonymousSignInEnabled } from '@/lib/auth/anonymousSignInMode';
 import {
   onAuthStateChanged,
@@ -128,7 +128,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       if (isLocalTestAnonymousSignInEnabled()) {
-        if (auth.app.options.projectId !== 'koi-companion-fyp') {
+        const isolatedDemo = isCompanionDemoEmulator
+          && auth.app.options.projectId === 'demo-koi-platform-web1'
+          && auth.emulatorConfig?.host === '127.0.0.1'
+          && auth.emulatorConfig.port === 5199;
+        if (auth.app.options.projectId !== 'koi-companion-fyp' && !isolatedDemo) {
           throw new Error('Local anonymous testing requires the koi-companion-fyp Firebase project.');
         }
         await firebaseSignInAnonymously(auth);

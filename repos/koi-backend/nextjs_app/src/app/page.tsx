@@ -1,5 +1,6 @@
 'use client';
 
+import PlatformNavigation from '@/components/platform/PlatformNavigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -166,6 +167,7 @@ export default function RootPage() {
               <Link href="/how-it-works" className="hover:text-black transition-colors">How It Works</Link>
             </div>
 
+            <PlatformNavigation />
             {user ? (
               <button
                 onClick={openChat}

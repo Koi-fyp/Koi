@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import schemas from '../../../../contracts/v0.5.1/contracts.schema.json';
+import schemas from '../../../../contracts/v0.5.2/contracts.schema.json';
 import { canonicalJson } from '../canonical';
 import { contentIssues } from '../content';
 import type { ManualContent } from '../types';

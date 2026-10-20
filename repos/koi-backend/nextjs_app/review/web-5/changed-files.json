@@ -1,0 +1,125 @@
+{
+  "baseline_head": "f2b9c80f3390e7828131e98d943322f6d1694bfb",
+  "changes": [
+    {
+      "path": ".gitignore",
+      "status": "Modified",
+      "sha256": "11f080f3c20538f0d8d03ece6d19e0cf5257b5e79a374bf54094932eb877d024"
+    },
+    {
+      "path": "dev/web5-reference/firebase.json",
+      "status": "Added",
+      "sha256": "0f47dc10aa56a7dc053d46256e24e886655f29884e278296d5d501eb984d9126"
+    },
+    {
+      "path": "dev/web5-reference/firestore.indexes.json",
+      "status": "Added",
+      "sha256": "6a651556da5c3d6b915e6fbf0fa6066c4109e96293e42b0ff0925a0a6394b846"
+    },
+    {
+      "path": "dev/web5-reference/firestore.rules",
+      "status": "Added",
+      "sha256": "83b94bb34a95fcfff9eb1b814ca40d543d969578c9d9195ea28789279204bab4"
+    },
+    {
+      "path": "dev/web5-reference/platform-deny.patch.rules",
+      "status": "Added",
+      "sha256": "c7b87cb57c6ff0820fe87e239eef8afa55f180627c1d4664a469b9031f1d8cff"
+    },
+    {
+      "path": "dev/web5-reference/source-manifest.json",
+      "status": "Added",
+      "sha256": "fd23e76d8a24eb20db3db116a63e6ebc39dde635412705c8861a2feaaf72cc97"
+    },
+    {
+      "path": "scripts/web5-artifacts.cjs",
+      "status": "Added",
+      "sha256": "eb6938b117a1763082546461cf5749f44864c06b9b8686f791fd0254eedb0ea3"
+    },
+    {
+      "path": "scripts/web5-backend-functional.cjs",
+      "status": "Added",
+      "sha256": "a468959d5951644abefcceba215bd277fc6b1622f559c256ec63334d8fc7ef2f"
+    },
+    {
+      "path": "scripts/web5-cloud-audit.cjs",
+      "status": "Added",
+      "sha256": "696b8840c16b4fa4bab365407e5aea037c5c72dee4aafb26b2728ea138f4588c"
+    },
+    {
+      "path": "scripts/web5-cloud-env.ps1",
+      "status": "Added",
+      "sha256": "c5ebc4e14e5cab1cf9468cb4b420d1d4ea9a459aff0fddc10eeb157a103652d5"
+    },
+    {
+      "path": "scripts/web5-load-platform.cjs",
+      "status": "Added",
+      "sha256": "d8301de01d98889b3b34382b477cd9e7a07dbe65b8c7b142d78db8ad876fbbff"
+    },
+    {
+      "path": "scripts/web5-network-guard.cjs",
+      "status": "Added",
+      "sha256": "587c1d5344e1a09b9055412ece5b3b62d8662d78c3e5464ca318803c1f5ecccd"
+    },
+    {
+      "path": "scripts/web5-provision-core.cjs",
+      "status": "Added",
+      "sha256": "8f3e0f3bfac64167a3df7542822df20374c93ac4d8da6d14f9d41cc90aa3c8eb"
+    },
+    {
+      "path": "scripts/web5-provision.cjs",
+      "status": "Added",
+      "sha256": "f4ee03c0d599b4901e02d981de0c5ceea4b0660c1a527870b70beb9217f9d8ab"
+    },
+    {
+      "path": "scripts/web5-provision.ps1",
+      "status": "Added",
+      "sha256": "1294e17a986439cf9bea3a56da10518da8df7cf237a4e9e4ae1fa403e2a979d2"
+    },
+    {
+      "path": "scripts/web5-rules-evidence.cjs",
+      "status": "Added",
+      "sha256": "a9563fda2cc4e6263490eebcbd2023fddf08f9d04ce6947c12a0cf79768599ee"
+    },
+    {
+      "path": "scripts/web5-rules-security.cjs",
+      "status": "Added",
+      "sha256": "85ebb4d573d18f37b49fdf55f13c82ba709aa233c2909be43a908fc913d4c59c"
+    },
+    {
+      "path": "src/__tests__/firebase-admin-coexistence.test.ts",
+      "status": "Added",
+      "sha256": "96d6823e1fc83873e1583cfaee43be369a356c70b79398ca7cae3ba12458643c"
+    },
+    {
+      "path": "src/__tests__/platform/bootstrap.test.ts",
+      "status": "Modified",
+      "sha256": "98123af6dba12d17f35d70f6270cc7a3201b807d4117b45ffd4b0395451c4b97"
+    },
+    {
+      "path": "src/__tests__/platform/web5-production.test.ts",
+      "status": "Added",
+      "sha256": "91dac712babf7e33e3a5ac467348dd85dd0bc2f8389628882b9113722b76fd16"
+    },
+    {
+      "path": "src/__tests__/platform/web5-provision.test.ts",
+      "status": "Added",
+      "sha256": "7aa54ca61cd3e2a075731cc34ec7d68d90f72d85fa63f69bbefff08c37201afc"
+    },
+    {
+      "path": "src/lib/firebase-admin.ts",
+      "status": "Modified",
+      "sha256": "c4d1f8ccde54af087c376a5750e674d5780d4b9a79f02d4331e38bcf9721c5a0"
+    },
+    {
+      "path": "src/lib/platform/server/admin-config.cjs",
+      "status": "Modified",
+      "sha256": "ab0c7d2acfce97bb9606b03cb1677efb85f4ada1e60d707df5c109e20bf7ee2a"
+    },
+    {
+      "path": "src/lib/platform/server/production-evidence.cjs",
+      "status": "Added",
+      "sha256": "4ccaa06cc56e3839dba4806c5e9e44a0f1dd00863170613e6846a2d6a4097e00"
+    }
+  ]
+}

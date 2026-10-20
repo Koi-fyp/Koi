@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "reference_matches_preserved_source": true,
+  "composite_indexes": 12,
+  "unnecessary_single_field_proposals": false,
+  "cloud_writes": 0,
+  "paid_provider_requests": 0
+}

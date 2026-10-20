@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "all_other_preexisting_files_preserved": true,
+  "allowed_modified_existing_files": [
+    ".gitignore",
+    "src/lib/firebase-admin.ts",
+    "src/lib/platform/server/admin-config.cjs",
+    "src/__tests__/platform/bootstrap.test.ts"
+  ],
+  "existing_contracts_ui_companion_sse_avatar_crisis_preserved": true
+}
