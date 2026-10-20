@@ -1,8 +1,11 @@
 import { NextRequest } from 'next/server';
 import { getPlatformRuntime } from '@/lib/platform/server/runtime';
 import { hash } from '@/lib/platform/server/contract';
+import { accessPollMs } from '@/lib/platform/poll-config';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+/** Read-free keepalive; must stay well under the client's 7 s stall deadline (access-monitor.ts). */
+const HEARTBEAT_MS = 2000;
 /** Separate, short-lived platform invalidation stream. Companion SSE is untouched. */
 export async function GET(req: NextRequest) {
   const headers = { 'Cache-Control': 'private, no-store', Vary: 'Authorization', 'X-Accel-Buffering': 'no' };
@@ -13,12 +16,14 @@ export async function GET(req: NextRequest) {
     let stopped = false, timer: ReturnType<typeof setTimeout> | undefined;
     const stream = new ReadableStream({
       start(controller) {
-        const encoder = new TextEncoder(), started = Date.now(); let previous = '', sequence = Math.max(1, first.authorization_revision);
+        const encoder = new TextEncoder(), started = Date.now(), pollMs = accessPollMs(); let previous = '', checkedAt = 0, sequence = Math.max(1, first.authorization_revision);
         const close = () => { if (stopped) return; stopped = true; clearTimeout(timer); try { controller.close(); } catch {} };
         req.signal.addEventListener('abort', close, { once: true });
         const tick = async () => {
           try {
             if (stopped || req.signal.aborted || Date.now() - started > 250000) { close(); return; }
+            if (Date.now() - checkedAt < pollMs) { controller.enqueue(encoder.encode(': heartbeat\n\n')); timer = setTimeout(tick, HEARTBEAT_MS); return; }
+            checkedAt = Date.now();
             const currentActor = await rt.authenticate(req), caps = await rt.service.capabilities(currentActor);
             if (caps.account_state !== 'registered') { close(); return; }
             const signature = hash(caps);
@@ -26,7 +31,7 @@ export async function GET(req: NextRequest) {
               previous = signature;
               controller.enqueue(encoder.encode(`event: authorization_changed\ndata: ${JSON.stringify({ event: 'authorization_changed', authorization_revision: Math.max(sequence++, caps.authorization_revision), occurred_at: new Date().toISOString() })}\n\n`));
             } else controller.enqueue(encoder.encode(': heartbeat\n\n'));
-            timer = setTimeout(tick, 2000);
+            timer = setTimeout(tick, HEARTBEAT_MS);
           } catch { close(); }
         };
         void tick();

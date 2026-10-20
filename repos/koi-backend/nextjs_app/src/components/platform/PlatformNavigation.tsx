@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useProfessionalAuth } from '@/lib/platform/professional-auth';
 import { professionalApi } from '@/lib/platform/client';
 import { platformLinks } from '@/lib/platform/navigation';
+import { navPollMs } from '@/lib/platform/poll-config';
 import type { CapabilitiesDTO } from '@/lib/platform/types';
 
 export default function PlatformNavigation({ expanded = false, compact = false }: { expanded?: boolean; compact?: boolean }) {
@@ -18,7 +19,7 @@ export default function PlatformNavigation({ expanded = false, compact = false }
       try { const caps = await api.request<CapabilitiesDTO>('/api/v1/me/capabilities'); if (alive && current.current()?.uid === uid && !document.hidden && caps.uid === uid) { setState({ uid, caps }); setError(false); } }
       catch { if (alive) { setState(null); setError(true); } } finally { loading = false; }
     };
-    void refresh(); const timer = setInterval(refresh, 5000);
+    void refresh(); const timer = setInterval(refresh, navPollMs());
     const lock = () => { setState(null); }; window.addEventListener('offline', lock); document.addEventListener('visibilitychange', refresh); window.addEventListener('focus', refresh);
     return () => { alive = false; api.dispose(); clearInterval(timer); window.removeEventListener('offline', lock); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('focus', refresh); };
   }, [uid]);
