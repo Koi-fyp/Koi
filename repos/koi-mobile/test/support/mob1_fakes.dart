@@ -65,7 +65,27 @@ class AccountFakeAuth extends FakeAuthService {
   final Map<String, (String, String)> accounts = {};
   final _tokens = StreamController<void>.broadcast();
   AccountAuthError? failNextLink;
+
+  /// AUTH-ENTRY: the next link / sign-in / create / reset call fails.
+  AccountAuthError? failNext;
+
+  /// Emails a password reset was requested for.
+  final List<String> resetEmails = [];
   int reauthCalls = 0;
+
+  /// Holds the next account calls until completed (to see the loader).
+  Completer<void>? callGate;
+
+  Future<void> _maybeFail() async {
+    final g = callGate;
+    if (g != null) await g.future;
+    final f = failNext;
+    if (f != null) {
+      failNext = null;
+      throw AccountAuthException(f);
+    }
+  }
+
   int refreshCalls = 0;
 
   void fireTokenChange() => _tokens.add(null);
@@ -93,6 +113,7 @@ class AccountFakeAuth extends FakeAuthService {
       failNextLink = null;
       throw AccountAuthException(f);
     }
+    await _maybeFail();
     if (accounts.containsKey(email)) {
       throw const AccountAuthException(AccountAuthError.emailInUse);
     }
@@ -103,6 +124,7 @@ class AccountFakeAuth extends FakeAuthService {
 
   @override
   Future<void> signInWithEmail(String email, String password) async {
+    await _maybeFail();
     final a = accounts[email];
     if (a == null || a.$2 != password) {
       throw const AccountAuthException(AccountAuthError.wrongCredentials);
@@ -112,6 +134,7 @@ class AccountFakeAuth extends FakeAuthService {
 
   @override
   Future<void> createAccountWithEmail(String email, String password) async {
+    await _maybeFail();
     if (accounts.containsKey(email)) {
       throw const AccountAuthException(AccountAuthError.emailInUse);
     }
@@ -128,6 +151,12 @@ class AccountFakeAuth extends FakeAuthService {
     if (a == null || a.$2 != password) {
       throw const AccountAuthException(AccountAuthError.wrongCredentials);
     }
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _maybeFail();
+    resetEmails.add(email);
   }
 }
 

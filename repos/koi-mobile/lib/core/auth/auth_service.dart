@@ -51,9 +51,13 @@ enum AccountAuthError {
   /// its own KOI account (credential collision while linking).
   emailInUse,
 
-  /// `wrong-password` / `invalid-credential` / `user-not-found` /
-  /// `user-mismatch` / `invalid-login-credentials`.
+  /// `wrong-password` / `invalid-credential` / `user-mismatch` /
+  /// `invalid-login-credentials`.
   wrongCredentials,
+
+  /// `user-not-found`. With Firebase email-enumeration protection on, a
+  /// missing account arrives as `invalid-credential` (wrongCredentials).
+  accountNotFound,
   weakPassword,
   invalidEmail,
   network,
@@ -72,8 +76,8 @@ enum AccountAuthError {
     'wrong-password' ||
     'invalid-credential' ||
     'invalid-login-credentials' ||
-    'user-not-found' ||
     'user-mismatch' => wrongCredentials,
+    'user-not-found' => accountNotFound,
     'weak-password' => weakPassword,
     'invalid-email' || 'missing-email' => invalidEmail,
     'network-request-failed' => network,
@@ -158,5 +162,10 @@ abstract class AuthService extends ChangeNotifier {
 
   /// Proves the signed-in registered user knows [password] (unlock, claim).
   Future<void> reauthenticate(String password) =>
+      Future.error(const AccountAuthException(AccountAuthError.notSupported));
+
+  /// Firebase sendPasswordResetEmail. A reset makes the CSE-encrypted
+  /// history unreadable, so the form warns first.
+  Future<void> sendPasswordResetEmail(String email) =>
       Future.error(const AccountAuthException(AccountAuthError.notSupported));
 }

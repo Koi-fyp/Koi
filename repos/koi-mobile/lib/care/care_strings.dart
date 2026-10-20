@@ -233,6 +233,56 @@ enum CareText {
   spCreate,
   spNotNow,
   spCallLabel,
+  // AUTH-ENTRY: sign in / create account, the anonymous Care page and the
+  // Settings card.
+  auCreateTitle,
+  auSignInTitle,
+  auBusyUpgrade,
+  auBusyCreate,
+  auBusySignIn,
+  auUpgradeIntro,
+  auSignInSwitchNote,
+  auEmail,
+  auPassword,
+  auPasswordHint,
+  auConfirm,
+  auShowPassword,
+  auHidePassword,
+  auPasswordWarning,
+  auCreateButton,
+  auSignInButton,
+  auSignInInstead,
+  auForgot,
+  auEnterEmail,
+  auEnterPassword,
+  auPasswordShort,
+  auMismatch,
+  auErrEmailInUse,
+  auErrWrong,
+  auErrNotFound,
+  auErrWeak,
+  auErrInvalidEmail,
+  auErrNetwork,
+  auErrTooMany,
+  auErrNotAllowed,
+  auErrSalt,
+  auErrGeneric,
+  auResetTitle,
+  auResetBody,
+  auResetSend,
+  auResetSending,
+  auResetSent,
+  auResetNeedEmail,
+  auCancel,
+  auPsychLink,
+  auPsychTitle,
+  auPsychBody,
+  auWhy,
+  auCareTitle,
+  auCareWhy,
+  auCareKeep,
+  auCareChat,
+  auDismiss,
 }
 
 const Map<CareText, String> _en = {
@@ -475,6 +525,83 @@ const Map<CareText, String> _en = {
   CareText.spCreate: 'Create my safety plan',
   CareText.spNotNow: 'Not now',
   CareText.spCallLabel: 'Call',
+  // AUTH-ENTRY.
+  CareText.auCreateTitle: 'Create your KOI account',
+  CareText.auSignInTitle: 'Sign in',
+  CareText.auBusyUpgrade: 'Securing your history…',
+  CareText.auBusyCreate: 'Creating your account…',
+  CareText.auBusySignIn: 'Signing in…',
+  CareText.auUpgradeIntro:
+      'Your chats, check-ins and safety plan stay on this account. KOI '
+      'encrypts them again with your new password.',
+  CareText.auSignInSwitchNote:
+      'Signing in to another account does not move this device\'s KOI '
+      'history. You will be asked first.',
+  CareText.auEmail: 'Email',
+  CareText.auPassword: 'Password',
+  CareText.auPasswordHint: 'At least 8 characters.',
+  CareText.auConfirm: 'Confirm password',
+  CareText.auShowPassword: 'Show password',
+  CareText.auHidePassword: 'Hide password',
+  CareText.auPasswordWarning:
+      'Your KOI history is protected with Client-Side Encryption (CSE) at '
+      'rest, using your password. If you forget or reset your password, your '
+      'saved history cannot be opened again.',
+  CareText.auCreateButton: 'Create account',
+  CareText.auSignInButton: 'Sign in',
+  CareText.auSignInInstead: 'Sign in instead',
+  CareText.auForgot: 'Forgot password?',
+  CareText.auEnterEmail: 'Please enter your email address.',
+  CareText.auEnterPassword: 'Please enter your password.',
+  CareText.auPasswordShort: 'Your password needs at least 8 characters.',
+  CareText.auMismatch: 'The passwords do not match.',
+  CareText.auErrEmailInUse:
+      'This email already has a KOI account. Sign in to it instead.',
+  CareText.auErrWrong: 'That email and password do not match.',
+  CareText.auErrNotFound:
+      'We could not find a KOI account with that email. Check it, or create '
+      'an account.',
+  CareText.auErrWeak:
+      'Please choose a stronger password (at least 8 characters).',
+  CareText.auErrInvalidEmail: 'Please enter a valid email address.',
+  CareText.auErrNetwork:
+      'You seem to be offline. Check your connection and try again.',
+  CareText.auErrTooMany:
+      'Too many attempts. Please wait a moment and try again.',
+  CareText.auErrNotAllowed:
+      'Account sign-up isn\'t switched on yet. Please try again later.',
+  CareText.auErrSalt:
+      'Signed in, but your encryption details could not be loaded. Check '
+      'your connection and try again.',
+  CareText.auErrGeneric: 'Something went wrong. Please try again.',
+  CareText.auResetTitle: 'Reset your password?',
+  CareText.auResetBody:
+      'If you reset your password, the private KOI history saved with your '
+      'old password cannot be opened again. Your account stays, but that '
+      'history is lost.',
+  CareText.auResetSend: 'Send reset email',
+  CareText.auResetSending: 'Sending…',
+  CareText.auResetSent:
+      'If a KOI account exists for this email, a reset link is on its way. '
+      'Check your inbox.',
+  CareText.auResetNeedEmail: 'Enter your email above first.',
+  CareText.auCancel: 'Cancel',
+  CareText.auPsychLink: 'I\'m a psychologist',
+  CareText.auPsychTitle: 'For psychologists',
+  CareText.auPsychBody:
+      'Psychologist accounts are created and verified on the KOI website.',
+  CareText.auWhy:
+      'An account lets you connect with a psychologist and use KOI on '
+      'another device.',
+  CareText.auCareTitle: 'Connect with a psychologist',
+  CareText.auCareWhy:
+      'Finding a psychologist, applying and talking with them needs an '
+      'account, so your care stays private and only yours.',
+  CareText.auCareKeep:
+      'Creating an account keeps your chats, check-ins and safety plan, '
+      'encrypted again with your new password.',
+  CareText.auCareChat: 'You can keep talking to KOI without an account.',
+  CareText.auDismiss: 'Dismiss',
 };
 
 // URDU NEEDS NATIVE REVIEW (see the file header).
@@ -721,6 +848,85 @@ const Map<CareText, String> _ur = {
   CareText.spCreate: 'اپنا حفاظتی منصوبہ بنائیں',
   CareText.spNotNow: 'ابھی نہیں',
   CareText.spCallLabel: 'کال کریں',
+  // AUTH-ENTRY. NEEDS NATIVE REVIEW.
+  CareText.auCreateTitle: 'اپنا KOI اکاؤنٹ بنائیں',
+  CareText.auSignInTitle: 'سائن ان',
+  CareText.auBusyUpgrade: 'آپ کی تاریخ محفوظ کی جا رہی ہے…',
+  CareText.auBusyCreate: 'آپ کا اکاؤنٹ بن رہا ہے…',
+  CareText.auBusySignIn: 'سائن ان ہو رہا ہے…',
+  CareText.auUpgradeIntro:
+      'آپ کی بات چیت، چیک اِنز اور حفاظتی منصوبہ اسی اکاؤنٹ میں رہیں گے۔ '
+      'KOI انہیں آپ کے نئے پاس ورڈ سے دوبارہ خفیہ کرتا ہے۔',
+  CareText.auSignInSwitchNote:
+      'کسی دوسرے اکاؤنٹ میں سائن ان کرنے سے اس ڈیوائس کی KOI تاریخ منتقل '
+      'نہیں ہوتی۔ پہلے آپ سے پوچھا جائے گا۔',
+  CareText.auEmail: 'ای میل',
+  CareText.auPassword: 'پاس ورڈ',
+  CareText.auPasswordHint: 'کم از کم 8 حروف۔',
+  CareText.auConfirm: 'پاس ورڈ کی تصدیق کریں',
+  CareText.auShowPassword: 'پاس ورڈ دکھائیں',
+  CareText.auHidePassword: 'پاس ورڈ چھپائیں',
+  CareText.auPasswordWarning:
+      'آپ کی KOI تاریخ آپ کے پاس ورڈ کے ساتھ Client-Side Encryption (CSE) '
+      'at rest سے محفوظ ہے۔ اگر آپ اپنا پاس ورڈ بھول جائیں یا ری سیٹ کریں تو '
+      'آپ کی محفوظ تاریخ دوبارہ نہیں کھل سکے گی۔',
+  CareText.auCreateButton: 'اکاؤنٹ بنائیں',
+  CareText.auSignInButton: 'سائن ان کریں',
+  CareText.auSignInInstead: 'اس کے بجائے سائن ان کریں',
+  CareText.auForgot: 'پاس ورڈ بھول گئے؟',
+  CareText.auEnterEmail: 'براہ کرم اپنا ای میل پتا لکھیں۔',
+  CareText.auEnterPassword: 'براہ کرم اپنا پاس ورڈ لکھیں۔',
+  CareText.auPasswordShort: 'پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے۔',
+  CareText.auMismatch: 'دونوں پاس ورڈ ایک جیسے نہیں ہیں۔',
+  CareText.auErrEmailInUse:
+      'اس ای میل کا پہلے سے KOI اکاؤنٹ موجود ہے۔ اس کے بجائے اس میں سائن ان '
+      'کریں۔',
+  CareText.auErrWrong: 'یہ ای میل اور پاس ورڈ آپس میں نہیں ملتے۔',
+  CareText.auErrNotFound:
+      'اس ای میل کا کوئی KOI اکاؤنٹ نہیں ملا۔ ای میل چیک کریں، یا نیا اکاؤنٹ '
+      'بنائیں۔',
+  CareText.auErrWeak: 'براہ کرم زیادہ مضبوط پاس ورڈ چنیں (کم از کم 8 حروف)۔',
+  CareText.auErrInvalidEmail: 'براہ کرم درست ای میل پتا لکھیں۔',
+  CareText.auErrNetwork:
+      'لگتا ہے آپ آف لائن ہیں۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
+  CareText.auErrTooMany:
+      'بہت زیادہ کوششیں ہو گئیں۔ تھوڑی دیر رکیں اور دوبارہ کوشش کریں۔',
+  CareText.auErrNotAllowed:
+      'اکاؤنٹ بنانے کی سہولت ابھی شروع نہیں ہوئی۔ براہ کرم بعد میں دوبارہ '
+      'کوشش کریں۔',
+  CareText.auErrSalt:
+      'سائن ان ہو گیا، لیکن آپ کی خفیہ کاری کی تفصیلات لوڈ نہیں ہو سکیں۔ '
+      'اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔',
+  CareText.auErrGeneric: 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔',
+  CareText.auResetTitle: 'پاس ورڈ ری سیٹ کریں؟',
+  CareText.auResetBody:
+      'اگر آپ پاس ورڈ ری سیٹ کرتے ہیں تو پرانے پاس ورڈ سے محفوظ کی گئی آپ '
+      'کی نجی KOI تاریخ دوبارہ نہیں کھل سکے گی۔ آپ کا اکاؤنٹ باقی رہے گا، '
+      'لیکن وہ تاریخ ضائع ہو جائے گی۔',
+  CareText.auResetSend: 'ری سیٹ ای میل بھیجیں',
+  CareText.auResetSending: 'بھیجی جا رہی ہے…',
+  CareText.auResetSent:
+      'اگر اس ای میل کا KOI اکاؤنٹ موجود ہے تو ری سیٹ لنک بھیج دیا گیا ہے۔ '
+      'اپنا ان باکس دیکھیں۔',
+  CareText.auResetNeedEmail: 'پہلے اوپر اپنا ای میل لکھیں۔',
+  CareText.auCancel: 'منسوخ کریں',
+  CareText.auPsychLink: 'میں ماہرِ نفسیات ہوں',
+  CareText.auPsychTitle: 'ماہرینِ نفسیات کے لیے',
+  CareText.auPsychBody:
+      'ماہرینِ نفسیات کے اکاؤنٹ KOI ویب سائٹ پر بنائے اور تصدیق کیے جاتے '
+      'ہیں۔',
+  CareText.auWhy:
+      'اکاؤنٹ کے ذریعے آپ کسی ماہرِ نفسیات سے رابطہ کر سکتے ہیں اور KOI کو '
+      'دوسری ڈیوائس پر استعمال کر سکتے ہیں۔',
+  CareText.auCareTitle: 'کسی ماہرِ نفسیات سے رابطہ کریں',
+  CareText.auCareWhy:
+      'ماہرِ نفسیات تلاش کرنے، درخواست دینے اور ان سے بات کرنے کے لیے اکاؤنٹ '
+      'ضروری ہے، تاکہ آپ کی دیکھ بھال نجی اور صرف آپ کی رہے۔',
+  CareText.auCareKeep:
+      'اکاؤنٹ بنانے سے آپ کی بات چیت، چیک اِنز اور حفاظتی منصوبہ برقرار رہتے '
+      'ہیں، آپ کے نئے پاس ورڈ سے دوبارہ خفیہ کر کے۔',
+  CareText.auCareChat: 'آپ اکاؤنٹ کے بغیر بھی KOI سے بات جاری رکھ سکتے ہیں۔',
+  CareText.auDismiss: 'بند کریں',
 };
 
 /// The strings and direction of the new Care screens.

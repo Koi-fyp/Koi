@@ -185,6 +185,14 @@ class DebugLocalAuthService extends AuthService {
     }
   }
 
+  /// No email leaves the device in the stand-in: accepted and dropped.
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    if (!email.contains('@')) {
+      throw const AccountAuthException(AccountAuthError.invalidEmail);
+    }
+  }
+
   static String _randomHex(int bytes) {
     final rng = Random.secure();
     return List.generate(

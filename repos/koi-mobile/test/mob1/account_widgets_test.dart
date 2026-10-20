@@ -56,7 +56,11 @@ void main() {
       await pumpApp(tester, h);
       expect(find.byType(AppShell), findsOneWidget);
       expect(find.byType(ChatScreen), findsOneWidget);
-      expect(_tab('care'), findsNothing);
+      // AUTH-ENTRY (approved 2026-10-20): the Care tab is an information
+      // page for anonymous users; still no capability fetch, no Care data.
+      await _openCare(tester);
+      expect(find.byKey(const Key('care-anonymous')), findsOneWidget);
+      expect(find.byType(CareScreen), findsNothing);
       expect(h.source.fetches, 0);
       await tester.tap(_tab('settings'));
       await tester.pump();
@@ -330,8 +334,8 @@ void main() {
         matching: find.byType(TextField),
       );
       await tester.enterText(field('account-email'), 'taken@x');
-      await tester.enterText(field('account-password'), 'secret1');
-      await tester.enterText(field('account-confirm'), 'secret1');
+      await tester.enterText(field('account-password'), 'secret12');
+      await tester.enterText(field('account-confirm'), 'secret12');
       await tester.ensureVisible(find.byKey(const Key('account-submit')));
       await tester.tap(find.byKey(const Key('account-submit')));
       await tester.pump();

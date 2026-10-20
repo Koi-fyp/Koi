@@ -33,6 +33,7 @@ abstract interface class AccountAuthBackend {
   Future<KoiUser> signInWithEmail(String email, String password);
   Future<KoiUser> createAccountWithEmail(String email, String password);
   Future<void> reauthenticate(String password);
+  Future<void> sendPasswordResetEmail(String email);
 }
 
 /// Firebase error codes meaning "anonymous sign-in is turned off".
@@ -154,6 +155,10 @@ class FirebaseAuthBackend implements AuthBackend, AccountAuthBackend {
       fb.EmailAuthProvider.credential(email: email, password: password),
     );
   });
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) =>
+      _mapped(() => _auth.sendPasswordResetEmail(email: email));
 }
 
 /// [AuthService] backed by Firebase anonymous sign-in. Firebase persists the
@@ -242,6 +247,10 @@ class FirebaseAuthService extends AuthService {
   @override
   Future<void> reauthenticate(String password) =>
       _account.reauthenticate(password);
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) =>
+      _account.sendPasswordResetEmail(email);
 
   @override
   Future<void> signInAnonymously() =>

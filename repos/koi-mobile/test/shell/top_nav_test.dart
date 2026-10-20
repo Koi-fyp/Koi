@@ -70,12 +70,19 @@ void main() {
     }
   });
 
-  testWidgets('ATC-M0-03 360dp: tab labels render at full size (no scaling)', (
-    tester,
-  ) async {
+  // AUTH-ENTRY (approved 2026-10-20): anonymous users now have 4 tabs
+  // (Care = information page), so at 360dp the row scales down a little,
+  // like it already did for General / Patient users. It must still fit.
+  testWidgets('ATC-M0-03 360dp: 4 tabs fit with no overflow', (tester) async {
     await pumpShell(tester);
+    expect(tester.takeException(), isNull);
+    for (final t in ['chat', 'progress', 'care', 'settings']) {
+      expect(find.byKey(Key('nav-tab-$t')), findsOneWidget, reason: t);
+    }
     // Natural DM Sans Bold 14px width of "Progress" is ~59.6dp.
-    expect(tester.getRect(find.text('Progress')).width, closeTo(59.6, 0.5));
+    expect(tester.getRect(find.text('Progress')).width, lessThan(60.1));
+    final r = tester.getRect(find.byKey(const Key('nav-pill-tabs')));
+    expect(r.right, lessThanOrEqualTo(360));
   });
 
   testWidgets('ATC-M0-03 320dp: tab row scales down instead of overflowing', (

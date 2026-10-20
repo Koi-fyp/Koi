@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../account/account_settings.dart';
+import '../account/auth_entry_widgets.dart' show AccountEntryCard;
 import '../app/app_version.dart';
 import '../app/providers.dart';
 import '../avatar/avatar_providers.dart';
@@ -330,6 +331,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
 
       const SettingsSectionLabel('Account'),
+      // AUTH-ENTRY: anonymous users, until dismissed.
+      const AccountEntryCard(),
       SettingsCard(
         child: Column(
           children: [

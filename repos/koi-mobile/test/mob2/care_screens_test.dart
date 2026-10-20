@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:koi_mobile/account/capabilities.dart';
+import 'package:koi_mobile/account/care_screen.dart' show CareScreen;
 import 'package:koi_mobile/applications/application_api.dart';
 import 'package:koi_mobile/applications/application_models.dart';
 import 'package:koi_mobile/applications/application_screens.dart';
@@ -351,11 +352,20 @@ void main() {
         );
       });
     }
-    testWidgets('anonymous: no bell, no Care tab', (tester) async {
+    // AUTH-ENTRY (approved 2026-10-20): anonymous users now get the Care
+    // tab as an information page only.
+    testWidgets('anonymous: no bell, Care tab = info page, no fetches', (
+      tester,
+    ) async {
       final h = Mob2Harness(user: const KoiUser(uid: 'u1', isAnonymous: true));
       await pumpKoi(tester, h.overrides);
       expect(find.byKey(const Key('nav-bell')), findsNothing);
-      expect(navTab('care'), findsNothing);
+      await tester.tap(navTab('care'));
+      await settle(tester);
+      expect(find.byKey(const Key('care-anonymous')), findsOneWidget);
+      expect(find.byType(CareScreen), findsNothing);
+      expect(find.byKey(const Key('nav-bell')), findsNothing);
+      expect(h.counting.fetches, 0);
     });
     testWidgets('tapping the bell opens the inbox inside the Care tab', (
       tester,

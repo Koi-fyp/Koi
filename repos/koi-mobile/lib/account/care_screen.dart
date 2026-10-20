@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../applications/application_screens.dart';
+import '../app/providers.dart';
 import '../appointments/appointment_screens.dart';
 import '../care/care_providers.dart';
 import '../care/care_strings.dart';
@@ -17,6 +18,8 @@ import '../widgets/neo_button.dart';
 import '../widgets/neo_card.dart';
 import 'account_providers.dart';
 import 'account_widgets.dart';
+import 'auth_entry_widgets.dart';
+import 'capability_controller.dart';
 import 'capability_gate.dart';
 import 'destinations.dart';
 
@@ -32,9 +35,27 @@ class CareTab extends StatelessWidget {
     key: navigatorKey,
     onGenerateRoute: (_) => PageRouteBuilder<void>(
       transitionDuration: Duration.zero,
-      pageBuilder: (context, _, _) => const CareScreen(),
+      pageBuilder: (context, _, _) => const CareHome(),
     ),
   );
+}
+
+/// The first page of the Care tab (AUTH-ENTRY): the information page for
+/// an anonymous user, "not available yet" while a registered account's
+/// features cannot be confirmed, otherwise the Care home.
+class CareHome extends ConsumerWidget {
+  const CareHome({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authServiceProvider).user;
+    if (user == null || user.isAnonymous) return const AnonymousCareScreen();
+    final status = ref.watch(capabilityControllerProvider).status;
+    if (status == CapabilityStatus.unavailable) {
+      return const CareUnavailableScreen();
+    }
+    return const CareScreen();
+  }
 }
 
 /// The Care home. General: Find an Expert + My applications. Patient (an

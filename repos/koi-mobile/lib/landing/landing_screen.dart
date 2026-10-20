@@ -3,8 +3,8 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../account/account_auth_screen.dart';
-import '../account/account_widgets.dart' show pushKoiPage;
+import '../account/auth_entry_widgets.dart';
+import '../care/care_strings.dart';
 import '../app/providers.dart';
 import '../core/auth/auth_service.dart';
 import '../onboarding/step_layout.dart';
@@ -368,41 +368,27 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                               height: 20 / 14,
                             ),
                           ),
-                          // MOB-1 (mobile-only): registered accounts. The
-                          // KOI experience above stays the same without one.
-                          const SizedBox(height: 16),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              NeoButton(
-                                key: const Key('landing-sign-in'),
-                                variant: NeoButtonVariant.ghost,
-                                onPressed: isLoading
-                                    ? null
-                                    : () => pushKoiPage<void>(
-                                        context,
-                                        const AccountAuthScreen(
-                                          mode: AccountFormMode.signIn,
-                                        ),
-                                      ),
-                                child: const Text('Sign in'),
-                              ),
-                              NeoButton(
-                                key: const Key('landing-create-account'),
-                                variant: NeoButtonVariant.ghost,
-                                onPressed: isLoading
-                                    ? null
-                                    : () => pushKoiPage<void>(
-                                        context,
-                                        const AccountAuthScreen(
-                                          mode: AccountFormMode.create,
-                                        ),
-                                      ),
-                                child: const Text('Create account'),
-                              ),
-                            ],
+                          // MOB-1 / AUTH-ENTRY (mobile-only): registered
+                          // accounts. "Start Talking" above stays the
+                          // no-account path, unchanged.
+                          const SizedBox(height: 24),
+                          AccountChoiceButtons(
+                            keyPrefix: 'landing',
+                            enabled: !isLoading,
                           ),
+                          const SizedBox(height: 12),
+                          Text(
+                            ref.watch(careStringsProvider).t(CareText.auWhy),
+                            key: const Key('landing-account-why'),
+                            style: bodyText(
+                              14,
+                              weight: FontWeight.w500,
+                              color: _gray600,
+                              height: 20 / 14,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const PsychologistLink(),
                         ],
                       ),
               ),

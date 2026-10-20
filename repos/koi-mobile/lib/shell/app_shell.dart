@@ -5,6 +5,7 @@ import '../account/account_providers.dart';
 import '../account/account_widgets.dart' show pushKoiPage;
 import '../account/capability_controller.dart';
 import '../account/care_screen.dart';
+import '../app/providers.dart';
 import '../chat/chat_screen.dart';
 import '../environment/environment_palette.dart';
 import '../environment/environment_providers.dart';
@@ -95,7 +96,18 @@ class _AppShellState extends ConsumerState<AppShell> {
     final checking = controller.status == CapabilityStatus.loading;
     if (!checking) _hadCare = confirmed;
     final hasCare = confirmed || (checking && _hadCare);
-    if (!hasCare && _tab == KoiTab.care) _tab = KoiTab.chat;
+    // AUTH-ENTRY: anonymous users get the tab as an information page (no
+    // Care data, no Care call), and registered users whose account
+    // features cannot be confirmed get the calm "not available yet". The
+    // bell and badge stay for a confirmed Care area only.
+    final anonymous = ref.watch(
+      authServiceProvider.select((a) => a.user?.isAnonymous ?? false),
+    );
+    final careTab =
+        hasCare ||
+        anonymous ||
+        controller.status == CapabilityStatus.unavailable;
+    if (!careTab && _tab == KoiTab.care) _tab = KoiTab.chat;
     return Scaffold(
       backgroundColor: KoiColors.background,
       body: Column(
@@ -113,7 +125,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                   ? (tab, child) =>
                         tab == KoiTab.care ? CareTabBadge(child: child) : child
                   : null,
-              tabs: hasCare
+              tabs: careTab
                   ? const [
                       KoiTab.chat,
                       KoiTab.progress,
