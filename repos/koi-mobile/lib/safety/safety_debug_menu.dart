@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/providers.dart';
 import '../environment/environment_debug_menu.dart';
 import '../environment/environment_providers.dart';
+import '../safety_plan/safety_plan_providers.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_text.dart';
 import '../voice_input/mic_providers.dart';
@@ -116,6 +117,7 @@ class SafetyDebugButton extends ConsumerWidget {
             context,
             ref.read(environmentControllerProvider),
           ),
+          safetyPlan: _safetyPlanTools(ref),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -151,6 +153,7 @@ class SafetyDebugTrigger extends ConsumerWidget {
           context,
           ref.read(environmentControllerProvider),
         ),
+        safetyPlan: _safetyPlanTools(ref),
       ),
       child: child,
     );
@@ -167,6 +170,41 @@ String? _lastDiagnostics(WidgetRef ref) {
   return lines.isEmpty ? null : lines.join('\n');
 }
 
+/// "Fill demo safety plan" / "Clear safety plan" for the signed-in user.
+/// Null (no items) in release builds, when nobody is signed in, or when the
+/// plan providers are not available: the rest of the menu always opens.
+SafetyPlanDebugTools? _safetyPlanTools(WidgetRef ref) {
+  if (!kDebugMode || !ref.read(safetyPlanDebugToolsProvider)) return null;
+  try {
+    final uid = ref.read(safetyPlanUidProvider);
+    if (uid == null) return null;
+    final repo = ref.read(safetyPlanRepositoryProvider);
+    final now = ref.read(safetyPlanClockProvider);
+    return (
+      fill: () async {
+        await repo.fillDemo(uid, now());
+        // An open plan screen (or the crisis button) reloads it.
+        ref.invalidate(safetyPlanControllerProvider(uid));
+      },
+      clear: () async {
+        await repo.clear(uid);
+        ref.invalidate(safetyPlanControllerProvider(uid));
+      },
+    );
+  } catch (e) {
+    debugPrint('KOI: safety plan debug tools unavailable: ${e.runtimeType}');
+    return null;
+  }
+}
+
+typedef SafetyPlanDebugTools = ({
+  Future<void> Function() fill,
+  Future<void> Function() clear,
+});
+
+const String fillDemoSafetyPlanLabel = 'Fill demo safety plan';
+const String clearSafetyPlanLabel = 'Clear safety plan';
+
 const String copyChatDiagnosticsLabel = 'Copy last chat diagnostics';
 const String noChatDiagnostics = '[KOI] chat: no request yet';
 
@@ -178,6 +216,7 @@ Future<void> showSafetyDebugMenu(
   SafetyController controller, {
   String? Function()? lastChatDiagnostics,
   VoidCallback? onEnvironmentEmotion,
+  SafetyPlanDebugTools? safetyPlan,
 }) => showModalBottomSheet<void>(
   context: context,
   useRootNavigator: true,
@@ -248,6 +287,14 @@ Future<void> showSafetyDebugMenu(
               'crisis_resolved sent',
               controller.crisisResolutionSent,
             ),
+            if (safetyPlan != null) ...[
+              item(
+                'fill-safety-plan',
+                fillDemoSafetyPlanLabel,
+                safetyPlan.fill,
+              ),
+              item('clear-safety-plan', clearSafetyPlanLabel, safetyPlan.clear),
+            ],
             if (onEnvironmentEmotion != null)
               item('environment', environmentDebugLabel, onEnvironmentEmotion),
             if (lastChatDiagnostics != null)

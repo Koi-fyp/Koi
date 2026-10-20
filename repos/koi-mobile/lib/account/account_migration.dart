@@ -9,6 +9,7 @@ import '../checkins/checkin_store.dart';
 import '../core/crypto_context.dart';
 import '../core/key_value_store.dart';
 import '../core/sync_queue.dart';
+import '../safety_plan/safety_plan_store.dart';
 
 /// The upload side a migration needs: write now and say whether the server
 /// confirmed it, and drop stale queued copies. [PersistentSyncQueue] is it.
@@ -149,10 +150,14 @@ class CseMigration {
     required this.cipher,
     required this.uploader,
     required this.markers,
+    this.safetyPlans,
   });
 
   final MessageStore messages;
   final CheckInBox checkIns;
+
+  /// The on-device safety plan (local only, like check-ins: never uploaded).
+  final SafetyPlanBox? safetyPlans;
   final MessageCipher cipher;
   final MigrationUploader uploader;
   final KeyValueStore markers;
@@ -225,8 +230,9 @@ class CseMigration {
     timestampFields: const ['timestamp'],
   );
 
-  /// Link (same uid): every message and check-in of [uid] moves from the
-  /// anonymous secret [fromSecret] to [to] (password + the uid's salt).
+  /// Link (same uid): every message, check-in and the safety plan of [uid]
+  /// moves from the anonymous secret [fromSecret] to [to] (password + the
+  /// uid's salt).
   Future<MigrationReport> runLink({
     required String uid,
     required String fromSecret,
@@ -266,6 +272,15 @@ class CseMigration {
     reencrypted += c.$1;
     already += c.$2;
     unreadable += c.$3;
+    final p = await _moveSafetyPlan(
+      from: uid,
+      to: uid,
+      fromSecret: fromSecret,
+      ctx: to,
+    );
+    reencrypted += p.$1;
+    already += p.$2;
+    unreadable += p.$3;
 
     // Old-ciphertext copies of these messages must never be written.
     final ids = {for (final r in rows) r.id};
@@ -350,6 +365,15 @@ class CseMigration {
     copied += c.$1;
     already += c.$2;
     unreadable += c.$3;
+    final p = await _moveSafetyPlan(
+      from: source,
+      to: target,
+      fromSecret: fromSecret,
+      ctx: to,
+    );
+    copied += p.$1;
+    already += p.$2;
+    unreadable += p.$3;
 
     marker = marker.copyWith(state: MigrationState.awaitingAck);
     await markers.put(claimKey(target), marker.encode());
@@ -416,6 +440,27 @@ class CseMigration {
           .encode(),
     );
     return uploaded;
+  }
+
+  /// Re-encrypts (link) or copies (claim, only when the account has none)
+  /// the safety plan. Returns (moved, alreadyDone, unreadable).
+  Future<(int, int, int)> _moveSafetyPlan({
+    required String from,
+    required String to,
+    required String fromSecret,
+    required CryptoContext ctx,
+  }) async {
+    final box = safetyPlans;
+    if (box == null) return (0, 0, 0);
+    return SafetyPlanRepository.move(
+      box,
+      from: from,
+      to: to,
+      plaintextToMove: (payload) => from == to
+          ? _plaintextToMove(payload, fromSecret, ctx)
+          : cipher.decrypt(payload, fromSecret),
+      encrypt: (plain) => cipher.encrypt(plain, ctx.secret, ctx.saltB64),
+    );
   }
 
   /// Re-encrypts (from == to) or copies (claim) check-in rows. Returns

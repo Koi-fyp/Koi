@@ -30,6 +30,8 @@ class CrisisScreen extends StatefulWidget {
     required this.view,
     required this.onChoose,
     this.openUrl = _launch,
+    this.onOpenSafetyPlan,
+    this.safetyPlanLabel = defaultSafetyPlanLabel,
   });
 
   final CrisisView view;
@@ -37,6 +39,14 @@ class CrisisScreen extends StatefulWidget {
 
   /// Opens the `tel:` link. Injectable for tests.
   final UrlOpener openUrl;
+
+  /// Mobile-only (BATCH SAFETY-PLAN): opens the user's own safety plan,
+  /// read only, on top of this screen. Null (no plan, still loading, or it
+  /// failed to load) = no button. It is NOT a path choice: it never
+  /// resolves or closes this screen and sends nothing.
+  final VoidCallback? onOpenSafetyPlan;
+  final String safetyPlanLabel;
+  static const String defaultSafetyPlanLabel = 'Open my safety plan';
 
   // Web text (CrisisHandoffDialog.tsx).
   static const String title = 'Let’s check what support you need';
@@ -175,6 +185,24 @@ class _CrisisScreenState extends State<CrisisScreen> {
         for (final path in CrisisPath.values) ...[
           _choice(path),
           if (path != CrisisPath.values.last) const SizedBox(height: 10),
+        ],
+        // Below the helpline and every existing option, never above them.
+        if (widget.onOpenSafetyPlan case final open?) ...[
+          const SizedBox(height: 20),
+          NeoButton(
+            key: const Key('crisis-safety-plan'),
+            variant: NeoButtonVariant.ghost,
+            fullWidth: true,
+            onPressed: open,
+            // Wraps (Urdu, 320dp) instead of overflowing the button row.
+            child: Flexible(
+              child: Text(
+                widget.safetyPlanLabel,
+                softWrap: true,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
         ],
       ],
     );

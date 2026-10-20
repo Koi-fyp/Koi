@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../care/care_strings.dart';
+import '../safety_plan/safety_plan_providers.dart';
+import '../safety_plan/safety_plan_view.dart' show SafetyPlanView;
 import '../settings/widgets/settings_widgets.dart'
     show SettingsToastLayer, ToastMessage, ToastType;
 import 'breathing_screen.dart';
@@ -27,6 +30,7 @@ class _SafetyHostState extends ConsumerState<SafetyHost> {
   late final SafetyController _c = ref.read(safetyControllerProvider);
   Route<void>? _crisisRoute;
   Route<void>? _breathingRoute;
+  Route<void>? _planRoute;
   int _noticeSeq = 0;
   ToastMessage? _toast;
 
@@ -42,6 +46,7 @@ class _SafetyHostState extends ConsumerState<SafetyHost> {
     _c.removeListener(_onChange);
     _remove(_crisisRoute);
     _remove(_breathingRoute);
+    _remove(_planRoute);
     super.dispose();
   }
 
@@ -61,6 +66,8 @@ class _SafetyHostState extends ConsumerState<SafetyHost> {
       _breathingRoute = null;
     }
     if (_c.crisis == null) {
+      _remove(_planRoute);
+      _planRoute = null;
       _remove(_crisisRoute);
       _crisisRoute = null;
     }
@@ -73,10 +80,14 @@ class _SafetyHostState extends ConsumerState<SafetyHost> {
         settings: const RouteSettings(name: 'crisis'),
         pageBuilder: (context, _, _) => ListenableBuilder(
           listenable: _c,
-          builder: (context, _) => CrisisScreen(
-            // The open screen may get its content filled in later.
-            view: _c.crisis ?? view,
-            onChoose: _c.chooseCrisisPath,
+          builder: (context, _) => Consumer(
+            builder: (context, ref, _) => CrisisScreen(
+              // The open screen may get its content filled in later.
+              view: _c.crisis ?? view,
+              onChoose: _c.chooseCrisisPath,
+              onOpenSafetyPlan: _safetyPlanOpener(ref),
+              safetyPlanLabel: _safetyPlanLabel(ref),
+            ),
           ),
         ),
       );
@@ -99,6 +110,46 @@ class _SafetyHostState extends ConsumerState<SafetyHost> {
         () => _toast = ToastMessage(_c.notice!, ToastType.info, _noticeSeq),
       );
     }
+  }
+
+  /// The crisis screen's "Open my safety plan": only when the signed-in
+  /// user's plan has loaded and has something in it. Loading, no plan or
+  /// any error = null (no button); the crisis screen and its helpline are
+  /// never held back or broken by the plan.
+  VoidCallback? _safetyPlanOpener(WidgetRef ref) {
+    try {
+      final uid = ref.watch(safetyPlanUidProvider);
+      if (uid == null) return null;
+      if (!ref.watch(safetyPlanControllerProvider(uid)).hasPlan) return null;
+      return _openSafetyPlan;
+    } catch (e) {
+      debugPrint('KOI: crisis safety plan button hidden: ${e.runtimeType}');
+      return null;
+    }
+  }
+
+  String _safetyPlanLabel(WidgetRef ref) {
+    try {
+      return ref.watch(careStringsProvider).t(CareText.spOpen);
+    } catch (_) {
+      return CrisisScreen.defaultSafetyPlanLabel;
+    }
+  }
+
+  /// Read only, above the crisis screen. Touches nothing in the
+  /// SafetyController: no path, no resolution, no event; Back returns to
+  /// the crisis screen exactly as it was.
+  void _openSafetyPlan() {
+    if (!mounted || _c.crisis == null) return;
+    if (_planRoute?.isActive ?? false) return;
+    final route = MaterialPageRoute<void>(
+      settings: const RouteSettings(name: 'crisis-safety-plan'),
+      builder: (_) => const SafetyPlanView(fromCrisis: true),
+    );
+    _planRoute = route;
+    Navigator.of(context, rootNavigator: true).push(route).whenComplete(() {
+      if (identical(_planRoute, route)) _planRoute = null;
+    });
   }
 
   @override

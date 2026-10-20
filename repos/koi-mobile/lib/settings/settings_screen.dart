@@ -11,6 +11,7 @@ import '../avatar/avatar_providers.dart';
 import '../avatar/avatar_source.dart';
 import '../onboarding/steps/ai_disclosure_step.dart' show AIDisclosureStep;
 import '../safety/safety_debug_menu.dart';
+import '../safety_plan/safety_plan_view.dart' show SafetyPlanEntry;
 import '../theme/koi_colors.dart';
 import '../widgets/neo_button.dart';
 import '../chat/widgets/chat_widgets.dart' show StrokeIcon;
@@ -442,6 +443,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Import Data',
               desc: 'Coming soon; import unavailable', // page.tsx:257
               onTap: () => _push(const ImportScreen()),
+            ),
+            const SettingsDivider(),
+            // Mobile-only (BATCH SAFETY-PLAN): the personal safety plan,
+            // stored encrypted on this device only. English label like the
+            // rest of Settings; the plan screens follow the Urdu table.
+            SettingsRow(
+              key: const Key('row-safety-plan'),
+              icon: '🛟',
+              label: 'My safety plan',
+              desc: 'Your plan for hard moments, on this device only',
+              onTap: () => _push(const SafetyPlanEntry()),
             ),
           ],
         ),

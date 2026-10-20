@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 
 import '../theme/koi_colors.dart';
 import '../theme/koi_radii.dart';
@@ -28,6 +29,8 @@ class NeoInput extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType,
     this.focusNode,
+    this.maxLength,
+    this.textDirection,
   });
 
   final String? label;
@@ -40,6 +43,12 @@ class NeoInput extends StatefulWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final FocusNode? focusNode;
+
+  /// Hard limit on the characters typed or pasted (no counter is drawn).
+  final int? maxLength;
+
+  /// Null = the surrounding direction.
+  final TextDirection? textDirection;
 
   // globals.css .neo-input (1rem = 16px)
   static const double borderWidth = 2; // border: 2px solid #000
@@ -114,6 +123,10 @@ class _NeoInputState extends State<NeoInput> {
         onChanged: widget.onChanged,
         enabled: widget.enabled,
         obscureText: widget.obscureText,
+        textDirection: widget.textDirection,
+        inputFormatters: widget.maxLength == null
+            ? null
+            : [LengthLimitingTextInputFormatter(widget.maxLength)],
         keyboardType: widget.multiline
             ? TextInputType.multiline
             : widget.keyboardType,

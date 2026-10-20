@@ -630,6 +630,9 @@ void main() {
       await tester.pump();
       await tester.tap(cta);
       await tester.pump();
+      // Optional safety plan sub-screen (not a counted step): Not now.
+      await tester.tap(find.byKey(const Key('sp-onboarding-skip')));
+      await tester.pump();
       await tester.ensureVisible(find.byKey(const Key('check-ai')));
       await tester.tap(find.byKey(const Key('check-ai')));
       await tester.tap(find.byKey(const Key('check-privacy')));

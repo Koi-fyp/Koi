@@ -34,6 +34,8 @@ import 'modes/input_mode.dart';
 import 'onboarding/onboarding_service.dart';
 import 'questionnaires/draft_store.dart';
 import 'questionnaires/questionnaire_providers.dart';
+import 'safety_plan/safety_plan_providers.dart';
+import 'safety_plan/safety_plan_store.dart';
 import 'settings/settings_prefs.dart';
 import 'theme/koi_theme.dart';
 import 'voice_input/mic_controller.dart';
@@ -90,6 +92,7 @@ Future<void> main() async {
   );
   final messages = await HiveMessageStore.open();
   final checkIns = await HiveCheckInBox.open();
+  final safetyPlans = await HiveSafetyPlanBox.open();
   final questionnaireDrafts = await HiveDraftBox.open();
   // MOB-1: Client-Side Encryption (CSE) at rest secrets, one set per uid.
   final secrets = AccountSecretStore(const FlutterSecureKv());
@@ -153,6 +156,7 @@ Future<void> main() async {
         onboardingStoreProvider.overrideWith((ref) => onboarding),
         modePrefsProvider.overrideWithValue(ModePrefs(localPrefs)),
         checkInBoxProvider.overrideWithValue(checkIns),
+        safetyPlanBoxProvider.overrideWithValue(safetyPlans),
         micPrefsProvider.overrideWithValue(MicPrefs(localPrefs)),
         onboardingUserWriterProvider.overrideWithValue(
           HiveUserOnboardingWriter(UserRepository()),

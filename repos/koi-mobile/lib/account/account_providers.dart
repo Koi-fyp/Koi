@@ -9,6 +9,7 @@ import '../core/sync_queue.dart';
 import '../experts/expert_api.dart';
 import '../platform/platform_client.dart';
 import '../platform/platform_config.dart';
+import '../safety_plan/safety_plan_providers.dart';
 import 'account_controller.dart';
 import 'account_migration.dart';
 import 'capabilities.dart';
@@ -111,6 +112,7 @@ final cseMigrationProvider = Provider<CseMigration>(
   (ref) => CseMigration(
     messages: ref.read(messageStoreProvider),
     checkIns: ref.read(checkInBoxProvider),
+    safetyPlans: ref.read(safetyPlanBoxProvider),
     cipher: ref.read(messageCipherProvider),
     uploader: ref.read(migrationUploaderProvider),
     markers: ref.read(localPrefsProvider),

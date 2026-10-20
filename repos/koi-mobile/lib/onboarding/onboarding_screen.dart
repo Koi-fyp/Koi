@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/providers.dart';
 import '../avatar/avatar_state.dart';
+import '../safety_plan/safety_plan_onboarding_step.dart';
 import '../theme/koi_colors.dart';
 import 'onboarding_service.dart';
 import 'progress_indicator.dart';
@@ -20,6 +21,11 @@ import 'steps/welcome_step.dart';
 /// Raza/male, Koi/fox (page.tsx:20). Steps: 0=Welcome, 1=Privacy,
 /// 2=CompanionSelection, 3=AIDisclosure, 4=Language, 5=Notification
 /// (page.tsx:21).
+///
+/// Mobile-only: after Companion, an optional safety plan sub-screen
+/// ([SafetyPlanOnboardingStep]) shows before AI Disclosure. It is not a
+/// counted step: [totalSteps], the step numbers and the progress dots stay
+/// as on Web (decision 2026-10-20, option B).
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({
     super.key,
@@ -52,6 +58,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// page.tsx:40 default 'raza'.
   CompanionAvatar _companion = CompanionAvatar.raza;
 
+  /// The safety plan sub-screen is showing (still step 2 for progress).
+  bool _safetyPlan = false;
+
   void _advance() => setState(() => _step++);
 
   /// Android back. Web keeps the step in component state, so browser back
@@ -61,6 +70,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// the landing page (decision 2026-10-14, option a).
   void _onBack(bool didPop, Object? _) {
     if (didPop) return;
+    if (_safetyPlan) {
+      setState(() => _safetyPlan = false);
+      return;
+    }
     final prev = OnboardingScreen.previousStep(_step);
     if (prev != null) {
       setState(() => _step = prev);
@@ -91,11 +104,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final step = switch (_step) {
       0 => WelcomeStep(onNext: _advance),
       1 => PrivacyStep(onNext: _advance),
+      2 when _safetyPlan => SafetyPlanOnboardingStep(
+        onNext: () => setState(() {
+          _safetyPlan = false;
+          _step++;
+        }),
+      ),
       2 => CompanionSelectionStep(
         initialSelection: _companion.companion,
         onNext: (id) => setState(() {
           _companion = CompanionAvatar.fromCompanion(id) ?? _companion;
-          _step++;
+          _safetyPlan = true;
         }),
       ),
       3 => AIDisclosureStep(
@@ -136,7 +155,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
             Expanded(
               child: KeyedSubtree(
-                key: ValueKey('onboarding-step-$_step'),
+                key: ValueKey(
+                  _safetyPlan
+                      ? 'onboarding-safety-plan'
+                      : 'onboarding-step-$_step',
+                ),
                 child: step,
               ),
             ),
