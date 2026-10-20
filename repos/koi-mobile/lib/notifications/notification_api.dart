@@ -15,9 +15,13 @@ abstract interface class NotificationApi {
   });
 }
 
-// PROVISIONAL CONTRACT: KOI_MOB1_PROVISIONAL_CONTRACTS.md §11
-// (Notifications). Contract v0.5.1 listNotifications /
-// markNotificationRead are `proposed_not_implemented`.
+// REAL, contract v0.5.2 (origin/handoff/koi-web-1-to-5-2026-10-20, read
+// with git show only; openapi x-status is stale): GET /api/v1/notifications
+// → community.ts:193-215 (registered accounts only; the first page also
+// delivers missing assignment notices; closed relationships are left out);
+// POST /api/v1/notifications/{id}/read with body {} → community.ts:199-205
+// (no recent sign-in needed; the first read_at is kept). Unread counts
+// describe loaded notifications only (semantics.md).
 class HttpNotificationApi implements NotificationApi {
   HttpNotificationApi(this.client);
   final PlatformClient client;

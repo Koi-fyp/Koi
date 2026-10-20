@@ -43,6 +43,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   /// The Care area was confirmed before the current capability re-check.
   bool _hadCare = false;
 
+  /// The Care tab was shown (any page) before the current re-check.
+  bool _hadCareTab = false;
+
   void _select(KoiTab tab) => setState(() => _tab = tab);
 
   /// MOB-2 bell: the inbox opens inside the Care tab, so the top nav stays.
@@ -103,10 +106,17 @@ class _AppShellState extends ConsumerState<AppShell> {
     final anonymous = ref.watch(
       authServiceProvider.select((a) => a.user?.isAnonymous ?? false),
     );
-    final careTab =
+    // MOB-4: a registered account the server has not set up for Care
+    // (`unregistered`, or no General access) gets the "not set up yet" page.
+    // A Retry from that page or the "not available" one keeps the tab
+    // while it checks.
+    final careTabNow =
         hasCare ||
         anonymous ||
-        controller.status == CapabilityStatus.unavailable;
+        controller.status == CapabilityStatus.unavailable ||
+        controller.effective.careNotSetUp;
+    if (!checking) _hadCareTab = careTabNow;
+    final careTab = careTabNow || (checking && _hadCareTab);
     if (!careTab && _tab == KoiTab.care) _tab = KoiTab.chat;
     return Scaffold(
       backgroundColor: KoiColors.background,

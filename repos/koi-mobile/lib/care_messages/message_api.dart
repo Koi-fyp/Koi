@@ -5,9 +5,10 @@ import 'message_models.dart';
 abstract interface class CareMessageApi {
   bool get isMock;
 
-  /// One page of a relationship's messages. The contract does not state
-  /// the order; mobile sorts by `created_at` itself and treats the cursor
-  /// as "older messages" (assumption, KOI_MOB1_PROVISIONAL_CONTRACTS.md §9).
+  /// One page of a relationship's messages, in the server's document-id
+  /// order (NOT by time: community.ts:188, semantics "displayed
+  /// chronologically within loaded records"). The thread reads every page
+  /// and sorts by `created_at` itself (CareList.loadAll).
   Future<ApiPage<HumanMessage>> list(String relationshipId, {String? cursor});
 
   Future<HumanMessage> send(
@@ -17,9 +18,12 @@ abstract interface class CareMessageApi {
   });
 }
 
-// PROVISIONAL CONTRACT: KOI_MOB1_PROVISIONAL_CONTRACTS.md §9 (Professional
-// messages). Contract v0.5.1 createHumanMessage / listHumanMessages are
-// `proposed_not_implemented`.
+// REAL, contract v0.5.2 (origin/handoff/koi-web-1-to-5-2026-10-20, read
+// with git show only; openapi x-status still says proposed_not_implemented
+// but the routes exist): GET /api/v1/relationships/{id}/messages →
+// community-http.ts:37 → community.ts:183-192; POST /api/v1/messages →
+// community-http.ts:34 → community.ts:132-146 (201, active relationship,
+// whitespace-only body 422, sign-in within 5 minutes → reauth).
 class HttpCareMessageApi implements CareMessageApi {
   HttpCareMessageApi(this.client);
   final PlatformClient client;
@@ -34,7 +38,7 @@ class HttpCareMessageApi implements CareMessageApi {
   }) async => parseApiPage(
     await client.getJson(
       '/api/v1/relationships/${Uri.encodeComponent(relationshipId)}/messages',
-      query: pageQuery(cursor: cursor),
+      query: pageQuery(cursor: cursor, limit: carePageLimitAll),
     ),
     HumanMessage.fromJson,
   );

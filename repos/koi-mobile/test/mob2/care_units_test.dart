@@ -335,7 +335,8 @@ void main() {
         expect(jsonDecode(r[2].body!), {'expected_revision': 2});
         expect(jsonDecode(r[4].body!), {'relationship_id': 'r1', 'body': 'hi'});
         expect(jsonDecode(r[5].body!), {'relationship_id': 'r1'});
-        expect(r[3].uri.queryParameters, {'limit': '25'});
+        // MOB-4 (decision 3, 2026-10-21): threads read every page at 100.
+        expect(r[3].uri.queryParameters, {'limit': '100'});
         expect(
           [for (final x in r) x.headers['Idempotency-Key']],
           ['k1', 'k2', 'k3', null, 'k4', 'k5', 'k6', 'k7'],

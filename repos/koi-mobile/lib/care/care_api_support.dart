@@ -6,11 +6,12 @@ import '../platform/platform_client.dart';
 import 'care_strings.dart';
 
 // Shared by the MOB-2 adapters (experts, applications, professional
-// messages, appointments, notifications). Wire shapes: contract v0.5.1
-// (origin/feat/web-1-professional-publishing
-// repos/koi-backend/nextjs_app/contracts/v0.5.1/contracts.schema.json),
-// read with git show only. Every list is `{items: [...], next_cursor}`
-// with `limit` (default 25, max 100) and an opaque `cursor`.
+// messages, appointments, notifications). Wire shapes: contract v0.5.2
+// (origin/handoff/koi-web-1-to-5-2026-10-20
+// repos/koi-backend/nextjs_app/contracts/v0.5.2/contracts.schema.json;
+// these definitions are unchanged since v0.5.1), read with git show only.
+// Every list is `{items: [...], next_cursor}` with `limit` (default 25,
+// max 100) and an opaque, signed `cursor` that expires after 15 minutes.
 
 /// One page of a contract list.
 @immutable
@@ -38,6 +39,14 @@ ApiPage<T> parseApiPage<T>(Object? body, T? Function(Object? item) parse) {
   final next = j['next_cursor'];
   return ApiPage(items, next is String && next.isNotEmpty ? next : null);
 }
+
+/// MOB-4: the contract's largest page (`limit` 1-100, community.ts:184),
+/// used by the lists that read every page (messages, appointments).
+const int carePageLimitAll = 100;
+
+/// At most this many pages of [carePageLimitAll]: 1,000 items, then the
+/// screen says only part could be loaded (decision 2026-10-21).
+const int careMaxPages = 10;
 
 Map<String, String> pageQuery({String? cursor, int limit = 25}) => {
   'limit': '$limit',

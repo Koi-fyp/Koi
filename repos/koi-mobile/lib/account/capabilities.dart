@@ -23,6 +23,27 @@ enum KoiRole {
   };
 }
 
+/// `CapabilitiesDTO.account_state` (contract v0.5.2, service.ts:81).
+/// [unknown] = no server answer (default-deny); [unrecognized] = a value
+/// this app does not know. Anything but [registered] has no Care
+/// privileges, and is NOT an anonymous user (MOB-4).
+enum AccountState {
+  unknown,
+  registered,
+  unregistered,
+  suspended,
+  closed,
+  unrecognized;
+
+  static AccountState fromWire(Object? v) => switch (v) {
+    'registered' => registered,
+    'unregistered' => unregistered,
+    'suspended' => suspended,
+    'closed' => closed,
+    _ => unrecognized,
+  };
+}
+
 /// The patient's relationship as the backend reports it. No clinical,
 /// evaluation or review data: only what the patient may see.
 ///
@@ -86,9 +107,9 @@ class RelationshipSummary {
   }
 }
 
-/// `GET /api/v1/me/capabilities`: REAL on
-/// origin/feat/web-1-professional-publishing (http.ts:40 → service.ts:54),
-/// contract v0.5.1 `CapabilitiesDTO` (`contract_version` "0.5.0"):
+/// `GET /api/v1/me/capabilities`: REAL, contract v0.5.2 (unchanged since
+/// v0.5.1; origin/handoff/koi-web-1-to-5-2026-10-20 http.ts:40 →
+/// service.ts:54-87), `CapabilitiesDTO` (`contract_version` "0.5.0"):
 ///
 /// ```json
 /// {"contract_version": "0.5.0", "uid": "...",
@@ -103,7 +124,8 @@ class RelationshipSummary {
 /// ```
 ///
 /// The contract has no `role`; mobile derives one:
-/// - not `registered` → [KoiRole.anonymous] (no privileges);
+/// - not `registered` → [KoiRole.anonymous] (no privileges), keeping
+///   [KoiCapabilities.accountState] so Care can say "not set up yet";
 /// - `professional_workspace` → [KoiRole.psychologist] (portal landing);
 /// - at least one active relationship → [KoiRole.patient];
 /// - otherwise → [KoiRole.general].
@@ -118,6 +140,7 @@ class KoiCapabilities {
     this.relationship,
     this.relationships = const [],
     this.authorizationRevision = 0,
+    this.accountState = AccountState.unknown,
   });
 
   /// Default-deny: no registered privileges at all.
@@ -136,6 +159,10 @@ class KoiCapabilities {
   final List<RelationshipSummary> relationships;
   final int authorizationRevision;
 
+  /// What the server said about the account; [AccountState.unknown] for
+  /// [none] (nothing confirmed).
+  final AccountState accountState;
+
   bool get isPsychologist => role == KoiRole.psychologist;
 
   /// General or patient, with the server's discovery flag.
@@ -150,6 +177,14 @@ class KoiCapabilities {
 
   /// Any registered (General / Patient) area at all.
   bool get hasCareArea => canDiscoverExperts || isPatient;
+
+  /// MOB-4: the server answered, but this account has no Care area: any
+  /// state other than `registered` (a new Email/Password account is
+  /// `unregistered`: there is no public registration), or `registered`
+  /// with every flag off (`general_access` false). Never an anonymous
+  /// user, never a patient or psychologist.
+  bool get careNotSetUp =>
+      accountState != AccountState.unknown && !isPsychologist && !hasCareArea;
 
   /// Active relationships (falls back to [relationship]).
   List<RelationshipSummary> get activeRelationships => !isPatient
@@ -167,7 +202,10 @@ class KoiCapabilities {
     if (version is! String || !version.startsWith('0.5.')) {
       throw const FormatException('unknown contract_version');
     }
-    if (j['account_state'] != 'registered') return none;
+    final state = AccountState.fromWire(j['account_state']);
+    if (state != AccountState.registered) {
+      return KoiCapabilities(role: KoiRole.anonymous, accountState: state);
+    }
     final flags = j['capabilities'] is Map
         ? (j['capabilities']! as Map).cast<String, Object?>()
         : const <String, Object?>{};
@@ -181,6 +219,7 @@ class KoiCapabilities {
       return KoiCapabilities(
         role: KoiRole.psychologist,
         authorizationRevision: revision,
+        accountState: state,
       );
     }
     final discovery = flags['expert_directory'] == true;
@@ -192,12 +231,14 @@ class KoiCapabilities {
         relationship: rels.first,
         relationships: rels,
         authorizationRevision: revision,
+        accountState: state,
       );
     }
     return KoiCapabilities(
       role: KoiRole.general,
       expertDiscovery: discovery,
       authorizationRevision: revision,
+      accountState: state,
     );
   }
 }
@@ -251,10 +292,16 @@ class MockCapabilitiesSource implements CapabilitiesSource {
   Future<KoiCapabilities> fetch(String uid) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     return switch (role.value) {
-      KoiRole.anonymous => KoiCapabilities.none,
+      // A registered Firebase user the demo server does not know: what a
+      // new Email/Password account gets (MOB-4 "not set up yet").
+      KoiRole.anonymous => const KoiCapabilities(
+        role: KoiRole.anonymous,
+        accountState: AccountState.unregistered,
+      ),
       KoiRole.general => const KoiCapabilities(
         role: KoiRole.general,
         expertDiscovery: true,
+        accountState: AccountState.registered,
       ),
       KoiRole.patient => KoiCapabilities(
         role: KoiRole.patient,
@@ -262,8 +309,12 @@ class MockCapabilitiesSource implements CapabilitiesSource {
         questionnaires: true,
         relationship: relationship,
         relationships: [relationship],
+        accountState: AccountState.registered,
       ),
-      KoiRole.psychologist => const KoiCapabilities(role: KoiRole.psychologist),
+      KoiRole.psychologist => const KoiCapabilities(
+        role: KoiRole.psychologist,
+        accountState: AccountState.registered,
+      ),
     };
   }
 }

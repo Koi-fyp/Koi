@@ -271,18 +271,17 @@ class _ThreadState extends ConsumerState<_Thread> {
               ),
             ),
             const SizedBox(height: 14),
-            if (list.hasMore)
+            // MOB-4: the thread reads every page (server pages are not in
+            // time order), so there is no "older messages" button; past
+            // 1,000 messages it says only part was loaded.
+            if (list.capped)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: list.isLoadingMore
-                    ? KoiLoader(compact: true, label: s.t(CareText.loading))
-                    : NeoButton(
-                        key: const Key('thread-load-older'),
-                        variant: NeoButtonVariant.ghost,
-                        fullWidth: true,
-                        onPressed: list.loadMore,
-                        child: CareButtonLabel(s.t(CareText.loadOlder)),
-                      ),
+                child: Text(
+                  s.t(CareText.m4MessagesCapped),
+                  key: const Key('thread-capped'),
+                  style: careMuted(s),
+                ),
               ),
             if (list.isUpdating) CareUpdating(strings: s),
             if (list.isLoading)

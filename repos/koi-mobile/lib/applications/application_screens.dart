@@ -128,12 +128,21 @@ class _ApplyState extends ConsumerState<_Apply> {
         ),
       );
     } catch (e) {
+      // A 403 also re-checks the capabilities, which can rebuild this page:
+      // the Care home keeps the answer as its notice too.
       if (!mounted) return;
+      if (careFailureOf(e) == CareFailure.denied) {
+        ref.read(careSessionProvider).showNotice(CareText.m4NotAcceptingNow);
+      }
       setState(() {
         _busy = false;
-        _error = careFailureOf(e) == CareFailure.conflict
-            ? s.t(CareText.alreadyConnected)
-            : careFailureText(s, e);
+        _error = switch (careFailureOf(e)) {
+          CareFailure.conflict => s.t(CareText.alreadyConnected),
+          // v0.5.2 (lifecycle.ts:159-160): the profile is not discoverable
+          // or not accepting new patients right now.
+          CareFailure.denied => s.t(CareText.m4NotAcceptingNow),
+          _ => careFailureText(s, e),
+        };
       });
     }
   }

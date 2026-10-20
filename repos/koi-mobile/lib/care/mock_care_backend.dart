@@ -8,6 +8,7 @@ import '../appointments/appointment_models.dart';
 import '../care_messages/message_api.dart';
 import '../care_messages/message_models.dart';
 import '../experts/expert_api.dart';
+import '../invitations/invitation_api.dart';
 import '../notifications/notification_api.dart';
 import '../notifications/notification_models.dart';
 import '../platform/platform_client.dart';
@@ -15,9 +16,9 @@ import 'care_api_support.dart';
 
 /// KOI_MOCKS=true ONLY: an in-memory stand-in for the platform server so
 /// the MOB-2 flows can be tried on a phone. Every screen fed by it shows
-/// the "Demo data" badge. It follows the contract v0.5.1 rules (states,
-/// revisions, one request per psychologist, fixed notification kinds) and
-/// keeps each signed-in uid's data apart.
+/// the "Demo data" badge. It follows the contract v0.5.2 rules (states,
+/// revisions, one request per psychologist, fixed notification kinds,
+/// invitation redeem) and keeps each signed-in uid's data apart.
 ///
 /// The psychologist's side (accept, propose a time, reply, end the
 /// relationship) is driven from the debug-only "Simulate psychologist"
@@ -98,10 +99,22 @@ class MockCareBackend extends ChangeNotifier {
   Future<ConnectionRequest> createApplication(String psychologistUid) async {
     await _wait();
     final u = _me;
+    // v0.5.2 (lifecycle.ts:159-160): only a discoverable profile accepting
+    // new patients takes a NEW application.
+    final id = 'demo-request-$psychologistUid';
+    final accepting = MockExpertDirectoryApi.profiles.any(
+      (p) => p.id == psychologistUid && p.acceptingNewPatients,
+    );
+    if (!accepting && !u.applications.containsKey(id)) {
+      throw const PlatformException(
+        PlatformErrorCode.forbidden,
+        status: 403,
+        body: {'code': 'forbidden', 'request_id': 'mock', 'retryable': false},
+      );
+    }
     if (_relationship?.psychologistUid == psychologistUid) throw _conflict;
     // Like the server: one request id per applicant + practice; a second
     // create returns the existing record.
-    final id = 'demo-request-$psychologistUid';
     return u.applications.putIfAbsent(
       id,
       () => ConnectionRequest(
@@ -246,6 +259,53 @@ class MockCareBackend extends ChangeNotifier {
     c.role.value = KoiRole.general;
     c.relationship = MockCapabilitiesSource.demoRelationship;
     notifyListeners();
+  }
+
+  // ---- invitations (MOB-4) ----
+
+  /// The fictional single-use code the simulate menu hands out. Valid
+  /// format (43+ url-safe characters), never a real token.
+  static const String demoInvitationCode =
+      'demo_invitation_code_for_development_only_0001';
+
+  /// A code that is always "expired, cancelled or already used" (409).
+  static const String demoUsedInvitationCode =
+      'demo_invitation_code_already_used_for_testing_9';
+
+  bool _demoInvitationUsed = false;
+
+  /// Like the server (lifecycle.ts:106-127): General access first (403),
+  /// unknown code 404, used / expired 409, otherwise a new active
+  /// relationship and the Patient area.
+  Future<InvitationAck> redeemInvitation(String token) async {
+    await _wait();
+    _me;
+    final c = capabilities;
+    if (c == null ||
+        (c.role.value != KoiRole.general && c.role.value != KoiRole.patient)) {
+      throw const PlatformException(
+        PlatformErrorCode.forbidden,
+        status: 403,
+        body: {'code': 'forbidden', 'request_id': 'mock', 'retryable': false},
+      );
+    }
+    if (token == demoUsedInvitationCode) throw _conflict;
+    if (token != demoInvitationCode) throw _notFound;
+    if (_demoInvitationUsed) throw _conflict;
+    _demoInvitationUsed = true;
+    const psychologist = 'demo-expert-3';
+    c.relationship = const RelationshipSummary(
+      id: 'demo-relationship-invited',
+      active: true,
+      organizationId: 'demo-org-invited',
+      psychologistUid: psychologist,
+    );
+    c.role.value = KoiRole.patient;
+    notifyListeners();
+    return const InvitationAck(
+      relationshipId: 'demo-relationship-invited',
+      organizationId: 'demo-org-invited',
+    );
   }
 
   // ---- messages ----
@@ -455,6 +515,19 @@ class MockNotificationApi implements NotificationApi {
     String id, {
     required String idempotencyKey,
   }) => backend.markNotificationRead(id);
+}
+
+class MockInvitationApi implements InvitationApi {
+  MockInvitationApi(this.backend);
+  final MockCareBackend backend;
+
+  @override
+  bool get isMock => true;
+  @override
+  Future<InvitationAck> redeem(
+    String token, {
+    required String idempotencyKey,
+  }) => backend.redeemInvitation(token);
 }
 
 /// The demo directory, for the simulate menu's names.

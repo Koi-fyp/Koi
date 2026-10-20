@@ -4,7 +4,7 @@ import '../applications/application_models.dart' show IllegalTransitionError;
 import '../care/care_api_support.dart';
 import '../platform/platform_client.dart';
 
-/// Contract v0.5.1 `AppointmentDTO.state`. Semantics (v0.5.0
+/// Contract v0.5.2 `AppointmentDTO.state`. Semantics (v0.5.0
 /// semantics.md "Appointments"): the patient requests; the psychologist
 /// proposes start/end; the patient confirms that exact proposal revision;
 /// the psychologist completes a confirmed appointment after its end. The

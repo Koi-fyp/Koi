@@ -21,9 +21,13 @@ abstract interface class AppointmentApi {
   });
 }
 
-// PROVISIONAL CONTRACT: KOI_MOB1_PROVISIONAL_CONTRACTS.md §10
-// (Appointments). Contract v0.5.1 createAppointment / listAppointments /
-// transitionAppointment are `proposed_not_implemented`.
+// REAL, contract v0.5.2 (origin/handoff/koi-web-1-to-5-2026-10-20, read
+// with git show only; openapi x-status is stale): list → community.ts:183
+// (document-id order, read in full by CareList.loadAll); create
+// {relationship_id} → community.ts:160-162 (patient only, 201);
+// transition {expected_revision, to_state} → community.ts:163-176 (stale
+// revision or illegal move 409; a patient never sends starts_at/ends_at).
+// Mutations need a sign-in within 5 minutes (service.ts:23).
 class HttpAppointmentApi implements AppointmentApi {
   HttpAppointmentApi(this.client);
   final PlatformClient client;
@@ -39,7 +43,7 @@ class HttpAppointmentApi implements AppointmentApi {
     await client.getJson(
       '/api/v1/relationships/${Uri.encodeComponent(relationshipId)}'
       '/appointments',
-      query: pageQuery(cursor: cursor),
+      query: pageQuery(cursor: cursor, limit: carePageLimitAll),
     ),
     Appointment.fromJson,
   );

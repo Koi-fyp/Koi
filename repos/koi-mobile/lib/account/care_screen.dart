@@ -10,6 +10,7 @@ import '../care/care_widgets.dart';
 import '../care/simulate_menu.dart';
 import '../care_messages/message_screens.dart';
 import '../experts/expert_screens.dart';
+import '../invitations/invitation_screen.dart';
 import '../notifications/notification_screens.dart';
 import '../questionnaires/questionnaire_screens.dart';
 import '../theme/koi_colors.dart';
@@ -42,7 +43,8 @@ class CareTab extends StatelessWidget {
 
 /// The first page of the Care tab (AUTH-ENTRY): the information page for
 /// an anonymous user, "not available yet" while a registered account's
-/// features cannot be confirmed, otherwise the Care home.
+/// features cannot be confirmed, "not set up yet" (MOB-4) when the server
+/// confirms no Care area, otherwise the Care home.
 class CareHome extends ConsumerWidget {
   const CareHome({super.key});
 
@@ -50,10 +52,11 @@ class CareHome extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authServiceProvider).user;
     if (user == null || user.isAnonymous) return const AnonymousCareScreen();
-    final status = ref.watch(capabilityControllerProvider).status;
-    if (status == CapabilityStatus.unavailable) {
+    final controller = ref.watch(capabilityControllerProvider);
+    if (controller.status == CapabilityStatus.unavailable) {
       return const CareUnavailableScreen();
     }
+    if (controller.effective.careNotSetUp) return const CareNotSetUpScreen();
     return const CareScreen();
   }
 }
@@ -169,6 +172,15 @@ class _CareScreenState extends ConsumerState<CareScreen> {
                   pushKoiPage<void>(context, const MyApplicationsScreen()),
             ),
           ],
+          // MOB-4: General / Patient only (this page needs a confirmed Care
+          // area); "not set up yet" accounts never see it.
+          if (caps.hasCareArea)
+            CareEntry(
+              key: const Key('care-invitation'),
+              title: s.t(CareText.m4InviteEntry),
+              subtitle: s.t(CareText.m4InviteEntrySub),
+              onTap: () => pushKoiPage<void>(context, const InvitationScreen()),
+            ),
           if (ref.watch(simulatePsychologistMenuProvider))
             NeoButton(
               key: const Key('care-simulate'),

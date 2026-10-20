@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../care/care_api_support.dart';
 import '../platform/platform_client.dart';
 
-/// Contract v0.5.1 `NotificationDTO.kind`: exactly four fixed kinds with
+/// Contract v0.5.2 `NotificationDTO.kind`: exactly four fixed kinds with
 /// typed id references and NO text (semantics: "No arbitrary
 /// title/body/data/provider strings, evaluation events or AI progress").
 /// The app writes its own fixed wording per kind. Any other kind is

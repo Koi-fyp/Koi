@@ -8,7 +8,7 @@ import '../platform/platform_client.dart';
 // lib/voice*, lib/safety or lib/environment, and nothing here is ever sent
 // to /api/v1/chat (tests MOB2-22).
 
-/// Contract v0.5.1 `HumanMessageDTO`: exactly `{id, relationship_id,
+/// Contract v0.5.2 `HumanMessageDTO`: exactly `{id, relationship_id,
 /// sender_uid, body, created_at}`. No read receipt, no edit/delete.
 @immutable
 class HumanMessage {

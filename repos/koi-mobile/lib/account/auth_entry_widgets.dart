@@ -242,6 +242,34 @@ class CareUnavailableScreen extends ConsumerWidget {
   }
 }
 
+/// MOB-4: the Care tab of a signed-in (non-anonymous) account the server
+/// has not set up for Care: `account_state` is not `registered` (a new
+/// Email/Password account is `unregistered`), or every capability is off.
+/// A calm notice and Retry; no sign-in buttons (the user IS signed in), no
+/// Care call, no invitation entry (the server would refuse it).
+class CareNotSetUpScreen extends ConsumerWidget {
+  const CareNotSetUpScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(careStringsProvider);
+    return CarePage(
+      key: const Key('care-not-set-up'),
+      back: false,
+      title: s.t(CareText.care),
+      children: [
+        KoiNoticeCard(
+          message: s.t(CareText.m4NotSetUp),
+          actionLabel: s.t(CareText.retry),
+          action: () => ref.read(capabilityControllerProvider).refresh(),
+        ),
+        const SizedBox(height: 16),
+        Text(s.t(CareText.m4NotSetUpChat), style: careMuted(s, 14)),
+      ],
+    );
+  }
+}
+
 /// Settings → Account, anonymous users: a small card with the two buttons,
 /// until dismissed (per uid, on this device).
 class AccountEntryCard extends ConsumerStatefulWidget {

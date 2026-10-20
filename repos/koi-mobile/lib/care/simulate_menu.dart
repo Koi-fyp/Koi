@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../account/account_providers.dart';
@@ -58,6 +59,25 @@ Future<void> showSimulatePsychologistMenu(
       'End the care relationship',
       const Key('simulate-end'),
       backend.simulateEndRelationship,
+    ),
+    // MOB-4: fictional codes for Care → "I have an invitation code".
+    (
+      'Copy a demo invitation code',
+      const Key('simulate-invite-code'),
+      () => unawaited(
+        Clipboard.setData(
+          const ClipboardData(text: MockCareBackend.demoInvitationCode),
+        ),
+      ),
+    ),
+    (
+      'Copy an already used demo code',
+      const Key('simulate-invite-used'),
+      () => unawaited(
+        Clipboard.setData(
+          const ClipboardData(text: MockCareBackend.demoUsedInvitationCode),
+        ),
+      ),
     ),
   ];
   final picked = await showDialog<void Function()>(

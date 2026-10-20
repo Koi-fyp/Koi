@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../care/care_api_support.dart';
 import '../platform/platform_client.dart';
 
-/// A discoverable psychologist: contract v0.5.1 `ExpertDTO`, exactly
+/// A discoverable psychologist: contract v0.5.2 `ExpertDTO`, exactly
 /// `{id, display_name, bio, accepting_new_patients}`. `id` is the
 /// psychologist's uid (what an application targets). Any other field the
 /// server sends is ignored; there are no specialties, languages,
@@ -44,9 +44,11 @@ abstract interface class ExpertDirectoryApi {
   Future<ExpertProfile> detail(String id);
 }
 
-// PROVISIONAL CONTRACT: KOI_MOB1_PROVISIONAL_CONTRACTS.md §8 (Expert
-// directory). Contract v0.5.1 operations listExperts / getExpert are
-// `proposed_not_implemented` ("Discovery catalogue is deferred", WEB-2).
+// REAL, contract v0.5.2 (origin/handoff/koi-web-1-to-5-2026-10-20, read
+// with git show only; openapi x-status is stale): GET /api/v1/experts and
+// /api/v1/experts/{uid} → community-http.ts:29-30 → community.ts:79-94.
+// Needs General access (403 otherwise). Hidden profiles are dropped from a
+// page, so a page may be empty with a next cursor (CareList skips it).
 class HttpExpertDirectoryApi implements ExpertDirectoryApi {
   HttpExpertDirectoryApi(this.client);
   final PlatformClient client;

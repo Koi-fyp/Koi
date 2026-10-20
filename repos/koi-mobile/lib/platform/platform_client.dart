@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 /// Why a platform call failed. HTTP status first, then the server's code:
-/// the contract v0.5.1 flat `ErrorDTO` (`{code, request_id, retryable}`,
+/// the contract v0.5.1/v0.5.2 flat `ErrorDTO` (`{code, request_id, retryable}`,
 /// origin/feat/web-1-professional-publishing lifecycle-http.ts) or the
 /// MOB-1 provisional nested `{"error": {"code"}}` still used by the
 /// questionnaire endpoints (their realignment is a later batch).
@@ -239,7 +239,7 @@ class PlatformClient {
         );
       }
     }
-    debugPrint('[KOI] platform: $method ${_template(path)} → ${res.status}');
+    debugPrint('[KOI] platform: $method ${template(path)} → ${res.status}');
     final errorBody = _decodeError(res.body);
     final serverCode = switch (errorBody?['error']) {
       final Map<dynamic, dynamic> e => e['code'],
@@ -281,11 +281,13 @@ class PlatformClient {
   }
 
   /// `/api/v1/patient/attempts/a1b2/draft` → `/api/v1/patient/attempts/…/draft`:
-  /// ids never reach the log.
-  static String _template(String path) => path
+  /// ids never reach the log. MOB-4: a kept segment is at most 32
+  /// characters, so an invitation token (43-128 characters, possibly all
+  /// lower-case letters) is always replaced.
+  static String template(String path) => path
       .split('/')
       .map(
-        (s) => RegExp(r'^[a-z_]+$|^v\d+$|^api$').hasMatch(s) || s.isEmpty
+        (s) => RegExp(r'^[a-z][a-z_-]{0,31}$|^v\d+$').hasMatch(s) || s.isEmpty
             ? s
             : '…',
       )

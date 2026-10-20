@@ -283,6 +283,27 @@ enum CareText {
   auCareKeep,
   auCareChat,
   auDismiss,
+  // MOB-4 (contract v0.5.2): "not set up yet", invitation codes, the
+  // 1,000-item cap and the closed-to-new-patients answer.
+  m4NotSetUp,
+  m4NotSetUpChat,
+  m4InviteEntry,
+  m4InviteEntrySub,
+  m4InviteTitle,
+  m4InviteIntro,
+  m4InviteLabel,
+  m4InviteHint,
+  m4InviteConsent,
+  m4InviteRedeem,
+  m4InviteRedeeming,
+  m4InviteFormat,
+  m4InviteNotFound,
+  m4InviteUsed,
+  m4InviteDenied,
+  m4InviteAccepted,
+  m4MessagesCapped,
+  m4AppointmentsCapped,
+  m4NotAcceptingNow,
 }
 
 const Map<CareText, String> _en = {
@@ -602,6 +623,40 @@ const Map<CareText, String> _en = {
       'encrypted again with your new password.',
   CareText.auCareChat: 'You can keep talking to KOI without an account.',
   CareText.auDismiss: 'Dismiss',
+  CareText.m4NotSetUp:
+      "Your account is created, but care features aren't set up for it yet.",
+  CareText.m4NotSetUpChat: 'You can keep talking to KOI as usual.',
+  CareText.m4InviteEntry: 'I have an invitation code',
+  CareText.m4InviteEntrySub: 'From a psychologist who invited you',
+  CareText.m4InviteTitle: 'Invitation code',
+  CareText.m4InviteIntro:
+      'If a psychologist gave you an invitation code or link, paste it '
+      'here to connect with them.',
+  CareText.m4InviteLabel: 'Invitation code or link',
+  CareText.m4InviteHint: 'Paste the code here',
+  CareText.m4InviteConsent:
+      'I agree to connect with the psychologist who invited me. They will '
+      'be able to message me, arrange appointments and send me '
+      'questionnaires through KOI.',
+  CareText.m4InviteRedeem: 'Accept invitation',
+  CareText.m4InviteRedeeming: 'Accepting…',
+  CareText.m4InviteFormat:
+      "That doesn't look like an invitation code. Please check it and try "
+      'again.',
+  CareText.m4InviteNotFound:
+      "We couldn't find this invitation for your account.",
+  CareText.m4InviteUsed:
+      'This code has expired, been cancelled, or was already used.',
+  CareText.m4InviteDenied:
+      "This invitation can't be used with your account right now.",
+  CareText.m4InviteAccepted:
+      'Invitation accepted. You are now connected with your psychologist.',
+  CareText.m4MessagesCapped:
+      'Only part of this conversation could be loaded (1,000 messages).',
+  CareText.m4AppointmentsCapped:
+      'Only part of your appointments could be loaded (1,000).',
+  CareText.m4NotAcceptingNow:
+      "This psychologist isn't accepting new patients right now.",
 };
 
 // URDU NEEDS NATIVE REVIEW (see the file header).
@@ -927,6 +982,39 @@ const Map<CareText, String> _ur = {
       'ہیں، آپ کے نئے پاس ورڈ سے دوبارہ خفیہ کر کے۔',
   CareText.auCareChat: 'آپ اکاؤنٹ کے بغیر بھی KOI سے بات جاری رکھ سکتے ہیں۔',
   CareText.auDismiss: 'بند کریں',
+  CareText.m4NotSetUp:
+      'آپ کا اکاؤنٹ بن گیا ہے، لیکن اس کے لیے نگہداشت کی سہولیات ابھی ترتیب '
+      'نہیں دی گئیں۔',
+  CareText.m4NotSetUpChat: 'آپ پہلے کی طرح KOI سے بات جاری رکھ سکتے ہیں۔',
+  CareText.m4InviteEntry: 'میرے پاس دعوتی کوڈ ہے',
+  CareText.m4InviteEntrySub: 'اُس ماہرِ نفسیات کی طرف سے جس نے آپ کو مدعو کیا',
+  CareText.m4InviteTitle: 'دعوتی کوڈ',
+  CareText.m4InviteIntro:
+      'اگر کسی ماہرِ نفسیات نے آپ کو دعوتی کوڈ یا لنک دیا ہے تو اُن سے منسلک '
+      'ہونے کے لیے اسے یہاں پیسٹ کریں۔',
+  CareText.m4InviteLabel: 'دعوتی کوڈ یا لنک',
+  CareText.m4InviteHint: 'کوڈ یہاں پیسٹ کریں',
+  CareText.m4InviteConsent:
+      'میں اُس ماہرِ نفسیات سے منسلک ہونے پر متفق ہوں جس نے مجھے مدعو کیا۔ وہ '
+      'KOI کے ذریعے مجھے پیغام بھیج سکیں گے، ملاقاتیں طے کر سکیں گے اور '
+      'سوالنامے بھیج سکیں گے۔',
+  CareText.m4InviteRedeem: 'دعوت قبول کریں',
+  CareText.m4InviteRedeeming: 'قبول کی جا رہی ہے…',
+  CareText.m4InviteFormat:
+      'یہ دعوتی کوڈ نہیں لگتا۔ براہِ کرم اسے چیک کر کے دوبارہ کوشش کریں۔',
+  CareText.m4InviteNotFound: 'یہ دعوت آپ کے اکاؤنٹ کے لیے نہیں ملی۔',
+  CareText.m4InviteUsed:
+      'اس کوڈ کی میعاد ختم ہو چکی ہے، یہ منسوخ ہو چکا ہے، یا پہلے ہی استعمال ہو '
+      'چکا ہے۔',
+  CareText.m4InviteDenied:
+      'یہ دعوت ابھی آپ کے اکاؤنٹ کے ساتھ استعمال نہیں ہو سکتی۔',
+  CareText.m4InviteAccepted:
+      'دعوت قبول ہو گئی۔ اب آپ اپنے ماہرِ نفسیات سے منسلک ہیں۔',
+  CareText.m4MessagesCapped:
+      'اس گفتگو کا صرف ایک حصہ لوڈ ہو سکا (1,000 پیغامات)۔',
+  CareText.m4AppointmentsCapped:
+      'آپ کی ملاقاتوں کا صرف ایک حصہ لوڈ ہو سکا (1,000)۔',
+  CareText.m4NotAcceptingNow: 'یہ ماہرِ نفسیات ابھی نئے مریض قبول نہیں کر رہے۔',
 };
 
 /// The strings and direction of the new Care screens.

@@ -151,6 +151,15 @@ class _AppointmentListState extends ConsumerState<_AppointmentList> {
           onPressed: () => _request(relId, list),
         ),
         const SizedBox(height: 20),
+        // MOB-4: every page is read; past 1,000 it says so.
+        if (list.capped) ...[
+          Text(
+            s.t(CareText.m4AppointmentsCapped),
+            key: const Key('appointments-capped'),
+            style: careMuted(s),
+          ),
+          const SizedBox(height: 12),
+        ],
         ...careListStates<AppointmentSection>(
           s: s,
           list: list,

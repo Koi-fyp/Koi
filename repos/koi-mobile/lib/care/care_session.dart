@@ -11,6 +11,7 @@ import '../care_messages/message_models.dart';
 import '../experts/expert_api.dart';
 import '../notifications/notification_api.dart';
 import '../notifications/notification_models.dart';
+import '../platform/platform_client.dart';
 import 'care_api_support.dart';
 import 'care_strings.dart';
 
@@ -22,8 +23,23 @@ import 'care_strings.dart';
 /// A paged server list with a stale-while-revalidate cache: re-opening a
 /// screen shows the last items at once with "Updating…" ([isUpdating])
 /// until the server answers, then the server data replaces them.
+///
+/// MOB-4 (contract v0.5.2, community.ts / service.ts):
+/// - pages come in document-id order, NOT by time (ids are hashes), so a
+///   time-ordered list ([loadAll]) reads every page (at most [maxPages],
+///   then [capped]) and sorts on the phone;
+/// - a page can be empty and still have a next cursor (hidden directory
+///   profiles are dropped server-side), so empty pages are skipped;
+/// - a cursor is signed and expires after 15 minutes (or when the
+///   relationship revision changes): its 422 restarts from the first page.
 class CareList<T> extends ChangeNotifier {
-  CareList(this._fetch, {required this.idOf, this.sort});
+  CareList(
+    this._fetch, {
+    required this.idOf,
+    this.sort,
+    this.loadAll = false,
+    this.maxPages = careMaxPages,
+  });
 
   final Future<ApiPage<T>> Function(String? cursor) _fetch;
   final String Function(T item) idOf;
@@ -31,18 +47,32 @@ class CareList<T> extends ChangeNotifier {
   /// Optional client-side order (the contract does not state one).
   final int Function(T a, T b)? sort;
 
+  /// Every refresh reads all pages (messages, appointments).
+  final bool loadAll;
+  final int maxPages;
+
+  /// Empty pages followed in one call before giving up (never endless).
+  static const int maxEmptyPages = 10;
+
   List<T> _items = const [];
   String? _nextCursor;
   bool _loaded = false;
   bool _busy = false;
   bool _loadingMore = false;
+  bool _capped = false;
   Object? _error;
   int _gen = 0;
   bool _disposed = false;
 
   List<T> get items => _items;
-  bool get hasMore => _nextCursor != null;
+
+  /// A "Show more" exists only for page-by-page lists.
+  bool get hasMore => !loadAll && _nextCursor != null;
   bool get loaded => _loaded;
+
+  /// [loadAll] stopped at [maxPages] with pages left: the screen says so
+  /// instead of dropping them silently.
+  bool get capped => _capped;
 
   /// Nothing to show yet and a request is running: full loading state.
   bool get isLoading => !_loaded && _busy;
@@ -63,10 +93,24 @@ class CareList<T> extends ChangeNotifier {
     // current build (the getters already report busy).
     scheduleMicrotask(_notify);
     try {
-      final page = await _fetch(null);
-      if (gen != _gen || _disposed) return;
+      ApiPage<T>? page;
+      try {
+        page = await _collect(null, gen);
+      } catch (e) {
+        // A cursor of this same read expired / went stale: start over once.
+        if (!loadAll || !_isStaleCursor(e) || gen != _gen || _disposed) {
+          rethrow;
+        }
+        page = await _collect(null, gen);
+      }
+      if (page == null) return;
       _items = _ordered(_merge(merge ? _items : const [], page.items));
-      if (!merge || !_loaded) _nextCursor = page.nextCursor;
+      if (loadAll) {
+        _nextCursor = null;
+        _capped = page.nextCursor != null;
+      } else if (!merge || !_loaded) {
+        _nextCursor = page.nextCursor;
+      }
       _loaded = true;
       _error = null;
     } catch (e) {
@@ -87,18 +131,50 @@ class CareList<T> extends ChangeNotifier {
     _loadingMore = true;
     _notify();
     try {
-      final page = await _fetch(cursor);
-      if (gen != _gen || _disposed) return;
+      final page = await _collect(cursor, gen);
+      if (page == null) {
+        if (!_disposed) _loadingMore = false;
+        return;
+      }
       _items = _ordered(_merge(_items, page.items));
       _nextCursor = page.nextCursor;
       _error = null;
     } catch (e) {
       if (gen != _gen || _disposed) return;
+      _loadingMore = false;
+      // The cursor expired (15 minutes) or the list changed under it: the
+      // first page again, never a dead "Show more".
+      if (_isStaleCursor(e)) return refresh();
       _error = e;
     }
     _loadingMore = false;
     _notify();
   }
+
+  /// From [cursor]: one page, following empty ones (at most
+  /// [maxEmptyPages]); or, for [loadAll], every page up to [maxPages]. The
+  /// result's cursor is where it stopped. Null = superseded.
+  Future<ApiPage<T>?> _collect(String? cursor, int gen) async {
+    final items = <T>[];
+    var next = cursor;
+    var fetches = 0;
+    do {
+      final page = await _fetch(next);
+      if (gen != _gen || _disposed) return null;
+      items.addAll(page.items);
+      next = page.nextCursor;
+      fetches++;
+      final more = loadAll
+          ? fetches < maxPages
+          : items.isEmpty && fetches < maxEmptyPages;
+      if (!more) break;
+    } while (next != null);
+    return ApiPage(items, next);
+  }
+
+  /// The server's 422 `invalid_request` for a cursor (service.ts:185-196).
+  static bool _isStaleCursor(Object e) =>
+      e is PlatformException && e.code == PlatformErrorCode.invalid;
 
   /// Puts the SERVER's answer for one item in place (or adds it).
   void put(T item) {
@@ -122,6 +198,7 @@ class CareList<T> extends ChangeNotifier {
     _loaded = false;
     _busy = false;
     _loadingMore = false;
+    _capped = false;
     _error = null;
     _notify();
   }
@@ -163,7 +240,9 @@ class ThreadController extends ChangeNotifier {
     list = CareList<HumanMessage>(
       (cursor) => api.list(relationshipId, cursor: cursor),
       idOf: (m) => m.id,
+      // Server pages are in id order: read them all, then oldest first.
       sort: (a, b) => a.createdAt.compareTo(b.createdAt),
+      loadAll: true,
     )..addListener(notifyListeners);
   }
 
@@ -333,6 +412,7 @@ class CareSession extends ChangeNotifier {
           (cursor) => appointmentApi.list(relationshipId, cursor: cursor),
           idOf: (a) => a.id,
           sort: (a, b) => b.updatedAt.compareTo(a.updatedAt),
+          loadAll: true,
         )..addListener(notifyListeners),
       );
 

@@ -11,6 +11,7 @@ import '../app/providers.dart';
 import '../applications/application_api.dart';
 import '../appointments/appointment_api.dart';
 import '../care_messages/message_api.dart';
+import '../invitations/invitation_api.dart';
 import '../notifications/notification_api.dart';
 import '../platform/platform_config.dart';
 import 'care_session.dart';
@@ -91,6 +92,17 @@ final notificationApiProvider = Provider<NotificationApi>((ref) {
     mock: () => MockNotificationApi(ref.read(mockCareBackendProvider)),
     real: () => HttpNotificationApi(client),
     unavailable: const UnavailableNotificationApi(),
+  );
+});
+
+final invitationApiProvider = Provider<InvitationApi>((ref) {
+  final client = ref.read(platformClientProvider);
+  return pickCareAdapter<InvitationApi>(
+    mocks: koiMocksEnabled,
+    configured: client.isConfigured,
+    mock: () => MockInvitationApi(ref.read(mockCareBackendProvider)),
+    real: () => HttpInvitationApi(client),
+    unavailable: const UnavailableInvitationApi(),
   );
 });
 
