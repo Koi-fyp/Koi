@@ -125,6 +125,7 @@ class MockCareBackend extends ChangeNotifier {
         revision: 1,
         createdAt: _t,
         updatedAt: _t,
+        organizationId: 'demo-org-$psychologistUid',
       ),
     );
   }
@@ -168,6 +169,7 @@ class MockCareBackend extends ChangeNotifier {
     revision: r.revision + 1,
     createdAt: r.createdAt,
     updatedAt: _t,
+    organizationId: r.organizationId,
   );
 
   // ---- simulated psychologist (debug menu) ----

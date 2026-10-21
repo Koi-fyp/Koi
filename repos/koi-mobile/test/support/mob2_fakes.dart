@@ -21,6 +21,7 @@ import 'package:koi_mobile/experts/expert_api.dart';
 import 'package:koi_mobile/notifications/notification_api.dart';
 import 'package:koi_mobile/notifications/notification_models.dart';
 import 'package:koi_mobile/platform/platform_client.dart';
+import 'package:koi_mobile/questionnaires/questionnaire_api.dart';
 import 'package:koi_mobile/settings/settings_prefs.dart';
 
 import 'mob1_fakes.dart';
@@ -36,6 +37,7 @@ class Mob2Harness {
     this.simulateMenu,
     ChatApiClient? chatApi,
     ExpertDirectoryApi? experts,
+    QuestionnaireApi? questionnaires,
   }) : caps = MockCapabilitiesSource(initial: role) {
     counting = CountingCapabilities(caps);
     base = Mob1Harness(
@@ -43,6 +45,7 @@ class Mob2Harness {
       capabilities: counting,
       experts: experts ?? MockExpertDirectoryApi(latency: latency, pageSize: 2),
       chatApi: chatApi,
+      questionnaires: questionnaires,
     );
     backend = MockCareBackend(
       currentUid: () => base.auth.user?.uid,
@@ -121,9 +124,28 @@ Finder navTab(String name) => find.byKey(Key('nav-tab-$name'));
 
 Future<void> tapKey(WidgetTester tester, String key) async {
   final f = find.byKey(Key(key));
+  await revealKey(tester, key);
   await tester.ensureVisible(f);
+  // MOB-5: the jump is laid out on the next frame (rows below the fold).
+  await tester.pump();
   await tester.tap(f);
   await settle(tester);
+}
+
+/// MOB-5: the Care hubs are taller, so a row further down may not be
+/// built yet (lazy list). Scrolls the top page's list until it is.
+Future<void> revealKey(WidgetTester tester, String key) async {
+  final f = find.byKey(Key(key));
+  if (f.evaluate().isNotEmpty) return;
+  await tester.scrollUntilVisible(
+    f,
+    200,
+    scrollable: find
+        .byWidgetPredicate(
+          (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+        )
+        .last,
+  );
 }
 
 /// A script for one fake call: optional gate (holds the call) and error.

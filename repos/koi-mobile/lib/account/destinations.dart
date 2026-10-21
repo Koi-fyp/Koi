@@ -29,6 +29,10 @@ enum KoiDestination {
   /// MOB-4: "I have an invitation code" (General / Patient). Deliberately
   /// NOT reachable from a `koi://` link: a link would carry the token.
   invitation,
+
+  /// MOB-5: "Become a Psychologist", information only (General / Patient).
+  /// It changes no access; psychologist accounts are made on the website.
+  becomePsychologist,
 }
 
 /// `koi://experts/{id}`, `koi://care/questionnaires/{attemptId}`, ...
@@ -134,7 +138,8 @@ LinkDecision decideDestination(
         KoiDestination.application ||
         KoiDestination.messageThread ||
         KoiDestination.appointment ||
-        KoiDestination.invitation:
+        KoiDestination.invitation ||
+        KoiDestination.becomePsychologist:
       if (!registered) return LinkDecision.signIn;
       if (status == CapabilityStatus.loading) return LinkDecision.wait;
       final ok = switch (d) {
@@ -142,7 +147,9 @@ LinkDecision decideDestination(
         KoiDestination.expert => caps.canDiscoverExperts,
         // MOB-4: redeem needs General access (lifecycle.ts:113), which a
         // confirmed Care area implies.
-        KoiDestination.care || KoiDestination.invitation => caps.hasCareArea,
+        KoiDestination.care ||
+        KoiDestination.invitation ||
+        KoiDestination.becomePsychologist => caps.hasCareArea,
         KoiDestination.questionnaires ||
         KoiDestination.questionnaire => caps.canUseQuestionnaires,
         // MOB-2: application outcomes reach General users too.

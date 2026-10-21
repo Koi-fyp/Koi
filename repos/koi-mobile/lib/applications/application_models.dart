@@ -71,10 +71,16 @@ class ConnectionRequest {
     required this.revision,
     required this.createdAt,
     required this.updatedAt,
+    this.organizationId,
   });
 
   final String id;
   final String psychologistUid;
+
+  /// MOB-5: `organization_id`, read only to match an accepted application
+  /// to an active relationship (care-state.ts applicationLabel). Optional
+  /// and tolerant: absent, empty or not a string → null.
+  final String? organizationId;
   final ApplicationState state;
   final DemoPaymentState demoPayment;
   final int revision;
@@ -99,6 +105,10 @@ class ConnectionRequest {
       revision: reqInt(j, 'revision'),
       createdAt: reqTime(j, 'created_at'),
       updatedAt: reqTime(j, 'updated_at'),
+      organizationId: switch (j['organization_id']) {
+        final String o when o.isNotEmpty => o,
+        _ => null,
+      },
     );
   }
 }

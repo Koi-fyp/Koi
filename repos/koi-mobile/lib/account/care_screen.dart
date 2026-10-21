@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../applications/application_screens.dart';
 import '../app/providers.dart';
 import '../appointments/appointment_screens.dart';
+import '../care/become_psychologist_screen.dart';
+import '../care/care_hub.dart';
 import '../care/care_providers.dart';
 import '../care/care_strings.dart';
 import '../care/care_widgets.dart';
@@ -12,7 +14,7 @@ import '../care_messages/message_screens.dart';
 import '../experts/expert_screens.dart';
 import '../invitations/invitation_screen.dart';
 import '../notifications/notification_screens.dart';
-import '../questionnaires/questionnaire_screens.dart';
+import '../questionnaires/questionnaire_providers.dart';
 import '../theme/koi_colors.dart';
 import '../theme/koi_radii.dart';
 import '../widgets/neo_button.dart';
@@ -61,11 +63,17 @@ class CareHome extends ConsumerWidget {
   }
 }
 
-/// The Care home. General: Find an Expert + My applications. Patient (an
-/// active relationship confirmed by /me/capabilities): My Psychologist,
-/// Questionnaires, Messages, Appointments, Notifications as well.
-/// Pull-to-refresh re-checks the capabilities (General → Patient after an
-/// accepted application, same uid, no sign-out).
+/// The Care home (MOB-5: two hubs, like the web's General User and Patient
+/// dashboards on origin/feat/koi2-ui-overhaul f9ed940):
+/// - Care Home (General): Find a Psychologist, My Applications,
+///   Notifications, invitation code, Become a Psychologist (info only);
+/// - My Care (Patient, an active relationship confirmed by
+///   /me/capabilities): My Psychologist, Questionnaires, Messages,
+///   Appointments, Notifications, and the General entries under
+///   "Additional care options".
+/// The hub follows the confirmed capabilities only, so an accepted
+/// application turns Care Home into My Care with no extra step, and a
+/// closed relationship turns it back. Pull-to-refresh re-checks them.
 class CareScreen extends ConsumerStatefulWidget {
   const CareScreen({super.key});
 
@@ -78,6 +86,9 @@ class CareScreen extends ConsumerStatefulWidget {
 
 class _CareScreenState extends ConsumerState<CareScreen> {
   Future<void> _refresh() async {
+    if (ref.read(effectiveCapabilitiesProvider).canUseQuestionnaires) {
+      ref.invalidate(assignmentsProvider);
+    }
     await Future.wait([
       ref.read(capabilityControllerProvider).refresh(silent: true),
       ref.read(careSessionProvider).notifications.refresh(),
@@ -90,17 +101,55 @@ class _CareScreenState extends ConsumerState<CareScreen> {
     builder: (context) {
       final s = ref.watch(careStringsProvider);
       final caps = ref.watch(effectiveCapabilitiesProvider);
-      final demo = ref.watch(capabilityControllerProvider).isMock;
+      final controller = ref.watch(capabilityControllerProvider);
       final session = ref.watch(careSessionProvider);
+      final patient = caps.isPatient;
       final relationship = caps.relationship;
       final notice = session.notice;
       final unreadMessages = session.unreadMessageNotifications.length;
+      void open(Widget page) => pushKoiPage<void>(context, page);
+
+      final notifications = CareEntry(
+        key: const Key('care-notifications'),
+        title: s.t(CareText.notifications),
+        subtitle: session.unreadCount > 0
+            ? s.unreadCount(session.unreadCount)
+            : s.t(CareText.notificationsSub),
+        onTap: () => open(const NotificationInboxScreen()),
+      );
+      final applications = CareEntry(
+        key: const Key('care-applications'),
+        title: s.t(CareText.myApplications),
+        subtitle: s.t(CareText.myApplicationsSub),
+        onTap: () => open(const MyApplicationsScreen()),
+      );
+      // MOB-4: General / Patient only (this page needs a confirmed Care
+      // area); "not set up yet" accounts never see it.
+      final invitation = CareEntry(
+        key: const Key('care-invitation'),
+        title: s.t(CareText.m4InviteEntry),
+        subtitle: s.t(CareText.m4InviteEntrySub),
+        onTap: () => open(const InvitationScreen()),
+      );
+      final become = CareEntry(
+        key: const Key('care-become-psychologist'),
+        title: s.t(CareText.m5BecomeTitle),
+        subtitle: s.t(CareText.m5BecomeSub),
+        onTap: () => open(const BecomePsychologistScreen()),
+      );
+
       return CarePage(
+        key: Key(patient ? 'my-care-hub' : 'care-home-hub'),
         back: false,
-        demo: demo,
-        title: s.t(CareText.care),
+        demo: controller.isMock,
+        title: s.t(patient ? CareText.m5MyCare : CareText.m5CareHome),
         onRefresh: _refresh,
         children: [
+          CareRoleChip(
+            label: s.t(
+              patient ? CareText.m5RolePatient : CareText.m5RoleGeneral,
+            ),
+          ),
           if (notice != null) ...[
             KoiNoticeCard(
               key: const Key('care-notice'),
@@ -111,76 +160,102 @@ class _CareScreenState extends ConsumerState<CareScreen> {
             ),
             const SizedBox(height: 16),
           ],
-          if (caps.isPatient && relationship != null) ...[
-            CareEntry(
-              key: const Key('care-psychologist'),
-              title: s.t(CareText.myPsychologist),
-              subtitle:
-                  ref
-                      .watch(psychologistNameProvider(relationship))
-                      .valueOrNull ??
+          if (patient) ...[
+            CareHeroCard(
+              key: const Key('care-hero'),
+              strings: s,
+              title: s.t(CareText.m5ActiveTitle),
+              eyebrow: s.t(CareText.m5Connected),
+              body:
+                  (relationship == null
+                      ? null
+                      : ref
+                            .watch(psychologistNameProvider(relationship))
+                            .valueOrNull) ??
                   s.t(CareText.yourPsychologist),
-              onTap: () =>
-                  pushKoiPage<void>(context, const MyPsychologistScreen()),
+              actions: [
+                CareActionButton(
+                  key: const Key('care-psychologist'),
+                  label: s.t(CareText.myPsychologist),
+                  busyLabel: '',
+                  busy: false,
+                  onPressed: () => open(const MyPsychologistScreen()),
+                ),
+                CareActionButton(
+                  key: const Key('care-hero-messages'),
+                  variant: NeoButtonVariant.secondary,
+                  label: s.t(CareText.m5OpenMessages),
+                  busyLabel: '',
+                  busy: false,
+                  onPressed: () => open(const ConversationListScreen()),
+                ),
+              ],
             ),
-            if (caps.canUseQuestionnaires)
-              CareEntry(
-                key: const Key('care-questionnaires'),
-                title: s.t(CareText.questionnaires),
-                subtitle: s.t(CareText.questionnairesSub),
-                onTap: () =>
-                    pushKoiPage<void>(context, const QuestionnaireListScreen()),
-              ),
+            if (caps.canUseQuestionnaires) const MyCareQuestionnairesCard(),
             CareEntry(
               key: const Key('care-messages'),
               title: s.t(CareText.messages),
               subtitle: unreadMessages > 0
                   ? s.unreadCount(unreadMessages)
                   : s.t(CareText.messagesSub),
-              onTap: () =>
-                  pushKoiPage<void>(context, const ConversationListScreen()),
+              onTap: () => open(const ConversationListScreen()),
             ),
             CareEntry(
               key: const Key('care-appointments'),
               title: s.t(CareText.appointments),
               subtitle: s.t(CareText.appointmentsSub),
-              onTap: () =>
-                  pushKoiPage<void>(context, const AppointmentListScreen()),
+              onTap: () => open(const AppointmentListScreen()),
             ),
+            notifications,
+            MoreCareOptions(
+              strings: s,
+              children: [
+                if (caps.canDiscoverExperts) ...[
+                  CareEntry(
+                    key: const Key('care-experts'),
+                    title: s.t(CareText.findExpert),
+                    subtitle: s.t(CareText.findExpertSub),
+                    onTap: () => open(const ExpertListScreen()),
+                  ),
+                  applications,
+                ],
+                invitation,
+                become,
+              ],
+            ),
+          ] else ...[
+            if (controller.endedNotice) ...[
+              KoiNoticeCard(
+                key: const Key('care-ended-notice'),
+                yellow: true,
+                message: s.t(CareText.m5Ended),
+                actionLabel: s.t(CareText.ok),
+                action: controller.dismissEndedNotice,
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (caps.canDiscoverExperts) ...[
+              CareHeroCard(
+                key: const Key('care-hero'),
+                strings: s,
+                title: s.t(CareText.m5StartTitle),
+                body: s.t(CareText.m5StartBody),
+                actions: [
+                  CareActionButton(
+                    key: const Key('care-experts'),
+                    label: s.t(CareText.findExpert),
+                    busyLabel: '',
+                    busy: false,
+                    onPressed: () => open(const ExpertListScreen()),
+                  ),
+                ],
+              ),
+              applications,
+            ],
+            notifications,
+            invitation,
+            become,
           ],
-          CareEntry(
-            key: const Key('care-notifications'),
-            title: s.t(CareText.notifications),
-            subtitle: session.unreadCount > 0
-                ? s.unreadCount(session.unreadCount)
-                : s.t(CareText.notificationsSub),
-            onTap: () =>
-                pushKoiPage<void>(context, const NotificationInboxScreen()),
-          ),
-          if (caps.canDiscoverExperts) ...[
-            CareEntry(
-              key: const Key('care-experts'),
-              title: s.t(CareText.findExpert),
-              subtitle: s.t(CareText.findExpertSub),
-              onTap: () => pushKoiPage<void>(context, const ExpertListScreen()),
-            ),
-            CareEntry(
-              key: const Key('care-applications'),
-              title: s.t(CareText.myApplications),
-              subtitle: s.t(CareText.myApplicationsSub),
-              onTap: () =>
-                  pushKoiPage<void>(context, const MyApplicationsScreen()),
-            ),
-          ],
-          // MOB-4: General / Patient only (this page needs a confirmed Care
-          // area); "not set up yet" accounts never see it.
-          if (caps.hasCareArea)
-            CareEntry(
-              key: const Key('care-invitation'),
-              title: s.t(CareText.m4InviteEntry),
-              subtitle: s.t(CareText.m4InviteEntrySub),
-              onTap: () => pushKoiPage<void>(context, const InvitationScreen()),
-            ),
           if (ref.watch(simulatePsychologistMenuProvider))
             NeoButton(
               key: const Key('care-simulate'),
@@ -279,12 +354,34 @@ class MyPsychologistScreen extends ConsumerWidget {
         children: [
           NeoCard(
             padding: const EdgeInsets.all(18),
-            child: Text(
-              name ?? s.t(CareText.yourPsychologist),
-              style: careBody(s, size: 18, weight: FontWeight.w700),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name ?? s.t(CareText.yourPsychologist),
+                  style: careBody(s, size: 18, weight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                // MOB-5: PatientWorkspace.tsx "My Psychologist" card.
+                Text(s.t(CareText.m5PsyAccess), style: careBody(s)),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          CareEntry(
+            key: const Key('mypsy-messages'),
+            title: s.t(CareText.m5MessageTeam),
+            subtitle: s.t(CareText.messagesSub),
+            onTap: () =>
+                pushKoiPage<void>(context, const ConversationListScreen()),
+          ),
+          CareEntry(
+            key: const Key('mypsy-appointments'),
+            title: s.t(CareText.m5ManageAppointments),
+            subtitle: s.t(CareText.appointmentsSub),
+            onTap: () =>
+                pushKoiPage<void>(context, const AppointmentListScreen()),
+          ),
           KoiNoticeCard(yellow: true, message: s.t(CareText.notMonitored)),
         ],
       );

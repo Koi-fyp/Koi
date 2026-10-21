@@ -73,6 +73,19 @@ class CapabilityController extends ChangeNotifier {
   PlatformErrorCode? get error => _error;
   bool get accessEnded => _accessEnded;
 
+  /// MOB-5: after the "access ended" screen, Care Home shows the web's
+  /// "previous care relationship has ended" line once (PatientWorkspace.tsx
+  /// `ended`). Cleared on dismiss, on a new relationship and on any account
+  /// change. A display hint only: it grants nothing.
+  bool _endedNotice = false;
+  bool get endedNotice => _endedNotice && !_accessEnded;
+
+  void dismissEndedNotice() {
+    if (!_endedNotice) return;
+    _endedNotice = false;
+    _notify();
+  }
+
   /// The role last CONFIRMED for this uid in this session (null before the
   /// first answer).
   KoiRole? _confirmedRole;
@@ -108,6 +121,7 @@ class CapabilityController extends ChangeNotifier {
     _registered = registered;
     _caps = KoiCapabilities.none;
     _accessEnded = false;
+    _endedNotice = false;
     // Patient history belongs to the previous account only.
     _wasPatient = false;
     _lastForbiddenRefresh = null;
@@ -168,8 +182,10 @@ class CapabilityController extends ChangeNotifier {
       _error = null;
       if (previouslyPatient && !caps.isPatient) {
         _accessEnded = true;
+        _endedNotice = true;
         await onPatientAccessLost?.call(uid);
       }
+      if (caps.isPatient) _endedNotice = false;
       _wasPatient = caps.isPatient;
     } catch (e) {
       if (gen != _generation || _disposed) return;
@@ -187,6 +203,7 @@ class CapabilityController extends ChangeNotifier {
               e.code == PlatformErrorCode.unauthorized)) {
         // The server refused: treat like a lost relationship.
         _accessEnded = true;
+        _endedNotice = true;
         _wasPatient = false;
         await onPatientAccessLost?.call(uid);
       }

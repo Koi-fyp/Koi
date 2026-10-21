@@ -169,6 +169,16 @@ void main() {
         'care-appointments',
         'care-notifications',
       ]) {
+        // MOB-5: My Care is taller; lower rows are built once scrolled to.
+        await tester.scrollUntilVisible(
+          find.byKey(Key(k)),
+          200,
+          scrollable: find
+              .byWidgetPredicate(
+                (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+              )
+              .last,
+        );
         expect(find.byKey(Key(k)), findsOneWidget);
       }
       // MOB-2: the three entries open their screens now (no placeholder).

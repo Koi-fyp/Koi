@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../account/account_providers.dart';
 import '../account/account_widgets.dart';
 import '../account/capabilities.dart';
 import '../account/capability_gate.dart';
@@ -12,21 +13,11 @@ import '../care/care_providers.dart';
 import '../care/care_strings.dart';
 import '../care/care_widgets.dart';
 import '../experts/expert_api.dart';
-import '../theme/koi_colors.dart';
 import '../widgets/neo_button.dart';
 import '../widgets/neo_card.dart';
 import 'application_flow.dart';
+import 'application_labels.dart';
 import 'application_models.dart';
-
-String applicationStateLabel(CareStrings s, ApplicationState st) =>
-    s.t(switch (st) {
-      ApplicationState.requested => CareText.stateRequested,
-      ApplicationState.awaitingDemoPayment => CareText.stateAwaitingPayment,
-      ApplicationState.pendingPsychologistReview => CareText.statePendingReview,
-      ApplicationState.accepted => CareText.stateAccepted,
-      ApplicationState.rejected => CareText.stateDeclined,
-      ApplicationState.withdrawn => CareText.stateWithdrawn,
-    });
 
 /// "Payment: Pending / Confirmed (simulated)". A status label only: no
 /// card field, no payment SDK, nothing that looks like a checkout.
@@ -35,12 +26,6 @@ String paymentLabel(CareStrings s, DemoPaymentState p) => s.t(
       ? CareText.paymentConfirmed
       : CareText.paymentPending,
 );
-
-Color applicationChipColor(ApplicationState st) => switch (st) {
-  ApplicationState.accepted => KoiColors.neoMint,
-  ApplicationState.rejected || ApplicationState.withdrawn => KoiColors.neoGray,
-  _ => KoiColors.neoYellow,
-};
 
 ApplicationFlow _flow(WidgetRef ref) {
   final session = ref.read(careSessionProvider);
@@ -283,6 +268,8 @@ class _ApplicationDetailState extends ConsumerState<_ApplicationDetail> {
       );
     }
     final actions = applicantActions(r.state);
+    final caps = ref.watch(effectiveCapabilitiesProvider);
+    final note = applicationNote(r, caps);
     return CarePage(
       demo: demo,
       title: s.t(CareText.applicationTitle),
@@ -301,8 +288,8 @@ class _ApplicationDetailState extends ConsumerState<_ApplicationDetail> {
               const SizedBox(height: 8),
               CareChip(
                 key: const Key('application-state'),
-                label: applicationStateLabel(s, r.state),
-                color: applicationChipColor(r.state),
+                label: applicationLabel(s, r, caps),
+                color: applicationChipColor(r, caps),
               ),
               const SizedBox(height: 8),
               Text(
@@ -319,10 +306,12 @@ class _ApplicationDetailState extends ConsumerState<_ApplicationDetail> {
           ),
         ),
         const SizedBox(height: 16),
-        if (r.state == ApplicationState.accepted)
-          KoiNoticeCard(yellow: true, message: s.t(CareText.acceptedNote)),
-        if (r.state == ApplicationState.rejected)
-          KoiNoticeCard(message: s.t(CareText.declinedNote)),
+        if (note != null)
+          KoiNoticeCard(
+            key: const Key('application-note'),
+            yellow: acceptedIntoActiveCare(r, caps),
+            message: s.t(note),
+          ),
         if (actions.contains(ApplicantAction.completeDemoPayment)) ...[
           Text(s.t(CareText.paymentExplainer), style: careMuted(s)),
           const SizedBox(height: 10),
@@ -414,6 +403,7 @@ class _MyApplicationsState extends ConsumerState<_MyApplications> {
   Widget build(BuildContext context) {
     final s = ref.watch(careStringsProvider);
     final list = ref.watch(careSessionProvider).applications;
+    final caps = ref.watch(effectiveCapabilitiesProvider);
     return CarePage(
       demo: ref.watch(applicationApiProvider).isMock,
       title: s.t(CareText.myApplications),
@@ -438,8 +428,8 @@ class _MyApplicationsState extends ConsumerState<_MyApplications> {
               ),
               const SizedBox(height: 6),
               CareChip(
-                label: applicationStateLabel(s, r.state),
-                color: applicationChipColor(r.state),
+                label: applicationLabel(s, r, caps),
+                color: applicationChipColor(r, caps),
               ),
               const SizedBox(height: 4),
               Text(paymentLabel(s, r.demoPayment), style: careMuted(s)),

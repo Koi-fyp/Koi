@@ -88,7 +88,6 @@ enum CareText {
   withdrawYes,
   keep,
   noApplications,
-  acceptedNote,
   declinedNote,
   applicationTitle,
   // Messages.
@@ -304,6 +303,31 @@ enum CareText {
   m4MessagesCapped,
   m4AppointmentsCapped,
   m4NotAcceptingNow,
+  // MOB-5 Care hubs (origin/feat/koi2-ui-overhaul f9ed940).
+  m5CareHome,
+  m5MyCare,
+  m5RoleGeneral,
+  m5RolePatient,
+  m5StartTitle,
+  m5StartBody,
+  m5ActiveTitle,
+  m5Connected,
+  m5OpenMessages,
+  m5QEmpty,
+  m5MoreOptions,
+  m5BecomeTitle,
+  m5BecomeSub,
+  m5BecomeHeading,
+  m5BecomeBody,
+  m5BecomeNoChange,
+  m5Ended,
+  m5StateAcceptedPrevious,
+  m5PendingReviewNote,
+  m5AcceptedPreviousNote,
+  m5AcceptedActiveNote,
+  m5PsyAccess,
+  m5MessageTeam,
+  m5ManageAppointments,
 }
 
 const Map<CareText, String> _en = {
@@ -335,10 +359,12 @@ const Map<CareText, String> _en = {
   CareText.appointments: 'Appointments',
   CareText.appointmentsSub: 'Request and manage appointments',
   CareText.notifications: 'Notifications',
-  CareText.notificationsSub: 'Updates about your care',
-  CareText.findExpert: 'Find an Expert',
-  CareText.findExpertSub: 'Browse psychologists listed in KOI',
-  CareText.myApplications: 'My applications',
+  // MOB-5: web wording (WorkspaceFrame.tsx generalViews, navigation.ts).
+  CareText.notificationsSub: 'Updates about your applications and care',
+  CareText.findExpert: 'Find a Psychologist',
+  CareText.findExpertSub:
+      'Explore professional profiles and apply to a practice',
+  CareText.myApplications: 'My Applications',
   CareText.myApplicationsSub: 'Applications you sent to psychologists',
   CareText.notMonitored:
       'Messages with your psychologist are not monitored for emergencies. '
@@ -373,12 +399,13 @@ const Map<CareText, String> _en = {
   CareText.viewApplication: 'View my application',
   CareText.notAcceptingCantApply:
       'This psychologist is not accepting new patients right now.',
-  CareText.stateRequested: 'Requested',
-  CareText.stateAwaitingPayment: 'Waiting for demo payment',
-  CareText.statePendingReview: 'Waiting for the psychologist',
-  CareText.stateAccepted: 'Accepted',
-  CareText.stateDeclined: 'Declined',
-  CareText.stateWithdrawn: 'Withdrawn',
+  // MOB-5: care-state.ts applicationLabel (f9ed940), word for word.
+  CareText.stateRequested: 'Application submitted',
+  CareText.stateAwaitingPayment: 'Demo step required',
+  CareText.statePendingReview: 'Waiting for practice review',
+  CareText.stateAccepted: 'Application accepted · Your care is active',
+  CareText.stateDeclined: 'Application declined',
+  CareText.stateWithdrawn: 'Application withdrawn',
   CareText.paymentPending: 'Payment: Pending (simulated)',
   CareText.paymentConfirmed: 'Payment: Confirmed (simulated)',
   CareText.paymentExplainer:
@@ -390,9 +417,6 @@ const Map<CareText, String> _en = {
   CareText.withdrawYes: 'Withdraw',
   CareText.keep: 'Keep it',
   CareText.noApplications: 'You have not applied to a psychologist yet.',
-  CareText.acceptedNote:
-      'The psychologist accepted your application. Pull down on Care to '
-      'see your care space.',
   CareText.declinedNote:
       'The psychologist could not take your application. You can look for '
       'another psychologist.',
@@ -657,6 +681,48 @@ const Map<CareText, String> _en = {
       'Only part of your appointments could be loaded (1,000).',
   CareText.m4NotAcceptingNow:
       "This psychologist isn't accepting new patients right now.",
+  // MOB-5: PatientWorkspace.tsx / WorkspaceFrame.tsx / PracticeApplication
+  // .tsx / ProfessionalEntry.tsx (f9ed940) unless noted.
+  CareText.m5CareHome: 'Care Home',
+  CareText.m5MyCare: 'My Care',
+  CareText.m5RoleGeneral: 'General User',
+  CareText.m5RolePatient: 'Patient',
+  CareText.m5StartTitle: 'Start your care journey',
+  CareText.m5StartBody:
+      'Find a psychologist or accept a practice invitation. Your registered '
+      'account stays the same when care access becomes active.',
+  CareText.m5ActiveTitle: 'Your care is active',
+  CareText.m5Connected: 'Connected psychologist',
+  CareText.m5OpenMessages: 'Open care messages',
+  CareText.m5QEmpty:
+      'Your psychologist will assign questionnaires here when ready.',
+  CareText.m5MoreOptions: 'Additional care options',
+  CareText.m5BecomeTitle: 'Become a Psychologist',
+  CareText.m5BecomeSub: 'Professional registration information',
+  CareText.m5BecomeHeading: 'Professional registration is not available yet',
+  // Approved for mobile 2026-10-21 (no website button on mobile).
+  CareText.m5BecomeBody:
+      'Psychologist accounts are created and verified on the KOI website.',
+  CareText.m5BecomeNoChange: 'This entry does not change your account access.',
+  CareText.m5Ended:
+      'Your previous care relationship has ended. You can continue using KOI '
+      'Care to find a psychologist.',
+  CareText.m5StateAcceptedPrevious: 'Application accepted previously',
+  CareText.m5PendingReviewNote:
+      'Your demo step is complete. The practice will accept or decline your '
+      'application. Check notifications for updates.',
+  CareText.m5AcceptedPreviousNote:
+      'This application was accepted previously. No active care relationship '
+      'is currently available for this practice. Application history does '
+      'not grant patient access.',
+  CareText.m5AcceptedActiveNote:
+      'You already have active care with this psychologist. Open My '
+      'Psychologist to manage your care.',
+  CareText.m5PsyAccess:
+      "Your registered account now has access to this practice's care "
+      'workflows.',
+  CareText.m5MessageTeam: 'Message your care team',
+  CareText.m5ManageAppointments: 'Manage appointments',
 };
 
 // URDU NEEDS NATIVE REVIEW (see the file header).
@@ -690,9 +756,10 @@ const Map<CareText, String> _ur = {
   CareText.appointments: 'ملاقاتیں',
   CareText.appointmentsSub: 'ملاقات کی درخواست کریں اور انہیں سنبھالیں',
   CareText.notifications: 'اطلاعات',
-  CareText.notificationsSub: 'آپ کی نگہداشت کے بارے میں اپ ڈیٹس',
-  CareText.findExpert: 'ماہر تلاش کریں',
-  CareText.findExpertSub: 'KOI میں درج ماہرینِ نفسیات دیکھیں',
+  CareText.notificationsSub: 'آپ کی درخواستوں اور نگہداشت کے بارے میں اپ ڈیٹس',
+  CareText.findExpert: 'ماہرِ نفسیات تلاش کریں',
+  CareText.findExpertSub:
+      'پیشہ ور پروفائل دیکھیں اور کسی پریکٹس کو درخواست دیں',
   CareText.myApplications: 'میری درخواستیں',
   CareText.myApplicationsSub: 'ماہرینِ نفسیات کو بھیجی گئی درخواستیں',
   CareText.notMonitored:
@@ -728,12 +795,12 @@ const Map<CareText, String> _ur = {
   CareText.viewApplication: 'میری درخواست دیکھیں',
   CareText.notAcceptingCantApply:
       'یہ ماہرِ نفسیات اس وقت نئے مریض قبول نہیں کر رہے۔',
-  CareText.stateRequested: 'درخواست دی گئی',
-  CareText.stateAwaitingPayment: 'ڈیمو ادائیگی کا انتظار',
-  CareText.statePendingReview: 'ماہرِ نفسیات کا انتظار',
-  CareText.stateAccepted: 'قبول کر لی گئی',
-  CareText.stateDeclined: 'رد کر دی گئی',
-  CareText.stateWithdrawn: 'واپس لے لی گئی',
+  CareText.stateRequested: 'درخواست جمع ہو گئی',
+  CareText.stateAwaitingPayment: 'ڈیمو مرحلہ ضروری ہے',
+  CareText.statePendingReview: 'پریکٹس کے جائزے کا انتظار',
+  CareText.stateAccepted: 'درخواست قبول · آپ کی نگہداشت فعال ہے',
+  CareText.stateDeclined: 'درخواست رد کر دی گئی',
+  CareText.stateWithdrawn: 'درخواست واپس لے لی گئی',
   CareText.paymentPending: 'ادائیگی: زیرِ التوا (فرضی)',
   CareText.paymentConfirmed: 'ادائیگی: تصدیق شدہ (فرضی)',
   CareText.paymentExplainer:
@@ -745,9 +812,6 @@ const Map<CareText, String> _ur = {
   CareText.withdrawYes: 'واپس لیں',
   CareText.keep: 'رہنے دیں',
   CareText.noApplications: 'آپ نے ابھی کسی ماہرِ نفسیات کو درخواست نہیں دی۔',
-  CareText.acceptedNote:
-      'ماہرِ نفسیات نے آپ کی درخواست قبول کر لی۔ اپنی نگہداشت کی جگہ دیکھنے '
-      'کے لیے نگہداشت کو نیچے کھینچیں۔',
   CareText.declinedNote:
       'ماہرِ نفسیات آپ کی درخواست نہیں لے سکے۔ آپ کسی اور ماہرِ نفسیات کو '
       'تلاش کر سکتے ہیں۔',
@@ -1015,6 +1079,42 @@ const Map<CareText, String> _ur = {
   CareText.m4AppointmentsCapped:
       'آپ کی ملاقاتوں کا صرف ایک حصہ لوڈ ہو سکا (1,000)۔',
   CareText.m4NotAcceptingNow: 'یہ ماہرِ نفسیات ابھی نئے مریض قبول نہیں کر رہے۔',
+  CareText.m5CareHome: 'نگہداشت ہوم',
+  CareText.m5MyCare: 'میری نگہداشت',
+  CareText.m5RoleGeneral: 'عام صارف',
+  CareText.m5RolePatient: 'مریض',
+  CareText.m5StartTitle: 'اپنی نگہداشت کا سفر شروع کریں',
+  CareText.m5StartBody:
+      'کوئی ماہرِ نفسیات تلاش کریں یا کسی پریکٹس کی دعوت قبول کریں۔ نگہداشت '
+      'فعال ہونے پر بھی آپ کا رجسٹرڈ اکاؤنٹ وہی رہتا ہے۔',
+  CareText.m5ActiveTitle: 'آپ کی نگہداشت فعال ہے',
+  CareText.m5Connected: 'منسلک ماہرِ نفسیات',
+  CareText.m5OpenMessages: 'نگہداشت کے پیغامات کھولیں',
+  CareText.m5QEmpty: 'آپ کے ماہرِ نفسیات تیار ہونے پر یہاں سوالنامے دیں گے۔',
+  CareText.m5MoreOptions: 'نگہداشت کے مزید اختیارات',
+  CareText.m5BecomeTitle: 'ماہرِ نفسیات بنیں',
+  CareText.m5BecomeSub: 'پیشہ ورانہ رجسٹریشن کی معلومات',
+  CareText.m5BecomeHeading: 'پیشہ ورانہ رجسٹریشن ابھی دستیاب نہیں',
+  CareText.m5BecomeBody:
+      'ماہرِ نفسیات کے اکاؤنٹ KOI ویب سائٹ پر بنائے اور تصدیق کیے جاتے ہیں۔',
+  CareText.m5BecomeNoChange: 'اس سے آپ کے اکاؤنٹ کی رسائی تبدیل نہیں ہوتی۔',
+  CareText.m5Ended:
+      'آپ کا پچھلا نگہداشت کا تعلق ختم ہو گیا ہے۔ آپ ماہرِ نفسیات تلاش کرنے '
+      'کے لیے KOI نگہداشت کا استعمال جاری رکھ سکتے ہیں۔',
+  CareText.m5StateAcceptedPrevious: 'درخواست پہلے قبول کی گئی تھی',
+  CareText.m5PendingReviewNote:
+      'آپ کا ڈیمو مرحلہ مکمل ہو گیا ہے۔ پریکٹس آپ کی درخواست قبول یا رد کرے '
+      'گی۔ اپ ڈیٹس کے لیے اطلاعات دیکھیں۔',
+  CareText.m5AcceptedPreviousNote:
+      'یہ درخواست پہلے قبول کی گئی تھی۔ اس پریکٹس کے ساتھ ابھی کوئی فعال '
+      'نگہداشت کا تعلق دستیاب نہیں۔ درخواست کی تاریخ مریض کی رسائی نہیں دیتی۔',
+  CareText.m5AcceptedActiveNote:
+      'اس ماہرِ نفسیات کے ساتھ آپ کی نگہداشت پہلے سے فعال ہے۔ اپنی نگہداشت '
+      'سنبھالنے کے لیے میرے ماہرِ نفسیات کھولیں۔',
+  CareText.m5PsyAccess:
+      'آپ کے رجسٹرڈ اکاؤنٹ کو اب اس پریکٹس کی نگہداشت تک رسائی حاصل ہے۔',
+  CareText.m5MessageTeam: 'اپنی نگہداشت ٹیم کو پیغام بھیجیں',
+  CareText.m5ManageAppointments: 'ملاقاتیں سنبھالیں',
 };
 
 /// The strings and direction of the new Care screens.
@@ -1067,6 +1167,11 @@ class CareStrings {
       isUrdu ? 'جمع کرنے کا وقت: $time' : 'Submitted at $time';
 
   String unreadCount(int n) => isUrdu ? '$n نہ پڑھے گئے' : '$n unread';
+
+  /// MOB-5 My Care questionnaire card (PatientWorkspace.tsx "N awaiting
+  /// completion"; mobile has every page loaded, up to the page cap).
+  String awaitingCount(int n) =>
+      isUrdu ? '$n مکمل ہونا باقی' : '$n awaiting completion';
 
   String notificationsBell(int n) =>
       isUrdu ? 'اطلاعات، $n نہ پڑھی گئیں' : 'Notifications, $n unread';

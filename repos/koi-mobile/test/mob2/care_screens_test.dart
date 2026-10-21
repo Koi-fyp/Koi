@@ -104,7 +104,7 @@ final _screens = <_Screen>[
     wire: (h) => _experts.script,
     addData: (h) => _experts.items = [MockExpertDirectoryApi.profiles.first],
     dataText: 'Demo Psychologist A',
-    titleEn: 'Find an Expert',
+    titleEn: 'Find a Psychologist',
     titleUr: CareStrings.ur.t(CareText.findExpert),
   ),
   _Screen(
@@ -123,8 +123,8 @@ final _screens = <_Screen>[
         state: ApplicationState.awaitingDemoPayment,
       ),
     ],
-    dataText: 'Waiting for demo payment',
-    titleEn: 'My applications',
+    dataText: 'Demo step required',
+    titleEn: 'My Applications',
     titleUr: CareStrings.ur.t(CareText.myApplications),
   ),
   _Screen(

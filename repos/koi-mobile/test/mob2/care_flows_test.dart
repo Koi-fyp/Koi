@@ -29,6 +29,7 @@ import 'package:koi_mobile/notifications/notification_models.dart';
 import 'package:koi_mobile/notifications/notification_screens.dart';
 import 'package:koi_mobile/platform/platform_client.dart';
 import 'package:koi_mobile/questionnaires/draft_store.dart';
+import 'package:koi_mobile/questionnaires/mock_questionnaire_api.dart';
 import 'package:koi_mobile/questionnaires/questionnaire_screens.dart';
 import 'package:koi_mobile/safety/safety_host.dart';
 import 'package:koi_mobile/shell/app_shell.dart';
@@ -129,7 +130,10 @@ void main() {
     await tapKey(tester, 'apply-confirm-send');
 
     expect(find.byType(ApplicationDetailScreen), findsOneWidget);
-    expect(find.text('Waiting for demo payment'), findsWidgets);
+    expect(
+      find.text(CareStrings.en.t(CareText.stateAwaitingPayment)),
+      findsWidgets,
+    );
     expect(find.text('Payment: Pending (simulated)'), findsOneWidget);
     expect(
       find.byType(EditableText),
@@ -137,7 +141,10 @@ void main() {
       reason: 'no card fields, nothing that looks like a checkout',
     );
     await tapKey(tester, 'application-demo-payment');
-    expect(find.text('Waiting for the psychologist'), findsWidgets);
+    expect(
+      find.text(CareStrings.en.t(CareText.statePendingReview)),
+      findsWidgets,
+    );
     expect(find.text('Payment: Confirmed (simulated)'), findsOneWidget);
     expect(find.byKey(const Key('application-demo-payment')), findsNothing);
 
@@ -151,7 +158,7 @@ void main() {
     await tapKey(tester, 'application-withdraw');
     expect(find.text(CareStrings.en.t(CareText.withdrawTitle)), findsOneWidget);
     await tapKey(tester, 'withdraw-confirm');
-    expect(find.text('Withdrawn'), findsWidgets);
+    expect(find.text(CareStrings.en.t(CareText.stateWithdrawn)), findsWidgets);
     expect(find.byKey(const Key('application-withdraw')), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -237,7 +244,7 @@ void main() {
     // The psychologist accepts on the server; the app learns it on resume.
     h.backend.simulateDecision('demo-request-demo-expert-1', accept: true);
     await _resume(tester);
-    expect(find.text('Accepted'), findsWidgets);
+    expect(find.text(CareStrings.en.t(CareText.stateAccepted)), findsWidgets);
     await _back(tester);
     await _back(tester);
     await _back(tester);
@@ -349,7 +356,10 @@ void main() {
     await _openCare(tester);
     await tapKey(tester, 'care-applications');
     expect(find.byKey(const Key('care-empty')), findsOneWidget);
-    expect(find.text('Waiting for demo payment'), findsNothing);
+    expect(
+      find.text(CareStrings.en.t(CareText.stateAwaitingPayment)),
+      findsNothing,
+    );
 
     h.auth.set(user: null);
     await settle(tester);
@@ -358,7 +368,13 @@ void main() {
 
   testWidgets('MOB2-31 403 from a care endpoint: one capability re-check, '
       'never a loop; still denied → screens removed + notice', (tester) async {
-    final h = Mob2Harness(user: _registered('p1'), role: KoiRole.patient);
+    // MOB-5: questionnaires from the demo source, so only the appointment
+    // call gets the 403 (the My Care hub now loads the assignments).
+    final h = Mob2Harness(
+      user: _registered('p1'),
+      role: KoiRole.patient,
+      questionnaires: MockQuestionnaireRemote(),
+    );
     await _seedPrivateKoi(h, 'p1');
     final t = RecordingTransport(
       (_, _) => const PlatformHttpResponse(
