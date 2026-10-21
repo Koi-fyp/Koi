@@ -12,9 +12,9 @@ import 'package:koi_mobile/questionnaires/questionnaire_wire.dart';
 
 import '../support/mob1_fakes.dart';
 
-// MOB-3 rewrite: same MOB-1 IDs and behaviours, now on the contract v0.5.1
-// flow (PATCH autosave, Restart = empty PATCH, POST submit) with the AI
-// QuestionnaireDraft body (PROVISIONAL).
+// MOB-3 rewrite: same MOB-1 IDs and behaviours on the contract flow (PATCH
+// autosave, Restart = empty PATCH, POST submit). MOB-6: the bodies are now
+// contract v0.5.2 (PatientQuestionnaireDTO, {question_id, type, value}).
 
 const _attempt = 'demo_attempt_en';
 
@@ -22,35 +22,38 @@ const _attempt = 'demo_attempt_en';
 const Map<String, AnswerValue> _complete = {
   'q_single': AnswerValue(optionIds: ['o_a']),
   'q_multi': AnswerValue(optionIds: ['o_b', 'o_c']),
-  'q_yes_no': AnswerValue(optionIds: ['o_yes']),
+  'q_yes_no': AnswerValue(yes: true),
   'q_likert': AnswerValue(optionIds: ['o3']),
-  'q_numeric': AnswerValue(value: 4),
   'q_image_single': AnswerValue(optionIds: ['img_square']),
 };
 
 Map<String, Object?> _published({
-  String status = 'published',
-  String type = 'single',
+  String type = 'single_choice',
+  Map<String, Object?> extra = const {},
 }) => {
-  'questionnaire_id': 'q',
-  'version': 1,
-  'status': status,
-  'body': {
-    'title': 'T',
-    'language': 'en',
-    'rtl': false,
-    'questions': [
-      {
-        'question_id': 'q1',
-        'type': type,
-        'text': 'Placeholder',
-        'options': [
-          {'option_id': 'a', 'label': 'A'},
-          {'option_id': 'b', 'label': 'B'},
-        ],
-      },
-    ],
-  },
+  'version_id': 'v1',
+  'schema_version': '0.5.0',
+  'title': {'en': 'T'},
+  'locales': ['en'],
+  'questions': [
+    {
+      'id': 'q1',
+      'type': type,
+      'prompt': {'en': 'Placeholder'},
+      'required': true,
+      'options': [
+        {
+          'id': 'a',
+          'label': {'en': 'A'},
+        },
+        {
+          'id': 'b',
+          'label': {'en': 'B'},
+        },
+      ],
+    },
+  ],
+  ...extra,
 };
 
 void main() {
@@ -97,35 +100,32 @@ void main() {
     assignment = (await remote.assignments()).items.first;
   });
 
-  group('MOB1-26 only published, known questionnaires render', () {
-    test('unpublished and unknown types are refused', () {
+  group('MOB1-26 only valid, known questionnaires render', () {
+    // MOB-6: v0.5.2 has no "published" status; an extra key is refused.
+    test('extra keys and unknown types are refused', () {
       expect(
-        () => parsePublishedQuestionnaire(_published(status: 'draft')),
+        () => parsePatientQuestionnaire(_published(extra: {'status': 'draft'})),
+        throwsA(isA<FormatException>()),
+      );
+      expect(
+        () => parsePatientQuestionnaire(_published(type: 'slider')),
         throwsA(isA<UnsupportedQuestionnaireException>()),
       );
-      expect(
-        () => parsePublishedQuestionnaire(_published(type: 'slider')),
-        throwsA(isA<UnsupportedQuestionnaireException>()),
-      );
-      expect(
-        parsePublishedQuestionnaire(_published()).questions.single.id,
-        'q1',
-      );
+      expect(parsePatientQuestionnaire(_published()).questions.single.id, 'q1');
     });
     test('answers are sanitized against the pinned questionnaire', () {
-      final v = parsePublishedQuestionnaire(_published());
-      final clean = sanitizeAnswers(v, const {
-        'q1': Answer(
-          answerId: 'id1',
-          questionId: 'q1',
-          optionIds: ['zzz', 'b', 'a'],
-        ),
-        'q9': Answer(answerId: 'id9', questionId: 'q9', optionIds: ['a']),
-      });
-      expect(clean.keys, ['q1']);
-      expect(clean['q1']!.optionIds, [
-        'b',
-      ], reason: 'single choice keeps one valid id');
+      final v = parsePatientQuestionnaire(_published());
+      Answer single(String q, Object value) =>
+          Answer(questionId: q, type: QuestionType.single, value: value);
+      expect(sanitizeAnswers(v, {'q1': single('q1', 'b')})['q1']!.value, 'b');
+      for (final bad in <Answer>[
+        single('q1', 'zzz'),
+        single('q1', ['b']),
+        single('q9', 'a'),
+        const Answer(questionId: 'q1', type: QuestionType.multi, value: ['b']),
+      ]) {
+        expect(sanitizeAnswers(v, {bad.questionId: bad}), isEmpty);
+      }
     });
     test(
       'an attempt for another version is never shown (no cross-version merge)',
@@ -156,7 +156,7 @@ void main() {
       expect(c.serverRevision, 0);
       c.setAnswer('q_single', const AnswerValue(optionIds: ['o_a']));
       c.setAnswer('q_single', const AnswerValue(optionIds: ['o_b']));
-      c.setAnswer('q_yes_no', const AnswerValue(optionIds: ['o_no']));
+      c.setAnswer('q_yes_no', const AnswerValue(yes: false));
       expect(c.saveStatus, isNot(SaveStatus.saved));
       await Future<void>.delayed(const Duration(milliseconds: 80));
       await settle();
@@ -173,12 +173,12 @@ void main() {
     test('the local draft is encrypted and holds no plain answers', () async {
       final c = device();
       await c.load();
-      c.setAnswer('q_free_text', const AnswerValue(text: 'my private words'));
+      c.setAnswer('q_short_text', const AnswerValue(text: 'my private words'));
       await settle();
       final raw = box.rows.values.single;
       expect(raw, isNot(contains('my private words')));
-      expect(raw, isNot(contains(c.answerIds['q_free_text']!)));
       expect((jsonDecode(raw) as Map).keys.toSet(), {
+        'format',
         'uid',
         'attempt_id',
         'version_id',
@@ -200,7 +200,7 @@ void main() {
       final b = device(store: draftsOn(MemoryDraftBox()));
       await b.load();
       expect(b.answers['q_single']!.optionIds, ['o_c']);
-      expect(b.answers['q_single']!.answerId, a.answerIds['q_single']);
+      expect(b.answers['q_single'], a.answers['q_single']);
       expect(b.serverRevision, a.serverRevision);
       a.dispose();
       b.dispose();
@@ -226,7 +226,7 @@ void main() {
       expect(remote.revisionOf(_attempt), 1);
 
       // A comes back online: conflict, the server answer is untouched.
-      a.setAnswer('q_yes_no', const AnswerValue(optionIds: ['o_yes']));
+      a.setAnswer('q_yes_no', const AnswerValue(yes: true));
       await settle();
       expect(a.saveStatus, SaveStatus.conflict);
       expect(serverOptions('q_single'), ['o_b']);
@@ -469,8 +469,8 @@ void main() {
       );
       // The demo fixtures parse with the app's own parser.
       expect(
-        parsePublishedQuestionnaire(demoAllTypesEn()).questions,
-        hasLength(8),
+        parsePatientQuestionnaire(demoAllTypesEn()).questions,
+        hasLength(7),
       );
     });
   });

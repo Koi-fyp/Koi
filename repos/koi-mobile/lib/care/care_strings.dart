@@ -179,11 +179,7 @@ enum CareText {
   qConflict,
   qAckTitle,
   qBackToList,
-  qNumberInvalid,
-  qPictureUnavailable,
-  qSources,
-  qIncrease,
-  qDecrease,
+  qLanguage,
   // Personal safety plan (BATCH SAFETY-PLAN). NEEDS CLINICIAN REVIEW: every
   // sp* text (both languages) was drafted for development and has not been
   // reviewed by a clinician. Never add wording about methods or means.
@@ -513,11 +509,7 @@ const Map<CareText, String> _en = {
   CareText.qConflict: 'Conflict',
   CareText.qAckTitle: 'Response submitted',
   CareText.qBackToList: 'Back to questionnaires',
-  CareText.qNumberInvalid: 'Please enter a number.',
-  CareText.qPictureUnavailable: 'Picture unavailable',
-  CareText.qSources: 'Source',
-  CareText.qIncrease: 'Increase',
-  CareText.qDecrease: 'Decrease',
+  CareText.qLanguage: 'Language',
   // Safety plan: NEEDS CLINICIAN REVIEW.
   CareText.spTitle: 'My safety plan',
   CareText.spIntro: 'A plan in your own words for the hard moments. You can add more anytime.',
@@ -911,11 +903,7 @@ const Map<CareText, String> _ur = {
   CareText.qConflict: 'تضاد',
   CareText.qAckTitle: 'جواب جمع ہو گیا',
   CareText.qBackToList: 'سوالناموں پر واپس',
-  CareText.qNumberInvalid: 'براہِ کرم ایک عدد لکھیں۔',
-  CareText.qPictureUnavailable: 'تصویر دستیاب نہیں',
-  CareText.qSources: 'ماخذ',
-  CareText.qIncrease: 'بڑھائیں',
-  CareText.qDecrease: 'گھٹائیں',
+  CareText.qLanguage: 'زبان',
   // Safety plan: NEEDS CLINICIAN REVIEW and NEEDS NATIVE REVIEW.
   CareText.spTitle: 'میرا حفاظتی منصوبہ',
   CareText.spIntro: 'مشکل لمحوں کے لیے آپ کے اپنے الفاظ میں ایک منصوبہ۔ آپ جب چاہیں اس میں مزید لکھ سکتے ہیں۔',
@@ -1149,19 +1137,13 @@ class CareStrings {
 
   String charCount(int n, int max) => '$n / $max';
 
-  String numberBelowMin(String min) => isUrdu
-      ? 'سب سے کم اجازت شدہ عدد $min ہے۔'
-      : 'The lowest allowed number is $min.';
+  /// MOB-6 multiple choice limits (contract `min_selections` /
+  /// `max_selections`).
+  String chooseAtLeast(int n) =>
+      isUrdu ? 'کم از کم $n منتخب کریں' : 'Choose at least $n';
 
-  String numberAboveMax(String max) => isUrdu
-      ? 'سب سے زیادہ اجازت شدہ عدد $max ہے۔'
-      : 'The highest allowed number is $max.';
-
-  String numberStep(String step) =>
-      isUrdu ? '$step کے وقفے سے لکھیں۔' : 'Use steps of $step.';
-
-  String numberRange(String min, String max) =>
-      isUrdu ? '$min سے $max تک' : 'From $min to $max';
+  String chooseUpTo(int n) =>
+      isUrdu ? 'زیادہ سے زیادہ $n منتخب کریں' : 'Choose up to $n';
 
   String submittedAt(String time) =>
       isUrdu ? 'جمع کرنے کا وقت: $time' : 'Submitted at $time';

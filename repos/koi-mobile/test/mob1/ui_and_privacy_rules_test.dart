@@ -102,8 +102,13 @@ void main() {
       expect(hits, isEmpty);
     });
 
-    test('extra server fields are dropped, never kept or re-sent', () {
-      final attempt = parseAttempt({
+    // MOB-6: contract v0.5.2 forbids extra keys, so such a reply is REFUSED
+    // (never half-read); a clean one round-trips with exactly its keys.
+    test('extra server fields are refused, never kept or re-sent', () {
+      Map<String, Object?> attempt({
+        Map<String, Object?> extra = const {},
+        Map<String, Object?> answerExtra = const {},
+      }) => {
         'id': 'a',
         'assignment_id': 's',
         'patient_uid': 'p',
@@ -113,35 +118,41 @@ void main() {
         'server_updated_at': '2026-10-19T10:00:00Z',
         'answers': [
           {
-            'answer_id': 'x1',
             'question_id': 'q1',
-            'option_ids': ['x'],
-            'value': null,
-            'text': null,
-            'score': 4,
-            'evaluation': 'hidden',
+            'type': 'single_choice',
+            'value': 'x',
+            ...answerExtra,
           },
         ],
-        'score': 12,
-        'evaluation_status': 'pending',
-        'ai_job_id': 'j1',
-      });
-      expect(encodeAnswer(attempt.answers.single), {
-        'answer_id': 'x1',
+        ...extra,
+      };
+      for (final bad in [
+        attempt(extra: {'score': 12}),
+        attempt(extra: {'evaluation_status': 'pending'}),
+        attempt(extra: {'ai_job_id': 'j1'}),
+        attempt(answerExtra: {'score': 4}),
+        attempt(answerExtra: {'evaluation': 'hidden'}),
+      ]) {
+        expect(() => parseAttempt(bad), throwsFormatException);
+      }
+      expect(encodeAnswer(parseAttempt(attempt()).answers.single), {
         'question_id': 'q1',
-        'option_ids': ['x'],
-        'value': null,
-        'text': null,
+        'type': 'single_choice',
+        'value': 'x',
       });
-      final ack = parseSubmitAck({
+      Map<String, Object?> ack([Map<String, Object?> extra = const {}]) => {
         'attempt_id': 'a',
         'assignment_id': 's',
         'status': 'submitted',
         'submitted_at': '2026-10-19T10:00:00Z',
-        'score': 12,
-        'review_status': 'queued',
-      });
-      expect(ack.attemptId, 'a');
+        ...extra,
+      };
+      expect(() => parseSubmitAck(ack({'score': 12})), throwsFormatException);
+      expect(
+        () => parseSubmitAck(ack({'review_status': 'queued'})),
+        throwsFormatException,
+      );
+      expect(parseSubmitAck(ack()).attemptId, 'a');
     });
 
     test('the app never calls psychologist-only, review or AI endpoints', () {

@@ -2,12 +2,10 @@ import '../platform/platform_client.dart';
 import 'questionnaire_models.dart';
 import 'questionnaire_wire.dart';
 
-/// The patient's questionnaire endpoints. Paths and flow are REAL contract
-/// v0.5.1 (`listPatientAssignments`, `getPatientAssignment`,
-/// `autosavePatientAttempt`, `submitPatientAttempt`; `web2_implemented`,
-/// not deployed). The questionnaire body and answer items inside them are
-/// // PROVISIONAL CONTRACT (KOI_MOB1_PROVISIONAL_CONTRACTS.md §3; see
-/// questionnaire_wire.dart).
+/// The patient's questionnaire endpoints. Paths, flow and bodies are REAL
+/// contract v0.5.2 (`listPatientAssignments`, `getPatientAssignment`,
+/// `autosavePatientAttempt`, `submitPatientAttempt`; the shapes the web's
+/// end-to-end flow uses, see questionnaire_wire.dart).
 ///
 /// Every call carries the Firebase ID token; the server decides what this
 /// uid may see. The app never calls psychologist-only or AI endpoints and

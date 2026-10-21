@@ -150,6 +150,16 @@ class _Runner extends ConsumerStatefulWidget {
 class _RunnerState extends ConsumerState<_Runner> {
   bool _summary = false;
 
+  /// The language the patient picked with the chips (null = the default:
+  /// app language, else English, else the first published locale).
+  QuestionnaireLanguage? _picked;
+
+  QuestionnaireLanguage _language(PublishedQuestionnaire v, CareStrings s) {
+    final picked = _picked;
+    if (picked != null && v.locales.contains(picked)) return picked;
+    return v.defaultLanguage(s.isUrdu ? 'ur' : 'en');
+  }
+
   AttemptController get _c =>
       ref.read(attemptControllerProvider(widget.attemptRef));
 
@@ -230,7 +240,7 @@ class _RunnerState extends ConsumerState<_Runner> {
       ),
       AttemptPhase.answering => Directionality(
         key: ValueKey(_summary ? 'summary' : 'question'),
-        textDirection: c.questionnaire!.direction,
+        textDirection: _language(c.questionnaire!, s).direction,
         child: _summary
             ? _summaryPage(c, s, demo, manifest)
             : _questionPage(c, s, demo, manifest),
@@ -257,8 +267,14 @@ class _RunnerState extends ConsumerState<_Runner> {
     child: Row(
       children: [
         const KoiBackButton(),
-        const Spacer(),
-        SaveIndicator(status: c.saveStatus, strings: s),
+        const SizedBox(width: 8),
+        // Flexible: the Urdu status + Demo badge fit at 320 dp (MOB-6).
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: SaveIndicator(status: c.saveStatus, strings: s),
+          ),
+        ),
         if (demo) ...[const SizedBox(width: 8), const DemoDataBadge()],
       ],
     ),
@@ -324,6 +340,7 @@ class _RunnerState extends ConsumerState<_Runner> {
     QuestionnaireAssetManifest manifest,
   ) {
     final v = c.questionnaire!;
+    final lang = _language(v, s);
     final q = v.questions[c.index];
     final last = c.index == v.questions.length - 1;
     final showMissing =
@@ -331,25 +348,18 @@ class _RunnerState extends ConsumerState<_Runner> {
     return _scaffold([
       _header(c, s, demo),
       Text(
-        v.title,
+        v.title.resolve(lang),
         key: const Key('questionnaire-title'),
-        style: questionnaireTextStyle(
-          v.language,
-          size: 22,
-          weight: FontWeight.w700,
-        ),
+        style: questionnaireTextStyle(lang, size: 22, weight: FontWeight.w700),
       ),
-      if (c.index == 0 && v.description != null) ...[
-        const SizedBox(height: 8),
-        Text(
-          v.description!,
-          key: const Key('questionnaire-description'),
-          style: questionnaireTextStyle(v.language, size: 15),
-        ),
-      ],
-      if (c.index == 0 && v.sources.any((x) => x.hasText)) ...[
+      if (v.locales.length > 1) ...[
         const SizedBox(height: 12),
-        QuestionnaireSources(questionnaire: v, strings: s),
+        QuestionnaireLanguageChips(
+          locales: v.locales,
+          selected: lang,
+          strings: s,
+          onSelected: (l) => setState(() => _picked = l),
+        ),
       ],
       const SizedBox(height: 16),
       QuestionnaireProgress(
@@ -362,7 +372,7 @@ class _RunnerState extends ConsumerState<_Runner> {
       QuestionView(
         key: ValueKey('qv-${q.id}'),
         question: q,
-        language: v.language,
+        language: lang,
         answer: c.answers[q.id],
         enabled: c.saveStatus != SaveStatus.conflict,
         manifest: manifest,
@@ -393,7 +403,7 @@ class _RunnerState extends ConsumerState<_Runner> {
               fullWidth: true,
               customPadding: const EdgeInsets.symmetric(vertical: 14),
               onPressed: () {
-                if (q.required && (c.answers[q.id]?.isEmpty ?? true)) {
+                if (!questionComplete(q, c.answers[q.id])) {
                   c.markUnanswered(q.id);
                   return;
                 }
@@ -427,16 +437,14 @@ class _RunnerState extends ConsumerState<_Runner> {
     Question q,
     Answer? a,
     CareStrings s,
-    QuestionnaireAssetManifest manifest,
+    QuestionnaireLanguage lang,
   ) {
     if (a == null || a.isEmpty) return s.t(CareText.qNoAnswer);
-    if (q.type == QuestionType.freeText) return a.text!;
-    if (q.type == QuestionType.numeric) {
-      return formatQuestionnaireNumber(a.value!);
-    }
+    if (a.yes case final yes?) return yes ? lang.yes : lang.no;
+    if (a.text case final text?) return text;
     return [
       for (final id in a.optionIds)
-        if (q.option(id) case final o?) o.label,
+        if (q.option(id) case final o?) o.label.resolve(lang),
     ].join(', ');
   }
 
@@ -447,6 +455,7 @@ class _RunnerState extends ConsumerState<_Runner> {
     QuestionnaireAssetManifest manifest,
   ) {
     final v = c.questionnaire!;
+    final lang = _language(v, s);
     return _scaffold([
       _header(c, s, demo),
       Semantics(
@@ -470,9 +479,9 @@ class _RunnerState extends ConsumerState<_Runner> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        v.questions[i].text,
+                        v.questions[i].prompt.resolve(lang),
                         style: questionnaireTextStyle(
-                          v.language,
+                          lang,
                           size: 14.5,
                           weight: FontWeight.w700,
                         ),
@@ -483,10 +492,10 @@ class _RunnerState extends ConsumerState<_Runner> {
                           v.questions[i],
                           c.answers[v.questions[i].id],
                           s,
-                          manifest,
+                          lang,
                         ),
                         key: Key('summary-${v.questions[i].id}'),
-                        style: questionnaireTextStyle(v.language, size: 14.5),
+                        style: questionnaireTextStyle(lang, size: 14.5),
                       ),
                     ],
                   ),
@@ -509,11 +518,6 @@ class _RunnerState extends ConsumerState<_Runner> {
             ),
           ),
         ),
-      if (v.sources.any((x) => x.hasText)) ...[
-        const SizedBox(height: 4),
-        QuestionnaireSources(questionnaire: v, strings: s),
-        const SizedBox(height: 12),
-      ],
       if (c.submitProblem != null) ...[
         const SizedBox(height: 4),
         KoiErrorText(_submitProblemText(s, c.submitProblem!)),
@@ -547,65 +551,73 @@ class _RunnerState extends ConsumerState<_Runner> {
       });
 }
 
-/// The `sources[]` attribution: citation and attribution text, word for
-/// word (WHO-5 and the mhGAP-derived items require it).
-class QuestionnaireSources extends StatelessWidget {
-  const QuestionnaireSources({
+/// The questionnaire's published languages (shown only when there is more
+/// than one), like the web runner's Language selector. Each chip is a
+/// 48 dp radio target named in its own language.
+class QuestionnaireLanguageChips extends StatelessWidget {
+  const QuestionnaireLanguageChips({
     super.key,
-    required this.questionnaire,
+    required this.locales,
+    required this.selected,
     required this.strings,
+    required this.onSelected,
   });
 
-  final PublishedQuestionnaire questionnaire;
+  final List<QuestionnaireLanguage> locales;
+  final QuestionnaireLanguage selected;
   final CareStrings strings;
+  final ValueChanged<QuestionnaireLanguage> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    final style = questionnaireTextStyle(
-      questionnaire.language,
-      size: 12.5,
-      color: KoiColors.koiDark,
-    );
-    return Container(
-      key: const Key('questionnaire-sources'),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: KoiColors.neoWhite,
-        border: Border.all(width: 2),
-        borderRadius: KoiRadii.inputAll,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            strings.t(CareText.qSources),
-            style: koiBodyStyle(
-              size: 12.5,
-              weight: FontWeight.w700,
-            ).copyWith(height: strings.lineHeight),
+  Widget build(BuildContext context) => Semantics(
+    key: const Key('q-languages'),
+    label: strings.t(CareText.qLanguage),
+    container: true,
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final l in locales)
+          Semantics(
+            key: Key('q-lang-${l.wire}'),
+            inMutuallyExclusiveGroup: true,
+            checked: l == selected,
+            button: true,
+            label: l.nativeName,
+            excludeSemantics: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onSelected(l),
+              child: Container(
+                constraints: const BoxConstraints(
+                  minHeight: koiMinTouch,
+                  minWidth: koiMinTouch,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: l == selected
+                      ? KoiColors.neoYellow
+                      : KoiColors.neoWhite,
+                  border: Border.all(width: 2),
+                  borderRadius: KoiRadii.pillAll,
+                ),
+                child: Text(
+                  l.nativeName,
+                  textDirection: l.direction,
+                  style: questionnaireTextStyle(
+                    l,
+                    size: 14,
+                    weight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
           ),
-          for (final src in questionnaire.sources) ...[
-            if (src.citation != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                src.citation!,
-                key: Key('source-citation-${src.sourceId}'),
-                style: style,
-              ),
-            ],
-            if (src.attributionText != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                src.attributionText!,
-                key: Key('source-attribution-${src.sourceId}'),
-                style: style,
-              ),
-            ],
-          ],
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
 }
 
 /// "Question 3 of 7" with a Neo progress bar.

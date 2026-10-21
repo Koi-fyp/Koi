@@ -67,11 +67,11 @@ enum SubmitProblem {
 /// One patient's attempt: load → answer (debounced autosave, revision
 /// compare-and-set) → submit (idempotent) → submitted (terminal).
 ///
-/// Contract v0.5.1 flow (REAL paths): `GET /patient/assignments/{id}`,
+/// Contract v0.5.2 flow (REAL paths): `GET /patient/assignments/{id}`,
 /// `PATCH /patient/attempts/{id}` (Restart = the same PATCH with no
 /// answers), `POST /patient/attempts/{id}/submit`. Rules:
-/// - every answer gets a uuid v4 answer id ONCE per question; it is kept
-///   across autosave, retry, resume (server and local draft) and Restart;
+/// - answers travel as the contract's `{question_id, type, value}` only;
+///   a multi selection below its minimum stays on this device until valid;
 /// - a retry of the same save reuses its Idempotency-Key; a different
 ///   save gets a new one;
 /// - a newer remote revision is NEVER overwritten silently: the state goes
@@ -90,9 +90,7 @@ class AttemptController extends ChangeNotifier {
     this.onlineChanges,
     this.debounce = const Duration(milliseconds: 800),
     String Function()? newKey,
-    String Function()? newAnswerId,
-  }) : _newKey = newKey ?? uuidV4,
-       _newAnswerId = newAnswerId ?? uuidV4 {
+  }) : _newKey = newKey ?? uuidV4 {
     _onlineSub = onlineChanges?.where((o) => o).listen((_) {
       if (_saveStatus == SaveStatus.offline) unawaited(_flush());
     });
@@ -105,7 +103,6 @@ class AttemptController extends ChangeNotifier {
   final Stream<bool>? onlineChanges;
   final Duration debounce;
   final String Function() _newKey;
-  final String Function() _newAnswerId;
 
   StreamSubscription<bool>? _onlineSub;
   Timer? _timer;
@@ -116,8 +113,6 @@ class AttemptController extends ChangeNotifier {
   PublishedQuestionnaire? _questionnaire;
   Map<String, Answer> _answers = {};
 
-  /// question id → answer id. Survives Restart (answers cleared, ids kept).
-  final Map<String, String> _answerIds = {};
   int _serverRevision = 0;
   bool _dirty = false;
 
@@ -145,7 +140,6 @@ class AttemptController extends ChangeNotifier {
   AttemptLoadError? get loadError => _loadError;
   PublishedQuestionnaire? get questionnaire => _questionnaire;
   Map<String, Answer> get answers => Map.unmodifiable(_answers);
-  Map<String, String> get answerIds => Map.unmodifiable(_answerIds);
   SaveStatus get saveStatus => _saveStatus;
   int get serverRevision => _serverRevision;
   int? get remoteRevision => _remoteRevision;
@@ -173,6 +167,7 @@ class AttemptController extends ChangeNotifier {
           await _lock(acknowledgement.submittedAt);
         case OpenAssignment(:final questionnaire, :final attempt):
           if (attempt.versionId != assignment.versionId ||
+              questionnaire.versionId != assignment.versionId ||
               detail.assignment.versionId != assignment.versionId ||
               attempt.attemptId != assignment.attemptId) {
             // Never show or merge answers across versions.
@@ -214,16 +209,13 @@ class AttemptController extends ChangeNotifier {
         ? local
         : null;
     if (mine != null) {
-      _answerIds.addAll(mine.answerIds);
       _idempotencyKey = mine.idempotencyKey;
     }
-    _takeIds(server);
     if (mine != null && mine.dirty) {
       final edits = sanitizeAnswers(q, mine.answers);
       if (mine.baseRevision == attempt.revision) {
         // Nothing newer remotely: this device's edits continue.
         _answers = edits;
-        _takeIds(edits);
         _dirty = true;
         _phase = AttemptPhase.answering;
         _schedule(Duration.zero);
@@ -246,21 +238,8 @@ class AttemptController extends ChangeNotifier {
     await _writeLocal();
   }
 
-  void _takeIds(Map<String, Answer> answers) {
-    for (final a in answers.values) {
-      _answerIds[a.questionId] = a.answerId;
-    }
-  }
-
   static bool _sameValues(Map<String, Answer> a, Map<String, Answer> b) =>
-      a.length == b.length &&
-      a.entries.every((e) {
-        final o = b[e.key];
-        return o != null &&
-            listEquals(o.optionIds, e.value.optionIds) &&
-            o.value == e.value.value &&
-            o.text == e.value.text;
-      });
+      a.length == b.length && a.entries.every((e) => b[e.key] == e.value);
 
   Future<void> _writeLocal() async {
     if (_questionnaire == null || locked) return;
@@ -273,7 +252,6 @@ class AttemptController extends ChangeNotifier {
           baseRevision: _serverRevision,
           dirty: _dirty,
           answers: _answers,
-          answerIds: Map.of(_answerIds),
           idempotencyKey: _idempotencyKey,
         ),
       );
@@ -303,21 +281,14 @@ class AttemptController extends ChangeNotifier {
 
   /// Records what the patient entered for [questionId]. Ignored once
   /// locked or while in conflict (the user must resolve first, so nothing
-  /// is lost or merged). An empty or invalid entry removes the answer; its
-  /// answer id is kept for the next entry.
+  /// is lost or merged). An empty or invalid entry removes the answer.
   void setAnswer(String questionId, AnswerValue value) {
     final q = _questionnaire;
     if (q == null || _phase != AttemptPhase.answering) return;
     if (_saveStatus == SaveStatus.conflict) return;
-    if (q.question(questionId) == null) return;
-    final answer = Answer(
-      answerId: _answerIds[questionId] ??= _newAnswerId(),
-      questionId: questionId,
-      optionIds: value.optionIds,
-      value: value.value,
-      text: value.text,
-    );
-    final clean = sanitizeAnswers(q, {questionId: answer});
+    final question = q.question(questionId);
+    if (question == null) return;
+    final clean = sanitizeAnswers(q, {questionId: Answer.of(question, value)});
     _answers = {..._answers}..remove(questionId);
     if (clean[questionId] != null) _answers[questionId] = clean[questionId]!;
     _dirty = true;
@@ -363,7 +334,7 @@ class AttemptController extends ChangeNotifier {
       final ack = await api.autosave(
         assignment.attemptId,
         expectedRevision: _serverRevision,
-        answers: orderedAnswers(_questionnaire!, _answers),
+        answers: sendableAnswers(_questionnaire!, _answers),
         idempotencyKey: _saveKey!,
       );
       if (_disposed || locked) return;
@@ -469,7 +440,6 @@ class AttemptController extends ChangeNotifier {
           _serverRevision = attempt.revision;
       }
       _answers = mine;
-      _takeIds(mine);
       _conflictLocal = null;
       _remoteRevision = null;
       _dirty = true;
@@ -486,8 +456,8 @@ class AttemptController extends ChangeNotifier {
   // ── Restart ────────────────────────────────────────────────────────────
 
   /// Clears an UNFINISHED attempt on the server (after the user confirmed)
-  /// with an autosave of no answers. The answer ids are kept, so the same
-  /// question gets the same answer id again. Returns false when refused
+  /// with an autosave of no answers (the web's Restart). Returns false when
+  /// refused
   /// (submitted, newer elsewhere, offline).
   Future<bool> restart() async {
     if (locked || _phase != AttemptPhase.answering) return false;
@@ -613,6 +583,17 @@ class AttemptController extends ChangeNotifier {
         }
         _notify();
         return locked;
+      }
+    } on FormatException {
+      // A reply that is not exactly the four-field acknowledgement is never
+      // read. Whether it landed is decided by the assignment detail; a
+      // retry re-uses the same key.
+      ack = await _submittedAckOrNull();
+      if (ack == null) {
+        _phase = AttemptPhase.answering;
+        _submitProblem = SubmitProblem.unconfirmed;
+        _notify();
+        return false;
       }
     }
     await _lock(ack.submittedAt);

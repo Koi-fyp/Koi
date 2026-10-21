@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/painting.dart' show TextDirection;
@@ -9,72 +8,44 @@ import 'package:koi_mobile/questionnaires/questionnaire_wire.dart';
 
 import '../support/mob3_support.dart';
 
-/// Everything the parsed model holds, as JSON (to prove what is kept).
-String dump(PublishedQuestionnaire q) => jsonEncode({
-  'id': q.questionnaireId,
-  'version': q.version,
-  'title': q.title,
-  'description': q.description,
-  'language': q.language.wire,
-  'rtl': q.rtl,
-  'sources': [
-    for (final s in q.sources) [s.sourceId, s.citation, s.attributionText],
-  ],
-  'questions': [
-    for (final x in q.questions)
-      {
-        'id': x.id,
-        'type': x.type.wire,
-        'text': x.text,
-        'help': x.helpText,
-        'required': x.required,
-        'min': x.minValue,
-        'max': x.maxValue,
-        'step': x.step,
-        'asset': x.assetId,
-        'visual': x.visualDescription,
-        'options': [
-          for (final o in x.options)
-            [o.id, o.label, o.assetId, o.visualDescription],
-        ],
-      },
-  ],
-});
+// MOB-6: rewritten for contract v0.5.2 (PatientQuestionnaireDTO). The
+// MOB-3 AI-draft shape (status, body, language, rtl, help_text, sources,
+// numeric, "rating") is gone; see the MOB-6 report for each change.
 
 Map<String, Object?> _q(
   String type, {
   int options = 2,
   String id = 'q1',
-  Object? required,
+  Object? required = true,
   Map<String, Object?> extra = const {},
 }) => {
-  'question_id': id,
+  'id': id,
   'type': type,
-  'text': 'Placeholder',
+  'prompt': {'en': 'Placeholder'},
   'required': ?required,
-  'options': [
-    for (var i = 0; i < options; i++)
-      {'option_id': 'o$i', 'label': 'Option $i'},
-  ],
+  if (type != 'yes_no' && type != 'short_text')
+    'options': [
+      for (var i = 0; i < options; i++)
+        {
+          'id': 'o$i',
+          'label': {'en': 'Option $i'},
+        },
+    ],
+  if (type == 'short_text') 'max_length': 100,
+  if (type == 'multi_choice') ...{'min_selections': 0, 'max_selections': 2},
   ...extra,
 };
 
 Map<String, Object?> _form(
   List<Map<String, Object?>> questions, {
-  String language = 'en',
-  bool? rtl,
-  String status = 'published',
-  Object? version = 1,
+  List<String> locales = const ['en'],
+  Object? schemaVersion = '0.5.0',
 }) => {
-  'questionnaire_id': 'form',
-  'version': version,
-  'status': status,
-  'body': {
-    'title': 'T',
-    'language': language,
-    'rtl': rtl ?? language == 'ur',
-    'questions': questions,
-  },
+  'version_id': 'v1',
+  'schema_version': schemaVersion,
+  'title': {'en': 'T'},
+  'locales': locales,
+  'questions': questions,
 };
 
 Matcher get _refused => throwsA(
@@ -82,24 +53,30 @@ Matcher get _refused => throwsA(
 );
 
 void main() {
-  group('MOB3-01 PublishedQuestionnaire body parses every question type', () {
-    test('the all-types fixture holds all 8 types with their fields', () {
-      final q = parsePublishedQuestionnaire(demoAllTypesEn());
+  group('MOB3-01 PatientQuestionnaireDTO parses every question type', () {
+    test('the all-types fixture holds all 7 types with their fields', () {
+      final q = parsePatientQuestionnaire(demoAllTypesEn());
       expect(
         q.questions.map((x) => x.type).toSet(),
         QuestionType.values.toSet(),
       );
-      final numeric = q.question('q_numeric')!;
-      expect([numeric.minValue, numeric.maxValue, numeric.step], [0, 10, 1]);
-      expect(q.question('q_multi')!.helpText, 'Choose one or more.');
-      expect(q.question('q_image_single')!.assetId, 'placeholder_triangle_v1');
-      expect(q.description, 'Placeholder description. Answer each item.');
-      expect(q.questionnaireId, 'demo_all_types_en');
-      expect(q.version, 1);
+      final multi = q.question('q_multi')!;
+      expect([multi.minSelections, multi.maxSelections], [2, 3]);
+      expect(q.question('q_short_text')!.maxLength, 500);
+      expect(q.question('q_yes_no')!.options, isEmpty);
+      expect(
+        q.question('q_image_single')!.options.first.asset!.assetId,
+        'placeholder_circle_v1',
+      );
+      expect(q.versionId, 'demo_version_en');
+      expect(q.locales, [
+        QuestionnaireLanguage.en,
+        QuestionnaireLanguage.ur,
+        QuestionnaireLanguage.romanUr,
+      ]);
     });
-    test('"rating" is read as likert; options keep their published order', () {
-      final q = parsePublishedQuestionnaire(_form([_q('rating', options: 4)]));
-      expect(q.questions.single.type, QuestionType.likert);
+    test('options keep their published order', () {
+      final q = parsePatientQuestionnaire(_form([_q('likert', options: 4)]));
       expect(q.questions.single.options.map((o) => o.id), [
         'o0',
         'o1',
@@ -109,84 +86,135 @@ void main() {
     });
   });
 
-  group('MOB3-02 malformed or unpublished questionnaires are refused', () {
+  group('MOB3-02 malformed questionnaires are refused', () {
     final cases = <String, Map<String, Object?>>{
-      'not published': _form([_q('single')], status: 'draft'),
-      'version 0': _form([_q('single')], version: 0),
-      'unknown language': _form([_q('single')], language: 'fr'),
-      'ur but rtl false': _form([_q('single')], language: 'ur', rtl: false),
-      'en but rtl true': _form([_q('single')], rtl: true),
+      'schema_version not 0.5.0': _form([
+        _q('single_choice'),
+      ], schemaVersion: '0.4'),
+      'unknown locale': _form([_q('single_choice')], locales: ['fr']),
+      'no locale': _form([_q('single_choice')], locales: []),
       'unknown type': _form([_q('slider')]),
+      'the old "rating" type': _form([_q('rating')]),
+      'the old "single" type': _form([_q('single')]),
       'no questions': _form([]),
-      'duplicate question ids': _form([_q('single'), _q('multi')]),
-      'bad question id': _form([_q('single', id: 'q 1')]),
-      'choice without options': _form([_q('single', options: 0)]),
-      'more than 12 options': _form([_q('multi', options: 13)]),
-      'more than 100 questions': _form([
-        for (var i = 0; i < 101; i++) _q('single', id: 'q$i'),
+      'duplicate question ids': _form([_q('single_choice'), _q('likert')]),
+      'bad question id': _form([_q('single_choice', id: 'q 1')]),
+      'id starting with a dash': _form([_q('single_choice', id: '-q1')]),
+      'choice with one option': _form([_q('single_choice', options: 1)]),
+      'more than 20 options': _form([_q('multi_choice', options: 21)]),
+      'more than 200 questions': _form([
+        for (var i = 0; i < 201; i++) _q('single_choice', id: 'q$i'),
       ]),
-      'min above max': _form([
-        _q('numeric', options: 0, extra: {'min_value': 5, 'max_value': 1}),
+      'min_selections above max_selections': _form([
+        _q(
+          'multi_choice',
+          options: 4,
+          extra: {'min_selections': 3, 'max_selections': 2},
+        ),
       ]),
-      'step 0': _form([
-        _q('numeric', options: 0, extra: {'step': 0}),
+      'multi without max_selections': _form([
+        {..._q('multi_choice')}..remove('max_selections'),
+      ]),
+      'short_text without max_length': _form([
+        {..._q('short_text')}..remove('max_length'),
+      ]),
+      'max_length above 4000': _form([
+        _q('short_text', extra: {'max_length': 4001}),
       ]),
       'duplicate option ids': _form([
         {
-          ..._q('single'),
+          ..._q('single_choice'),
           'options': [
-            {'option_id': 'a', 'label': 'A'},
-            {'option_id': 'a', 'label': 'B'},
+            {
+              'id': 'a',
+              'label': {'en': 'A'},
+            },
+            {
+              'id': 'a',
+              'label': {'en': 'B'},
+            },
           ],
         },
       ]),
       'bad option id': _form([
         {
-          ..._q('single'),
+          ..._q('single_choice'),
           'options': [
-            {'option_id': 'a/b', 'label': 'A'},
+            {
+              'id': 'a/b',
+              'label': {'en': 'A'},
+            },
+            {
+              'id': 'b',
+              'label': {'en': 'B'},
+            },
           ],
         },
       ]),
-      'no body': {'questionnaire_id': 'f', 'version': 1, 'status': 'published'},
+      'plain-string prompt': _form([
+        {..._q('single_choice'), 'prompt': 'Placeholder'},
+      ]),
+      'empty prompt': _form([
+        {
+          ..._q('single_choice'),
+          'prompt': {'en': ''},
+        },
+      ]),
+      'prompt in an unknown locale': _form([
+        {
+          ..._q('single_choice'),
+          'prompt': {'fr': 'Bonjour'},
+        },
+      ]),
     };
     for (final e in cases.entries) {
       test(e.key, () {
-        expect(() => parsePublishedQuestionnaire(e.value), _refused);
+        expect(() => parsePatientQuestionnaire(e.value), _refused);
       });
     }
   });
 
-  group('MOB3-03 yes_no has exactly 2 options; likert 3 to 7', () {
+  group('MOB3-03 yes_no has no options; likert 2 to 11', () {
     test('yes_no', () {
       expect(
-        () => parsePublishedQuestionnaire(_form([_q('yes_no', options: 1)])),
+        () => parsePatientQuestionnaire(
+          _form([
+            {
+              ..._q('yes_no'),
+              'options': [
+                {
+                  'id': 'y',
+                  'label': {'en': 'Y'},
+                },
+                {
+                  'id': 'n',
+                  'label': {'en': 'N'},
+                },
+              ],
+            },
+          ]),
+        ),
         _refused,
       );
       expect(
-        () => parsePublishedQuestionnaire(_form([_q('yes_no', options: 3)])),
-        _refused,
-      );
-      expect(
-        parsePublishedQuestionnaire(_form([_q('yes_no')]))
+        parsePatientQuestionnaire(_form([_q('yes_no')]))
             .questions
             .single
             .options,
-        hasLength(2),
+        isEmpty,
       );
     });
     test('likert', () {
-      for (final bad in [2, 8]) {
+      for (final bad in [1, 12]) {
         expect(
-          () =>
-              parsePublishedQuestionnaire(_form([_q('likert', options: bad)])),
+          () => parsePatientQuestionnaire(_form([_q('likert', options: bad)])),
           _refused,
           reason: '$bad options',
         );
       }
-      for (final ok in [3, 7]) {
+      for (final ok in [2, 11]) {
         expect(
-          parsePublishedQuestionnaire(_form([_q('likert', options: ok)]))
+          parsePatientQuestionnaire(_form([_q('likert', options: ok)]))
               .questions
               .single
               .options,
@@ -196,48 +224,58 @@ void main() {
     });
   });
 
-  group('MOB3-04 required defaults to true; optional texts may be absent', () {
+  group('MOB3-04 required is mandatory; due_at is optional', () {
     test('required', () {
       expect(
-        parsePublishedQuestionnaire(_form([_q('single')]))
+        parsePatientQuestionnaire(_form([_q('single_choice')]))
             .questions
             .single
             .required,
         isTrue,
       );
       expect(
-        parsePublishedQuestionnaire(_form([_q('single', required: false)]))
+        parsePatientQuestionnaire(_form([_q('single_choice', required: false)]))
             .questions
             .single
             .required,
         isFalse,
       );
-      expect(
-        () =>
-            parsePublishedQuestionnaire(_form([_q('single', required: 'yes')])),
-        _refused,
-      );
+      for (final bad in [null, 'yes']) {
+        expect(
+          () => parsePatientQuestionnaire(
+            _form([_q('single_choice', required: bad)]),
+          ),
+          _refused,
+          reason: '$bad',
+        );
+      }
     });
-    test('description, help_text and visual descriptions are optional', () {
-      final q = parsePublishedQuestionnaire(_form([_q('single')]));
-      expect(q.description, isNull);
-      expect(q.questions.single.helpText, isNull);
-      expect(q.questions.single.visualDescription, isNull);
-      expect(q.sources, isEmpty);
+    test('a text missing in a listed locale falls back in locale order', () {
+      final q = parsePatientQuestionnaire(
+        _form(
+          [
+            {
+              ..._q('single_choice'),
+              'prompt': {'ur': 'اردو'},
+            },
+          ],
+          locales: ['ur', 'en'],
+        ),
+      );
+      expect(
+        q.questions.single.prompt.resolve(QuestionnaireLanguage.en),
+        'اردو',
+      );
     });
   });
 
   group(
     'MOB3-05 fields for the psychologist / evaluation are never parsed',
     () {
-      test('a body full of hidden fields parses to exactly the same model', () {
+      test('a questionnaire carrying them is refused (strict v0.5.2)', () {
         expect(
-          dump(parsePublishedQuestionnaire(allTypesWithHiddenFields())),
-          dump(parsePublishedQuestionnaire(demoAllTypesEn())),
-        );
-        expect(
-          dump(parsePublishedQuestionnaire(allTypesWithHiddenFields())),
-          isNot(contains(psychologistOnlyMarker)),
+          () => parsePatientQuestionnaire(allTypesWithHiddenFields()),
+          _refused,
         );
       });
       test('no questionnaire source file reads those keys (code only)', () {
@@ -246,8 +284,8 @@ void main() {
         );
         final hits = <String>[];
         for (final f in dartFilesUnder('lib/questionnaires')) {
-          // The mock fixtures are the SERVER side of the demo (they contain a
-          // realistic body, including category/validated) and are excluded.
+          // The mock fixtures are the SERVER side of the demo and are
+          // excluded.
           if (f.path.contains('mock_')) continue;
           final lines = codeOf(f).split('\n');
           for (var i = 0; i < lines.length; i++) {
@@ -259,93 +297,71 @@ void main() {
     },
   );
 
-  group(
-    'MOB3-06 direction follows the questionnaire, not the language name',
-    () {
-      test('ur → right-to-left; roman_ur and en → left-to-right', () {
-        expect(
-          parsePublishedQuestionnaire(demoUrdu()).direction,
-          TextDirection.rtl,
-        );
-        expect(
-          parsePublishedQuestionnaire(demoUrdu()).language,
-          QuestionnaireLanguage.ur,
-        );
-        expect(
-          parsePublishedQuestionnaire(demoRomanUrdu()).direction,
-          TextDirection.ltr,
-        );
-        expect(
-          parsePublishedQuestionnaire(demoRomanUrdu()).language,
-          QuestionnaireLanguage.romanUr,
-        );
-        expect(
-          parsePublishedQuestionnaire(demoAllTypesEn()).direction,
-          TextDirection.ltr,
-        );
-      });
-    },
-  );
-
-  group('MOB3-07 sources keep citation and attribution only', () {
-    test(
-      'WHO-5 attribution is kept word for word; bad sources are skipped',
-      () {
-        final who5 = parsePublishedQuestionnaire(who5Published());
-        final s = who5.sources.single;
-        expect(s.sourceId, 'who5_en_2024');
-        expect(
-          s.citation,
-          'World Health Organization. The World Health Organization-Five '
-          'Well-Being Index (WHO-5). Geneva: World Health Organization; 2024. '
-          'License: CC-BY-NC-SA 3.0 IGO',
-        );
-        expect(s.attributionText, '© WHO, 2024. License: CC-BY-NC-SA 3.0 IGO');
-        final form = _form([_q('single')]);
-        (form['body']! as Map)['sources'] = [
-          {'source_id': 'bad id', 'citation': 'x'},
-          'not a map',
-          {'source_id': 'ok', 'attribution_text': 'Attribution'},
-        ];
-        final parsed = parsePublishedQuestionnaire(form);
-        expect(parsed.sources.map((x) => x.sourceId), ['ok']);
-        expect(parsed.sources.single.citation, isNull);
-      },
-    );
+  group('MOB3-06 direction follows the shown locale', () {
+    test('ur → right-to-left; ur-Latn and en → left-to-right', () {
+      expect(QuestionnaireLanguage.ur.direction, TextDirection.rtl);
+      expect(QuestionnaireLanguage.romanUr.direction, TextDirection.ltr);
+      expect(QuestionnaireLanguage.en.direction, TextDirection.ltr);
+      expect(
+        parsePatientQuestionnaire(demoUrdu()).defaultLanguage('en'),
+        QuestionnaireLanguage.ur,
+      );
+      expect(
+        parsePatientQuestionnaire(demoRomanUrdu()).defaultLanguage('ur'),
+        QuestionnaireLanguage.romanUr,
+      );
+    });
   });
 
-  group('MOB3-08 asset ids are ids, never URLs or paths', () {
-    test('a URL or path is treated as unknown (never loaded)', () {
-      Question parsedWith(Object? asset) => parsePublishedQuestionnaire(
-        _form([
-          {
-            ..._q('image_single'),
-            'options': [
-              {
-                'option_id': 'a',
-                'label': 'A',
-                'asset_id': asset,
-                'visual_description': 'A drawn sun',
-              },
-              {'option_id': 'b', 'label': 'B'},
-            ],
-          },
-        ]),
-      ).questions.single;
-      for (final bad in [
+  group('MOB3-08 pictures are asset references, never URLs or paths', () {
+    test('a URL or a malformed reference is refused (never loaded)', () {
+      Map<String, Object?> withAsset(Object? asset) => _form([
+        {
+          ..._q('image_single_choice'),
+          'options': [
+            {
+              'id': 'a',
+              'label': {'en': 'A'},
+              'asset': asset,
+            },
+            {
+              'id': 'b',
+              'label': {'en': 'B'},
+              'asset': {'asset_id': 'b_pic', 'version': 1, 'sha256': 'a' * 64},
+            },
+          ],
+        },
+      ]);
+      for (final bad in <Object?>[
         'https://example.com/a.png',
-        '../secret',
-        'a.png',
-        'x' * 129,
-        42,
+        {'asset_id': '../secret', 'version': 1, 'sha256': 'a' * 64},
+        {'asset_id': 'a.png', 'version': 1, 'sha256': 'a' * 64},
+        {'asset_id': 'ok', 'version': 0, 'sha256': 'a' * 64},
+        {'asset_id': 'ok', 'version': 1, 'sha256': 'A' * 64},
+        {'asset_id': 'ok', 'version': 1},
+        {
+          'asset_id': 'ok',
+          'version': 1,
+          'sha256': 'a' * 64,
+          'url': 'https://example.com/a.png',
+        },
+        null,
       ]) {
-        final o = parsedWith(bad).options.first;
-        expect(o.assetId, isNull, reason: '$bad');
-        expect(o.visualDescription, 'A drawn sun');
+        expect(
+          () => parsePatientQuestionnaire(withAsset(bad)),
+          _refused,
+          reason: '$bad',
+        );
       }
       expect(
-        parsedWith('sleep_moon_01').options.first.assetId,
-        'sleep_moon_01',
+        parsePatientQuestionnaire(
+          withAsset({
+            'asset_id': 'sleep_moon_01',
+            'version': 2,
+            'sha256': 'b' * 64,
+          }),
+        ).questions.single.options.first.asset,
+        AssetReference(assetId: 'sleep_moon_01', version: 2, sha256: 'b' * 64),
       );
     });
     test('no lib file loads pictures from the network', () {

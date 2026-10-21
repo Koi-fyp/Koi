@@ -78,24 +78,23 @@ void main() {
         contains('- assets/questionnaire/'),
       );
     });
-    test(
-      'every asset id in the demo fixtures is either bundled or has a text',
-      () async {
-        final m = await QuestionnaireAssetManifest.load();
-        for (final f in [demoAllTypesEn(), demoUrdu(), demoRomanUrdu()]) {
-          final q = parsePublishedQuestionnaire(f);
-          for (final question in q.questions) {
-            for (final o in question.options.where((o) => o.assetId != null)) {
-              expect(
-                m.resolve(o.assetId) != null || o.visualDescription != null,
-                isTrue,
-                reason: '${q.questionnaireId}/${o.id}',
-              );
-            }
+    // MOB-6: demo pictures are v0.5.2 AssetReferences; every one must
+    // resolve (full {asset_id, version, sha256} match).
+    test('every asset reference in the demo fixtures is bundled', () async {
+      final m = await QuestionnaireAssetManifest.load();
+      for (final f in [demoAllTypesEn(), demoUrdu(), demoRomanUrdu()]) {
+        final q = parsePatientQuestionnaire(f);
+        for (final question in q.questions) {
+          for (final o in question.options.where((o) => o.asset != null)) {
+            expect(
+              m.resolveReference(o.asset),
+              isNotNull,
+              reason: '${q.versionId}/${o.id}',
+            );
           }
         }
-      },
-    );
+      }
+    });
   });
 }
 

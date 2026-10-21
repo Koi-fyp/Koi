@@ -57,7 +57,6 @@ class LocalDraft {
     required this.baseRevision,
     required this.dirty,
     required this.answers,
-    this.answerIds = const {},
     this.idempotencyKey,
   });
 
@@ -75,16 +74,12 @@ class LocalDraft {
   final bool dirty;
   final Map<String, Answer> answers;
 
-  /// question id → answer id, including questions answered before a
-  /// Restart: the same question keeps the same answer id.
-  final Map<String, String> answerIds;
-
   /// Set before the first submit is sent, so a retry after a timeout or a
   /// restart of the app re-uses the SAME key.
   final String? idempotencyKey;
 }
 
-/// Local drafts, per uid. The answers and answer ids are encrypted with the
+/// Local drafts, per uid. The answers are encrypted with the
 /// account's Client-Side Encryption (CSE) at rest context (same path as
 /// check-ins); only ids, revision and flags are plaintext. Drafts are
 /// deleted on sign-out, on relationship removal and once an attempt is
@@ -94,8 +89,9 @@ class LocalDraft {
 /// false nothing is read or written, only deleted.
 ///
 /// The box format is mobile-private: the web resumes from the SERVER copy
-/// written by autosave, never from this box. A MOB-1 draft (older payload
-/// format) does not parse and is ignored.
+/// written by autosave, never from this box. Only rows with
+/// [format] are read: a MOB-1 or MOB-3 draft (older answer shape) is
+/// ignored and the server copy wins (MOB-6).
 class DraftRepository {
   DraftRepository({
     required this.box,
@@ -111,23 +107,25 @@ class DraftRepository {
 
   static String keyFor(String uid, String attemptId) => '$uid::$attemptId';
 
+  /// MOB-6: answers in the contract v0.5.2 shape (`{question_id, type,
+  /// value}`). Rows without it are older formats and are not read.
+  static const int format = 2;
+
   Future<LocalDraft?> load(String uid, String attemptId) async {
     if (!enabled) return null;
     final raw = box.get(keyFor(uid, attemptId));
     if (raw == null) return null;
     try {
       final j = (jsonDecode(raw) as Map).cast<String, Object?>();
-      if (j['uid'] != uid) return null;
+      if (j['uid'] != uid || j['format'] != format) return null;
       final ctx = await cryptoContext(uid);
       final payload = (jsonDecode(
         await cipher.decrypt(j['payload']! as String, ctx.secret),
       ) as Map).cast<String, Object?>();
       final answers = <String, Answer>{
-        for (final a
-            in (payload['answers']! as List).map(decodeAnswer).nonNulls)
+        for (final a in (payload['answers']! as List).map(decodeAnswer))
           a.questionId: a,
       };
-      final ids = (payload['answer_ids']! as Map).cast<String, Object?>();
       return LocalDraft(
         attemptId: attemptId,
         versionId: j['version_id']! as String,
@@ -135,11 +133,6 @@ class DraftRepository {
         dirty: j['dirty'] == true,
         idempotencyKey: j['idempotency_key'] as String?,
         answers: answers,
-        answerIds: {
-          for (final e in ids.entries)
-            if (isQuestionnaireId(e.key) && isQuestionnaireId(e.value))
-              e.key: e.value! as String,
-        },
       );
     } catch (e) {
       debugPrint('[KOI] questionnaire draft unreadable (${e.runtimeType})');
@@ -153,6 +146,7 @@ class DraftRepository {
     await box.put(
       keyFor(uid, d.attemptId),
       jsonEncode({
+        'format': format,
         'uid': uid,
         'attempt_id': d.attemptId,
         'version_id': d.versionId,
@@ -162,7 +156,6 @@ class DraftRepository {
         'payload': await cipher.encrypt(
           jsonEncode({
             'answers': [for (final a in d.answers.values) encodeAnswer(a)],
-            'answer_ids': d.answerIds,
           }),
           ctx.secret,
           ctx.saltB64,

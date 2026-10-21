@@ -83,7 +83,7 @@ Map<String, Object?> _openDetail(
   List<Object?> answers = const [],
 }) => {
   'assignment': _assignmentJson(),
-  'questionnaire': demoAllTypesEn(),
+  'questionnaire': demoAllTypesEn('ver1'),
   'attempt': {
     'id': 'at1',
     'assignment_id': 'as1',
@@ -187,12 +187,11 @@ void main() {
         final body = jsonDecode(patch.body!) as Map;
         expect(body.keys.toSet(), {'expected_revision', 'answers'});
         expect(body['expected_revision'], 0);
+        // MOB-6: the contract v0.5.2 Answer, exactly.
         expect((body['answers'] as List).single, {
-          'answer_id': c.answerIds['q_single'],
           'question_id': 'q_single',
-          'option_ids': ['o_a'],
-          'value': null,
-          'text': null,
+          'type': 'single_choice',
+          'value': 'o_a',
         });
         expect(c.serverRevision, 1);
         c.dispose();
@@ -326,9 +325,16 @@ void main() {
       for (final q in c.questionnaire!.questions.where((q) => q.required)) {
         c.setAnswer(
           q.id,
-          q.type == QuestionType.numeric
-              ? const AnswerValue(value: 1)
-              : AnswerValue(optionIds: [q.options.first.id]),
+          q.type == QuestionType.yesNo
+              ? const AnswerValue(yes: true)
+              : AnswerValue(
+                  optionIds: [
+                    for (final o in q.options.take(
+                      q.minSelections > 1 ? q.minSelections : 1,
+                    ))
+                      o.id,
+                  ],
+                ),
         );
       }
       await _settle();
@@ -357,10 +363,9 @@ void main() {
         await c.load();
         for (final e in {
           'q_single': const AnswerValue(optionIds: ['o_a']),
-          'q_multi': const AnswerValue(optionIds: ['o_a']),
-          'q_yes_no': const AnswerValue(optionIds: ['o_yes']),
+          'q_multi': const AnswerValue(optionIds: ['o_a', 'o_b']),
+          'q_yes_no': const AnswerValue(yes: true),
           'q_likert': const AnswerValue(optionIds: ['o1']),
-          'q_numeric': const AnswerValue(value: 0),
           'q_image_single': const AnswerValue(optionIds: ['img_circle']),
         }.entries) {
           c.setAnswer(e.key, e.value);
@@ -419,14 +424,13 @@ void main() {
         remote.offline = true;
         c.setAnswer('q_single', const AnswerValue(optionIds: ['o_a']));
         await _settle();
-        c.setAnswer('q_yes_no', const AnswerValue(optionIds: ['o_no']));
+        c.setAnswer('q_yes_no', const AnswerValue(yes: false));
         await _settle();
         expect(c.saveStatus, SaveStatus.offline);
         expect(c.answers.keys, containsAll(['q_single', 'q_yes_no']));
         for (final e in {
-          'q_multi': const AnswerValue(optionIds: ['o_a']),
+          'q_multi': const AnswerValue(optionIds: ['o_a', 'o_b']),
           'q_likert': const AnswerValue(optionIds: ['o1']),
-          'q_numeric': const AnswerValue(value: 0),
           'q_image_single': const AnswerValue(optionIds: ['img_circle']),
         }.entries) {
           c.setAnswer(e.key, e.value);
@@ -604,38 +608,34 @@ void main() {
         expect(flags, contains('set this to false'));
       },
     );
-    test(
-      'on: answers and ids encrypted; off: nothing written or read',
-      () async {
-        final on = MemoryDraftBox();
-        final c = device(box: on);
-        await c.load();
-        c.setAnswer('q_free_text', const AnswerValue(text: 'private words'));
-        await _settle();
-        final row = on.rows.values.single;
-        expect(row, isNot(contains('private words')));
-        expect(row, isNot(contains(c.answerIds['q_free_text']!)));
-        expect(row, isNot(contains('q_free_text')));
-        c.dispose();
+    test('on: answers encrypted; off: nothing written or read', () async {
+      final on = MemoryDraftBox();
+      final c = device(box: on);
+      await c.load();
+      c.setAnswer('q_short_text', const AnswerValue(text: 'private words'));
+      await _settle();
+      final row = on.rows.values.single;
+      expect(row, isNot(contains('private words')));
+      expect(row, isNot(contains('q_short_text')));
+      c.dispose();
 
-        final off = MemoryDraftBox();
-        final d = device(box: off, drafts: false);
-        await d.load();
-        d.setAnswer('q_free_text', const AnswerValue(text: 'private words'));
-        await _settle();
-        expect(off.rows, isEmpty);
-        off.rows['p1::demo_attempt_en'] = on.rows.values.single;
-        expect(
-          await _drafts(off, enabled: false).load('p1', 'demo_attempt_en'),
-          isNull,
-        );
-        await _drafts(off, enabled: false).deleteAllFor('p1');
-        expect(off.rows, isEmpty, reason: 'old rows still deleted');
-        d.dispose();
-      },
-    );
+      final off = MemoryDraftBox();
+      final d = device(box: off, drafts: false);
+      await d.load();
+      d.setAnswer('q_short_text', const AnswerValue(text: 'private words'));
+      await _settle();
+      expect(off.rows, isEmpty);
+      off.rows['p1::demo_attempt_en'] = on.rows.values.single;
+      expect(
+        await _drafts(off, enabled: false).load('p1', 'demo_attempt_en'),
+        isNull,
+      );
+      await _drafts(off, enabled: false).deleteAllFor('p1');
+      expect(off.rows, isEmpty, reason: 'old rows still deleted');
+      d.dispose();
+    });
   });
 }
 
 PublishedQuestionnaire parsePublished(MockAssignmentSeed s) =>
-    parsePublishedQuestionnaire(s.questionnaire);
+    parsePatientQuestionnaire(s.questionnaire);

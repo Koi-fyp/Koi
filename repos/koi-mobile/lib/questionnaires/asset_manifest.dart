@@ -51,6 +51,38 @@ class QuestionnaireAssetManifest {
   QuestionnaireAsset? resolve(String? assetId) =>
       isQuestionnaireId(assetId) ? assets[assetId] : null;
 
+  /// MOB-6: the contract's `AssetReference {asset_id, version, sha256}`,
+  /// pinned for every picture this app bundles. The web resolves a
+  /// reference only when all three fields match its manifest; so does the
+  /// app. MOB6 tests check each hash against the file on disk.
+  static const Map<String, AssetReference> bundledReferences = {
+    'placeholder_circle_v1': AssetReference(
+      assetId: 'placeholder_circle_v1',
+      version: 1,
+      sha256:
+          'e7ddf556f4055352eaf71a239e3aef15b45c4277c932890cb905d2806e05c112',
+    ),
+    'placeholder_square_v1': AssetReference(
+      assetId: 'placeholder_square_v1',
+      version: 1,
+      sha256:
+          'a3a46af3cff7442a3d042f70dcedf0a08c32a8831148be14d76da70c326db58e',
+    ),
+    'placeholder_triangle_v1': AssetReference(
+      assetId: 'placeholder_triangle_v1',
+      version: 1,
+      sha256:
+          '67fd402dc39e105143ef21c0511a009d42c210d935509d142674005be4547955',
+    ),
+  };
+
+  /// The bundled picture for [ref], or null (unknown id, other version or
+  /// hash, or not in the manifest): the option is then shown as text.
+  QuestionnaireAsset? resolveReference(AssetReference? ref) {
+    if (ref == null || bundledReferences[ref.assetId] != ref) return null;
+    return assets[ref.assetId];
+  }
+
   /// Entries with a malformed id or missing fields are skipped.
   factory QuestionnaireAssetManifest.fromJson(Object? v) {
     final raw = ((v! as Map)['assets']! as List).cast<Object?>();

@@ -6,10 +6,11 @@ import 'questionnaire_wire.dart';
 
 /// In-memory stand-in for the patient questionnaire endpoints: the demo
 /// adapter for `--dart-define=KOI_MOCKS=true` (screens show "Demo data")
-/// and the fake remote in tests. It follows contract v0.5.1 behaviour
-/// (revision compare-and-set, terminal submission, idempotency keys, flat
+/// and the fake remote in tests. It follows contract v0.5.2 behaviour
+/// (revision compare-and-set, the answers.ts rules on every save, submit
+/// of the SAVED answers only, terminal submission, idempotency keys, flat
 /// ErrorDTO) and answers with the raw JSON a server would send, run
-/// through the app's own parsers in questionnaire_wire.dart.
+/// through the app's own strict parsers in questionnaire_wire.dart.
 class MockQuestionnaireRemote implements QuestionnaireApi {
   MockQuestionnaireRemote({
     List<MockAssignmentSeed>? seeds,
@@ -84,7 +85,7 @@ class MockQuestionnaireRemote implements QuestionnaireApi {
 
   /// Test helper: the server's answers now (decoded like the app would).
   List<Answer> answersOf(String attemptId) => [
-    for (final a in _row(attemptId).answers) decodeAnswer(a)!,
+    for (final a in _row(attemptId).answers) decodeAnswer(a),
   ];
 
   int revisionOf(String attemptId) => _row(attemptId).revision;
@@ -167,19 +168,26 @@ class MockQuestionnaireRemote implements QuestionnaireApi {
     if (replay != null) return replay; // same key = the same save
     if (r.submittedAt != null) throw _conflict();
     if (expectedRevision != r.revision) throw _conflict();
-    final q = parsePublishedQuestionnaire(r.seed.questionnaire);
-    final decoded = {
-      for (final a in (body['answers']! as List).map(decodeAnswer).nonNulls)
-        a.questionId: a,
-    };
-    if (decoded.length != answers.length) {
+    final q = parsePatientQuestionnaire(r.seed.questionnaire);
+    // Like the server: the exact AutosaveRequest keys, every answer in the
+    // contract shape, then answers.ts. Anything else is 400, nothing kept.
+    final List<Answer> decoded;
+    try {
+      if (body.keys.toSet().difference({
+        'expected_revision',
+        'answers',
+      }).isNotEmpty) {
+        throw const FormatException('AutosaveRequest');
+      }
+      decoded = [for (final a in body['answers']! as List) decodeAnswer(a)];
+    } on FormatException {
+      throw _error(PlatformErrorCode.invalid, 400, 'invalid_request');
+    }
+    if (answerIssues(q.questions, decoded).isNotEmpty) {
       throw _error(PlatformErrorCode.invalid, 400, 'invalid_request');
     }
     r
-      ..answers = [
-        for (final a in orderedAnswers(q, sanitizeAnswers(q, decoded)))
-          encodeAnswer(a),
-      ]
+      ..answers = [for (final a in decoded) encodeAnswer(a)]
       ..revision += 1;
     final ack = parseAutosaveAck({
       'attempt_id': attemptId,
@@ -211,11 +219,11 @@ class MockQuestionnaireRemote implements QuestionnaireApi {
     if (again) return parseSubmitAck(_ackJson(r)); // same key, same answer
     if (r.submittedAt != null) throw _conflict();
     if (expectedRevision != r.revision) throw _conflict();
-    final q = parsePublishedQuestionnaire(r.seed.questionnaire);
-    final held = {
-      for (final a in r.answers.map(decodeAnswer)) a!.questionId: a,
-    };
-    if (missingRequired(q, held).isNotEmpty) {
+    final q = parsePatientQuestionnaire(r.seed.questionnaire);
+    // The server submits what it already saved (PatientSubmitRequest has
+    // no answers) and checks it with answers.ts (final).
+    final held = [for (final a in r.answers) decodeAnswer(a)];
+    if (answerIssues(q.questions, held, isFinal: true).isNotEmpty) {
       throw _error(PlatformErrorCode.invalid, 400, 'invalid_request');
     }
     r
@@ -236,7 +244,11 @@ class MockQuestionnaireRemote implements QuestionnaireApi {
       assignmentId: 'demo_assignment_en',
       attemptId: 'demo_attempt_en',
       versionId: 'demo_version_en',
-      title: const {'en': 'Placeholder form (English)'},
+      title: const {
+        'en': 'Placeholder form (English)',
+        'ur': 'نمونہ فارم',
+        'ur-Latn': 'Namoona form',
+      },
       questionnaire: demoAllTypesEn(),
     ),
     MockAssignmentSeed(
@@ -257,7 +269,7 @@ class MockQuestionnaireRemote implements QuestionnaireApi {
 }
 
 /// One demo assignment: its ids, LocalizedText title and the raw
-/// PublishedQuestionnaire JSON.
+/// PatientQuestionnaireDTO JSON (its version_id is [versionId]).
 class MockAssignmentSeed {
   const MockAssignmentSeed({
     required this.assignmentId,
