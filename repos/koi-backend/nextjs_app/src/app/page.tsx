@@ -1,6 +1,6 @@
 'use client';
 
-import PlatformNavigation from '@/components/platform/PlatformNavigation';
+import HomepageEntryMenu from '@/components/platform/HomepageEntryMenu';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -108,6 +108,8 @@ export default function RootPage() {
     setStarting(true);
     try {
       await signInAnonymously();
+      // Continue even when sign-in began from the deliberate /?home=1 visit.
+      setHomeRequested(false);
     } catch {
       // The auth provider owns error presentation; allow retry in either failure mode.
     } finally {
@@ -167,28 +169,30 @@ export default function RootPage() {
               <Link href="/how-it-works" className="hover:text-black transition-colors">How It Works</Link>
             </div>
 
-            <PlatformNavigation />
+            <HomepageEntryMenu onAnonymous={startAction} busy={isLoading} />
             {user ? (
               <button
                 onClick={openChat}
+                aria-label="Open companion"
                 className="neo-btn-primary"
-                style={{ fontSize: '0.875rem', padding: '0.5rem 1.25rem' }}
+                style={{ fontSize: '0.875rem', padding: '0.5rem .75rem' }}
               >
-                Open chat
+                <span className="hidden sm:inline">Open companion</span><span className="sm:hidden">AI chat</span>
               </button>
             ) : (
             <button
               onClick={handleGetStarted}
+              aria-label="Chat anonymously"
               disabled={isLoading}
               className="neo-btn-primary"
-              style={{ fontSize: '0.875rem', padding: '0.5rem 1.25rem' }}
+              style={{ fontSize: '0.875rem', padding: '0.5rem .75rem' }}
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent" style={{ animation: 'spin 0.7s linear infinite' }} />
                   Starting…
                 </span>
-              ) : <>Get Started →</>}
+              ) : <><span className="hidden sm:inline">Chat anonymously</span><span className="sm:hidden">AI chat</span></>}
             </button>
             )}
           </div>
@@ -369,6 +373,7 @@ export default function RootPage() {
               <div className="flex flex-col gap-4 items-start lg:items-end shrink-0">
                 <button
                   onClick={startAction}
+                  aria-label="Start anonymous companion chat"
                   disabled={isLoading}
                   style={{
                     background: '#FFD100',

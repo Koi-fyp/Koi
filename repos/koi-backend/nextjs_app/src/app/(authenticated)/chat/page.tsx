@@ -85,7 +85,7 @@ export default function ChatPage() {
       >
         <OfflineBanner />
         <div className="chatControls">
-        <ConversationProductControls preferenceState={avatarPreference} pending={isTyping}>
+        <ConversationProductControls style={{ padding: '12px 16px 4px' }} preferenceState={avatarPreference} pending={isTyping}>
           <Link href="/companion-scene" className="neo-btn-secondary neo-btn-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
@@ -257,6 +257,9 @@ export default function ChatPage() {
         .chatLayout {
           display: flex;
           flex-direction: column-reverse;
+          width: 100%;
+          max-width: 1440px;
+          margin: 0 auto;
         }
         .chatColumn {
           display: flex;
@@ -272,6 +275,9 @@ export default function ChatPage() {
           min-height: 0;
           max-height: 55%;
           overflow-y: auto;
+          width: 100%;
+          max-width: 56rem;
+          margin: 0 auto;
         }
         .avatarPanel {
           box-sizing: border-box;
@@ -340,6 +346,21 @@ export default function ChatPage() {
           }
           .avatarCard { width: 100%; height: auto; max-height: 80vh; }
           .avatarCta { display: flex !important; }
+        }
+        @media (min-width: 1024px) {
+          .chatLayout { gap: 24px; padding: 16px 24px; }
+          .avatarPanel {
+            flex-basis: clamp(300px, 28vw, 380px);
+            width: clamp(300px, 28vw, 380px);
+            max-width: 380px;
+            padding: 12px 8px 16px 0;
+            justify-content: center;
+          }
+          .avatarStage { flex: 0 1 auto; }
+          .avatarCard { max-height: calc(100svh - 210px); }
+        }
+        @media (min-width: 1440px) {
+          .chatLayout { gap: 32px; padding-left: 32px; padding-right: 32px; }
         }
         @keyframes thinkBubble1 {
           0%, 100% {

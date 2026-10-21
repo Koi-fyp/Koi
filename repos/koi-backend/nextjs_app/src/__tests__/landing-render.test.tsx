@@ -16,7 +16,7 @@ it('renders the landing hero and the sign-in CTA for a signed-out visitor', () =
   expect(screen.getByRole('heading', { level: 1, name: /Your\s+mind\s+deserves a\s+friend\./ })).toBeInTheDocument();
   const cta = screen.getByRole('button', { name: /Start Talking/ });
   expect(cta).toBeEnabled();
-  expect(screen.getByRole('button', { name: /Get Started/ })).toBeEnabled();
+  expect(screen.getByRole('button', { name: /Chat anonymously/ })).toBeEnabled();
   expect(mockReplace).not.toHaveBeenCalled();
 });
 

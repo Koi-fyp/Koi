@@ -4,6 +4,7 @@ module.exports = {
   setupFiles: ['fake-indexeddb/auto'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
+    '\\.module\\.css$': '<rootDir>/src/__mocks__/style.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^next/navigation$': '<rootDir>/src/__mocks__/next-navigation.ts',
     '^next/link$': '<rootDir>/src/__mocks__/next-link.tsx',

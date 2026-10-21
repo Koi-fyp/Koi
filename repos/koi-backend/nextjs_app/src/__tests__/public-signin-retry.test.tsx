@@ -18,7 +18,7 @@ beforeEach(() => {
 it.each([Landing, How])('allows retry after an auth-provider-reported failure without navigating', async Component => {
   mockSignIn.mockResolvedValue(undefined); // Existing provider reports errors in context, not by rejection.
   render(<Component />);
-  const button = screen.getAllByRole('button', { name: /Get Started|Start Talking/ })[0];
+  const button = screen.getAllByRole('button', { name: /Chat anonymously|Start Talking/ })[0];
   fireEvent.click(button);
   await waitFor(() => expect(button).not.toBeDisabled());
   fireEvent.click(button);

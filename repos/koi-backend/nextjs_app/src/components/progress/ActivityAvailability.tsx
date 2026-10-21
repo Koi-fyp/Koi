@@ -55,9 +55,9 @@ function OwnedActivities({ uid, legacyTotal, totals }: { uid: string; legacyTota
   const ready = data.status === 'ready' ? data : null;
   const counts = ready ? dashboardCounts({ completedExchanges: totals?.completedExchanges ?? NaN, conversations: totals?.conversations ?? NaN,
     events: ready.ledger.events, rewards: ready.ledger.rewards, milestones: ready.ledger.milestones }) : null;
-  // Same card, heading and spacing as the rest of Progress; order: counts, board, check-in, calendar.
-  return <>
-    <section className="neo-card p-5 mb-5" aria-label="Saved activity counts">
+  // One mounted instance of each section; CSS arranges the desktop dashboard.
+  return <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 items-start [&>*]:min-w-0">
+    <section className="neo-card p-5 mb-5 lg:col-start-2 lg:row-start-1" aria-label="Saved activity counts">
       <h2 className={CARD_TITLE}>Your saved activity</h2>
       {data.status === 'error' && <p role="alert" className="text-sm mt-2">Saved activities could not be loaded. Your records have not been changed.</p>}
       <dl className="text-sm grid grid-cols-2 gap-3 mt-3">{COUNT_LABELS.map(([key, label]) => <div key={key} className="border-[2.5px] border-black rounded-2xl p-3 bg-white shadow-[4px_4px_0_0_#000] min-w-0">
@@ -65,8 +65,10 @@ function OwnedActivities({ uid, legacyTotal, totals }: { uid: string; legacyTota
         <dd className="text-lg font-extrabold">{counts && Number.isFinite(counts[key]) ? (key === 'pieces' ? `${counts.pieces} of 25` : counts[key]) : data.status === 'error' || counts ? 'Unavailable' : 'Loading…'}</dd>
       </div>)}</dl>
     </section>
+    <div className="lg:col-start-1 lg:row-start-1 lg:row-span-2">
     <RecordedBoard ownerUid={uid} legacyTotal={legacyTotal} pieces={ready ? ready.ledger.rewards.map(receipt => ({ ownerUid: uid, slot: receipt.slot_index - 1, completionId: receipt.completion_id, source: receipt.source_type, unlockedAt: ready.ledger.events.find(event => event.id === receipt.completion_id)?.completed_at ?? receipt.awarded_at, provenance: receipt.source_type === 'breathing' ? 'client-measured' : receipt.source_type === 'check_in' ? 'saved-consented-check-in' : 'explicit-persisted-exchange' })) : null} milestones={ready?.ledger.milestones.map(receipt => receipt.milestone) ?? []} />
-    <section className="neo-card p-5 mb-5" aria-label="Recorded activities">
+    </div>
+    <section className="neo-card p-5 mb-5 lg:col-start-2 lg:row-start-2" aria-label="Recorded activities">
       <h2 className={CARD_TITLE}>Check-ins and activities</h2>
       <p className="text-sm my-3">Voluntary check-in: Mood, Connection and Energy, each from 1 to 5. Ratings describe your own experience; they are not a diagnosis.</p>
       <form onSubmit={save}>
@@ -87,7 +89,9 @@ function OwnedActivities({ uid, legacyTotal, totals }: { uid: string; legacyTota
         {!available && <button type="button" className="neo-btn-secondary neo-btn-sm" onClick={checkAccess}>Retry key access</button>}
         {saved && <button type="button" className="neo-btn-secondary neo-btn-sm" onClick={() => { setEntry(crypto.randomUUID()); attemptTime.current = null; setSaved(false); setNotice('A new check-in is ready. Only one check-in piece can be earned per Karachi day.'); }}>Record another check-in</button>}
       </div>}
-      <h3 className="font-bold mt-4">Check-in ratings over time</h3>
+    </section>
+    <section className="neo-card p-5 mb-5" aria-label="Check-in trends">
+      <h3 className="font-bold">Check-in ratings over time</h3>
       <div role="group" aria-label="Time range" className="flex flex-wrap gap-2 my-2">{RANGES.map(option => <button key={option.key} type="button" aria-pressed={range === option.key}
         className={`border-2 border-black rounded-full px-3 py-1 text-sm font-bold shadow-[2px_2px_0_0_#000] ${range === option.key ? 'bg-[var(--neo-blue)] text-white' : 'bg-white'}`} onClick={() => setRange(option.key)}>{option.label}</button>)}</div>
       {data.status === 'error' ? <p>Saved rating history is unavailable.</p> : !ready ? <p>Loading saved ratings...</p> : ready.locked ? <p>Saved ratings are locked. Unlock the existing key to view them.</p>
@@ -99,5 +103,5 @@ function OwnedActivities({ uid, legacyTotal, totals }: { uid: string; legacyTota
       {data.status === 'error' ? <p>Activity history is unavailable.</p> : !ready ? <p>Loading recorded activities...</p> : <ActivityHeatmap days={activityDayCounts(ready.ledger.events)} now={now} />}
       <p className="text-sm mt-3">Daily reward limits use your device clock in Asia/Karachi. This is not an authoritative security clock or a measure of mental-health improvement.</p>
     </section>
-  </>;
+  </div>;
 }

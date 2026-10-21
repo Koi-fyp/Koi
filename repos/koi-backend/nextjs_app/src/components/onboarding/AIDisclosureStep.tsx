@@ -34,18 +34,8 @@ export default function AIDisclosureStep({ onNext }: Props) {
   ];
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        padding: '1.5rem',
-        maxWidth: '480px',
-        margin: '0 auto',
-        width: '100%',
-      }}
-    >
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '1rem' }}>
+    <div className="flex flex-col flex-1 lg:flex-none w-full max-w-5xl mx-auto p-6 lg:px-8 lg:py-10">
+      <div className="flex-1 lg:flex-none pb-4">
         <h2
           style={{
             fontFamily: 'var(--font-display)',
@@ -59,6 +49,7 @@ export default function AIDisclosureStep({ onNext }: Props) {
           Important Notice
         </h2>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 lg:gap-x-8 items-start [&>*]:min-w-0">
         {/* Warning card */}
         <NeoCard variant="yellow" className="p-4 mb-4">
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
@@ -123,7 +114,7 @@ export default function AIDisclosureStep({ onNext }: Props) {
               { name: 'Rozan Counselling',     tel: '0800-22444',   href: 'tel:080022444'  },
               { name: 'Emergency Services',    tel: '15 / 1122',    href: 'tel:15'         },
             ].map(({ name, tel, href }) => (
-              <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div key={name} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: '#444' }}>{name}</span>
                 <a
                   href={href}
@@ -142,6 +133,9 @@ export default function AIDisclosureStep({ onNext }: Props) {
           </div>
         </NeoCard>
 
+        </div>
+
+        <section className="max-w-3xl" aria-label="Required acknowledgments">
         {/* Checkboxes */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
           {checks.map(({ id, label, checked, onChange }) => (
@@ -183,9 +177,8 @@ export default function AIDisclosureStep({ onNext }: Props) {
             </label>
           ))}
         </div>
-      </div>
-
       <NeoButton
+        className="lg:max-w-md"
         onClick={onNext}
         disabled={!checkedAI || !checkedPrivacy}
         fullWidth
@@ -193,6 +186,8 @@ export default function AIDisclosureStep({ onNext }: Props) {
       >
         I Agree →
       </NeoButton>
+        </section>
+      </div>
     </div>
   );
 }

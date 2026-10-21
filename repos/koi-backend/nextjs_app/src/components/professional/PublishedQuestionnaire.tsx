@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import NeoCard from '@/components/ui/NeoCard';
+import CareLink from '@/components/platform/CareLink';
 import { illustrations, localeNames, questionNames } from '@/lib/platform/content';
 import type { Locale, VersionDTO } from '@/lib/platform/types';
 
@@ -23,6 +24,6 @@ export default function PublishedQuestionnaire({ version }: { version: VersionDT
       </section>)}
     </div>
     <details><summary>Version details</summary><p className="professional-muted">Published {new Date(version.published_at).toLocaleString()}</p><p className="professional-muted">Version: {version.id}</p><p className="professional-muted">Content SHA-256: {version.content_sha256}</p></details>
-    <a className="professional-link" href={`/professional?version=${encodeURIComponent(version.id)}`}>Open this published version later</a>
+    <CareLink href={`/professional?version=${encodeURIComponent(version.id)}`}>Open this published version later</CareLink>
   </NeoCard>;
 }

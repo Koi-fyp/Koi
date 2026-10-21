@@ -30,7 +30,7 @@ function bridge(uid = 'clinician_a'): ProfessionalApi {
     } catch (error: any) { throw new PlatformClientError(error.status ?? 503, error.code ?? 'unavailable'); }
   }) as any };
 }
-beforeEach(() => { store = new MemoryPlatformStore(); registered(store, 'clinician_a'); service = new PlatformService(store, 'functional-key-with-at-least-32-characters', () => testTime); jest.spyOn(window, 'confirm').mockReturnValue(true); window.history.replaceState({}, '', '/professional'); });
+beforeEach(() => { store = new MemoryPlatformStore(); registered(store, 'clinician_a'); service = new PlatformService(store, 'functional-key-with-at-least-32-characters', () => testTime); jest.spyOn(window, 'confirm').mockReturnValue(true); window.history.replaceState({}, '', '/professional?view=questionnaires'); });
 afterEach(() => jest.restoreAllMocks());
 const text = (name: string, value: string) => fireEvent.change(screen.getByRole('textbox', { name }), { target: { value } });
 
@@ -38,7 +38,7 @@ async function newSavedForm(api: ProfessionalApi) {
   render(<ProfessionalWorkspace api={api} onSessionExpired={jest.fn()} />);
   await screen.findByRole('heading', { name: 'Create your organization' });
   text('Organization name', 'Fictional practice'); fireEvent.click(screen.getByRole('button', { name: 'Create organization' }));
-  await screen.findByText('Organization created.'); fireEvent.click(screen.getByRole('button', { name: 'New questionnaire' }));
+  await screen.findByText('Organization created.'); fireEvent.click(screen.getByRole('button', { name: 'Create manually' }));
   text('Title · English', 'Original manual form'); text('Question 1 · English', 'What would you like to discuss?');
   fireEvent.click(screen.getByRole('button', { name: 'Save draft' })); await screen.findByText('Draft saved. Revision 1.');
 }
@@ -46,7 +46,7 @@ it('completes organization -> manual form with picture -> save -> immutable publ
   const api = bridge(); const view = render(<ProfessionalWorkspace api={api} onSessionExpired={jest.fn()} />);
   await screen.findByRole('heading', { name: 'Create your organization' });
   text('Organization name', 'Fictional practice'); fireEvent.click(screen.getByRole('button', { name: 'Create organization' }));
-  await screen.findByText('Organization created.'); fireEvent.click(screen.getByRole('button', { name: 'New questionnaire' }));
+  await screen.findByText('Organization created.'); fireEvent.click(screen.getByRole('button', { name: 'Create manually' }));
   text('Title · English', 'Original manual form'); text('Question 1 · English', 'What would you like to discuss?');
   fireEvent.click(screen.getByRole('button', { name: 'Add question' }));
   fireEvent.change(screen.getByRole('combobox', { name: 'Question 2 type' }), { target: { value: 'image_single_choice' } });
@@ -86,7 +86,7 @@ it('clears protected editor content when verification is suspended before an act
 });
 it('denies guests and does not substitute demo data when the platform is unavailable', async () => {
   const view = render(<ProfessionalWorkspace api={bridge('guest')} onSessionExpired={jest.fn()} />);
-  await screen.findByRole('heading', { name: 'Practice access required' }); expect(screen.queryByRole('button', { name: 'New questionnaire' })).not.toBeInTheDocument(); view.unmount();
+  await screen.findByRole('heading', { name: 'Practice access required' }); expect(screen.queryByRole('button', { name: 'Create manually' })).not.toBeInTheDocument(); view.unmount();
   render(<ProfessionalWorkspace api={{ request: jest.fn().mockRejectedValue(new PlatformClientError(503, 'unavailable')), dispose: jest.fn() }} onSessionExpired={jest.fn()} />);
   await screen.findByRole('heading', { name: 'Workspace unavailable' }); expect(screen.queryByRole('textbox', { name: 'Organization name' })).not.toBeInTheDocument();
 });

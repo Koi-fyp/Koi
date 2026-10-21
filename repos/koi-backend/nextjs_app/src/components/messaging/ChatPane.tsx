@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import NeoButton from '@/components/ui/NeoButton';
 import type { ProfessionalApi } from '@/lib/platform/client';
 import type { HumanMessage } from '@/lib/platform/community-types';
@@ -16,6 +16,7 @@ export default function ChatPane({ api, conversation, messages, capped, loaded, 
   onSent: (message: HumanMessage) => void; onBack: () => void; onError: (error: unknown) => void;
 }) {
   const [draft, setDraft] = useState(''), [outbox, setOutbox] = useState<Outgoing[]>([]), [jump, setJump] = useState(false);
+  const counterId = useId();
   const box = useRef<Outgoing[]>([]), flushing = useRef(false), alive = useRef(true), scroller = useRef<HTMLDivElement>(null), stick = useRef(true), seen = useRef(0);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const change = (fn: (old: Outgoing[]) => Outgoing[]) => { box.current = fn(box.current); if (alive.current) setOutbox(box.current); };
@@ -86,10 +87,10 @@ export default function ChatPane({ api, conversation, messages, capped, loaded, 
     {jump && <div style={{ textAlign: 'center' }}><NeoButton variant="secondary" onClick={toBottom}>New messages</NeoButton></div>}
     <form className="flex items-end gap-2 p-3 border-t-[3px] border-black" onSubmit={e => { e.preventDefault(); send(); }}>
       <div style={{ flex: 1 }}>
-        <textarea className="neo-input" aria-label="Message" aria-describedby="message-counter" rows={2} dir="auto" value={draft} placeholder="Write a message" style={{ width: '100%' }}
+        <textarea className="neo-input" aria-label="Message" aria-describedby={counterId} rows={2} dir="auto" value={draft} placeholder="Write a message" style={{ width: '100%' }}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }} />
-        <p id="message-counter" className={over ? 'professional-error' : 'professional-muted'} style={{ fontSize: '.75rem', margin: 0 }} role={over ? 'alert' : undefined}>
+        <p id={counterId} className={over ? 'professional-error' : 'professional-muted'} style={{ fontSize: '.75rem', margin: 0 }} role={over ? 'alert' : undefined}>
           {over ? `Too long: ${length}/${MESSAGE_LIMIT}` : length >= MESSAGE_LIMIT - 400 ? `${length}/${MESSAGE_LIMIT}` : 'Enter to send, Shift+Enter for a new line'}</p>
       </div>
       <NeoButton type="submit" disabled={!canSend(draft)}>Send</NeoButton>

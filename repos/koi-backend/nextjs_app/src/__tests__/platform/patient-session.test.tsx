@@ -14,12 +14,12 @@ afterEach(() => { global.fetch = originalFetch; });
 it('never reuses a disposed client across authorization generations or accepts late callbacks', async () => {
   let rejectOld: (error: unknown) => void;
   const old = { request: jest.fn(() => new Promise((_, reject) => { rejectOld = reject; })), dispose: jest.fn() };
-  const caps = { capabilities: { expert_directory: true }, active_patient_relationships: [] };
+  const caps = { account_state: 'registered', capabilities: { expert_directory: true }, active_patient_relationships: [] };
   const current = { request: jest.fn(async (path: string) => path.includes('capabilities') ? caps : { items: [], next_cursor: null }), dispose: jest.fn() };
   (professionalApi as jest.Mock).mockReturnValueOnce(old).mockReturnValue(current);
   const view = render(<PatientApp />); await waitFor(() => expect(old.request).toHaveBeenCalled());
-  generation++; view.rerender(<PatientApp />); await screen.findByRole('heading', { name: 'Join a practice' }); expect(old.dispose).toHaveBeenCalledTimes(1);
+  generation++; view.rerender(<PatientApp />); await screen.findByText('General User Dashboard'); expect(old.dispose).toHaveBeenCalledTimes(1);
   await act(async () => { rejectOld(new PlatformClientError(401, 'unauthenticated')); });
   expect(screen.queryByRole('heading', { name: 'Care access changed' })).not.toBeInTheDocument();
-  ready = false; view.rerender(<PatientApp />); expect(screen.queryByRole('heading', { name: 'Join a practice' })).not.toBeInTheDocument(); expect(current.dispose).toHaveBeenCalledTimes(1);
+  ready = false; view.rerender(<PatientApp />); expect(screen.queryByText('General User Dashboard')).not.toBeInTheDocument(); expect(current.dispose).toHaveBeenCalledTimes(1);
 });

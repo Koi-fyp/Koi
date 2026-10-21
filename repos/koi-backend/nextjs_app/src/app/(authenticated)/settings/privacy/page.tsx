@@ -19,7 +19,7 @@ export default function PrivacyPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAFA' }}>
-      <div style={{ padding: '1.5rem', maxWidth: '480px', margin: '0 auto' }}>
+      <div className="mx-auto w-full max-w-6xl p-6 lg:px-8">
         <BackButton />
 
         {/* Hero Section */}
@@ -45,11 +45,12 @@ export default function PrivacyPage() {
           >
             Privacy Center
           </h1>
-          <p style={{ fontSize: '0.95rem', color: '#666', lineHeight: 1.6 }}>
+          <p className="max-w-3xl" style={{ fontSize: '0.95rem', color: '#666', lineHeight: 1.6 }}>
             Your data, your control. Here's everything we do to keep your conversations private.
           </p>
         </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 items-start [&>*]:min-w-0">
         {/* Encryption Status */}
         <div
           style={{
@@ -113,7 +114,7 @@ export default function PrivacyPage() {
         </div>
 
         {/* Data Breakdown */}
-        <div
+        <div className="lg:col-start-2 lg:row-start-1 lg:row-span-2"
           style={{
             background: '#fff',
             border: '2.5px solid #000',
@@ -141,7 +142,7 @@ export default function PrivacyPage() {
               onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(4px)'}
               onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>📱 On Your Device</span>
                 <span
                   style={{
@@ -176,7 +177,7 @@ export default function PrivacyPage() {
               onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(4px)'}
               onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>☁️ Cloud Sync</span>
                 <span
                   style={{
@@ -211,7 +212,7 @@ export default function PrivacyPage() {
               onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(4px)'}
               onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>🔎 Trust Boundary</span>
                 <span
                   style={{
@@ -238,7 +239,7 @@ export default function PrivacyPage() {
         </div>
 
         {/* Audit Log */}
-        <div
+        <div className="lg:col-start-1 lg:row-start-2"
           style={{
             background: '#fff',
             border: '2.5px solid #000',
@@ -293,6 +294,8 @@ export default function PrivacyPage() {
           </div>
         </div>
 
+        </div>
+
         {/* Delete Account */}
         <div
           style={{
@@ -317,7 +320,7 @@ export default function PrivacyPage() {
             </div>
           </div>
           <button disabled title="Account deletion requires an approved deletion policy"
-            className="neo-btn-ghost"
+            className="neo-btn-ghost lg:max-w-md"
             style={{
               width: '100%',
               borderColor: '#FF4136',

@@ -45,7 +45,7 @@ export default function InputBar({ onSend, disabled = false, inputRef, extra }: 
   const canSend = !disabled && value.trim().length > 0;
 
   return (
-    <div style={{ padding: '10px 16px 14px', background: 'transparent', flexShrink: 0 }}>
+    <div className="w-full max-w-4xl mx-auto" style={{ padding: '10px 16px 14px', background: 'transparent', flexShrink: 0 }}>
       <div
         style={{
           display: 'flex',
@@ -70,6 +70,7 @@ export default function InputBar({ onSend, disabled = false, inputRef, extra }: 
           rows={1}
           style={{
             flex: 1,
+            minWidth: 0,
             resize: 'none',
             overflowY: 'hidden',
             minHeight: '36px',

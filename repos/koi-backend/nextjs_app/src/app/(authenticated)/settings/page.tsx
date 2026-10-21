@@ -81,7 +81,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <div style={{ padding: '1.5rem 1.5rem 0', maxWidth: '480px', margin: '0 auto' }}>
+      <div className="mx-auto w-full max-w-6xl px-6 pt-6 lg:px-8">
         <h1
           style={{
             fontWeight: 900,
@@ -95,6 +95,8 @@ export default function SettingsPage() {
         </h1>
 
         <AccountPreferenceStatus uid={user?.uid} />
+        <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-2 lg:gap-x-8 items-start">
+        <section className="min-w-0" aria-label="Account settings">
         {/* Account */}
         <p style={{
           fontWeight: 800,
@@ -156,6 +158,8 @@ export default function SettingsPage() {
           />
         </div>
 
+        </section>
+        <section className="min-w-0" aria-label="Notification settings">
         {/* Notifications — yellow card */}
         <p style={{
           fontWeight: 800,
@@ -209,6 +213,8 @@ export default function SettingsPage() {
         </label>}
         <p role="status" className="text-xs mb-4">{now ? reminderStatus(profile, now) : 'Loading device time...'} Language is a saved preference; replies and interface translation are not guaranteed.</p>
 
+        </section>
+        <section className="min-w-0" aria-label="Privacy settings">
         {/* Privacy */}
         <p style={{
           fontWeight: 800,
@@ -268,6 +274,8 @@ export default function SettingsPage() {
           />
         </div>
 
+        </section>
+        <section className="min-w-0" aria-label="Storage information">
         {/* Storage */}
         <p style={{
           fontWeight: 800,
@@ -370,6 +378,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        </section>
+        <section className="min-w-0" aria-label="About and help">
         {/* About & Help */}
         <p style={{
           fontWeight: 800,
@@ -650,6 +660,9 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        </section>
         </div>
 
         {/* App info */}

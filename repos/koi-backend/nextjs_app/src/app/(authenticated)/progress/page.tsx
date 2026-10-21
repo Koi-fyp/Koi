@@ -209,15 +209,7 @@ export default function ProgressPage() {
   const heatmapData = generateHeatmapData();
 
   return (
-    <div
-      style={{
-        padding: '1.5rem 1.5rem 0',
-        maxWidth: '480px',
-        margin: '0 auto',
-        paddingBottom: '2rem',
-        position: 'relative',
-      }}
-    >
+    <div className="relative mx-auto w-full max-w-6xl px-6 pt-6 pb-8 lg:px-8">
       {/* Animated header with celebration particles */}
       <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
         <h1
@@ -256,7 +248,8 @@ export default function ProgressPage() {
         </p>
       </div>
 
-      <NeoCard className="p-4 mb-5">
+      <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-2 lg:gap-x-8 items-start">
+      <NeoCard className="p-4 mb-5 min-w-0 lg:col-start-2 lg:row-start-2">
         <p className="text-sm">{recorded ? 'Your legacy recorded puzzle totals are shown below.' : 'No legacy puzzle totals are recorded on this device.'} Eligible saved check-ins can earn a piece in the recorded board below.</p>
         <details className="mt-3">
           <summary className="font-bold cursor-pointer">Recorded pieces by activity</summary>
@@ -270,7 +263,7 @@ export default function ProgressPage() {
       </NeoCard>
 
       {/* Recorded total; expanded puzzle illustration remains an explicitly labelled preview. */}
-      <div role="button" tabIndex={0} aria-label="Puzzle preview" aria-expanded={jigsawExpanded} onKeyDown={activateWithKeyboard}
+      <div className="min-w-0 lg:col-start-1 lg:row-start-2" role="button" tabIndex={0} aria-label="Puzzle preview" aria-expanded={jigsawExpanded} onKeyDown={activateWithKeyboard}
         style={{
           background: jigsawExpanded ? '#1a54b8' : '#2D63EB',
           border: '2.5px solid #000',
@@ -662,7 +655,7 @@ export default function ProgressPage() {
       </div>
 
       {/* Enhanced Stats grid with hover effects */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '1.25rem' }}>
+      <div className="grid grid-cols-3 gap-2.5 mb-5 min-w-0 lg:col-span-2 lg:row-start-1 lg:gap-6">
         {STATS.map((stat) => (
           <div
             key={stat.label}
@@ -728,10 +721,13 @@ export default function ProgressPage() {
         ))}
       </div>
 
+      </div>
+
       <ActivityAvailability legacyTotal={recorded?.jigsaw_pieces} totals={{ completedExchanges: progress.summary.completedExchanges, conversations: progress.summary.conversationsWithReplies }} />
       <details className="mt-5"><summary className="font-bold cursor-pointer mb-5">Design previews (sample data, not your activity)</summary>
       <p role="note" className="text-sm mb-5">The puzzle illustration, sample mood chart and sample heatmap are previews. They do not represent your saved activities or mood.</p>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 items-start min-w-0">
       {/* Sample mood data is not read from sensitive check-in ratings. */}
       <div
         style={{
@@ -1105,6 +1101,7 @@ export default function ProgressPage() {
             Preview only · Download and sharing are unavailable
           </p>
         </div>
+      </div>
       </div>
       </details>
     </div>

@@ -1,0 +1,21 @@
+.root { color: var(--neo-black); }
+.trigger { font-size: .875rem; padding: .5rem .75rem; min-height: 44px; white-space: nowrap; }
+.trigger[aria-expanded='true'] { background: var(--neo-yellow); }
+.panel { position: fixed; top: 76px; inset-inline-end: max(16px, calc((100vw - 1280px) / 2 + 48px)); z-index: 70; width: min(600px, calc(100vw - 32px)); max-height: calc(100dvh - 92px); overflow-y: auto; overscroll-behavior: contain; padding: 16px; border: 3px solid var(--neo-black); border-radius: 20px; box-shadow: var(--shadow-lg); background: var(--neo-white); text-align: start; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.heading h2 { font-size: 1rem; font-weight: 800; }
+.close { flex: 0 0 44px; height: 44px; border: 2px solid var(--neo-black); border-radius: 50%; background: var(--neo-white); font-size: 1.5rem; box-shadow: 2px 2px 0 var(--neo-black); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0 3px 3px 0; }
+.card { min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 14px; border: 2.5px solid var(--neo-black); border-radius: 16px; box-shadow: var(--shadow-sm); background: var(--neo-white); color: var(--neo-black); text-align: start; font: inherit; text-decoration: none; cursor: pointer; }
+.card:first-child { background: var(--neo-yellow); }
+.card:last-child { background: var(--neo-blue); color: var(--neo-white); }
+.title { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: .9375rem; }
+.title svg { flex-shrink: 0; }
+.description { font-size: .8125rem; line-height: 1.45; flex: 1; }
+.action { font-weight: 700; font-size: .75rem; line-height: 1.5; }
+.card:hover, .close:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--neo-black); }
+.card:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--neo-black); }
+.root :is(a, button):focus-visible { outline: 3px solid var(--neo-black); outline-offset: 4px; }
+.card:disabled { opacity: .65; cursor: wait; }
+@media (max-width: 479px) { .grid { grid-template-columns: 1fr; gap: 10px; } .panel { padding: 12px; } .card { padding: 10px 12px; gap: 4px; } }
+@media (prefers-reduced-motion: reduce) { .root :is(a, button) { transition: none; transform: none; } }
