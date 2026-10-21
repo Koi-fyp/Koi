@@ -12,6 +12,7 @@ import type { Locale } from '@/lib/platform/types';
 import { localeNames } from '@/lib/platform/content';
 import QuestionFields from '@/components/patient/QuestionFields';
 import { ACTION_FAILED, useConfirm, useSnackbar } from '@/components/ui/feedback';
+import { answerText, evaluationStateText, evidenceCoverage, parseInterpretation } from '@/lib/platform/interpretation';
 
 const decisionNames: Record<ReviewDecision, string> = { approve: 'Approved', reject: 'Rejected', feedback: 'Feedback recorded' };
 const decisionVerbs: Record<ReviewDecision, string> = { approve: 'approve', reject: 'reject', feedback: 'feedback' };
@@ -57,7 +58,9 @@ export default function SubmissionReview({ id, api, onError }: { id: string; api
     finally { running.current = false; if (alive.current) setBusy(false); }
   };
   const title = value.questionnaire.content.title[locale] ?? value.questionnaire.content.title[value.questionnaire.content.locales[0]];
-  const stateLabel = value.job.state === 'queued' ? 'Pending evaluation' : value.job.state === 'claimed' ? 'Evaluation in progress' : value.job.state === 'failed' ? 'Evaluation unavailable' : value.job.state === 'completed' ? 'Evaluation processing completed' : 'Evaluation status unavailable';
+  const state = evaluationStateText(value.job), parsed = parseInterpretation(value.evaluation.interpretation);
+  const questions = value.questionnaire.content.questions, coverage = evidenceCoverage(value.evaluation, value.submission.answers);
+  const refreshEvaluation = () => void load().then(() => snackbar.success('Evaluation refreshed'), error => { snackbar.error(ACTION_FAILED); loadFailure(error); });
   return <NeoCard className="professional-card" aria-label="Protected submission review" aria-busy={busy}>
     <header className="professional-stack"><h2>Submission and clinician review</h2><p className="professional-muted">Professional workspace only. Submitted answers stay read-only; saved review revisions are retained.</p></header>
     <nav className="care-review-nav" aria-label="Submission review sections">{sections.map(([part, label], index) => <CareLink key={part} href={`#${sectionId(part)}`} aria-current={fragment === sectionId(part) ? 'location' : undefined}>{index + 1}. {label}</CareLink>)}</nav>
@@ -78,14 +81,23 @@ export default function SubmissionReview({ id, api, onError }: { id: string; api
     </section>
 
     <section id={sectionId('evaluation')} tabIndex={-1} className="care-review-section" aria-labelledby={sectionId('evaluation-heading')}>
-      <h3 id={sectionId('evaluation-heading')}>AI evaluation and evidence</h3><p role="status"><span className="professional-badge">{stateLabel}</span></p>
-      <p>{value.job.state === 'queued' ? 'The submission is waiting for processing. Refresh to check for an update.' : value.job.state === 'claimed' ? 'Processing has started. An interpretation may not be available yet.' : value.job.state === 'failed' ? 'Processing failed. No completed interpretation is implied.' : 'Inspect the available interpretation and supporting evidence before recording your own review.'}</p>
+      <div className="professional-row professional-between"><h3 id={sectionId('evaluation-heading')}>AI evaluation and evidence</h3><span className="care-ai-label">AI-generated · expert review required</span></div>
+      <div className="professional-row professional-between"><p role="status"><span className="professional-badge">{state.label}</span></p><NeoButton variant="ghost" disabled={busy} onClick={refreshEvaluation}>Refresh evaluation</NeoButton></div>
+      <p>{state.detail}</p>
       <p className="care-review-message">A pending or unavailable AI evaluation does not prevent manual review of the original answers. Enter your own conclusion below to use the existing review actions.</p>
-      <div className="professional-grid"><section className="professional-question"><h4>Available interpretation</h4><p dir="auto" className="care-review-prose">{value.evaluation.interpretation ?? 'No AI interpretation is available. You can review the original answers manually.'}</p></section>
-        <section className="professional-question"><h4>Supporting evidence</h4>{value.evaluation.evidence.length ? <ul className="professional-stack">{value.evaluation.evidence.map((reference, index) => {
-          const position = value.questionnaire.content.questions.findIndex(question => question.id === reference.question_id), question = value.questionnaire.content.questions[position];
-          return <li key={index}><strong>{position >= 0 ? `Question ${position + 1}` : 'Question reference'}</strong>{question && <p dir={locale === 'ur' ? 'rtl' : 'auto'}>{question.prompt[locale]}</p>}<p className="professional-muted">Question ID: <code>{reference.question_id}</code>; answer reference {reference.answer_index + 1}</p></li>;
-        })}</ul> : <p>No evidence references are available for this evaluation.</p>}</section></div>
+      <div className="care-analytics-grid"><div className="care-tile"><span className="care-tile-label">Answers cited by the AI</span><strong className="care-tile-value">{coverage.total ? `${coverage.cited} / ${coverage.total}` : 'No answers'}</strong><span className="professional-muted">Cited answers out of the answers submitted</span></div></div>
+      <section className="professional-question" aria-label="AI interpretation"><h4>Available interpretation</h4>
+        {!value.evaluation.interpretation ? <p className="care-review-prose">No AI interpretation is available. You can review the original answers manually.</p>
+          : !parsed.structured ? <p dir="auto" className="care-review-prose" style={{ whiteSpace: 'pre-wrap' }}>{value.evaluation.interpretation}</p>
+          : <div className="professional-stack">{parsed.preface.map((line, i) => <p key={i} dir="auto">{line}</p>)}{parsed.sections.map(section => <section key={section.title} className="care-ai-section" aria-label={section.title}><h5>{section.title}</h5>{section.paragraphs.map((p, i) => <p key={i} dir="auto">{p}</p>)}{section.items.length > 0 && <ul>{section.items.map((item, i) => <li key={i} dir="auto">{item}</li>)}</ul>}</section>)}</div>}
+      </section>
+      <section className="professional-question" aria-label="Supporting evidence"><h4>Supporting evidence</h4>{value.evaluation.evidence.length ? <ul className="care-evidence-list">{value.evaluation.evidence.map((reference, index) => {
+        const position = questions.findIndex(question => question.id === reference.question_id), question = questions[position];
+        const answer = answerText(question, value.submission.answers.find(a => a.question_id === reference.question_id), locale);
+        return <li key={index} className="care-evidence-card"><strong>{position >= 0 ? `Question ${position + 1}` : 'Question reference'}</strong>{question && <p dir={locale === 'ur' ? 'rtl' : 'auto'}>{question.prompt[locale]}</p>}
+          <blockquote className="care-evidence-quote" dir="auto">{answer ?? <em>No answer was submitted for this question.</em>}</blockquote>
+          <p className="professional-muted">Patient's submitted answer. Question ID: <code>{reference.question_id}</code>; answer reference {reference.answer_index + 1}</p></li>;
+      })}</ul> : <p>No evidence references are available for this evaluation.</p>}</section>
       {value.evaluation.validated_scores.length ? <details><summary>Available validated scores</summary><ul>{value.evaluation.validated_scores.map(score => <li key={score.scale_id}>{score.scale_id}: {score.value}; scoring {score.scoring_version}; implementation {score.implementation_version}</li>)}</ul></details> : <p className="professional-muted">No validated scores are available for this submission.</p>}
       <details><summary>Technical evaluation details</summary><p>Job state: <code>{value.job.state}</code></p>{value.job.failure_code && <p>Failure code: <code>{value.job.failure_code}</code></p>}</details>
     </section>

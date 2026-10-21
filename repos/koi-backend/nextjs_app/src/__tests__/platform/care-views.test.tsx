@@ -107,7 +107,8 @@ it.each(['home', 'experts', 'care', 'questionnaires', 'appointments', 'messages'
   expect((api.request as jest.Mock).mock.calls.some(([path]) => /evaluations|reviews|professional/.test(path))).toBe(false);
   await preview('patient-' + view);
 });
-it.each([['queued', 'Pending evaluation'], ['claimed', 'Evaluation in progress'], ['failed', 'Evaluation unavailable'], ['completed', 'Evaluation processing completed']])('explains %s evaluation state and retains technical diagnostics', async (state, label) => {
+// Labels intentionally reworded in the AI review layout (queued / failed with reason / completed).
+it.each([['queued', 'Evaluation queued'], ['claimed', 'Evaluation in progress'], ['failed', 'Evaluation unavailable (unusable AI output): you can review the original answers manually'], ['completed', 'Evaluation completed']])('explains %s evaluation state and retains technical diagnostics', async (state, label) => {
   const api = apiFor(true);
   (api.request as jest.Mock).mockImplementation(async (path: string) => path.includes('/workspace') ? { submission: { patient_uid: 'fictional-patient', submitted_at: '2026-10-21T00:00:00Z', answers: [] }, questionnaire: { content: emptyContent() }, evaluation: { id: 'fixture-evaluation', interpretation: null, validated_scores: [], evidence: [] }, job: { state, ...(state === 'failed' ? { failure_code: 'invalid_output' } : {}) }, review_revision: 0 } : { items: [], next_cursor: null });
   render(<SubmissionReview id="fixture-submission" api={api} onError={jest.fn()} />);
