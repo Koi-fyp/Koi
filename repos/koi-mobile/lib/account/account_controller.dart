@@ -209,7 +209,10 @@ class AccountController extends ChangeNotifier {
           fromSecret: from,
           to: to,
         );
-        if (_lastReport!.state == MigrationState.done) {
+        // A copy the server refused (serverStale) still holds the OLD
+        // ciphertext, so the secret stays until the rules allow it.
+        if (_lastReport!.state == MigrationState.done &&
+            _lastReport!.serverStale == 0) {
           // Every server copy is acknowledged: the anonymous secret is no
           // longer needed (web: clearAnonymousSecret after migration).
           await secrets.deleteAnonymousSecret(uid);

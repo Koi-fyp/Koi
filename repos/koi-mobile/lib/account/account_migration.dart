@@ -15,6 +15,7 @@ import '../safety_plan/safety_plan_store.dart';
 /// confirmed it, and drop stale queued copies. [PersistentSyncQueue] is it.
 abstract interface class MigrationUploader {
   /// true = the server acknowledged the write; false = kept queued.
+  /// Throws [SyncRejected] when the server refused it for good.
   Future<bool> writeNow(SyncItem item);
 
   /// Drops queued items matching [test].
@@ -60,6 +61,7 @@ class MigrationMarker {
     required this.state,
     this.source,
     this.acked = const {},
+    this.serverStale = const {},
   });
 
   final MigrationState state;
@@ -70,17 +72,28 @@ class MigrationMarker {
   /// Message ids whose new copy the server acknowledged.
   final Set<String> acked;
 
-  MigrationMarker copyWith({MigrationState? state, Set<String>? acked}) =>
-      MigrationMarker(
-        state: state ?? this.state,
-        source: source,
-        acked: acked ?? this.acked,
-      );
+  /// Message ids whose new copy the server refused for good (live rules:
+  /// an existing message can't be changed, so a server copy written before
+  /// a link keeps its OLD ciphertext). Never retried. While any exists the
+  /// anonymous secret is kept, so that old copy can still be opened.
+  final Set<String> serverStale;
+
+  MigrationMarker copyWith({
+    MigrationState? state,
+    Set<String>? acked,
+    Set<String>? serverStale,
+  }) => MigrationMarker(
+    state: state ?? this.state,
+    source: source,
+    acked: acked ?? this.acked,
+    serverStale: serverStale ?? this.serverStale,
+  );
 
   String encode() => jsonEncode({
     'state': state.name,
     if (source != null) 'source': source,
     'acked': acked.toList()..sort(),
+    if (serverStale.isNotEmpty) 'serverStale': serverStale.toList()..sort(),
   });
 
   static MigrationMarker? decode(String? raw) {
@@ -93,6 +106,9 @@ class MigrationMarker {
         state: state,
         source: j['source'] as String?,
         acked: {for (final a in (j['acked'] as List?) ?? const []) a as String},
+        serverStale: {
+          for (final a in (j['serverStale'] as List?) ?? const []) a as String,
+        },
       );
     } catch (_) {
       return null;
@@ -108,9 +124,13 @@ class MigrationReport {
     this.alreadyDone = 0,
     this.unreadable = 0,
     this.uploaded = 0,
+    this.serverStale = 0,
   });
 
   final MigrationState state;
+
+  /// Server copies refused for good, in total ([MigrationMarker.serverStale]).
+  final int serverStale;
 
   /// Records re-encrypted by this run.
   final int reencrypted;
@@ -241,7 +261,10 @@ class CseMigration {
     var marker =
         linkMarker(uid) ?? const MigrationMarker(state: MigrationState.pending);
     if (marker.state == MigrationState.done) {
-      return const MigrationReport(state: MigrationState.done);
+      return MigrationReport(
+        state: MigrationState.done,
+        serverStale: marker.serverStale.length,
+      );
     }
     var reencrypted = 0, already = 0, unreadable = 0;
 
@@ -292,7 +315,8 @@ class CseMigration {
     await markers.put(linkKey(uid), marker.encode());
 
     final uploaded = await _upload(uid, linkKey(uid), marker, ids);
-    final finalState = linkMarker(uid)!.state;
+    final after = linkMarker(uid)!;
+    final finalState = after.state;
     debugPrint(
       '[KOI] account: link migration ${finalState.name} '
       '($reencrypted new, $already done, $unreadable unreadable)',
@@ -303,6 +327,7 @@ class CseMigration {
       alreadyDone: already,
       unreadable: unreadable,
       uploaded: uploaded,
+      serverStale: after.serverStale.length,
     );
   }
 
@@ -400,11 +425,13 @@ class CseMigration {
       alreadyDone: already,
       unreadable: unreadable,
       uploaded: uploaded,
+      serverStale: after.serverStale.length,
     );
   }
 
-  /// Uploads the [uid] copies of [ids] that are not acknowledged yet.
-  /// Marks the migration done when all are.
+  /// Uploads the [uid] copies of [ids] that are not acknowledged (or
+  /// refused for good) yet. Marks the migration done when none is left;
+  /// refused ids ([MigrationMarker.serverStale]) don't hold it back.
   Future<int> _upload(
     String uid,
     String key,
@@ -415,19 +442,30 @@ class CseMigration {
       for (final r in await messages.byConversation(uid)) r.id: r,
     };
     final acked = {...marker.acked};
+    final stale = {...marker.serverStale};
     var uploaded = 0;
     for (final id in ids) {
-      if (acked.contains(id)) continue;
+      if (acked.contains(id) || stale.contains(id)) continue;
       final record = current[id];
       if (record == null) continue; // unreadable source: nothing to send
-      if (await uploader.writeNow(_messageItem(uid, record))) {
-        acked.add(id);
-        uploaded++;
-        await markers.put(key, marker.copyWith(acked: acked).encode());
+      try {
+        if (await uploader.writeNow(_messageItem(uid, record))) {
+          acked.add(id);
+          uploaded++;
+        } else {
+          continue;
+        }
+      } on SyncRejected {
+        stale.add(id);
       }
+      await markers.put(
+        key,
+        marker.copyWith(acked: acked, serverStale: stale).encode(),
+      );
     }
     final pendingIds = ids.where(
-      (id) => current.containsKey(id) && !acked.contains(id),
+      (id) =>
+          current.containsKey(id) && !acked.contains(id) && !stale.contains(id),
     );
     final done = pendingIds.isEmpty;
     await markers.put(
@@ -435,6 +473,7 @@ class CseMigration {
       marker
           .copyWith(
             acked: acked,
+            serverStale: stale,
             state: done ? MigrationState.done : MigrationState.awaitingAck,
           )
           .encode(),

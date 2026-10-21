@@ -15,6 +15,7 @@ import '../progress/progress_screen.dart';
 import '../safety/safety_host.dart';
 import '../settings/settings_screen.dart';
 import '../theme/koi_colors.dart';
+import 'shell_tabs.dart';
 import 'top_nav.dart';
 
 /// Signed-in shell, mirroring
@@ -84,7 +85,9 @@ class _AppShellState extends ConsumerState<AppShell> {
       canPop: _tab == KoiTab.chat,
       onPopInvokedWithResult: _onBack,
       // Crisis (Flow 4) and breathing screens open above any page.
-      child: SafetyHost(child: _scaffold()),
+      child: SafetyHost(
+        child: ShellTabs(select: _select, child: _scaffold()),
+      ),
     );
   }
 

@@ -142,8 +142,11 @@ class SettingsRowText extends StatelessWidget {
         label,
         style: settingsText(14.4, weight: FontWeight.w700, color: labelColor),
       ),
-      const SizedBox(height: 1),
-      Text(desc, style: settingsText(12.48, color: const Color(0xFF999999))),
+      // An empty desc (e.g. the signed-in Account row) leaves no blank line.
+      if (desc.isNotEmpty) ...[
+        const SizedBox(height: 1),
+        Text(desc, style: settingsText(12.48, color: const Color(0xFF999999))),
+      ],
     ],
   );
 }

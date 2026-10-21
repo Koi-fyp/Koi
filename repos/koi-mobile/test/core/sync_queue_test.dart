@@ -67,7 +67,9 @@ void main() {
   });
 
   test(
-    'ATC-M14-12 permission-denied (rules not deployed): kept queued, never throws',
+    // LIVE-READY (approved 2026-10-21): the live rules are deployed, so a
+    // permission-denied can never succeed later: dropped for good, counted.
+    'ATC-M14-12 permission-denied: dropped for good (not retried), never throws',
     () async {
       final remote = _Remote()
         ..ready = true
@@ -83,7 +85,8 @@ void main() {
       await q.enqueueAsync(_item('m1', 3));
       await q.flush();
       await q.flush();
-      expect(q.pending.map((i) => i.docId), ['m1']);
+      expect(q.pending, isEmpty);
+      expect(q.rejectedCounts, {'permission-denied': 1});
     },
   );
 

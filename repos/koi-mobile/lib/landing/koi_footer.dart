@@ -90,14 +90,13 @@ class KoiFooter extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var i = 0; i < links.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 24), // gap-6
-                    link(links[i].$1, links[i].$2),
-                  ],
-                ],
+              // gap-6. A Wrap, not a Row: at 320dp the three links don't
+              // fit on one line (overflowed); they now move to a second.
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 24,
+                runSpacing: 8,
+                children: [for (final l in links) link(l.$1, l.$2)],
               ),
               const SizedBox(height: 24),
               Text(

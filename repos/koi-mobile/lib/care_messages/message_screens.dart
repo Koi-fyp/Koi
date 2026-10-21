@@ -191,13 +191,33 @@ class _ThreadState extends ConsumerState<_Thread> {
   late final ThreadController _thread;
   late final CareSession _session;
 
+  /// Polling stops while the app is in the background (care_polling.dart).
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
     _session = ref.read(careSessionProvider);
     _thread = _session.thread(widget.relationshipId);
     unawaited(_open());
-    _thread.startPolling();
+    _thread.startPolling(this);
+    final state = WidgetsBinding.instance.lifecycleState;
+    _thread.setForeground(
+      state != AppLifecycleState.hidden &&
+          state != AppLifecycleState.paused &&
+          state != AppLifecycleState.detached,
+    );
+    _lifecycle = AppLifecycleListener(
+      onShow: () => _thread.setForeground(true),
+      onHide: () => _thread.setForeground(false),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Polls only while this is the top route (not under another page).
+    _thread.setVisible(ModalRoute.of(context)?.isCurrent ?? true, this);
   }
 
   Future<void> _open() async {
@@ -218,7 +238,8 @@ class _ThreadState extends ConsumerState<_Thread> {
 
   @override
   void dispose() {
-    _thread.stopPolling();
+    _lifecycle.dispose();
+    _thread.stopPolling(this);
     _text.dispose();
     super.dispose();
   }

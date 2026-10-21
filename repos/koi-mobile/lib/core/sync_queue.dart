@@ -33,6 +33,8 @@ class SyncItem {
     this.timestamp,
     this.op = SyncOp.merge,
     this.timestampFields = const [],
+    this.attempts = 0,
+    this.retryAfter,
   });
 
   /// The queued create-once salt write (priority 4, like sync.ts tasks/user).
@@ -64,6 +66,12 @@ class SyncItem {
   /// are written to Firestore as a `Timestamp` (web writes a JS Date).
   final List<String> timestampFields;
 
+  /// `failed-precondition` answers so far (see [maxBackoffAttempts]).
+  final int attempts;
+
+  /// Not retried before this time (ms since epoch); null = any time.
+  final int? retryAfter;
+
   /// The uid this item belongs to: the segment after `users/` in its path,
   /// or null when the path is not under users/{uid}.
   String? get ownerUid {
@@ -81,6 +89,21 @@ class SyncItem {
     timestamp: ms,
     op: op,
     timestampFields: timestampFields,
+    attempts: attempts,
+    retryAfter: retryAfter,
+  );
+
+  /// One more `failed-precondition`: wait [syncBackoff] before the next try.
+  SyncItem backedOff(int nowMs) => SyncItem(
+    collection: collection,
+    docId: docId,
+    data: data,
+    priority: priority,
+    timestamp: timestamp,
+    op: op,
+    timestampFields: timestampFields,
+    attempts: attempts + 1,
+    retryAfter: nowMs + syncBackoff(attempts + 1).inMilliseconds,
   );
 
   Map<String, Object?> toJson() => {
@@ -91,6 +114,8 @@ class SyncItem {
     if (timestamp != null) 'timestamp': timestamp,
     if (op != SyncOp.merge) 'op': op.wire,
     if (timestampFields.isNotEmpty) 'timestampFields': timestampFields,
+    if (attempts > 0) 'attempts': attempts,
+    if (retryAfter != null) 'retryAfter': retryAfter,
   };
 
   factory SyncItem.fromJson(Map<String, Object?> j) => SyncItem(
@@ -103,8 +128,53 @@ class SyncItem {
     timestampFields: [
       for (final f in (j['timestampFields'] as List?) ?? const []) f as String,
     ],
+    attempts: (j['attempts'] as int?) ?? 0,
+    retryAfter: j['retryAfter'] as int?,
   );
 }
+
+/// Firestore answers a retry can never fix (live rules 2026-10-20): the
+/// item is dropped for good. Its local record stays; only a count and the
+/// code are kept ([PersistentSyncQueue.rejectedKey]).
+const Set<String> terminalSyncCodes = {'permission-denied', 'invalid-argument'};
+
+/// Retried with [syncBackoff], at most [maxBackoffAttempts] times, then
+/// dropped like [terminalSyncCodes].
+const String backoffSyncCode = 'failed-precondition';
+const int maxBackoffAttempts = 5;
+
+/// Wait after the [attempt]-th `failed-precondition`: 30 s, 1, 2, 4 min.
+Duration syncBackoff(int attempt) =>
+    Duration(seconds: 30 * (1 << (attempt - 1).clamp(0, 10)));
+
+/// Thrown by a [RemoteWriter] for an item the live rules would deny
+/// (core/firestore/live_rules.dart): it is never sent. [reason] is a short
+/// code, never data.
+class SyncPrecheckFailed implements Exception {
+  const SyncPrecheckFailed(this.reason);
+  final String reason;
+  @override
+  String toString() => 'SyncPrecheckFailed($reason)';
+}
+
+/// Thrown by [PersistentSyncQueue.writeNow] when the item was dropped for
+/// good (see [terminalSyncCodes]). [code] is the [syncFailureReason].
+class SyncRejected implements Exception {
+  const SyncRejected(this.code);
+  final String code;
+  @override
+  String toString() => 'SyncRejected($code)';
+}
+
+enum _FailureKind { retry, backoff, terminal }
+
+_FailureKind _failureKind(Object e) => switch (e) {
+  SyncPrecheckFailed() => _FailureKind.terminal,
+  FirebaseException(:final code) when terminalSyncCodes.contains(code) =>
+    _FailureKind.terminal,
+  FirebaseException(code: backoffSyncCode) => _FailureKind.backoff,
+  _ => _FailureKind.retry,
+};
 
 abstract interface class SyncQueue {
   void enqueue(SyncItem item);
@@ -142,6 +212,7 @@ class FirestoreNotConnectedWriter implements RemoteWriter {
 /// or the error type. Never the item data.
 String syncFailureReason(Object e) => switch (e) {
   FirebaseException(:final code) => code,
+  SyncPrecheckFailed(:final reason) => 'precheck-$reason',
   TimeoutException() => 'timeout',
   _ => e.runtimeType.toString(),
 };
@@ -203,16 +274,59 @@ class PersistentSyncQueue implements SyncQueue {
     await _save(queue);
   });
 
-  /// Completes when the item is either written or persisted locally (web's
-  /// enqueue is fire-and-forget; tests await this). A failed write (e.g.
-  /// permission-denied while the rules are not deployed) is kept queued.
+  /// Per-code counts of items dropped for good, JSON `{code: count}` under
+  /// this key of [store] (diagnostics only: codes, never data).
+  static const String rejectedKey = 'koi_sync_rejected';
+
+  Map<String, int> get rejectedCounts {
+    try {
+      final raw = store.get(rejectedKey);
+      if (raw == null) return const {};
+      return (jsonDecode(raw) as Map).cast<String, int>();
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Future<void> _countRejected(String code) => store.put(
+    rejectedKey,
+    jsonEncode(
+      {...rejectedCounts}..update(code, (n) => n + 1, ifAbsent: () => 1),
+    ),
+  );
+
+  /// What a failed write of [item] leaves to queue: the item again (retry
+  /// as before), the item backed off (`failed-precondition`), or null when
+  /// it is dropped for good and counted (live rules: permission-denied,
+  /// invalid-argument, pre-check failures, or the last back-off attempt).
+  /// The local record (message store) is never touched.
+  Future<SyncItem?> _afterFailure(SyncItem item, Object e) async {
+    final kind = _failureKind(e);
+    if (kind == _FailureKind.retry) return item;
+    if (kind == _FailureKind.backoff &&
+        item.attempts + 1 < maxBackoffAttempts) {
+      return item.backedOff(_now());
+    }
+    await _countRejected(syncFailureReason(e));
+    return null;
+  }
+
+  /// Completes when the item is either written, persisted locally, or
+  /// dropped for good (web's enqueue is fire-and-forget; tests await this).
+  /// A failure that a retry can fix (offline, timeout) is kept queued.
   Future<void> enqueueAsync(SyncItem item) async {
     if (!remote.isReady || !remote.owns(item)) return _append(item);
     try {
       await remote.write(item);
     } catch (e) {
-      debugPrint('[KOI] sync: write kept queued (${syncFailureReason(e)})');
-      await _append(item);
+      final reason = syncFailureReason(e);
+      final keep = await _afterFailure(item, e);
+      if (keep == null) {
+        debugPrint('[KOI] sync: 1 write rejected for good ($reason)');
+        return;
+      }
+      debugPrint('[KOI] sync: write kept queued ($reason)');
+      await _append(keep);
     }
   }
 
@@ -231,30 +345,44 @@ class PersistentSyncQueue implements SyncQueue {
         return byPriority != 0 ? byPriority : a.compareTo(b);
       });
     final remaining = <SyncItem>[];
-    var failed = 0;
-    String? reason;
+    var failed = 0, rejected = 0;
+    String? reason, rejectedReason;
+    final now = _now();
     for (final item in [for (final i in order) loaded[i]]) {
-      if (!remote.owns(item)) {
+      final waiting = item.retryAfter != null && item.retryAfter! > now;
+      if (!remote.owns(item) || waiting) {
         remaining.add(item);
         continue;
       }
       try {
         await remote.write(item);
       } catch (e) {
-        failed++;
-        reason ??= syncFailureReason(e);
-        remaining.add(item);
+        final keep = await _afterFailure(item, e);
+        if (keep == null) {
+          rejected++;
+          rejectedReason ??= syncFailureReason(e);
+        } else {
+          failed++;
+          reason ??= syncFailureReason(e);
+          remaining.add(keep);
+        }
       }
     }
     if (failed > 0) {
       debugPrint('[KOI] sync: $failed write(s) kept queued ($reason)');
     }
+    if (rejected > 0) {
+      debugPrint(
+        '[KOI] sync: $rejected write(s) rejected for good ($rejectedReason)',
+      );
+    }
     await _save(remaining);
   });
 
   /// MOB-1 migration: writes [item] now and reports whether the server
-  /// confirmed it (true). On failure (or not ready / another uid) it is
-  /// kept queued like [enqueueAsync] and false is returned.
+  /// confirmed it (true). On a failure a retry can fix (or not ready /
+  /// another uid) it is kept queued like [enqueueAsync] and false is
+  /// returned. Dropped for good → throws [SyncRejected].
   Future<bool> writeNow(SyncItem item) async {
     if (!remote.isReady || !remote.owns(item)) {
       await _append(item);
@@ -264,8 +392,14 @@ class PersistentSyncQueue implements SyncQueue {
       await remote.write(item);
       return true;
     } catch (e) {
-      debugPrint('[KOI] sync: write kept queued (${syncFailureReason(e)})');
-      await _append(item);
+      final reason = syncFailureReason(e);
+      final keep = await _afterFailure(item, e);
+      if (keep == null) {
+        debugPrint('[KOI] sync: 1 write rejected for good ($reason)');
+        throw SyncRejected(reason);
+      }
+      debugPrint('[KOI] sync: write kept queued ($reason)');
+      await _append(keep);
       return false;
     }
   }

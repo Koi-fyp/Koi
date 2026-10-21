@@ -13,6 +13,7 @@ import '../notifications/notification_api.dart';
 import '../notifications/notification_models.dart';
 import '../platform/platform_client.dart';
 import 'care_api_support.dart';
+import 'care_polling.dart';
 import 'care_strings.dart';
 
 // MOB-2 state, per uid and IN MEMORY ONLY (decision C; contract semantics
@@ -119,6 +120,23 @@ class CareList<T> extends ChangeNotifier {
     }
     _busy = false;
     _notify();
+  }
+
+  /// A poll tick (care_polling.dart): the FIRST page only, one request,
+  /// merged into what is loaded. Listeners hear about it only when it
+  /// brought an item not seen before. Skipped while a full reload runs;
+  /// a failure is ignored (the next tick or reload asks again).
+  Future<void> pollFirstPage() async {
+    if (_busy) return;
+    final gen = _gen;
+    try {
+      final page = await _fetch(null);
+      if (gen != _gen || _disposed) return;
+      final known = {for (final i in _items) idOf(i)};
+      if (page.items.every((i) => known.contains(idOf(i)))) return;
+      _items = _ordered(_merge(_items, page.items));
+      _notify();
+    } catch (_) {}
   }
 
   /// Refreshes only if nothing was loaded yet or the cache is shown.
@@ -234,7 +252,7 @@ class ThreadController extends ChangeNotifier {
   ThreadController({
     required this.api,
     required this.relationshipId,
-    this.pollInterval = const Duration(seconds: 20),
+    this.pollInterval = careThreadPollInterval,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now {
     list = CareList<HumanMessage>(
@@ -257,24 +275,61 @@ class ThreadController extends ChangeNotifier {
   int _localSeq = 0;
   bool _disposed = false;
 
+  /// Open thread screens (several can show the same thread, e.g. one
+  /// opened from a notification on top of another) → whether each is the
+  /// top route.
+  final Map<Object, bool> _viewers = {};
+  bool _foreground = true;
+  static const Object _defaultViewer = Object();
+
   /// Oldest first.
   List<HumanMessage> get messages => list.items;
 
   /// Messages typed here and not confirmed by the server yet (pending or
   /// failed), oldest first.
   List<OutgoingMessage> get outgoing => _outgoing;
+
+  /// The poll timer is running right now.
   bool get isPolling => _poll != null;
 
-  /// While the thread is open: refresh now and every [pollInterval]
-  /// (no websockets: the contract has none).
-  void startPolling() {
-    _poll?.cancel();
-    _poll = Timer.periodic(pollInterval, (_) => list.refresh(merge: true));
+  /// A thread screen is open (visible or covered).
+  bool get isOpen => _viewers.isNotEmpty;
+
+  /// [viewer]'s screen opened: poll the first page every [pollInterval]
+  /// (no websockets: the contract has none) while it is the top route and
+  /// the app is in the foreground. The screen does the full reload itself.
+  void startPolling([Object viewer = _defaultViewer]) {
+    _viewers[viewer] = _viewers[viewer] ?? true;
+    _syncTimer();
   }
 
-  void stopPolling() {
-    _poll?.cancel();
-    _poll = null;
+  void stopPolling([Object viewer = _defaultViewer]) {
+    _viewers.remove(viewer);
+    _syncTimer();
+  }
+
+  /// [viewer]'s route became (or stopped being) the top route.
+  void setVisible(bool visible, [Object viewer = _defaultViewer]) {
+    if (!_viewers.containsKey(viewer)) return;
+    _viewers[viewer] = visible;
+    _syncTimer();
+  }
+
+  /// The app was shown (true) or hidden (false): no polling in the
+  /// background.
+  void setForeground(bool foreground) {
+    _foreground = foreground;
+    _syncTimer();
+  }
+
+  void _syncTimer() {
+    final run = !_disposed && _foreground && _viewers.containsValue(true);
+    if (!run) {
+      _poll?.cancel();
+      _poll = null;
+    } else {
+      _poll ??= Timer.periodic(pollInterval, (_) => list.pollFirstPage());
+    }
   }
 
   /// Sends [body] (trimmed, max 4000). Returns the failure, or null.
@@ -334,7 +389,8 @@ class ThreadController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    stopPolling();
+    _viewers.clear();
+    _syncTimer();
     list.dispose();
     super.dispose();
   }
@@ -350,7 +406,7 @@ class CareSession extends ChangeNotifier {
     required this.appointmentApi,
     required this.notificationApi,
     this.refreshCapabilities,
-    this.pollInterval = const Duration(seconds: 20),
+    this.pollInterval = careThreadPollInterval,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now {
     experts = CareList<ExpertProfile>(
@@ -523,12 +579,13 @@ class CareSession extends ChangeNotifier {
 
   // ---- lifecycle ----
 
-  /// App back in the foreground: notifications and open threads again.
+  /// App back in the foreground: notifications, and every page of each
+  /// open thread (a full reload, care_polling.dart).
   void onResume() {
     if (_disposed) return;
     if (notifications.loaded) unawaited(notifications.refresh());
     for (final t in _threads.values) {
-      if (t.isPolling) unawaited(t.list.refresh(merge: true));
+      if (t.isOpen) unawaited(t.list.refresh(merge: true));
     }
   }
 

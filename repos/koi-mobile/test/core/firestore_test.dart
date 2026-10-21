@@ -181,10 +181,18 @@ void main() {
           SyncItem(
             collection: ConversationService.messagesCollection(_uid, _uid),
             docId: 'm1',
+            // LIVE-READY: a full record (the live rules deny anything else).
             data: {
               'id': 'm1',
-              'content': 'v1:PBKDF2:c2FsdA==:bm9uY2U=:Y3Q=',
+              'conversationId': _uid,
+              'sender': 'user',
+              'content':
+                  'v1:PBKDF2:AAAAAAAAAAAAAAAAAAAAAA==:AAAAAAAAAAAAAAAA:'
+                  'AAAAAAAAAAAAAAAAAAAAAA==',
               'timestamp': when.toIso8601String(),
+              'emotion': 'neutral',
+              'emotion_confidence': 1,
+              'synced': false,
             },
             priority: 3,
             timestampFields: const ['timestamp'],

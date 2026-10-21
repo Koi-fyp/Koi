@@ -4,15 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/providers.dart';
 import '../platform/platform_config.dart';
 import '../settings/widgets/settings_widgets.dart';
+import '../shell/shell_tabs.dart';
+import '../shell/top_nav.dart' show KoiTab;
 import '../theme/koi_colors.dart';
 import '../widgets/neo_button.dart';
 import '../widgets/neo_card.dart';
 import 'account_auth_screen.dart';
-import 'account_gate_screens.dart';
 import 'account_providers.dart';
 import 'account_widgets.dart';
 import 'capabilities.dart';
 import 'capability_controller.dart';
+
+/// Settings → Account secondary line while the account has no usable Care
+/// area (capabilities unavailable, or not set up for Care).
+const String accountNoCareText = "Care features aren't available yet";
 
 /// The MOB-1 rows at the top of the Settings "Account" card, in the
 /// existing SettingsRow style.
@@ -124,16 +129,23 @@ class AccountSettingsRows extends ConsumerWidget {
         ),
       ]);
     } else {
-      final unavailable = caps.status == CapabilityStatus.unavailable;
+      // LIVE-READY: who is signed in, and a calm note while Care can't be
+      // used. Tapping opens the Care tab, which shows the account's Care
+      // status (with Retry) or the Care home.
+      final noCare =
+          caps.status == CapabilityStatus.unavailable ||
+          caps.effective.careNotSetUp;
+      final tabs = ShellTabs.maybeOf(context);
+      final email = user.email;
       rows.addAll([
         SettingsRow(
           key: const Key('row-account'),
           icon: '✉',
-          label: 'Account',
-          desc: unavailable
-              ? '${capabilityStatusText(caps.status)} Tap to try again.'
-              : (user.email ?? 'Signed in'),
-          onTap: unavailable ? caps.refresh : null,
+          label: email == null || email.isEmpty
+              ? 'Signed in'
+              : 'Signed in as $email',
+          desc: noCare ? accountNoCareText : '',
+          onTap: tabs == null ? null : () => tabs.select(KoiTab.care),
         ),
         const SettingsDivider(),
         SettingsRow(

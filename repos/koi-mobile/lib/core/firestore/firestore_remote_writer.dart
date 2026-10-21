@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../crypto_context.dart';
 import '../sync_queue.dart';
+import 'live_rules.dart';
 import 'user_document_store.dart';
 
 /// Converts a queued item's data for Firestore: the keys listed in
@@ -37,8 +38,12 @@ class FirestoreRemoteWriter implements RemoteWriter {
     return uid != null && item.ownerUid == uid;
   }
 
+  /// Throws [SyncPrecheckFailed] (nothing is sent) for an item the live
+  /// rules would deny (live_rules.dart).
   @override
   Future<void> write(SyncItem item) async {
+    final violation = liveRulesViolation(item);
+    if (violation != null) throw SyncPrecheckFailed(violation);
     switch (item.op) {
       case SyncOp.merge:
         await _db
