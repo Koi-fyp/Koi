@@ -10,6 +10,7 @@ import ExpertDirectory from './ExpertDirectory';
 import CareConversation from './CareConversation';
 import CareNotifications from './CareNotifications';
 import QuestionnaireRunner from './QuestionnaireRunner';
+import MessagesScreen from '@/components/messaging/MessagesScreen';
 export default function PatientWorkspace({ api, onDenied }: { api: ProfessionalApi; onDenied: () => void }) {
   const [view, setView] = useState('all');
   useEffect(() => { setView(new URLSearchParams(window.location.search).get('view') ?? 'all'); }, []);
@@ -41,6 +42,7 @@ export default function PatientWorkspace({ api, onDenied }: { api: ProfessionalA
   if (!caps) return <div role="status" className="professional-status"><span className="neo-spinner" aria-hidden="true" />Loading your account…{error && <p role="alert">{error}</p>}</div>;
   if (!caps.capabilities.expert_directory) return <NeoCard className="professional-card"><h1>General account registration required</h1><p>Use an existing server-registered General account to accept invitations or apply to a practice. Registration delivery is not available in this slice.</p></NeoCard>;
   if (['care', 'questionnaires', 'messages', 'appointments', 'notifications'].includes(view) && !caps.active_patient_relationships.length) return <NeoCard className="professional-card"><h1>Active care relationship required</h1><p>This care section is available after a psychologist accepts your application or invitation.</p><a className="professional-link" href="/patient?view=experts#experts">Find an Expert</a></NeoCard>;
+  if (view === 'messages') return <><h1>Messages</h1><section id="messages"><MessagesScreen api={api} role="patient" patientRelationships={caps.active_patient_relationships} onError={failure} /></section>{error && <p role="alert" className="professional-error">{error}</p>}<a className="professional-link" href="/patient?view=care#care">Back to your care</a></>;
   if (detail && 'attempt' in detail) return <QuestionnaireRunner key={detail.attempt.id} api={api} initial={detail} onDenied={onDenied} onClose={() => { setDetail(null); void load().catch(failure); }} />;
   if (detail && 'acknowledgement' in detail) return <NeoCard className="professional-card"><h1>Questionnaire submitted</h1><p>Your responses were received on {new Date(detail.acknowledgement.submitted_at).toLocaleString()}.</p><NeoButton onClick={() => setDetail(null)}>Back to assignments</NeoButton></NeoCard>;
   return <><h1>Your care</h1><section id="experts"><ExpertDirectory api={api} onChoose={uid => { setPsychologist(uid); setMessage('Professional selected. Review consent and submit your application below.'); }} onError={failure} /></section><section id="notifications"><CareNotifications api={api} onError={failure} /></section><section id="care">{caps.active_patient_relationships.map(r => <CareConversation key={r.relationship_id} relationshipId={r.relationship_id} api={api} onError={failure} />)}</section>{error && <p role="alert" className="professional-error">{error}</p>}<p role="status">{busy ? <><span className="neo-spinner" aria-hidden="true" /> Working…</> : message}</p>

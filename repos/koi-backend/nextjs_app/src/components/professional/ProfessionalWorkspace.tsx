@@ -11,6 +11,7 @@ import QuestionnaireEditor from './QuestionnaireEditor';
 import AiDraftPanel, { AiReviewBanner, type AiProvenance } from './AiDraftPanel';
 import PublishedQuestionnaire from './PublishedQuestionnaire';
 import PatientManagement from './PatientManagement';
+import MessagesScreen from '@/components/messaging/MessagesScreen';
 
 export function WorkspaceLoading({ text = 'Loading your workspace…' }: { text?: string }) {
   return <div className="professional-status" role="status" aria-live="polite"><span className="neo-spinner" aria-hidden="true" />{text}</div>;
@@ -24,8 +25,8 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
   const [version, setVersion] = useState<VersionDTO | null>(null), [inspectRevision, setInspectRevision] = useState(1);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
   const [issues, setIssues] = useState<string[]>([]), [aiInfo, setAiInfo] = useState<AiProvenance | null>(null);
-  const [showPatients, setShowPatients] = useState(false);
-  useEffect(() => { const view = new URLSearchParams(window.location.search).get('view'); if (view && view !== 'questionnaires') setShowPatients(true); }, []);
+  const [showPatients, setShowPatients] = useState(false), [messagesView, setMessagesView] = useState(false);
+  useEffect(() => { const view = new URLSearchParams(window.location.search).get('view'); setMessagesView(view === 'messages'); if (view && view !== 'questionnaires' && view !== 'messages') setShowPatients(true); }, []);
   const busyRef = useRef(false), alive = useRef(true);
   const clearProtected = () => { setContent(null); setDraft(null); setVersion(null); setItems([]); setOrg(null); setCursor(null); };
   const handleError = (failure: unknown) => {
@@ -108,6 +109,7 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
   return <>
     <div className="professional-row professional-between"><div><h1>{orgName || 'Your practice'}</h1><p className="professional-muted">Create, save and publish your own questionnaires.</p></div><span className="professional-badge">Custom · Not validated</span></div>
     {error && <p role="alert" className="professional-error">{error}</p>}
+    {messagesView && <section id="messages"><MessagesScreen api={api} role="professional" organizationId={org} onError={handleError} /></section>}
     <div role="status" aria-live="polite">{busy ? <span className="professional-row"><span className="neo-spinner" aria-hidden="true" />Saving or loading…</span> : message}</div>
     {!org ? <NeoCard className="professional-card professional-narrow"><h2>Create your organization</h2><p className="professional-muted">Your organization holds your drafts and published versions.</p>
       <form className="professional-stack" onSubmit={event => { event.preventDefault(); void run(async () => {
