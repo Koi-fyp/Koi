@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { professionalApi } from '@/lib/platform/client';
 import type { CareNotification } from '@/lib/platform/community-types';
 import { desktopEnabled, notifyDesktop } from '@/lib/platform/messaging/desktop';
-import { desktopNoticeText, noticeMessageId, titleWithCount, unreadMessageNotices, type MessagingRole } from '@/lib/platform/messaging/model';
+import { desktopNoticeText, noticeMessageId, titleWithCount, unreadMessageNotices, unreadOtherNotices, type MessagingRole } from '@/lib/platform/messaging/model';
 import { unreadPollMs } from '@/lib/platform/messaging/poll-config';
 import { createPoller } from '@/lib/platform/messaging/poller';
 import { unreadStore } from '@/lib/platform/messaging/unread-store';
@@ -14,6 +14,7 @@ const fatal = (e: unknown) => status(e) === 401 || status(e) === 403;
 
 export const useUnreadState = () => useSyncExternalStore(unreadStore.subscribe, unreadStore.get, unreadStore.get);
 export const useUnreadCount = () => unreadMessageNotices(useUnreadState().notices).length;
+export const useUnreadNoticeCount = () => unreadOtherNotices(useUnreadState().notices).length;
 
 /**
  * Owns the single unread-notification poller of this window (menu badge, toast, tab title, desktop notice).
@@ -23,15 +24,17 @@ export function useUnreadMessages(uid: string | null | undefined, currentUser: (
   const token = useRef(Symbol('unread')).current, user = useRef(currentUser); user.current = currentUser;
   const roleRef = useRef(role); roleRef.current = role;
   const ownerless = useSyncExternalStore(unreadStore.subscribe, () => unreadStore.get().owner === null, () => false);
-  const [leader, setLeader] = useState(false), [toast, setToast] = useState(false), leading = useRef(false);
-  const state = useUnreadState(), count = unreadMessageNotices(state.notices).length;
+  const [leader, setLeader] = useState(false), [toast, setToast] = useState(false), [noticeToast, setNoticeToast] = useState(false), leading = useRef(false);
+  const state = useUnreadState(), count = unreadMessageNotices(state.notices).length, notices = unreadOtherNotices(state.notices).length;
   const canClaim = ownerless || leading.current;
   useEffect(() => {
     if (!uid || !enabled) return;
     if (!unreadStore.claim(token)) return;
     leading.current = true; setLeader(true);
     const api = professionalApi(uid, () => user.current() as never);
-    const seen = new Set<string>(); let first = true, alive = true, toastTimer: ReturnType<typeof setTimeout> | null = null;
+    const seen = new Set<string>(); let first = true, alive = true, toastTimer: ReturnType<typeof setTimeout> | null = null, noticeTimer: ReturnType<typeof setTimeout> | null = null;
+    // Generic label only: notices never carry message, answer or appointment text.
+    const announceNotice = () => { setNoticeToast(true); if (noticeTimer) clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { if (alive) setNoticeToast(false); }, TOAST_MS); };
     const announce = async (fresh: CareNotification[]) => {
       try { await unreadStore.activeChat?.refresh(); } catch { /* the chat reports its own failures */ }
       const chat = unreadStore.activeChat, outside = fresh.filter(n => !chat?.hasMessage(noticeMessageId(n)));
@@ -46,17 +49,19 @@ export function useUnreadMessages(uid: string | null | undefined, currentUser: (
         for (let page = 0; page < MAX_PAGES; page++) {
           const result: { items?: CareNotification[]; next_cursor?: string | null } = await api.request(`/api/v1/notifications?limit=${PAGE}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
           if (!Array.isArray(result?.items)) break;
-          found.push(...result.items.filter(n => n.kind === 'new_message'));
+          found.push(...result.items);
           cursor = result.next_cursor ?? null; if (!cursor) break;
         }
         if (!alive) return;
-        const fresh = unreadMessageNotices(found).filter(n => !seen.has(n.id));
+        const fresh = unreadMessageNotices(found).filter(n => !seen.has(n.id)), freshOther = unreadOtherNotices(found).filter(n => !seen.has(n.id));
         for (const n of found) seen.add(n.id);
         unreadStore.publish(uid, found);
-        if (!first && fresh.length) void announce(fresh); first = false;
+        if (!first && fresh.length) void announce(fresh);
+        if (!first && freshOther.length) announceNotice();
+        first = false;
       },
       isFatal: fatal,
-      onFatal: () => { unreadStore.clear(); setToast(false); },
+      onFatal: () => { unreadStore.clear(); setToast(false); setNoticeToast(false); },
     });
     unreadStore.refresh = () => poller.trigger();
     unreadStore.markRead = async ids => {
@@ -66,12 +71,12 @@ export function useUnreadMessages(uid: string | null | undefined, currentUser: (
       }
     };
     poller.start();
-    return () => { alive = false; poller.stop(); api.dispose(); if (toastTimer) clearTimeout(toastTimer); unreadStore.refresh = null; unreadStore.markRead = null; leading.current = false; unreadStore.release(token); setLeader(false); setToast(false); };
+    return () => { alive = false; poller.stop(); api.dispose(); if (toastTimer) clearTimeout(toastTimer); if (noticeTimer) clearTimeout(noticeTimer); unreadStore.refresh = null; unreadStore.markRead = null; leading.current = false; unreadStore.release(token); setLeader(false); setToast(false); setNoticeToast(false); };
   }, [uid, enabled, canClaim, token]);
   useEffect(() => {
     if (!leader) return;
     document.title = titleWithCount(document.title, count);
     return () => { document.title = titleWithCount(document.title, 0); };
   }, [leader, count]);
-  return { count, toast: leader && toast, dismissToast: () => setToast(false) };
+  return { count, notices, toast: leader && toast, dismissToast: () => setToast(false), noticeToast: leader && noticeToast, dismissNoticeToast: () => setNoticeToast(false) };
 }

@@ -14,7 +14,9 @@ export function platformLinks(caps: CapabilitiesDTO | null): PlatformLink[] {
   if (caps.capabilities.professional_workspace) links.push(
     { label: 'Professional Dashboard', href: '/professional?view=dashboard#practice-dashboard' }, { label: 'Professional Questionnaires', href: '/professional?view=questionnaires#professional-questionnaires' },
     { label: 'Patients', href: '/professional?view=patients#patients' }, { label: 'Practice appointments', href: '/professional?view=appointments' }, { label: 'Messages', href: '/professional?view=messages#messages' }, { label: 'Submissions', href: '/professional?view=submissions#submissions' }, { label: 'Assignments & Submissions', href: '/professional?view=analytics#practice-analytics' },
+    { label: 'Notifications', href: '/professional?view=notifications#notifications' },
   );
-  const menu = caps.capabilities.professional_workspace && caps.active_patient_relationships.length ? links.map(link => link.label === 'Messages' ? { ...link, label: link.href.startsWith('/professional') ? 'Practice messages' : 'Care messages' } : link) : links;
+  const dual = caps.capabilities.professional_workspace && (caps.active_patient_relationships.length || caps.capabilities.expert_directory);
+  const menu = dual ? links.map(link => link.label === 'Messages' && caps.active_patient_relationships.length ? { ...link, label: link.href.startsWith('/professional') ? 'Practice messages' : 'Care messages' } : link.label === 'Notifications' ? { ...link, label: link.href.startsWith('/professional') ? 'Practice notifications' : 'Care notifications' } : link) : links;
   return [...menu, { label: 'Account', href: '/account' }];
 }

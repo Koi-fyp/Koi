@@ -3,6 +3,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useCareReveal } from './care-focus';
 import { revealCareElement } from './care-focus';
 import ScrollButtons from '@/components/ui/ScrollButtons';
+import { useUnreadState } from '@/components/messaging/useUnreadMessages';
+import { badgeText, unreadMessageNotices, unreadOtherNotices } from '@/lib/platform/messaging/model';
 
 export interface WorkspaceView { id: string; label: string; description: string; anchor?: string }
 export const professionalViews: WorkspaceView[] = [
@@ -13,6 +15,7 @@ export const professionalViews: WorkspaceView[] = [
   { id: 'analytics', label: 'Assignments & Submissions', description: 'Track questionnaire assignments and submitted attempts. These operational counts do not measure clinical improvement.', anchor: 'practice-analytics' },
   { id: 'messages', label: 'Messages', description: 'Your human conversations with patients.', anchor: 'messages' },
   { id: 'appointments', label: 'Appointments', description: 'Select an active patient to manage appointment requests and proposed times.' },
+  { id: 'notifications', label: 'Notifications', description: 'Updates about appointments, applications and patient messages.', anchor: 'notifications' },
 ];
 export const generalViews: WorkspaceView[] = [
   { id: 'home', label: 'Care Home', description: 'Find a psychologist, track applications and accept practice invitations.' },
@@ -84,6 +87,8 @@ export function workspaceHref(base: string, view: WorkspaceView, contextParams: 
 export default function WorkspaceFrame({ base, views, view, children, secondaryViews = [], workspaceLabel, contextParams = {} }: { base: string; views: WorkspaceView[]; view: string; children: ReactNode; secondaryViews?: WorkspaceView[]; workspaceLabel?: string; contextParams?: Record<string, string> }) {
   const selected = [...views, ...secondaryViews].find(v => v.id === view);
   useCareReveal('workspace-heading', view);
+  const unread = useUnreadState().notices, counts: Record<string, number> = { messages: unreadMessageNotices(unread).length, notifications: unreadOtherNotices(unread).length };
+  const label = (item: WorkspaceView) => <>{item.label}{counts[item.id] > 0 && <> <span aria-hidden="true" className="professional-badge">{badgeText(counts[item.id])}</span><span className="sr-only"> ({counts[item.id]} unread)</span></>}</>;
   return <div className="care-workspace" onClick={event => {
     const link = (event.target as HTMLElement).closest('a');
     if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target || link.hasAttribute('download')) return;
@@ -97,7 +102,7 @@ export default function WorkspaceFrame({ base, views, view, children, secondaryV
   }}>
     <nav className="care-sidebar" aria-label={base === '/professional' ? 'Practice navigation' : 'Care navigation'}>
       <p className="professional-label">{workspaceLabel ?? 'KOI Care'}</p>
-      {views.map(item => <a key={item.id} href={workspaceHref(base, item, contextParams)} aria-current={view === item.id ? 'page' : undefined}>{item.label}</a>)}
+      {views.map(item => <a key={item.id} href={workspaceHref(base, item, contextParams)} aria-current={view === item.id ? 'page' : undefined}>{label(item)}</a>)}
       {secondaryViews.length > 0 && <details className="care-disclosure" open={secondaryViews.some(item => item.id === view) || undefined}><summary>Additional care options</summary>{secondaryViews.map(item => <a key={item.id} href={workspaceHref(base, item, contextParams)} aria-current={view === item.id ? 'page' : undefined}>{item.label}</a>)}</details>}
       <a href="/account">{base === '/patient' ? 'Account & Access' : 'Account & access'}</a>
     </nav>

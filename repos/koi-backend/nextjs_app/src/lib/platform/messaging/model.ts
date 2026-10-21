@@ -25,7 +25,9 @@ export const preview = (text: string, max = 60) => { const flat = text.replace(/
 export const shortId = (uid: string) => uid.slice(-4);
 
 export const unreadMessageNotices = (notices: CareNotification[]) => notices.filter(n => n.kind === 'new_message' && !n.read_at && 'message_id' in n.reference);
-export const noticeMessageId = (n: CareNotification) => 'message_id' in n.reference ? n.reference.message_id : '';
+/** Unread non-message notices (appointments, assignments, applications) for the Notifications badge. */
+export const unreadOtherNotices = (notices: CareNotification[]) => notices.filter(n => n.kind !== 'new_message' && !n.read_at);
+export const noticeMessageId =(n: CareNotification) => 'message_id' in n.reference ? n.reference.message_id : '';
 /** Unread notices belonging to one conversation, matched through its already loaded message ids. */
 export function unreadForThread(notices: CareNotification[], messages: HumanMessage[]): CareNotification[] {
   const ids = new Set(messages.map(m => m.id));

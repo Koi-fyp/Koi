@@ -17,6 +17,7 @@ import type { Relationship } from '@/lib/platform/patient-types';
 import { useCareReveal } from '@/components/platform/care-focus';
 import WorkspaceFrame, { professionalViews, useWorkspaceView, useWorkspaceSearchParam, navigateWorkspace } from '@/components/platform/WorkspaceFrame';
 import MessagesScreen from '@/components/messaging/MessagesScreen';
+import CareNotifications from '@/components/patient/CareNotifications';
 import { useConfirm, useConfirmedAction } from '@/components/ui/feedback';
 
 export function WorkspaceLoading({ text = 'Loading your workspace…' }: { text?: string }) {
@@ -176,7 +177,8 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
       </NeoCard>}
       </div>
     </>}
-    {view === 'questionnaires' && version && <div id="published-questionnaire-panel" tabIndex={-1} className="professional-stack"><PublishedQuestionnaire key={version.id} version={version} /><CareLink variant="primary" href="/professional?view=patients#patients">Assign this published version to patients</CareLink></div>}
+    {view === 'notifications' && <section id="notifications"><CareNotifications api={api} workspace="professional" onError={handleError} /></section>}
+    {view === 'questionnaires' && version &&<div id="published-questionnaire-panel" tabIndex={-1} className="professional-stack"><PublishedQuestionnaire key={version.id} version={version} /><CareLink variant="primary" href="/professional?view=patients#patients">Assign this published version to patients</CareLink></div>}
     {org && (['patients', 'submissions', 'appointments'].includes(view) || visitedViews.some(item => ['patients', 'submissions', 'appointments'].includes(item))) && <div hidden={!['patients', 'submissions', 'appointments'].includes(view)}><PatientManagement key={org} active={['patients', 'submissions', 'appointments'].includes(view)} view={(['patients', 'submissions', 'appointments'].includes(view) ? view : 'patients') as 'patients' | 'submissions' | 'appointments'} api={api} organizationId={org} publishedVersionId={version?.id} knownVersions={knownVersions} selectedRelationshipId={requestedRelationship} onOpenConversation={setSelectedPatient} onDenied={handleError} /></div>}
   </WorkspaceFrame>;
 }

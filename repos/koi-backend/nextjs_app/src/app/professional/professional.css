@@ -147,3 +147,18 @@
 .care-usage-meter::-webkit-meter-bar { background:var(--neo-gray); border:1px solid var(--neo-black); border-radius:999px; }
 .care-usage-meter::-webkit-meter-optimum-value { background:var(--neo-blue); }
 .care-usage-meter::-moz-meter-bar { background:var(--neo-blue); }
+
+/* Notifications and "New" markers */
+.care-notification-list { display:grid; gap:.75rem; list-style:none; padding:0; margin:0; }
+.care-notification { position:relative; border:2px solid #000; border-radius:1rem; background:var(--neo-white); padding:1rem; display:grid; gap:.5rem; }
+.care-notification[data-unread] { background:#FFF8D6; box-shadow:var(--shadow-sm); }
+.care-new-badge { position:absolute; top:-.6rem; right:.75rem; background:var(--neo-coral); color:#000; border:2px solid #000; border-radius:999px; padding:.05rem .55rem; font-size:.75rem; font-weight:800; }
+.care-chip { display:inline-block; border:2px solid #000; border-radius:999px; padding:.1rem .6rem; font-size:.78rem; font-weight:700; background:var(--neo-gray); }
+.care-chip--latest { background:var(--neo-blue); color:#fff; }
+.care-chip--requested { background:#FFE7B3; } .care-chip--proposed { background:#D6E4FF; } .care-chip--confirmed { background:#CDEFD9; }
+.care-chip--completed { background:#E5E5E5; } .care-chip--rejected, .care-chip--cancelled { background:#FFD6D6; }
+.care-role-badge { display:inline-flex; align-items:center; gap:.35rem; background:var(--neo-black); color:var(--neo-white); border-radius:999px; padding:.3rem .8rem; font-weight:800; font-size:.85rem; width:fit-content; }
+.care-timeline { display:flex; flex-wrap:wrap; gap:.5rem; list-style:none; padding:0; margin:0; }
+.care-timeline li { border:2px solid #000; border-radius:999px; padding:.15rem .7rem; font-size:.8rem; font-weight:700; background:var(--neo-white); }
+.care-timeline li[data-state="done"] { background:var(--neo-mint); }
+.care-timeline li[data-state="current"] { background:var(--neo-yellow); }
