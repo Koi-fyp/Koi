@@ -9,6 +9,7 @@ import type { Answer, Connection, Page, PatientAssignment, PatientDetail, Relati
 import type { Decision, Evaluation, Job, Review, ReviewDecision, Submission, SubmissionWorkspace } from '../professional-types';
 import { answerIssues } from '../answers';
 import { CARE_CONSENT_VERSION } from '../patient-types';
+import { isAiFeedbackRequest, type AiFeedbackNote } from '../ai-feedback';
 
 interface Invitation { id: string; organization_id: string; psychologist_uid: string; intended_uid?: string; nonce: string; token_hash: string; state: 'open' | 'redeemed' | 'revoked'; expires_at: string; revision: number; redeemed_by?: string }
 interface Assignment { id: string; organization_id: string; relationship_id: string; patient_uid: string; psychologist_uid: string; questionnaire_version_id: string; attempt_id: string; state: 'assigned' | 'in_progress' | 'submitted' | 'revoked'; created_at: string; due_at?: string; idempotency_key: string }
@@ -348,6 +349,23 @@ export class LifecycleService extends PlatformService {
       const result = decision ? this.output('ReviewDecisionDTO', { review, decision: body.decision }) : this.output('ReviewRecordDTO', review);
       this.record(tx, rid, actor, op, e.id, body, result, this.time(), e.organization_id);
       return result;
+    });
+  }
+  /** One note per evaluation and psychologist in `ai_feedback_notes`; a later send returns the first note unchanged. */
+  async createAiFeedback(actor: Actor, evaluationId: string, body: unknown, key: string): Promise<AiFeedbackNote> {
+    this.fresh(actor); checkSchema('Id', evaluationId);
+    if (!isAiFeedbackRequest(body)) throw invalid();
+    const op = 'createAiFeedbackNote', rid = this.key(actor, op, evaluationId, key);
+    return this.store.transaction(async tx => {
+      const e = await this.scopedEvaluation(tx, actor, evaluationId);
+      const old = await this.receipt<AiFeedbackNote>(tx, rid, actor, op, e.id, body); if (old) return old;
+      const id = `feedback_${hash([e.id, actor.uid])}`, first = await tx.get<AiFeedbackNote & { organization_id: string }>('ai_feedback_notes', id);
+      const note = (n: AiFeedbackNote): AiFeedbackNote => ({ evaluation_id: n.evaluation_id, rating: n.rating, tags: [...n.tags], ...(n.comment ? { comment: n.comment } : {}), created_at: n.created_at, psychologist_uid: n.psychologist_uid });
+      if (first) return note(first);
+      const created: AiFeedbackNote = { evaluation_id: e.id, rating: body.rating, tags: [...body.tags], ...(body.comment?.trim() ? { comment: body.comment.trim() } : {}), created_at: this.time(), psychologist_uid: actor.uid };
+      tx.create('ai_feedback_notes', id, { ...created, organization_id: e.organization_id });
+      this.record(tx, rid, actor, op, e.id, body, created, this.time(), e.organization_id);
+      return note(created);
     });
   }
   async list(actor: Actor, kind: 'relationships' | 'submissions' | 'connections' | 'assignments' | 'reviews' | 'decisions', org = '', limit = 25, cursor?: string, evaluationId?: string): Promise<Page<any>> {

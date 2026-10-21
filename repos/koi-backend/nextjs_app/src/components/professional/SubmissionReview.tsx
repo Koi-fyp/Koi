@@ -11,6 +11,7 @@ import type { Page } from '@/lib/platform/patient-types';
 import type { Locale } from '@/lib/platform/types';
 import { localeNames } from '@/lib/platform/content';
 import QuestionFields from '@/components/patient/QuestionFields';
+import AiFeedbackPanel from './AiFeedbackPanel';
 import { ACTION_FAILED, useConfirm, useSnackbar } from '@/components/ui/feedback';
 import { answerText, evaluationStateText, evidenceCoverage, parseInterpretation } from '@/lib/platform/interpretation';
 
@@ -98,6 +99,7 @@ export default function SubmissionReview({ id, api, onError }: { id: string; api
           <blockquote className="care-evidence-quote" dir="auto">{answer ?? <em>No answer was submitted for this question.</em>}</blockquote>
           <p className="professional-muted">Patient's submitted answer. Question ID: <code>{reference.question_id}</code>; answer reference {reference.answer_index + 1}</p></li>;
       })}</ul> : <p>No evidence references are available for this evaluation.</p>}</section>
+      {value.evaluation.interpretation && <AiFeedbackPanel key={value.evaluation.id} api={api} evaluationId={value.evaluation.id} onError={onError} />}
       {value.evaluation.validated_scores.length ? <details><summary>Available validated scores</summary><ul>{value.evaluation.validated_scores.map(score => <li key={score.scale_id}>{score.scale_id}: {score.value}; scoring {score.scoring_version}; implementation {score.implementation_version}</li>)}</ul></details> : <p className="professional-muted">No validated scores are available for this submission.</p>}
       <details><summary>Technical evaluation details</summary><p>Job state: <code>{value.job.state}</code></p>{value.job.failure_code && <p>Failure code: <code>{value.job.failure_code}</code></p>}</details>
     </section>
