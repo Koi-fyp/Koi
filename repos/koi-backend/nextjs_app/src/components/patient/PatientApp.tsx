@@ -8,6 +8,7 @@ import { professionalApi, type ProfessionalApi } from '@/lib/platform/client';
 import { useAccessMonitor } from '@/lib/platform/access-monitor';
 import { useRecentAuthentication } from '@/components/professional/RecentAuthentication';
 import PatientWorkspace from './PatientWorkspace';
+import { FeedbackProviders } from '@/components/ui/feedback';
 function CareContent({ auth, expired, beforeMutation, generation }: { auth: ReturnType<typeof useProfessionalAuth>; expired: () => void; beforeMutation: () => Promise<void>; generation: number }) {
   const current = useRef(auth.currentUser), recent = useRef(beforeMutation);
   current.current = auth.currentUser; recent.current = beforeMutation;
@@ -27,5 +28,5 @@ export default function PatientApp() {
   if (auth.loading) return <div role="status" className="professional-status"><span className="neo-spinner" aria-hidden="true" />Checking your session…</div>;
   if (auth.error) return <NeoCard className="professional-card"><h1>Care sign-in unavailable</h1><NeoButton onClick={() => window.location.reload()}>Retry</NeoButton></NeoCard>;
   if (!auth.user || expired) return <NeoCard className="professional-card professional-narrow"><h1>{expired ? 'Care access changed' : 'Care sign-in'}</h1><p>Use your existing registered General account. Your companion session stays separate.</p>{error && <p role="alert">{error}</p>}<form className="professional-stack" onSubmit={async e => { e.preventDefault(); setBusy(true); setError(''); try { await auth.signIn(email, password); setExpired(false); } catch { setError('Sign-in failed. Check your credentials and connection.'); } finally { setPassword(''); setBusy(false); } }}><NeoInput label="Email" aria-label="Email" type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /><NeoInput label="Password" aria-label="Password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /><NeoButton type="submit" loading={busy}>Sign in</NeoButton></form></NeoCard>;
-  return <><div className="professional-row professional-between"><span>Care account</span><NeoButton variant="ghost" onClick={() => { setExpired(true); void auth.signOut(); }}>Sign out</NeoButton></div><Session key={auth.user.uid} auth={auth} expired={() => setExpired(true)} beforeMutation={recent.beforeMutation} />{recent.dialog}</>;
+  return <FeedbackProviders><div className="professional-row professional-between"><span>Care account</span><NeoButton variant="ghost" onClick={() => { setExpired(true); void auth.signOut(); }}>Sign out</NeoButton></div><Session key={auth.user.uid} auth={auth} expired={() => setExpired(true)} beforeMutation={recent.beforeMutation} />{recent.dialog}</FeedbackProviders>;
 }

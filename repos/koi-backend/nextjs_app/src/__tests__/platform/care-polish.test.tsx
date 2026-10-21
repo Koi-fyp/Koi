@@ -4,6 +4,7 @@ import CareLink from '@/components/platform/CareLink';
 import WorkspaceFrame, { professionalViews } from '@/components/platform/WorkspaceFrame';
 import SubmissionReview from '@/components/professional/SubmissionReview';
 import PatientManagement from '@/components/professional/PatientManagement';
+import { FeedbackProviders } from '@/components/ui/feedback';
 import { illustrations, newQuestion } from '@/lib/platform/content';
 import type { QuestionType, VersionDTO } from '@/lib/platform/types';
 import type { SubmissionWorkspace, Decision } from '@/lib/platform/professional-types';
@@ -39,7 +40,9 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/professional?view=submissions');
 });
 afterEach(() => { cleanup(); jest.restoreAllMocks(); });
-const mountReview = () => render(<WorkspaceFrame base="/professional" views={professionalViews} view="submissions"><SubmissionReview id="submission" api={api} onError={jest.fn()} /></WorkspaceFrame>);
+const mountReview = () => render(<FeedbackProviders><WorkspaceFrame base="/professional" views={professionalViews} view="submissions"><SubmissionReview id="submission" api={api} onError={jest.fn()} /></WorkspaceFrame></FeedbackProviders>);
+// The themed dialog replaced window.confirm; tests now confirm through it explicitly.
+const confirmDialog = async (name: string) => fireEvent.click(await screen.findByRole('button', { name }));
 it('uses semantic Neo link variants without changing their destinations', () => {
   render(<><CareLink variant="primary" href="/professional?view=questionnaires#professional-questionnaires">Manage questionnaires</CareLink><CareLink variant="secondary" href="/account">Account</CareLink><CareLink href="#context">Context</CareLink></>);
   expect(screen.getByRole('link', { name: 'Manage questionnaires' })).toHaveClass('neo-btn-primary', 'care-link--primary');
@@ -80,8 +83,9 @@ it.each(['Approve review', 'Reject evaluation', 'Save feedback'])('saves %s as a
   const original = JSON.stringify(value.submission.answers); mountReview(); await screen.findByRole('heading', { name: 'Psychologist review' });
   fireEvent.change(screen.getByRole('textbox', { name: 'Psychologist conclusion' }), { target: { value: 'My exact fixture conclusion' } });
   fireEvent.change(screen.getByRole('textbox', { name: 'Review feedback' }), { target: { value: 'My optional fixture feedback' } });
-  fireEvent.click(screen.getByRole('button', { name: label }));
+  fireEvent.click(screen.getByRole('button', { name: label })); await confirmDialog('Save review decision');
   await screen.findByText('Review revision 3 saved. Original answers and interpretation are preserved.');
+  expect(screen.getByText('Review decision saved')).toBeInTheDocument(); expect(window.confirm).not.toHaveBeenCalled();
   const post = request.mock.calls.find(([path, method]) => path === '/api/v1/professional/review-decisions' && method === 'POST');
   expect(post?.[2]).toEqual({ organization_id: 'org', evaluation_id: 'evaluation', expected_review_revision: 2, conclusion: 'My exact fixture conclusion', feedback: 'My optional fixture feedback', decision: label === 'Approve review' ? 'approve' : label === 'Reject evaluation' ? 'reject' : 'feedback' });
   expect(JSON.stringify(value.submission.answers)).toBe(original);
@@ -108,17 +112,17 @@ it('preserves review text when saving fails', async () => {
   request.mockImplementation(async (path, method, body) => { if (method === 'POST') throw new Error('fixture conflict'); return original(path, method, body); });
   mountReview(); await screen.findByRole('heading', { name: 'Psychologist review' });
   fireEvent.change(screen.getByRole('textbox', { name: 'Psychologist conclusion' }), { target: { value: 'Keep my conclusion' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Approve review' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Approve review' })); await confirmDialog('Save review decision');
   await screen.findByText(/Review save was not confirmed/);
   expect(screen.getByRole('textbox', { name: 'Psychologist conclusion' })).toHaveValue('Keep my conclusion');
 });
 it('offers authorized version names and sends the real selected ID with the existing assignment target', async () => {
-  render(<PatientManagement api={api} organizationId="org" onDenied={jest.fn()} />);
+  render(<PatientManagement api={api} organizationId="org" onDenied={jest.fn()} />, { wrapper: FeedbackProviders });
   const option = await screen.findByRole('option', { name: 'Wellbeing check-in - Revision 4 - English, Urdu' });
   expect(option).toHaveValue('published-known');
   fireEvent.click(await screen.findByRole('checkbox', { name: 'Select patient-fixture for assignment' }));
   fireEvent.change(screen.getByRole('combobox', { name: 'Published questionnaire' }), { target: { value: 'published-known' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Assign published questionnaire' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Assign published questionnaire' })); await confirmDialog('Assign questionnaire');
   await screen.findByText('1 independent assignments created.');
   expect(request).toHaveBeenCalledWith('/api/v1/professional/assignments', 'POST', { organization_id: 'org', questionnaire_version_id: 'published-known', target: { kind: 'selected', relationship_ids: ['relationship'] } });
 });

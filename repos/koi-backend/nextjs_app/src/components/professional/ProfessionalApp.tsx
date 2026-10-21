@@ -7,6 +7,7 @@ import { professionalApi, type ProfessionalApi } from '@/lib/platform/client';
 import { useProfessionalAuth } from '@/lib/platform/professional-auth';
 import ProfessionalWorkspace, { WorkspaceLoading } from './ProfessionalWorkspace';
 import { useRecentAuthentication } from './RecentAuthentication';
+import { FeedbackProviders } from '@/components/ui/feedback';
 
 function Session({ uid, currentUser, expired, beforeMutation }: { uid: string; currentUser: ReturnType<typeof useProfessionalAuth>['currentUser']; expired: () => void; beforeMutation: () => Promise<void> }) {
   const current = useRef(currentUser); current.current = currentUser;
@@ -35,7 +36,7 @@ export default function ProfessionalApp() {
       <NeoButton type="submit" loading={busy}>Sign in</NeoButton>
     </form><p className="professional-muted">An account alone does not grant practice access. Verification is handled by the authorized administrator.</p>
   </NeoCard>;
-  return <><div className="professional-row professional-between"><span className="professional-muted">Professional session</span><NeoButton variant="ghost" onClick={() => { void auth.signOut().catch(() => setError('Sign-out failed. Try again.')); }}>Sign out of workspace</NeoButton></div>{error && <p role="alert">{error}</p>}
+  return <FeedbackProviders><div className="professional-row professional-between"><span className="professional-muted">Professional session</span><NeoButton variant="ghost" onClick={() => { void auth.signOut().catch(() => setError('Sign-out failed. Try again.')); }}>Sign out of workspace</NeoButton></div>{error && <p role="alert">{error}</p>}
     <Session key={auth.user.uid} uid={auth.user.uid} currentUser={auth.currentUser} expired={() => setExpired(true)} beforeMutation={recent.beforeMutation} />{recent.dialog}
-  </>;
+  </FeedbackProviders>;
 }

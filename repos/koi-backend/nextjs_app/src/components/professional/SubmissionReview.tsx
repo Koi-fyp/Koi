@@ -11,13 +11,15 @@ import type { Page } from '@/lib/platform/patient-types';
 import type { Locale } from '@/lib/platform/types';
 import { localeNames } from '@/lib/platform/content';
 import QuestionFields from '@/components/patient/QuestionFields';
+import { ACTION_FAILED, useConfirm, useSnackbar } from '@/components/ui/feedback';
 
 const decisionNames: Record<ReviewDecision, string> = { approve: 'Approved', reject: 'Rejected', feedback: 'Feedback recorded' };
+const decisionVerbs: Record<ReviewDecision, string> = { approve: 'approve', reject: 'reject', feedback: 'feedback' };
 export default function SubmissionReview({ id, api, onError }: { id: string; api: ProfessionalApi; onError: (error: unknown) => void }) {
   const [value, setValue] = useState<SubmissionWorkspace | null>(null), [history, setHistory] = useState<Decision[]>([]), [cursor, setCursor] = useState<string | null>(null);
   const [conclusion, setConclusion] = useState(''), [feedback, setFeedback] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [locale, setLocale] = useState<Locale>('en');
   const [loadError, setLoadError] = useState(false), [reviewError, setReviewError] = useState(''), [historyState, setHistoryState] = useState<'loading' | 'ready' | 'error'>('loading');
-  const alive = useRef(true), running = useRef(false);
+  const alive = useRef(true), running = useRef(false), confirm = useConfirm(), snackbar = useSnackbar();
   const fragment = useWorkspaceFragment(), sectionId = (part: string) => `review-${id}-${part}`;
   const sections = [['overview', 'Submission overview'], ['answers', 'Original answers'], ['evaluation', 'AI evaluation & evidence'], ['review', 'Psychologist review'], ['history', 'Review history']] as const;
   const isSection = sections.some(([part]) => sectionId(part) === fragment);
@@ -42,16 +44,16 @@ export default function SubmissionReview({ id, api, onError }: { id: string; api
   if (!value) return <p role="status"><span className="neo-spinner" aria-hidden="true" />Loading protected submission...</p>;
   const decide = async (decision: ReviewDecision) => {
     if (running.current || !conclusion.trim()) return;
-    if (!window.confirm(`Save this ${decision} decision as an immutable review revision?`)) return;
+    if (!(await confirm({ title: `Save this ${decisionVerbs[decision]} decision?`, description: 'It is saved as a new immutable review revision. The original answers and evaluation are preserved.', confirmLabel: 'Save review decision' }))) return;
     running.current = true; setBusy(true); setMessage(''); setReviewError('');
     try {
       const saved = await api.request<Decision>('/api/v1/professional/review-decisions', 'POST', { organization_id: value.submission.organization_id, evaluation_id: value.evaluation.id, expected_review_revision: value.review_revision, conclusion, ...(feedback.trim() ? { feedback } : {}), decision });
       if (alive.current) {
         setConclusion(''); setFeedback('');
-        setMessage(`Review revision ${saved.review.revision} saved. Original answers and interpretation are preserved.`);
+        setMessage(`Review revision ${saved.review.revision} saved. Original answers and interpretation are preserved.`); snackbar.success('Review decision saved');
         await load().catch(error => { if (alive.current) { setReviewError('Your review was saved, but the latest submission or history could not be refreshed. Refresh before another review.'); onError(error); } });
       }
-    } catch (error) { if (alive.current) { setReviewError('Review save was not confirmed. Your conclusion and feedback are still here. Check the workspace message before retrying.'); onError(error); } }
+    } catch (error) { if (alive.current) { setReviewError('Review save was not confirmed. Your conclusion and feedback are still here. Check the workspace message before retrying.'); snackbar.error(ACTION_FAILED); onError(error); } }
     finally { running.current = false; if (alive.current) setBusy(false); }
   };
   const title = value.questionnaire.content.title[locale] ?? value.questionnaire.content.title[value.questionnaire.content.locales[0]];

@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { TextEncoder } from 'node:util';
 import { webcrypto } from 'node:crypto';
 import ProfessionalWorkspace from '@/components/professional/ProfessionalWorkspace';
+import { FeedbackProviders } from '@/components/ui/feedback';
 import { PlatformService } from '@/lib/platform/server/service';
 import { PlatformClientError, type ProfessionalApi } from '@/lib/platform/client';
 import { MemoryPlatformStore, registered, actor, testTime } from '../../../test/platform-memory';
@@ -35,7 +36,7 @@ afterEach(() => jest.restoreAllMocks());
 const text = (name: string, value: string) => fireEvent.change(screen.getByRole('textbox', { name }), { target: { value } });
 
 async function newSavedForm(api: ProfessionalApi) {
-  render(<ProfessionalWorkspace api={api} onSessionExpired={jest.fn()} />);
+  render(<ProfessionalWorkspace api={api} onSessionExpired={jest.fn()} />, { wrapper: FeedbackProviders });
   await screen.findByRole('heading', { name: 'Create your organization' });
   text('Organization name', 'Fictional practice'); fireEvent.click(screen.getByRole('button', { name: 'Create organization' }));
   await screen.findByText('Organization created.'); fireEvent.click(screen.getByRole('button', { name: 'Create manually' }));
@@ -43,7 +44,7 @@ async function newSavedForm(api: ProfessionalApi) {
   fireEvent.click(screen.getByRole('button', { name: 'Save draft' })); await screen.findByText('Draft saved. Revision 1.');
 }
 it('completes organization -> manual form with picture -> save -> immutable publish -> later reopen/inspect', async () => {
-  const api = bridge(); const view = render(<ProfessionalWorkspace api={api} onSessionExpired={jest.fn()} />);
+  const api = bridge(); const view = render(<ProfessionalWorkspace api={api} onSessionExpired={jest.fn()} />, { wrapper: FeedbackProviders });
   await screen.findByRole('heading', { name: 'Create your organization' });
   text('Organization name', 'Fictional practice'); fireEvent.click(screen.getByRole('button', { name: 'Create organization' }));
   await screen.findByText('Organization created.'); fireEvent.click(screen.getByRole('button', { name: 'Create manually' }));
@@ -53,7 +54,10 @@ it('completes organization -> manual form with picture -> save -> immutable publ
   text('Question 2 · English', 'Choose a shape');
   fireEvent.click(within(screen.getByRole('group', { name: 'Question 2 option 1 picture' })).getByRole('button', { name: /Triangle/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Save draft' })); await screen.findByText('Draft saved. Revision 1.');
-  fireEvent.click(screen.getByRole('button', { name: 'Publish saved revision' })); await screen.findByText('Published. This version is immutable.');
+  fireEvent.click(screen.getByRole('button', { name: 'Publish saved revision' }));
+  // Themed dialog replaces the native confirm: confirm explicitly, then the success snackbar appears.
+  fireEvent.click(within(await screen.findByRole('alertdialog', { name: 'Publish revision 1?' })).getByRole('button', { name: 'Publish revision' }));
+  await screen.findByText('Published. This version is immutable.'); expect(await screen.findByText('Revision published')).toBeInTheDocument(); expect(window.confirm).not.toHaveBeenCalled();
   expect(within(screen.getByRole('region', { name: 'Published questionnaire' })).getByText('Original manual form')).toBeVisible();
   text('Title · English', 'Edited manual form'); expect(screen.getByRole('button', { name: 'Publish saved revision' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Save draft' })); await screen.findByText('Draft saved. Revision 2.');
@@ -75,6 +79,7 @@ it('preserves unsaved edits on a revision conflict and allows deliberate reload'
   text('Title · English', 'My unsaved title'); fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
   await screen.findByRole('alert'); expect(screen.getByRole('textbox', { name: 'Title · English' })).toHaveValue('My unsaved title');
   fireEvent.click(screen.getByRole('button', { name: 'Reload saved draft' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Discard edits' }));
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'Title · English' })).toHaveValue('Another device title'));
 });
 it('clears protected editor content when verification is suspended before an action', async () => {

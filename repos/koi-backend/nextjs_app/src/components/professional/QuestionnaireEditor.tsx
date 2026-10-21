@@ -1,6 +1,7 @@
 'use client';
 import NeoButton from '@/components/ui/NeoButton';
 import NeoInput from '@/components/ui/NeoInput';
+import { useConfirm } from '@/components/ui/feedback';
 import { illustrations, locales, localeNames, newQuestion, questionNames } from '@/lib/platform/content';
 import type { Locale, LocalizedText, ManualContent, Question, QuestionType } from '@/lib/platform/types';
 
@@ -8,22 +9,23 @@ function TranslationFields({ label, value, active, onChange }: { label: string; 
   return <div className="professional-grid">{active.map(locale => <NeoInput key={locale} label={`${label} · ${localeNames[locale]}`} aria-label={`${label} · ${localeNames[locale]}`} value={value[locale] ?? ''} maxLength={4000} lang={locale === 'ur-Latn' ? 'ur-Latn' : locale} dir={locale === 'ur' ? 'rtl' : 'ltr'} onChange={event => onChange({ ...value, [locale]: event.target.value })} />)}</div>;
 }
 export default function QuestionnaireEditor({ content, onChange, disabled }: { content: ManualContent; onChange: (content: ManualContent) => void; disabled: boolean }) {
+  const confirm = useConfirm();
   const update = (index: number, q: Question) => onChange({ ...content, questions: content.questions.map((old, i) => i === index ? q : old) });
-  const languages = (locale: Locale, enabled: boolean) => {
+  const languages = async (locale: Locale, enabled: boolean) => {
     const active = enabled ? locales.filter(l => content.locales.includes(l) || l === locale) : content.locales.filter(l => l !== locale);
-    if (!active.length || (!enabled && !window.confirm(`Remove ${localeNames[locale]} text from this draft?`))) return;
+    if (!active.length || (!enabled && !(await confirm({ title: `Remove ${localeNames[locale]} text?`, description: `All ${localeNames[locale]} title, question and option text is removed from this unsaved draft.`, confirmLabel: 'Remove language', tone: 'danger' })))) return;
     const localized = (value: LocalizedText) => Object.fromEntries(active.map(l => [l, value[l] ?? '']));
     onChange({ ...content, locales: active, title: localized(content.title), questions: content.questions.map(q => ({ ...q, prompt: localized(q.prompt), ...(q.options ? { options: q.options.map(o => ({ ...o, label: localized(o.label) })) } : {}) })) });
   };
   return <fieldset disabled={disabled} className="professional-stack" aria-label="Manual questionnaire editor">
     <legend className="sr-only">Questionnaire content</legend>
-    <h3>Languages and questionnaire title</h3><div role="group" className="professional-row" aria-label="Questionnaire languages">{locales.map(locale => <label key={locale} className="professional-row"><input type="checkbox" checked={content.locales.includes(locale)} onChange={event => languages(locale, event.target.checked)} />{localeNames[locale]}</label>)}</div>
+    <h3>Languages and questionnaire title</h3><div role="group" className="professional-row" aria-label="Questionnaire languages">{locales.map(locale => <label key={locale} className="professional-row"><input type="checkbox" checked={content.locales.includes(locale)} onChange={event => void languages(locale, event.target.checked)} />{localeNames[locale]}</label>)}</div>
     <TranslationFields label="Title" value={content.title} active={content.locales} onChange={title => onChange({ ...content, title })} />
     {content.questions.map((q, index) => <section className="professional-question" key={q.id} aria-label={`Question ${index + 1}`}>
       <div className="professional-row professional-between"><h3>Question {index + 1}</h3><div className="professional-row">
         <NeoButton type="button" variant="ghost" className="neo-btn-sm" aria-label={`Move question ${index + 1} up`} disabled={index === 0} onClick={() => { const questions = [...content.questions]; [questions[index - 1], questions[index]] = [questions[index], questions[index - 1]]; onChange({ ...content, questions }); }}>↑</NeoButton>
         <NeoButton type="button" variant="ghost" className="neo-btn-sm" aria-label={`Move question ${index + 1} down`} disabled={index === content.questions.length - 1} onClick={() => { const questions = [...content.questions]; [questions[index + 1], questions[index]] = [questions[index], questions[index + 1]]; onChange({ ...content, questions }); }}>↓</NeoButton>
-        <NeoButton type="button" variant="ghost" className="neo-btn-sm" disabled={content.questions.length === 1} onClick={() => { if (window.confirm('Remove this question from the draft?')) onChange({ ...content, questions: content.questions.filter((_, i) => i !== index) }); }}>Remove question {index + 1}</NeoButton>
+        <NeoButton type="button" variant="ghost" className="neo-btn-sm" disabled={content.questions.length === 1} onClick={async () => { if (await confirm({ title: `Remove question ${index + 1}?`, description: 'The question and its options are removed from this draft. Unsaved until you save the draft.', confirmLabel: 'Remove question', tone: 'danger' })) onChange({ ...content, questions: content.questions.filter(item => item.id !== q.id) }); }}>Remove question {index + 1}</NeoButton>
       </div></div>
       <div className="professional-row"><label className="professional-label">Question {index + 1} type<select className="neo-input" value={q.type} onChange={event => update(index, { ...newQuestion(event.target.value as QuestionType, content.locales), id: q.id, prompt: q.prompt, required: q.required })}>{Object.entries(questionNames).map(([type, name]) => <option value={type} key={type}>{name}</option>)}</select></label>
         <label className="professional-row"><input type="checkbox" checked={q.required} onChange={event => update(index, { ...q, required: event.target.checked })} />Required question {index + 1}</label>

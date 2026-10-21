@@ -7,12 +7,14 @@ import type { Answer, PatientDetail, SubmitAck } from '@/lib/platform/patient-ty
 import type { Locale } from '@/lib/platform/types';
 import { answerIssues } from '@/lib/platform/answers';
 import QuestionFields from './QuestionFields';
+import { useConfirm, useSnackbar } from '@/components/ui/feedback';
 type OpenDetail = Extract<PatientDetail, { attempt: unknown }>;
 export default function QuestionnaireRunner({ initial, api, onClose, onDenied, paused = false }: { initial: OpenDetail; api: ProfessionalApi; paused?: boolean; onClose: () => void; onDenied: () => void }) {
   const [answers, setAnswers] = useState(initial.attempt.answers), [locale, setLocale] = useState<Locale>(initial.questionnaire.locales[0]);
   const [saved, setSaved] = useState(JSON.stringify(initial.attempt.answers)), [revision, setRevision] = useState(initial.attempt.revision);
   const [busy, setBusy] = useState(false), [review, setReview] = useState(false), [conflict, setConflict] = useState(false), [error, setError] = useState(''), [ack, setAck] = useState<SubmitAck | null>(null);
   const [remote, setRemote] = useState<OpenDetail | null>(null);
+  const confirm = useConfirm(), snackbar = useSnackbar();
   const alive = useRef(true), inFlight = useRef(false), current = useRef(answers); current.current = answers;
   useEffect(() => { alive.current = true; return () => { alive.current = false; current.current = []; }; }, []);
   const apiRef = useRef(api), pausedRef = useRef(paused), operation = useRef(0);
@@ -61,21 +63,21 @@ export default function QuestionnaireRunner({ initial, api, onClose, onDenied, p
     <p role="status" aria-live="polite">{busy ? <><span className="neo-spinner" aria-hidden="true" /> Saving…</> : dirty ? 'Unsaved changes' : 'All answers saved'}</p>
     {error && <p role="alert" className="professional-error">{error}</p>}
     {conflict && <div className="professional-error" role="alert"><h3>Answers changed on another device</h3><p>Your edits are kept here. Load the saved answers, or deliberately replace them with your current edits.</p>
-      {remote && <><details><summary>Compare saved answers</summary><QuestionFields questions={remote.questionnaire.questions} answers={remote.attempt.answers} locale={locale} disabled /></details><NeoButton onClick={() => { setAnswers(remote.attempt.answers); setRevision(remote.attempt.revision); setSaved(JSON.stringify(remote.attempt.answers)); setConflict(false); setRemote(null); setError(''); }}>Use saved answers</NeoButton><NeoButton variant="secondary" onClick={() => { if (!window.confirm('Replace the saved answers with your current edits on the next save?')) return; setRevision(remote.attempt.revision); setSaved(JSON.stringify(remote.attempt.answers)); setConflict(false); setRemote(null); setError(''); }}>Keep my edits</NeoButton></>}
+      {remote && <><details><summary>Compare saved answers</summary><QuestionFields questions={remote.questionnaire.questions} answers={remote.attempt.answers} locale={locale} disabled /></details><NeoButton onClick={() => { setAnswers(remote.attempt.answers); setRevision(remote.attempt.revision); setSaved(JSON.stringify(remote.attempt.answers)); setConflict(false); setRemote(null); setError(''); }}>Use saved answers</NeoButton><NeoButton variant="secondary" onClick={async () => { if (!(await confirm({ title: 'Keep your edits?', description: 'Your current edits replace the answers saved on the other device at the next save.', confirmLabel: 'Keep my edits' }))) return; setRevision(remote.attempt.revision); setSaved(JSON.stringify(remote.attempt.answers)); setConflict(false); setRemote(null); setError(''); }}>Keep my edits</NeoButton></>}
       {!remote && <NeoButton onClick={() => void loadRemote().catch(e => denied(e) ? onDenied() : setError('Latest answers unavailable.'))}>Reload latest answers</NeoButton>}
     </div>}
     {review && <div className="professional-badge">Review your answers before submitting</div>}
     <QuestionFields questions={initial.questionnaire.questions} answers={answers} locale={locale} disabled={review || conflict || busy} onChange={setAnswers} />
     <div className="professional-row">
       {!review ? <><NeoButton disabled={busy || conflict || !dirty} onClick={() => void save()}>Save answers</NeoButton><NeoButton variant="secondary" disabled={busy || conflict || dirty} onClick={() => { const issues = answerIssues(initial.questionnaire.questions, answers, true); if (issues.length) setError(issues.join(' ')); else { setReview(true); setError(''); } }}>Review before submitting</NeoButton>
-        <NeoButton variant="ghost" disabled={busy || conflict} onClick={async () => { if (!window.confirm('Restart this questionnaire? Your saved answers will be cleared.')) return; if (await save([])) setAnswers([]); }}>Restart questionnaire</NeoButton></>
+        <NeoButton variant="ghost" disabled={busy || conflict} onClick={async () => { if (!(await confirm({ title: 'Restart this questionnaire?', description: 'Your saved answers will be cleared.', confirmLabel: 'Restart questionnaire', tone: 'danger' }))) return; if (await save([])) { setAnswers([]); snackbar.success('Questionnaire restarted'); } }}>Restart questionnaire</NeoButton></>
         : <><p>Submitting locks these answers. You can return to editing before confirming.</p><NeoButton variant="ghost" disabled={busy} onClick={() => setReview(false)}>Return to editing</NeoButton><NeoButton disabled={busy} onClick={async () => {
           if (paused || inFlight.current) return; const stamp = operation.current; const valid = () => active() && stamp === operation.current; inFlight.current = true; setBusy(true); setError('');
-          try { const result = await api.request<SubmitAck>(`/api/v1/patient/attempts/${initial.attempt.id}/submit`, 'POST', { expected_revision: revision }); if (valid()) { setAck(result); setAnswers([]); current.current = []; setSaved('[]'); } }
+          try { const result = await api.request<SubmitAck>(`/api/v1/patient/attempts/${initial.attempt.id}/submit`, 'POST', { expected_revision: revision }); if (valid()) { setAck(result); setAnswers([]); current.current = []; setSaved('[]'); snackbar.success('Answers submitted'); } }
           catch (e) { if (!valid()) return; if (denied(e)) onDenied(); else if (e instanceof PlatformClientError && e.status === 409) { setConflict(true); setReview(false); await loadRemote().catch(() => setError('Reload the latest saved answers.')); } else setError('Submission was not confirmed. Retry; duplicate requests are safe.'); }
           finally { if (stamp === operation.current) { inFlight.current = false; if (alive.current) setBusy(false); } }
         }}>Confirm final submission</NeoButton></>}
-      <NeoButton variant="ghost" disabled={busy} onClick={() => { if (!dirty || window.confirm('Leave without saving your latest edits?')) onClose(); }}>Back to assignments</NeoButton>
+      <NeoButton variant="ghost" disabled={busy} onClick={async () => { if (!dirty || await confirm({ title: 'Leave without saving?', description: 'Your latest edits have not been saved yet.', confirmLabel: 'Leave without saving', cancelLabel: 'Stay', tone: 'danger' })) onClose(); }}>Back to assignments</NeoButton>
     </div>
   </NeoCard></fieldset>;
 }

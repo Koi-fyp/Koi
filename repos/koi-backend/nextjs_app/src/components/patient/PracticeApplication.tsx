@@ -9,6 +9,7 @@ import type { CapabilitiesDTO } from '@/lib/platform/types';
 import { CARE_CONSENT_VERSION, type Connection } from '@/lib/platform/patient-types';
 import { applicationLabel } from '@/lib/platform/care-state';
 import type { Expert } from './ExpertDirectory';
+import { ACTION_FAILED, useConfirm, useSnackbar } from '@/components/ui/feedback';
 
 export default function PracticeApplication({ api, selectedId, initialProfile, caps, connections, active, onProfile, onSubmitted, onUnauthorized }: {
   api: ProfessionalApi; selectedId: string | null; initialProfile: Expert | null; caps: CapabilitiesDTO; connections: Connection[]; active: boolean;
@@ -19,6 +20,7 @@ export default function PracticeApplication({ api, selectedId, initialProfile, c
   const [result, setResult] = useState<Connection | null>(null);
   const alive = useRef(true), currentApi = useRef(api), currentId = useRef(selectedId), callbacks = useRef({ onProfile, onSubmitted, onUnauthorized }), working = useRef(false);
   currentApi.current = api; currentId.current = selectedId; callbacks.current = { onProfile, onSubmitted, onUnauthorized };
+  const confirm = useConfirm(), snackbar = useSnackbar();
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   useEffect(() => { setConsent(false); setResult(null); setError(''); }, [selectedId]);
   useEffect(() => {
@@ -52,16 +54,20 @@ export default function PracticeApplication({ api, selectedId, initialProfile, c
       {alreadyActive && <p>You already have active care with this psychologist. Open My Psychologist to manage your care.</p>}
       {record && <div id="application-result" tabIndex={-1} className="professional-question" role="status"><h3>{result?.id === record.id ? 'Application recorded' : 'Application on record'}</h3><p>{applicationLabel(record, caps)}</p><p>Use the application status and available next steps below. Sending an application does not activate patient access.</p>{record.state === 'accepted' && !alreadyActive && <p>No active care relationship is currently available for this practice. Rejoining a previous practice is not supported by this workflow. You can choose another psychologist.</p>}</div>}
       {error && <div role="alert" className="professional-error"><p>{error}</p>{!ready && <CareLink variant="secondary" href="/patient?view=experts#experts">Return to the directory</CareLink>}</div>}
-      <form className="professional-stack" aria-label="Practice application" onSubmit={event => {
+      <form className="professional-stack" aria-label="Practice application" onSubmit={async event => {
         event.preventDefault();
         if (!ready || !profile?.accepting_new_patients || !consent || alreadyActive || record || working.current) return;
-        working.current = true; setBusy(true); setError('');
+        working.current = true;
+        if (!(await confirm({ title: `Send your application to ${profile.display_name}?`, description: 'If accepted, you join this practice and share the questionnaires its psychologist assigns. Sending does not activate patient access.', confirmLabel: 'Send application' }))) { working.current = false; return; }
+        if (!alive.current || currentApi.current !== api || currentId.current !== selectedId) { working.current = false; return; }
+        setBusy(true); setError('');
         void api.request<Connection>('/api/v1/connection-requests', 'POST', { psychologist_uid: selectedId, consent_version: CARE_CONSENT_VERSION }).then(connection => {
           if (!alive.current || currentApi.current !== api || currentId.current !== selectedId) return;
           if (connection.applicant_uid !== caps.uid || connection.psychologist_uid !== selectedId) throw new Error('Invalid application response');
-          setResult(connection); callbacks.current.onSubmitted(connection);
+          setResult(connection); callbacks.current.onSubmitted(connection); snackbar.success('Application sent');
         }).catch(failure => {
           if (!alive.current || currentApi.current !== api || currentId.current !== selectedId) return;
+          snackbar.error(ACTION_FAILED);
           if (failure instanceof PlatformClientError && failure.status === 409) setError('This practice cannot accept a new application for this account right now. An existing or previous care relationship, or another application conflict, may prevent reapplying. No new application was confirmed. Check your application history or choose another psychologist. Rejoining a previous practice is not supported by the current workflow.');
           else if (failure instanceof PlatformClientError && [403, 404].includes(failure.status)) { setVerified(null); setError('This psychologist is no longer available for applications. Choose another psychologist from the directory.'); }
           else if (failure instanceof PlatformClientError && failure.status === 401) callbacks.current.onUnauthorized(failure);

@@ -1,6 +1,7 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import QuestionnaireRunner from '@/components/patient/QuestionnaireRunner';
+import { FeedbackProviders } from '@/components/ui/feedback';
 import { PlatformClientError, type ProfessionalApi } from '@/lib/platform/client';
 import type { PatientDetail } from '@/lib/platform/patient-types';
 import { illustrations } from '@/lib/platform/content';
@@ -20,9 +21,11 @@ it('autosaves text and pictures, resumes, restarts and returns only a submission
   const view = render(<QuestionnaireRunner api={api} initial={initial} onClose={jest.fn()} onDenied={jest.fn()} />);
   fireEvent.change(screen.getByRole('textbox', { name: 'Your answer' }), { target: { value: 'Saved response' } }); fireEvent.click(screen.getByLabelText('Circle'));
   await waitFor(() => expect(saved).toHaveLength(2), { timeout: 2500 });
-  view.unmount(); render(<QuestionnaireRunner api={api} initial={{ ...initial, attempt: { ...initial.attempt, answers: saved, revision } }} onClose={jest.fn()} onDenied={jest.fn()} />);
+  view.unmount(); render(<QuestionnaireRunner api={api} initial={{ ...initial, attempt: { ...initial.attempt, answers: saved, revision } }} onClose={jest.fn()} onDenied={jest.fn()} />, { wrapper: FeedbackProviders });
   expect(screen.getByRole('textbox', { name: 'Your answer' })).toHaveValue('Saved response');
-  fireEvent.click(screen.getByRole('button', { name: 'Restart questionnaire' })); await waitFor(() => expect(screen.getByRole('textbox', { name: 'Your answer' })).toHaveValue(''));
+  // Themed dialog replaced window.confirm: confirm the restart inside it.
+  fireEvent.click(screen.getByRole('button', { name: 'Restart questionnaire' }));
+  fireEvent.click(within(await screen.findByRole('alertdialog', { name: 'Restart this questionnaire?' })).getByRole('button', { name: 'Restart questionnaire' })); await waitFor(() => expect(screen.getByRole('textbox', { name: 'Your answer' })).toHaveValue(''));
   fireEvent.change(screen.getByRole('textbox', { name: 'Your answer' }), { target: { value: 'Final response' } }); fireEvent.click(screen.getByRole('button', { name: 'Save answers' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review before submitting' })).toBeEnabled()); fireEvent.click(screen.getByRole('button', { name: 'Review before submitting' }));
   expect(screen.getByRole('textbox', { name: 'Your answer' })).toBeDisabled(); fireEvent.click(screen.getByRole('button', { name: 'Confirm final submission' }));

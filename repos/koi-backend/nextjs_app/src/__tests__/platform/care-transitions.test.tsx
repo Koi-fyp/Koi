@@ -16,6 +16,7 @@ jest.mock('@/components/professional/RecentAuthentication', () => ({ useRecentAu
 jest.mock('@/components/messaging/MessagesScreen', () => ({ __esModule: true, default: () => <div>Read-only message fixture</div> }));
 import PatientWorkspace from '@/components/patient/PatientWorkspace';
 import PatientApp from '@/components/patient/PatientApp';
+import { FeedbackProviders } from '@/components/ui/feedback';
 
 const relation = (id: string) => ({ relationship_id: id, organization_id: 'org-' + id, psychologist_uid: 'pro-' + id });
 const capabilities = (...ids: string[]): CapabilitiesDTO => ({ uid: mockUser.uid, contract_version: '0.5.0', account_state: 'registered', authorization_revision: 1, capabilities: { expert_directory: true, professional_workspace: false, companion_account_sync: true, create_organization: false }, professional_organization_ids: [], active_patient_relationships: ids.map(relation) });
@@ -53,8 +54,10 @@ it.each(['requested', 'awaiting_demo_payment', 'pending_psychologist_review', 'a
   if (state === 'accepted') expect(await screen.findByText(/No active care relationship is currently available/)).toBeVisible();
 });
 it('does not promote after the existing demo payment step completes', async () => {
-  const { api } = fixture(capabilities(), 'awaiting_demo_payment'); render(<PatientWorkspace api={api} onDenied={jest.fn()} />);
+  const { api } = fixture(capabilities(), 'awaiting_demo_payment'); render(<PatientWorkspace api={api} onDenied={jest.fn()} />, { wrapper: FeedbackProviders });
   fireEvent.click(await screen.findByRole('button', { name: 'Complete demo step' }));
+  // The demo step now asks first in the themed dialog.
+  fireEvent.click(within(await screen.findByRole('alertdialog', { name: 'Complete the demo payment step?' })).getByRole('button', { name: 'Complete demo step' }));
   await screen.findByText('Waiting for practice review');
   expect(screen.getByText('General User Dashboard')).toBeVisible(); expect(screen.queryByText('Patient Dashboard')).not.toBeInTheDocument();
 });

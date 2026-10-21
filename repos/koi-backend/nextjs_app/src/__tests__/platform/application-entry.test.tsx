@@ -13,6 +13,7 @@ jest.mock('@/components/professional/RecentAuthentication', () => ({ useRecentAu
 jest.mock('@/components/messaging/MessagesScreen', () => ({ __esModule: true, default: () => <div>Static human-message fixture</div> }));
 import PatientWorkspace from '@/components/patient/PatientWorkspace';
 import PatientApp from '@/components/patient/PatientApp';
+import { FeedbackProviders } from '@/components/ui/feedback';
 
 const profile = { id: 'directory-psychologist', display_name: 'Dr Fictional Example', bio: 'Authoritative fixture practice profile. English and Urdu consultations.', accepting_new_patients: true };
 function fixture() {
@@ -42,6 +43,8 @@ const nav = () => screen.getByRole('navigation', { name: 'Care navigation' });
 const originalFetch = global.fetch;
 beforeEach(() => { global.fetch = jest.fn(); mockGeneration = 1; mockApi.mockReset(); window.history.replaceState(null, '', '/patient?view=experts'); });
 afterEach(() => { global.fetch = originalFetch; });
+// Applying and the demo step now ask first in the themed dialog; tests confirm explicitly inside it.
+const confirmIn = async (name: string) => fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name }));
 async function choose() {
   fireEvent.click((await screen.findAllByRole('button', { name: 'Choose for application' }))[0]);
   await screen.findByRole('heading', { level: 1, name: 'My Applications' });
@@ -59,7 +62,7 @@ it('shows the six requested General User entries and an honest professional entr
   expect(screen.queryByRole('link', { name: 'Professional Dashboard' })).not.toBeInTheDocument();
 });
 it('hands the authoritative selected profile to a visible form, validates consent and submits only UID and consent version', async () => {
-  const { makeApi } = fixture(); const api = makeApi(); render(<PatientWorkspace api={api} onDenied={jest.fn()} />);
+  const { makeApi } = fixture(); const api = makeApi(); render(<PatientWorkspace api={api} onDenied={jest.fn()} />, { wrapper: FeedbackProviders });
   await choose();
   const form = screen.getByRole('form', { name: 'Practice application' });
   expect(screen.getByRole('heading', { name: profile.display_name })).toBeVisible();
@@ -70,7 +73,7 @@ it('hands the authoritative selected profile to a visible form, validates consen
   fireEvent.submit(form); expect((api.request as jest.Mock).mock.calls.some(([, method]) => method === 'POST')).toBe(false);
   fireEvent.click(within(form).getByRole('checkbox'));
   expect(screen.getByRole('button', { name: 'Send Application' })).toBeEnabled();
-  fireEvent.click(screen.getByRole('button', { name: 'Send Application' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Send Application' })); await confirmIn('Send application');
   expect(await screen.findByRole('heading', { name: 'Application recorded' })).toBeVisible();
   expect(screen.getByText('General User Dashboard')).toBeVisible();
   expect(await screen.findByRole('button', { name: 'Continue application' })).toBeVisible();
@@ -90,9 +93,9 @@ it('preserves selection and consent through care navigation and restores the pro
 it('keeps the genuine lifecycle and promotes/demotes only through refreshed capabilities without another login', async () => {
   const { makeApi, data } = fixture(); mockApi.mockImplementation(makeApi);
   const view = render(<PatientApp />); await choose();
-  fireEvent.click(screen.getByRole('checkbox', { name: /^I consent to joining this practice/ })); fireEvent.click(screen.getByRole('button', { name: 'Send Application' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /^I consent to joining this practice/ })); fireEvent.click(screen.getByRole('button', { name: 'Send Application' })); await confirmIn('Send application');
   fireEvent.click(await screen.findByRole('button', { name: 'Continue application' }));
-  fireEvent.click(await screen.findByRole('button', { name: 'Complete demo step' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Complete demo step' })); await confirmIn('Complete demo step');
   await screen.findAllByText('Waiting for practice review'); expect(screen.getByText('General User Dashboard')).toBeVisible();
   data.records[0] = { ...data.records[0], state: 'accepted' };
   mockGeneration++; view.rerender(<PatientApp />);
@@ -105,8 +108,8 @@ it('keeps the genuine lifecycle and promotes/demotes only through refreshed capa
   expect(screen.getByText(/Your previous care relationship has ended/)).toBeVisible(); expect(data.records[0].state).toBe('accepted');
 });
 it('explains a generic conflict without inventing a known closed relationship or creating a new application', async () => {
-  const { makeApi, data } = fixture(); data.conflict = true; const api = makeApi(); render(<PatientWorkspace api={api} onDenied={jest.fn()} />);
-  await choose(); fireEvent.click(screen.getByRole('checkbox', { name: /^I consent to joining this practice/ })); fireEvent.click(screen.getByRole('button', { name: 'Send Application' }));
+  const { makeApi, data } = fixture(); data.conflict = true; const api = makeApi(); render(<PatientWorkspace api={api} onDenied={jest.fn()} />, { wrapper: FeedbackProviders });
+  await choose(); fireEvent.click(screen.getByRole('checkbox', { name: /^I consent to joining this practice/ })); fireEvent.click(screen.getByRole('button', { name: 'Send Application' })); await confirmIn('Send application');
   expect(await screen.findByRole('alert')).toHaveTextContent('An existing or previous care relationship, or another application conflict, may prevent reapplying');
   expect(screen.getByRole('alert')).toHaveTextContent('No new application was confirmed');
   expect(screen.queryByRole('heading', { name: 'Application recorded' })).not.toBeInTheDocument(); expect(data.records).toHaveLength(0);
