@@ -18,6 +18,7 @@ import { useCareReveal } from '@/components/platform/care-focus';
 import WorkspaceFrame, { professionalViews, useWorkspaceView, useWorkspaceSearchParam, navigateWorkspace } from '@/components/platform/WorkspaceFrame';
 import MessagesScreen from '@/components/messaging/MessagesScreen';
 import CareNotifications from '@/components/patient/CareNotifications';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import { useConfirm, useConfirmedAction } from '@/components/ui/feedback';
 
 export function WorkspaceLoading({ text = 'Loading your workspace…' }: { text?: string }) {
@@ -34,7 +35,8 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
   const [issues, setIssues] = useState<string[]>([]), [aiInfo, setAiInfo] = useState<AiProvenance | null>(null);
   const view = useWorkspaceView(professionalViews, 'dashboard');
-  const requestedRelationship = useWorkspaceSearchParam('relationship'), requestedVersion = useWorkspaceSearchParam('version');
+  const requestedRelationship = useWorkspaceSearchParam('relationship'), requestedVersion = useWorkspaceSearchParam('version'), requestedSubmission = useWorkspaceSearchParam('submission');
+  const openSubmission = (id: string) => navigateWorkspace(`/professional?view=submissions&submission=${encodeURIComponent(id)}#submissions`);
   const [selectedPatient, setSelectedPatient] = useState<Relationship | null>(null);
   const [visitedViews, setVisitedViews] = useState<string[]>([]);
   const [editorReveal, setEditorReveal] = useState(0), [versionReveal, setVersionReveal] = useState(0), [aiReveal, setAiReveal] = useState(0), [aiVisible, setAiVisible] = useState(false);
@@ -146,6 +148,8 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
         setOrg(result.id); setOrgName(result.name); setMessage('Organization created.'); await loadList(result.id);
       }); }}><NeoInput label="Organization name" aria-label="Organization name" value={organizationName} maxLength={160} required disabled={busy} onChange={event => setOrganizationName(event.target.value)} /><NeoButton type="submit" loading={busy} disabled={!organizationName.trim()}>Create organization</NeoButton></form>
     </NeoCard> : <>
+      {view === 'dashboard' && <AnalyticsDashboard compact api={api} organizationId={org} onError={handleError} onView={openSubmission} />}
+      {view === 'analytics' && <AnalyticsDashboard api={api} organizationId={org} onError={handleError} onView={openSubmission} />}
       {view === 'dashboard' && <div className="professional-grid care-shortcuts"><NeoCard className="professional-card"><h2>Build your questionnaire library</h2><p>Create a manual form or review an AI draft, then publish a saved revision.</p><div className="care-link-actions"><CareLink variant="primary" href="/professional?view=questionnaires#professional-questionnaires">Manage questionnaires</CareLink></div></NeoCard><NeoCard className="professional-card"><h2>Follow up with patients</h2><p>Review applications, assign published forms and inspect submitted answers.</p><div className="care-link-actions"><CareLink variant="primary" href="/professional?view=patients#patients">Open patient roster</CareLink><CareLink variant="secondary" href="/professional?view=submissions#submissions">Review submissions</CareLink><CareLink href="/professional?view=analytics#practice-analytics">View assignments and submissions</CareLink></div></NeoCard></div>}
       {(view === 'dashboard' || visitedViews.includes('dashboard')) && <div hidden={view !== 'dashboard'}><PracticeOverview api={api} organizationId={org} view="profile" onError={handleError} /></div>}
       {(view === 'analytics' || visitedViews.includes('analytics')) && <div hidden={view !== 'analytics'}><PracticeOverview api={api} organizationId={org} view="analytics" onError={handleError} /></div>}
@@ -179,6 +183,6 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
     </>}
     {view === 'notifications' && <section id="notifications"><CareNotifications api={api} workspace="professional" onError={handleError} /></section>}
     {view === 'questionnaires' && version &&<div id="published-questionnaire-panel" tabIndex={-1} className="professional-stack"><PublishedQuestionnaire key={version.id} version={version} /><CareLink variant="primary" href="/professional?view=patients#patients">Assign this published version to patients</CareLink></div>}
-    {org && (['patients', 'submissions', 'appointments'].includes(view) || visitedViews.some(item => ['patients', 'submissions', 'appointments'].includes(item))) && <div hidden={!['patients', 'submissions', 'appointments'].includes(view)}><PatientManagement key={org} active={['patients', 'submissions', 'appointments'].includes(view)} view={(['patients', 'submissions', 'appointments'].includes(view) ? view : 'patients') as 'patients' | 'submissions' | 'appointments'} api={api} organizationId={org} publishedVersionId={version?.id} knownVersions={knownVersions} selectedRelationshipId={requestedRelationship} onOpenConversation={setSelectedPatient} onDenied={handleError} /></div>}
+    {org && (['patients', 'submissions', 'appointments'].includes(view) || visitedViews.some(item => ['patients', 'submissions', 'appointments'].includes(item))) && <div hidden={!['patients', 'submissions', 'appointments'].includes(view)}><PatientManagement key={org} active={['patients', 'submissions', 'appointments'].includes(view)} view={(['patients', 'submissions', 'appointments'].includes(view) ? view : 'patients') as 'patients' | 'submissions' | 'appointments'} api={api} organizationId={org} publishedVersionId={version?.id} knownVersions={knownVersions} selectedRelationshipId={requestedRelationship} selectedSubmissionId={requestedSubmission} onOpenConversation={setSelectedPatient} onDenied={handleError} /></div>}
   </WorkspaceFrame>;
 }

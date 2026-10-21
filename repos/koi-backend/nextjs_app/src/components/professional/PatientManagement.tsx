@@ -16,7 +16,7 @@ import type { VersionDTO } from '@/lib/platform/types';
 import { navigateWorkspace } from '@/components/platform/WorkspaceFrame';
 import { useConfirm, useConfirmedAction } from '@/components/ui/feedback';
 import { revealCareElement, useCareReveal } from '@/components/platform/care-focus';
-export default function PatientManagement({ api, organizationId, publishedVersionId, onDenied, onOpenConversation, selectedRelationshipId, knownVersions, active = true, view = 'patients' }: { knownVersions?: VersionDTO[]; selectedRelationshipId?: string | null; active?: boolean; onOpenConversation?: (patient: Relationship) => void; view?: 'patients' | 'submissions' | 'appointments'; api: ProfessionalApi; organizationId: string; publishedVersionId?: string; onDenied: (error: unknown) => void }) {
+export default function PatientManagement({ api, organizationId, publishedVersionId, onDenied, onOpenConversation, selectedRelationshipId, selectedSubmissionId, knownVersions, active = true, view = 'patients' }: { knownVersions?: VersionDTO[]; selectedRelationshipId?: string | null; selectedSubmissionId?: string | null; active?: boolean; onOpenConversation?: (patient: Relationship) => void; view?: 'patients' | 'submissions' | 'appointments'; api: ProfessionalApi; organizationId: string; publishedVersionId?: string; onDenied: (error: unknown) => void }) {
   const [history, setHistory] = useState<Relationship | null>(null);
   const [search, setSearch] = useState(''), [stateFilter, setStateFilter] = useState('all');
   const [conversation, setConversation] = useState<string | null>(null);
@@ -65,6 +65,8 @@ export default function PatientManagement({ api, organizationId, publishedVersio
     reviewOpener.current = document.activeElement as HTMLElement;
     setSubmission(id); setReviewReveal(n => n + 1);
   };
+  // "View submission" links from the dashboard open the review directly.
+  useEffect(() => { if (active && view === 'submissions' && selectedSubmissionId && selectedSubmissionId !== submission) void inspect(selectedSubmissionId); }, [active, view, selectedSubmissionId]);
   const roster = patients.filter(p => p.patient_uid.toLocaleLowerCase().includes(search.toLocaleLowerCase()) && (stateFilter === 'all' || p.state === stateFilter));
   return <section className="professional-stack" aria-label="Practice patients and submissions">
     {error && <p role="alert" className="professional-error">{error}</p>}
