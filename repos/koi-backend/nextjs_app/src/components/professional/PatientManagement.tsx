@@ -7,6 +7,7 @@ import { PlatformClientError, type ProfessionalApi } from '@/lib/platform/client
 import type { Connection, Page, Relationship } from '@/lib/platform/patient-types';
 import type { Submission } from '@/lib/platform/professional-types';
 import CareConversation from '../patient/CareConversation';
+import AppointmentsBoard from '../patient/AppointmentsBoard';
 import SubmissionNotifications from './SubmissionNotifications';
 import PatientHistory from './PatientHistory';
 import SubmissionReview from './SubmissionReview';
@@ -81,8 +82,9 @@ export default function PatientManagement({ api, organizationId, publishedVersio
     {view === 'appointments' && selectedRelationshipId && !conversation && patients.length > 0 && <p role="status">This patient is not available for appointments in the loaded active roster.</p>}
     {view === 'appointments' && conversation && <section id="patient-appointments" tabIndex={-1} aria-labelledby="patient-appointments-heading" className="professional-stack care-result-panel">
       <div className="professional-row professional-between"><h2 id="patient-appointments-heading">Appointments: {patients.find(p => p.id === conversation)?.patient_uid ?? conversation}</h2><NeoButton variant="ghost" onClick={() => { setConversation(null); navigateWorkspace('/professional?view=appointments'); returnTo(appointmentOpener.current); }}>Back to patient selection</NeoButton></div>
-      <CareConversation key={conversation} mode="appointments" relationshipId={conversation} professional api={api} onError={failure} />
+      <CareConversation key={conversation} mode="appointments" relationshipId={conversation} label={patients.find(p => p.id === conversation)?.patient_uid} professional api={api} onError={failure} />
     </section>}
+    {view === 'appointments' && active && !conversation && <AppointmentsBoard api={api} professional relationships={patients.filter(p => p.state === 'active').map(p => ({ id: p.id, label: p.patient_uid }))} onError={failure} />}
     <div hidden={view === 'submissions'} className={history && view === 'patients' ? 'care-patient-layout' : 'professional-stack'}>
       <NeoCard className="professional-card"><h2 id="patients">{view === 'appointments' ? 'Select a patient for appointments' : 'Patients and assignments'}</h2>
         <p>{patients.filter(p => p.state === 'active').length} active in loaded roster / {patients.filter(p => p.state === 'closed').length} closed</p>

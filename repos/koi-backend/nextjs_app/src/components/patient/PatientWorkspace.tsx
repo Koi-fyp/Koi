@@ -9,7 +9,7 @@ import type { Connection, Page, PatientAssignment, PatientDetail } from '@/lib/p
 import ExpertDirectory, { type Expert } from './ExpertDirectory';
 import PracticeApplication from './PracticeApplication';
 import ProfessionalEntry from './ProfessionalEntry';
-import CareConversation from './CareConversation';
+import AppointmentsBoard from './AppointmentsBoard';
 import CareNotifications from './CareNotifications';
 import QuestionnaireRunner from './QuestionnaireRunner';
 import MessagesScreen from '@/components/messaging/MessagesScreen';
@@ -120,7 +120,7 @@ export default function PatientWorkspace({ api, onDenied, accessReady = true }: 
     {confirmed && view === 'notifications' && <section id="notifications"><CareNotifications api={api} onError={failure} /></section>}
     {patient && <section id="messages" hidden={!confirmed || view !== 'messages'}><fieldset disabled={!confirmed || view !== 'messages'} style={{ border: 0, padding: 0, minWidth: 0 }}><MessagesScreen active={confirmed && view === 'messages'} api={api} role="patient" patientRelationships={caps.active_patient_relationships} onError={failure} /></fieldset></section>}
     {confirmed && patient && view === 'care' && <section id="care" className="professional-grid">{caps.active_patient_relationships.map(r => <NeoCard key={r.relationship_id} className="professional-card"><h2>Active care relationship</h2><p>Psychologist account: {r.psychologist_uid}</p><p>Your registered account now has access to this practice's care workflows.</p><a className="professional-link" href="/patient?view=messages#messages">Message your care team</a><a className="professional-link" href="/patient?view=appointments#care">Manage appointments</a></NeoCard>)}</section>}
-    {confirmed && patient && view === 'appointments' && <section id="care" className="professional-stack">{caps.active_patient_relationships.map(r => <CareConversation key={r.relationship_id} mode="appointments" relationshipId={r.relationship_id} api={api} onError={failure} />)}</section>}
+    {confirmed && patient && view === 'appointments' && <section id="care" className="professional-stack"><AppointmentsBoard api={api} relationships={caps.active_patient_relationships.map(r => ({ id: r.relationship_id, label: `Psychologist ${r.psychologist_uid}` }))} onError={failure} /></section>}
     {error && <p role="alert" className="professional-error">{error}</p>}{(busy || message) && <p role="status">{busy ? <><span className="neo-spinner" aria-hidden="true" /> Working...</> : message}</p>}
     <div hidden={!confirmed || !['home', 'experts', 'applications'].includes(view) || (patient && view === 'home')} className="professional-grid">
     <div className="professional-stack">

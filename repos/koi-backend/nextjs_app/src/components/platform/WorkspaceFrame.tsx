@@ -14,7 +14,7 @@ export const professionalViews: WorkspaceView[] = [
   { id: 'submissions', label: 'Submission review', description: 'Review submitted answers and record your professional conclusions.', anchor: 'submissions' },
   { id: 'analytics', label: 'Assignments & Submissions', description: 'Track questionnaire assignments and submitted attempts. These operational counts do not measure clinical improvement.', anchor: 'practice-analytics' },
   { id: 'messages', label: 'Messages', description: 'Your human conversations with patients.', anchor: 'messages' },
-  { id: 'appointments', label: 'Appointments', description: 'Select an active patient to manage appointment requests and proposed times.' },
+  { id: 'appointments', label: 'Appointments', description: 'All appointments across your patients, latest change first. Propose times on requests, or select a patient below.' },
   { id: 'notifications', label: 'Notifications', description: 'Updates about appointments, applications and patient messages.', anchor: 'notifications' },
 ];
 export const generalViews: WorkspaceView[] = [
@@ -31,7 +31,7 @@ export const patientViews: WorkspaceView[] = [
   { id: 'care', label: 'My Psychologist', description: 'Your active care relationships.', anchor: 'care' },
   { id: 'questionnaires', label: 'Questionnaires', description: 'Complete assigned forms or return to a saved attempt.', anchor: 'questionnaires' },
   { id: 'messages', label: 'Messages', description: 'Your human conversations with your care team.', anchor: 'messages' },
-  { id: 'appointments', label: 'Appointments', description: 'Request an appointment or respond to a proposed time.' },
+  { id: 'appointments', label: 'Appointments', description: 'All your appointments, latest change first. Request an appointment or respond to a proposed time.' },
   { id: 'notifications', label: 'Notifications', description: 'Updates about your applications and care.', anchor: 'notifications' },
 ];
 export function viewFromLocation(views: WorkspaceView[], fallback: string): string {
