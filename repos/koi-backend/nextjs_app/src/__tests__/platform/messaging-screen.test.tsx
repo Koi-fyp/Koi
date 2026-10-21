@@ -23,6 +23,19 @@ const inLog = () => within(screen.getByRole('log'));
 beforeEach(() => { unreadStore.reset(); });
 
 describe('conversation list and chat pane', () => {
+  it('retains an unsent draft through an authorized refresh and removes a revoked conversation', async () => {
+    const first = makeApi(threadHandler()), next = makeApi(threadHandler());
+    const all = [...relationships, { relationship_id: 'rel2', psychologist_uid: 'psy2' }];
+    const view = render(<MessagesScreen api={first} role="patient" patientRelationships={all} onError={jest.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Your psychologist.*psy1/ }));
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Message' }), { target: { value: 'Unsent fixture draft' } });
+    view.rerender(<MessagesScreen api={next} role="patient" patientRelationships={all} active={false} onError={jest.fn()} />);
+    view.rerender(<MessagesScreen api={next} role="patient" patientRelationships={relationships} onError={jest.fn()} />);
+    expect(await screen.findByRole('textbox', { name: 'Message' })).toHaveValue('Unsent fixture draft');
+    view.rerender(<MessagesScreen api={next} role="patient" patientRelationships={[]} onError={jest.fn()} />);
+    expect(screen.queryByRole('textbox', { name: 'Message', hidden: true })).not.toBeInTheDocument();
+    expect([...first.request.mock.calls, ...next.request.mock.calls].every(([, method]) => !method || method === 'GET')).toBe(true);
+  });
   it('shows one conversation with preview, ordered messages, date separators, times and dir=auto', async () => {
     const api = makeApi(threadHandler());
     render(<MessagesScreen api={api} role="patient" patientRelationships={relationships} onError={jest.fn()} />);

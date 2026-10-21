@@ -20,6 +20,7 @@ export default function MessageList(props: Readonly<MessageListProps>) {
 
   return (
     <div
+      className="w-full max-w-4xl mx-auto min-h-0 min-w-0"
       role="log"
       aria-label="Conversation"
       aria-live="polite"

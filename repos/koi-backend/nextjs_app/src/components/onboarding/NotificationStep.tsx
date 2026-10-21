@@ -16,18 +16,8 @@ export default function NotificationStep({ onComplete, saving = false, disabled 
   const [time, setTime]       = useState(initialTime);
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        padding: '1.5rem',
-        maxWidth: '480px',
-        margin: '0 auto',
-        width: '100%',
-      }}
-    >
-      <div style={{ flex: 1 }}>
+    <div className="flex flex-col flex-1 lg:flex-none w-full max-w-5xl mx-auto p-6 lg:px-8 lg:py-10">
+      <div className="flex-1 lg:flex-none">
         <h2
           style={{
             fontFamily: 'var(--font-display)',
@@ -44,9 +34,10 @@ export default function NotificationStep({ onComplete, saving = false, disabled 
           Save a preferred check-in time on this device. Web notifications and scheduled messages are not enabled.
         </p>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 lg:gap-x-8 items-start [&>*]:min-w-0">
         {/* Toggle */}
         <NeoCard className="p-4 mb-3">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
             <div>
               <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: '#000' }}>
                 Save daily check-in preference
@@ -111,7 +102,7 @@ export default function NotificationStep({ onComplete, saving = false, disabled 
               min="06:00"
               max="23:00"
               onChange={(e) => setTime(e.target.value)}
-              className="neo-input"
+              className="neo-input max-w-full md:max-w-xs"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 700,
@@ -125,8 +116,10 @@ export default function NotificationStep({ onComplete, saving = false, disabled 
             </p>
           </NeoCard>
         )}
+        </div>
       </div>
 
+      <div className="lg:max-w-md w-full">
       <NeoButton
         variant="secondary"
         disabled={saving || disabled}
@@ -136,6 +129,7 @@ export default function NotificationStep({ onComplete, saving = false, disabled 
       >
         {saving ? 'Saving companion...' : <>Let&apos;s Go ✦</>}
       </NeoButton>
+      </div>
     </div>
   );
 }

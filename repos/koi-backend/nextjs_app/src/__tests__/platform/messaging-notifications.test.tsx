@@ -29,7 +29,7 @@ describe('Messages menu item', () => {
   it('appears for the professional workspace and keeps the existing items', () => {
     const labels = platformLinks(caps(true, false)).map(l => l.label);
     expect(platformLinks(caps(true, false)).find(l => l.label === 'Messages')?.href).toBe('/professional?view=messages#messages');
-    expect(labels).toEqual(expect.arrayContaining(['Professional Dashboard', 'Professional Questionnaires', 'Patients', 'Submissions', 'Analytics']));
+    expect(labels).toEqual(expect.arrayContaining(['Professional Dashboard', 'Professional Questionnaires', 'Patients', 'Submissions', 'Assignments & Submissions']));
     expect(labels).not.toContain('My Psychologist');
   });
 });

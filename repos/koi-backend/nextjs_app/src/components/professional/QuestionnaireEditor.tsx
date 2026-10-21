@@ -17,7 +17,7 @@ export default function QuestionnaireEditor({ content, onChange, disabled }: { c
   };
   return <fieldset disabled={disabled} className="professional-stack" aria-label="Manual questionnaire editor">
     <legend className="sr-only">Questionnaire content</legend>
-    <div className="professional-row" aria-label="Questionnaire languages">{locales.map(locale => <label key={locale} className="professional-row"><input type="checkbox" checked={content.locales.includes(locale)} onChange={event => languages(locale, event.target.checked)} />{localeNames[locale]}</label>)}</div>
+    <h3>Languages and questionnaire title</h3><div role="group" className="professional-row" aria-label="Questionnaire languages">{locales.map(locale => <label key={locale} className="professional-row"><input type="checkbox" checked={content.locales.includes(locale)} onChange={event => languages(locale, event.target.checked)} />{localeNames[locale]}</label>)}</div>
     <TranslationFields label="Title" value={content.title} active={content.locales} onChange={title => onChange({ ...content, title })} />
     {content.questions.map((q, index) => <section className="professional-question" key={q.id} aria-label={`Question ${index + 1}`}>
       <div className="professional-row professional-between"><h3>Question {index + 1}</h3><div className="professional-row">

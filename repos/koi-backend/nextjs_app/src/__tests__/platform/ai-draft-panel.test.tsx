@@ -37,11 +37,11 @@ beforeEach(async () => {
   service = new PlatformService(store, 'functional-key-with-at-least-32-characters', () => testTime);
   await service.createOrganization(actor('clinician_a'), { name: 'Fictional practice' }, 'org_key');
   aiCall = jest.fn(async () => ({ content: aiContent(), provenance, notice: 'AI draft, not validated; the psychologist must review every question' }));
-  jest.spyOn(window, 'confirm').mockReturnValue(true); window.history.replaceState({}, '', '/professional');
+  jest.spyOn(window, 'confirm').mockReturnValue(true); window.history.replaceState({}, '', '/professional?view=questionnaires');
 });
 afterEach(() => jest.restoreAllMocks());
 const fill = () => { fireEvent.change(screen.getByRole('textbox', { name: 'AI topic' }), { target: { value: 'Sleep' } }); fireEvent.change(screen.getByRole('textbox', { name: 'AI audience' }), { target: { value: 'Adults' } }); };
-const open = async () => { render(<ProfessionalWorkspace api={bridge()} onSessionExpired={jest.fn()} />); await screen.findByRole('heading', { name: 'Draft with AI' }); };
+const open = async () => { render(<ProfessionalWorkspace api={bridge()} onSessionExpired={jest.fn()} />); fireEvent.click(await screen.findByRole('button', { name: 'Draft with AI' })); await screen.findByRole('heading', { level: 2, name: 'Draft with AI' }); };
 
 it('offers English, Urdu and Roman Urdu with 8 questions by default and needs topic and audience', async () => {
   await open();

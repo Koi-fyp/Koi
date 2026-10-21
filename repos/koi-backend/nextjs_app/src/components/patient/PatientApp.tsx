@@ -8,16 +8,18 @@ import { professionalApi, type ProfessionalApi } from '@/lib/platform/client';
 import { useAccessMonitor } from '@/lib/platform/access-monitor';
 import { useRecentAuthentication } from '@/components/professional/RecentAuthentication';
 import PatientWorkspace from './PatientWorkspace';
-function CareContent({ auth, expired, beforeMutation }: { auth: ReturnType<typeof useProfessionalAuth>; expired: () => void; beforeMutation: () => Promise<void> }) {
+function CareContent({ auth, expired, beforeMutation, generation }: { auth: ReturnType<typeof useProfessionalAuth>; expired: () => void; beforeMutation: () => Promise<void>; generation: number }) {
   const current = useRef(auth.currentUser), recent = useRef(beforeMutation);
   current.current = auth.currentUser; recent.current = beforeMutation;
-  const [api, setApi] = useState<ProfessionalApi | null>(null);
-  useEffect(() => { const client = professionalApi(auth.user!.uid, () => current.current(), fetch, () => recent.current()); setApi(client); return () => client.dispose(); }, [auth.user!.uid]);
-  return api ? <PatientWorkspace api={api} onDenied={expired} /> : <div role="status" className="professional-status"><span className="neo-spinner" aria-hidden="true" />Loading care access…</div>;
+  const [client, setClient] = useState<{ api: ProfessionalApi; generation: number } | null>(null);
+  // Rotate/abort requests on an authorization hint, but retain the workspace so
+  // it can reconcile relationship access before discarding an authorized draft.
+  useEffect(() => { const api = professionalApi(auth.user!.uid, () => current.current(), fetch, () => recent.current()); setClient({ api, generation }); return () => api.dispose(); }, [auth.user!.uid, generation]);
+  return client ? <PatientWorkspace api={client.api} accessReady={client.generation === generation} onDenied={expired} /> : <div role="status" className="professional-status"><span className="neo-spinner" aria-hidden="true" />Loading care access…</div>;
 }
 function Session({ auth, expired, beforeMutation }: { auth: ReturnType<typeof useProfessionalAuth>; expired: () => void; beforeMutation: () => Promise<void> }) {
   const access = useAccessMonitor(auth.user!.uid, auth.currentUser);
-  return access.ready ? <CareContent key={access.generation} auth={auth} expired={expired} beforeMutation={beforeMutation} /> : <NeoCard className="professional-card"><div role="status"><span className="neo-spinner" aria-hidden="true" /> Checking care access…</div><p>Care content stays locked while the access connection is unavailable. An existing registered General account is required.</p><NeoButton onClick={() => window.location.reload()}>Reconnect</NeoButton></NeoCard>;
+  return access.ready ? <CareContent generation={access.generation} auth={auth} expired={expired} beforeMutation={beforeMutation} /> : <NeoCard className="professional-card"><div role="status"><span className="neo-spinner" aria-hidden="true" /> Checking care access…</div><p>Care content stays locked while the access connection is unavailable. An existing registered General account is required.</p><NeoButton onClick={() => window.location.reload()}>Reconnect</NeoButton></NeoCard>;
 }
 export default function PatientApp() {
   const auth = useProfessionalAuth(), recent = useRecentAuthentication(auth.user?.uid ?? null, auth.currentUser);

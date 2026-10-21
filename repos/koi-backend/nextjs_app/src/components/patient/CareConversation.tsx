@@ -7,7 +7,7 @@ import type { ProfessionalApi } from '@/lib/platform/client';
 import type { Page } from '@/lib/platform/patient-types';
 import type { Appointment, HumanMessage } from '@/lib/platform/community-types';
 
-export default function CareConversation({ api, relationshipId, professional = false, onError }: { api: ProfessionalApi; relationshipId: string; professional?: boolean; onError: (error: unknown) => void }) {
+export default function CareConversation({ api, relationshipId, professional = false, onError, mode = 'all' }: { mode?: 'all' | 'appointments'; api: ProfessionalApi; relationshipId: string; professional?: boolean; onError: (error: unknown) => void }) {
   const [messages, setMessages] = useState<HumanMessage[]>([]), [appointments, setAppointments] = useState<Appointment[]>([]);
   const [cursors, setCursors] = useState<Record<string, string | null>>({}), [body, setBody] = useState(''), [start, setStart] = useState(''), [end, setEnd] = useState('');
   const [busy, setBusy] = useState(false), [loaded, setLoaded] = useState(false), [error, setError] = useState('');
@@ -26,13 +26,13 @@ export default function CareConversation({ api, relationshipId, professional = f
     const dates = state === 'proposed' ? { starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString() } : {};
     await api.request(`/api/v1/appointments/${a.id}/transition`, 'POST', { expected_revision: a.revision, to_state: state, ...dates }); await load('appointments');
   });
-  return <NeoCard className="professional-card"><h3>Messages and appointments</h3><p>This human conversation is separate from your KOI companion. It is not an emergency support service.</p>
+  return <NeoCard className="professional-card"><h3>{mode === 'appointments' ? 'Appointments' : 'Messages and appointments'}</h3><p>This human conversation is separate from your KOI companion. It is not an emergency support service.</p>
     {busy && <p role="status"><span className="neo-spinner" aria-hidden="true" />Loading…</p>}{error && <p role="alert">{error}</p>}
-    {loaded && !messages.length && <p>No messages yet.</p>}
+    <div hidden={mode === 'appointments'} className="professional-stack">{loaded && !messages.length && <p>No messages yet.</p>}
     {[...messages].sort((a, b) => a.created_at.localeCompare(b.created_at)).map(m => <div className="professional-question" key={m.id}><p>{m.sender_uid} · <time dateTime={m.created_at}>{new Date(m.created_at).toLocaleString()}</time></p><p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{m.body}</p></div>)}
     {cursors.messages && <NeoButton disabled={busy} onClick={() => void run(() => load('messages', cursors.messages!))}>More messages</NeoButton>}
     <form onSubmit={e => { e.preventDefault(); void run(async () => { await api.request('/api/v1/messages', 'POST', { relationship_id: relationshipId, body }); if (alive.current) setBody(''); await load('messages'); }); }} className="professional-stack"><label>Message<textarea className="neo-input" value={body} maxLength={4000} required onChange={e => setBody(e.target.value)} /></label><NeoButton type="submit" disabled={busy || !body.trim()}>Send message</NeoButton></form>
-    <h4>Appointments</h4>{loaded && !appointments.length && <p>No appointments yet.</p>}
+    </div><h4>Appointments</h4>{loaded && !appointments.length && <p>No appointments yet.</p>}
     {!professional && <NeoButton disabled={busy} onClick={() => void run(async () => { await api.request('/api/v1/appointments', 'POST', { relationship_id: relationshipId }); await load('appointments'); })}>Request appointment</NeoButton>}
     {professional && <div className="professional-row"><NeoInput aria-label="Proposed start time" label="Proposed start (local time)" type="datetime-local" value={start} onChange={e => setStart(e.target.value)} /><NeoInput aria-label="Proposed end time" label="Proposed end (local time)" type="datetime-local" value={end} onChange={e => setEnd(e.target.value)} /></div>}
     {appointments.map(a => <div className="professional-question" key={a.id}><p>{a.state}{a.starts_at && ` · ${new Date(a.starts_at).toLocaleString()} – ${new Date(a.ends_at!).toLocaleString()}`}</p><div className="professional-row">

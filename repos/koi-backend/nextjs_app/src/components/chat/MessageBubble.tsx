@@ -20,7 +20,7 @@ export default function MessageBubble({ message, showAvatar = false }: MessageBu
       data-sender={message.sender}
       className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} px-4 py-2 animate-[koiSlideIn_0.25s_cubic-bezier(0.34,1.56,0.64,1)_both]`}
     >
-      <div className="flex gap-2 items-end max-w-[82%]">
+      <div className="flex gap-2 items-end min-w-0 max-w-[min(82%,42rem)]">
         {!isUser && (
           <div className="w-9 h-9 flex-shrink-0">
             {showAvatar && (
@@ -32,9 +32,10 @@ export default function MessageBubble({ message, showAvatar = false }: MessageBu
         )}
 
         <motion.div
+          dir="auto"
           whileTap={{ x: isUser ? 5 : 0, y: isUser ? 5 : 0, scale: 0.995 }}
           className={
-            `p-3 border-[2px] border-black rounded-[15px] text-sm leading-6 break-words font-[var(--font-body)] ` +
+            `min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere] p-3 border-[2px] border-black rounded-[15px] text-sm leading-6 break-words font-[var(--font-body)] ` +
             (isUser
               ? 'bg-[#3B82F6] text-black hard-shadow'
               : 'glass-white text-black hard-shadow-cyan')

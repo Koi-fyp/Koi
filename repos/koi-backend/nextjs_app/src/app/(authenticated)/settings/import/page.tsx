@@ -6,22 +6,21 @@ import BackupPreview from '@/components/data-portability/BackupPreview';
 export default function ImportPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F9F9F9 0%, #FAFAFA 100%)' }}>
-      <div style={{ padding: '1.5rem', maxWidth: '480px', margin: '0 auto' }}>
+      <div className="mx-auto w-full max-w-6xl p-6 lg:px-8">
         <BackButton />
-        <BackupPreview />
 
         {/* Coming Soon Hero */}
         <div
+          className="text-center lg:text-left"
           style={{
-            textAlign: 'center',
-            padding: '3rem 1rem',
+            padding: '0.5rem 0 1rem',
             animation: 'fadeUp 0.6s ease both',
           }}
         >
           <div
             style={{
               fontSize: '5rem',
-              marginBottom: '1.5rem',
+              marginBottom: '0.75rem',
               animation: 'floatY 3s ease-in-out infinite',
               filter: 'grayscale(0.3)',
             }}
@@ -60,19 +59,22 @@ export default function ImportPage() {
           </div>
 
           <p
+            className="max-w-3xl mx-auto lg:mx-0"
             style={{
               fontSize: '1rem',
               color: '#666',
               lineHeight: 1.7,
-              maxWidth: '360px',
-              margin: '0 auto 2rem',
+              marginBottom: '0.5rem',
               animation: 'fadeUp 0.6s ease 0.3s both',
             }}
           >
-            Only versioned KOI backup JSON is planned for restoration. The preview above does not restore records. PDF reports, ordinary JSON and other documents are not restorable backups.
+            Only versioned KOI backup JSON is planned for restoration. The read-only preview does not restore records. PDF reports, ordinary JSON and other documents are not restorable backups.
           </p>
         </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 items-start">
+        <div className="min-w-0 [&>section]:mt-0"><BackupPreview /></div>
+        <section className="min-w-0" aria-label="Import requirements and limitations">
         {/* Feature Preview Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
           {[
@@ -156,6 +158,9 @@ export default function ImportPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        </section>
         </div>
 
         {/* Notification Card */}
