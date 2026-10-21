@@ -1,2 +1,3 @@
 import ProfessionalApp from '@/components/professional/ProfessionalApp';
-export default function ProfessionalPage() { return <ProfessionalApp />; }
+import { FeedbackProviders } from '@/components/ui/feedback';
+export default function ProfessionalPage() { return <FeedbackProviders><ProfessionalApp /></FeedbackProviders>; }

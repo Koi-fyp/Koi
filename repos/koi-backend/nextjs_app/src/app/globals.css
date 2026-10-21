@@ -722,3 +722,42 @@ select.neo-input {
 @media (prefers-reduced-motion: reduce) {
   .environment-background { transition: none; }
 }
+/* Page frame: scroll buttons, themed confirmation dialog and snackbars (KOI Neo). */
+.koi-scroll-buttons {
+  position: fixed; right: max(1rem, env(safe-area-inset-right)); z-index: 55;
+  /* Sits above chat composers, the message toast and mobile bottom bars. */
+  bottom: calc(7rem + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: .5rem;
+}
+.koi-scroll-button {
+  width: 44px; height: 44px; border: 3px solid var(--neo-black); border-radius: 999px;
+  background: var(--neo-yellow); box-shadow: var(--shadow-sm); font-weight: 800; font-size: 1.1rem; cursor: pointer;
+}
+.koi-scroll-button:hover { transform: translate(-1px, -1px); box-shadow: var(--shadow-md); }
+.koi-scroll-button:focus-visible { outline: 3px solid var(--neo-blue); outline-offset: 2px; }
+.koi-dialog-backdrop {
+  position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, .45);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.koi-dialog {
+  width: min(460px, 100%); background: var(--neo-white); color: var(--neo-black);
+  border: 3px solid var(--neo-black); border-radius: 1rem; box-shadow: var(--shadow-lg); padding: 1.25rem;
+  display: flex; flex-direction: column; gap: .75rem;
+}
+.koi-dialog h2 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; }
+.koi-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
+.koi-snackbar-region {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 80;
+  bottom: calc(1rem + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: .5rem;
+  width: min(420px, calc(100vw - 2rem)); pointer-events: none;
+}
+.koi-snackbar {
+  pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  border: 3px solid var(--neo-black); border-radius: .75rem; box-shadow: var(--shadow-md); padding: .6rem .9rem; font-weight: 700;
+}
+.koi-snackbar--success { background: #E7F8EE; }
+.koi-snackbar--error { background: #FFE9E9; }
+.koi-snackbar-dismiss { border: 0; background: transparent; font-size: 1.25rem; cursor: pointer; min-width: 32px; min-height: 32px; }
+@media (prefers-reduced-motion: reduce) {
+  .koi-scroll-button:hover { transform: none; }
+}

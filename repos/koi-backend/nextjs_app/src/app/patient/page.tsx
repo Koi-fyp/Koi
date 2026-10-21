@@ -1,2 +1,3 @@
 import PatientApp from '@/components/patient/PatientApp';
-export default function PatientPage() { return <PatientApp />; }
+import { FeedbackProviders } from '@/components/ui/feedback';
+export default function PatientPage() { return <FeedbackProviders><PatientApp /></FeedbackProviders>; }

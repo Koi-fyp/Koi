@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useCareReveal } from './care-focus';
 import { revealCareElement } from './care-focus';
+import ScrollButtons from '@/components/ui/ScrollButtons';
 
 export interface WorkspaceView { id: string; label: string; description: string; anchor?: string }
 export const professionalViews: WorkspaceView[] = [
@@ -101,5 +102,6 @@ export default function WorkspaceFrame({ base, views, view, children, secondaryV
       <a href="/account">{base === '/patient' ? 'Account & Access' : 'Account & access'}</a>
     </nav>
     <div className="care-content"><header className="care-view-heading"><h1 id="workspace-heading" tabIndex={-1}>{selected?.label ?? 'Care workspace'}</h1><p className="professional-muted">{selected?.description}</p></header>{children}</div>
+    <ScrollButtons />
   </div>;
 }
