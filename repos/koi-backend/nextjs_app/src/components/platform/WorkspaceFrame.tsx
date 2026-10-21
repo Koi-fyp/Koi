@@ -84,7 +84,9 @@ export function workspaceHref(base: string, view: WorkspaceView, contextParams: 
   const params = new URLSearchParams({ ...contextParams, view: view.id });
   return `${base}?${params}${view.anchor ? `#${view.anchor}` : ''}`;
 }
-export default function WorkspaceFrame({ base, views, view, children, secondaryViews = [], workspaceLabel, contextParams = {} }: { base: string; views: WorkspaceView[]; view: string; children: ReactNode; secondaryViews?: WorkspaceView[]; workspaceLabel?: string; contextParams?: Record<string, string> }) {
+/** Role names shown to people; the role itself always comes from server capabilities. */
+export type WorkspaceRole = 'General User' | 'Patient' | 'Psychologist';
+export default function WorkspaceFrame({ base, views, view, children, secondaryViews = [], workspaceLabel, contextParams = {}, role }: { base: string; views: WorkspaceView[]; view: string; children: ReactNode; secondaryViews?: WorkspaceView[]; workspaceLabel?: string; contextParams?: Record<string, string>; role?: WorkspaceRole }) {
   const selected = [...views, ...secondaryViews].find(v => v.id === view);
   useCareReveal('workspace-heading', view);
   const unread = useUnreadState().notices, counts: Record<string, number> = { messages: unreadMessageNotices(unread).length, notifications: unreadOtherNotices(unread).length };
@@ -101,12 +103,12 @@ export default function WorkspaceFrame({ base, views, view, children, secondaryV
     }
   }}>
     <nav className="care-sidebar" aria-label={base === '/professional' ? 'Practice navigation' : 'Care navigation'}>
-      <p className="professional-label">{workspaceLabel ?? 'KOI Care'}</p>
+      <p className={role ? 'care-role-badge' : 'professional-label'}>{workspaceLabel ?? 'KOI Care'}</p>
       {views.map(item => <a key={item.id} href={workspaceHref(base, item, contextParams)} aria-current={view === item.id ? 'page' : undefined}>{label(item)}</a>)}
       {secondaryViews.length > 0 && <details className="care-disclosure" open={secondaryViews.some(item => item.id === view) || undefined}><summary>Additional care options</summary>{secondaryViews.map(item => <a key={item.id} href={workspaceHref(base, item, contextParams)} aria-current={view === item.id ? 'page' : undefined}>{item.label}</a>)}</details>}
       <a href="/account">{base === '/patient' ? 'Account & Access' : 'Account & access'}</a>
     </nav>
-    <div className="care-content"><header className="care-view-heading"><h1 id="workspace-heading" tabIndex={-1}>{selected?.label ?? 'Care workspace'}</h1><p className="professional-muted">{selected?.description}</p></header>{children}</div>
+    <div className="care-content"><header className="care-view-heading">{role && <p className="care-role-badge" data-role={role}><span className="sr-only">Your role: </span>{role}</p>}<h1 id="workspace-heading" tabIndex={-1}>{selected?.label ?? 'Care workspace'}</h1><p className="professional-muted">{selected?.description}</p></header>{children}</div>
     <ScrollButtons />
   </div>;
 }

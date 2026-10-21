@@ -134,7 +134,7 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
   if (phase === 'loading') return <WorkspaceLoading />;
   if (phase === 'denied') return <NeoCard className="professional-card"><h1>Practice access required</h1><p>This workspace is available to approved psychologists with an active practice membership. A general or anonymous KOI session does not grant access.</p><NeoButton onClick={() => void access(true)}>Check access again</NeoButton></NeoCard>;
   if (phase === 'unavailable') return <NeoCard className="professional-card"><h1>Workspace unavailable</h1><p role="alert">The practice service is not ready or could not be reached. No example practice or saved form has been substituted.</p><NeoButton onClick={() => { setPhase('loading'); void access(true); }}>Retry workspace</NeoButton></NeoCard>;
-  return <WorkspaceFrame base="/professional" views={professionalViews} view={view}>
+  return <WorkspaceFrame base="/professional" views={professionalViews} view={view} role="Psychologist" workspaceLabel="Psychologist Dashboard">
     {orgName && <p className="professional-badge">{orgName}</p>}
     {error && <p role="alert" className="professional-error">{error}</p>}
     {(view === 'messages' || visitedViews.includes('messages')) && <section id="messages" hidden={view !== 'messages'}><MessagesScreen api={api} role="professional" organizationId={org} active={view === 'messages'} selectedPatient={selectedPatient} selectedRelationshipId={requestedRelationship} onSelectRelationship={id => navigateWorkspace(`/professional?view=messages${id ? `&relationship=${encodeURIComponent(id)}` : ''}#messages`)} onError={handleError} /></section>}

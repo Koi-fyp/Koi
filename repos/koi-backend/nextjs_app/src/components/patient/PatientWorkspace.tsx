@@ -14,7 +14,8 @@ import CareNotifications from './CareNotifications';
 import QuestionnaireRunner from './QuestionnaireRunner';
 import MessagesScreen from '@/components/messaging/MessagesScreen';
 import CareLink from '@/components/platform/CareLink';
-import { useConfirmedAction } from '@/components/ui/feedback';
+import { useConfirmedAction, useSnackbar } from '@/components/ui/feedback';
+import ApplicationTimeline from './ApplicationTimeline';
 import { hasPatientAccess, applicationLabel } from '@/lib/platform/care-state';
 import { revealCareElement } from '@/components/platform/care-focus';
 import WorkspaceFrame, { generalViews, patientViews, useWorkspaceView, useWorkspaceSearchParam, navigateWorkspace } from '@/components/platform/WorkspaceFrame';
@@ -30,7 +31,8 @@ export default function PatientWorkspace({ api, onDenied, accessReady = true }: 
   const [invite, setInvite] = useState(''), [consent, setConsent] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('');
   const alive = useRef(true), working = useRef(false), currentApi = useRef(api), epoch = useRef(0), previousAccess = useRef<CapabilitiesDTO | null>(null);
   currentApi.current = api;
-  const ask = useConfirmedAction();
+  const ask = useConfirmedAction(), snackbar = useSnackbar(), expertName = useRef<Record<string, string>>({});
+  if (selectedExpert) expertName.current[selectedExpert.id] = selectedExpert.display_name;
   const [verifiedApi, setVerifiedApi] = useState<ProfessionalApi | null>(null), [verifying, setVerifying] = useState(true), [ended, setEnded] = useState(false), [required, setRequired] = useState(false);
   const confirmed = accessReady && verifiedApi === api && !verifying;
   const current = (client: ProfessionalApi, revision: number) => alive.current && currentApi.current === client && epoch.current === revision;
@@ -69,6 +71,10 @@ export default function PatientWorkspace({ api, onDenied, accessReady = true }: 
     if (before && hasPatientAccess(before) && !patient) { setEnded(true); replaceHome(); }
     if (patient) {
       setEnded(false); setRequired(false);
+      if (before && !hasPatientAccess(before)) {
+        const added = access.active_patient_relationships.find(r => !before.active_patient_relationships.some(old => old.relationship_id === r.relationship_id)) ?? access.active_patient_relationships[0];
+        snackbar.success(`You are now a patient of ${expertName.current[added.psychologist_uid] ?? `psychologist ${added.psychologist_uid}`}`);
+      }
       if (before && !hasPatientAccess(before) && ['home', 'applications'].includes(new URLSearchParams(window.location.search).get('view') ?? 'home')) replaceHome();
     }
     previousAccess.current = access;
@@ -100,7 +106,7 @@ export default function PatientWorkspace({ api, onDenied, accessReady = true }: 
   if (confirmed && (caps.account_state !== 'registered' || !caps.capabilities.expert_directory)) return <NeoCard className="professional-card"><h1>General account registration required</h1><p>Use an existing server-registered General account to accept invitations or apply to a practice. Public self-registration is not available. Sign in with an existing registered KOI Care account.</p></NeoCard>;
   const views = confirmed ? patient ? patientViews.filter(v => !['experts', 'applications', 'become-psychologist'].includes(v.id)) : generalViews : [];
   const secondaryViews = confirmed && patient ? generalViews.filter(v => ['experts', 'applications', 'become-psychologist'].includes(v.id)) : [];
-  return <WorkspaceFrame contextParams={selectedId ? { psychologist: selectedId } : {}} base="/patient" views={views} secondaryViews={secondaryViews} view={view} workspaceLabel={confirmed ? patient ? 'Patient Dashboard' : 'General User Dashboard' : 'Checking care access'}>
+  return <WorkspaceFrame contextParams={selectedId ? { psychologist: selectedId } : {}} base="/patient" views={views} secondaryViews={secondaryViews} view={view} role={confirmed ? patient ? 'Patient' : 'General User' : undefined} workspaceLabel={confirmed ? patient ? 'Patient Dashboard' : 'General User Dashboard' : 'Checking care access'}>
     {!confirmed && <p role="status">Confirming your care permissions... {error}</p>}
     {confirmed && ended && <p role="status" className="professional-question">Your previous care relationship has ended. You can continue using KOI Care to find a psychologist.</p>}
     {confirmed && required && !patient && <p role="status">Active care relationship required. Find a psychologist or accept a practice invitation to access patient tools.</p>}
@@ -111,7 +117,7 @@ export default function PatientWorkspace({ api, onDenied, accessReady = true }: 
       <NeoCard className="professional-card"><h2>Your care is active</h2>{caps.active_patient_relationships.map(r => <div className="professional-question" key={r.relationship_id}><p><strong>Connected psychologist</strong></p><p>Psychologist account: {r.psychologist_uid}</p></div>)}<div className="care-account-actions"><CareLink variant="primary" href="/patient?view=care#care">My Psychologist</CareLink><CareLink variant="secondary" href="/patient?view=messages#messages">Open care messages</CareLink></div></NeoCard>
       <NeoCard className="professional-card"><h2>Your questionnaires</h2><p>{assignmentsLoaded ? <>{items.filter(item => item.state !== 'submitted').length} awaiting completion in loaded assignments.</> : 'Loading your assignments...'}</p>{items.slice(0, 3).map(item => <p key={item.id}>{item.title.en ?? item.title.ur ?? item.title['ur-Latn']}</p>)}{assignmentsLoaded && !items.length && <p>Your psychologist will assign questionnaires here when ready.</p>}<CareLink variant="primary" href="/patient?view=questionnaires#questionnaires">Open assigned questionnaires</CareLink></NeoCard>
       <NeoCard className="professional-card"><h2>Appointments & updates</h2><p>Manage appointment requests and check care notifications. Requests are confirmed only through the existing appointment workflow.</p><div className="care-account-actions"><CareLink variant="secondary" href="/patient?view=appointments">Manage appointments</CareLink><CareLink variant="secondary" href="/patient?view=notifications#notifications">Check notifications</CareLink></div></NeoCard>
-    </div> : <div className="professional-grid"><NeoCard className="professional-card"><h2>Start your care journey</h2><p>Find a psychologist or accept a practice invitation. Your registered account stays the same when care access becomes active.</p><CareLink variant="primary" href="/patient?view=experts#experts">Find a Psychologist</CareLink></NeoCard><NeoCard className="professional-card"><h2>Practice applications</h2><p>Track applications and complete the demo step when requested. Patient tools become available only after the server confirms an active care relationship.</p><div className="care-account-actions"><CareLink variant="secondary" href="/patient?view=applications#applications">My Applications</CareLink><CareLink href="/patient?view=notifications#notifications">Check notifications</CareLink></div></NeoCard></div>)}
+    </div> : <div className="professional-grid"><NeoCard className="professional-card" aria-labelledby="general-unlocks"><h2 id="general-unlocks">What unlocks after acceptance</h2><p>As a General User you can find a psychologist, apply to a practice and follow your application.</p><p><strong>Questionnaires, Messages and Appointments appear after acceptance.</strong> They unlock once a practice accepts your application and the server confirms an active care relationship.</p></NeoCard><NeoCard className="professional-card"><h2>Start your care journey</h2><p>Find a psychologist or accept a practice invitation. Your registered account stays the same when care access becomes active.</p><CareLink variant="primary" href="/patient?view=experts#experts">Find a Psychologist</CareLink></NeoCard><NeoCard className="professional-card"><h2>Practice applications</h2><p>Track applications and complete the demo step when requested. Patient tools become available only after the server confirms an active care relationship.</p><div className="care-account-actions"><CareLink variant="secondary" href="/patient?view=applications#applications">My Applications</CareLink><CareLink href="/patient?view=notifications#notifications">Check notifications</CareLink></div></NeoCard></div>)}
     {(view === 'experts' || visitedExperts) && <section id="experts" hidden={!confirmed || view !== 'experts'}><ExpertDirectory active={confirmed && view === 'experts'} api={api} onChoose={expert => {
       setSelectedExpert(expert);
       navigateWorkspace(`/patient?view=applications&psychologist=${encodeURIComponent(expert.id)}#practice-application`);
@@ -135,6 +141,7 @@ export default function PatientWorkspace({ api, onDenied, accessReady = true }: 
       </div></details>
     </div>
     <NeoCard className="professional-card"><h2 id="applications">Applications</h2>{!connections.length && <p>No applications yet. Choose an expert and apply, or use a practice invitation.</p>}{connections.map(c => <div className="professional-question" key={c.id}><p>{selectedExpert?.id === c.psychologist_uid ? selectedExpert.display_name : c.psychologist_uid} — <span className="professional-badge">{applicationLabel(c, caps)}</span></p>
+      <ApplicationTimeline state={c.state} />
       {c.state === 'pending_psychologist_review' && <p>Your demo step is complete. The practice will accept or decline your application. Check notifications for updates.</p>}
       {c.state === 'accepted' && !caps.active_patient_relationships.some(r => r.organization_id === c.organization_id && r.psychologist_uid === c.psychologist_uid) && <p>This application was accepted previously. No active care relationship is currently available for this practice. Application history does not grant patient access.</p>}
       {c.state === 'requested' && <NeoButton disabled={busy} onClick={() => void run(async () => { await api.request(`/api/v1/connection-requests/${c.id}/transition`, 'POST', { expected_revision: c.revision, to_state: 'awaiting_demo_payment' }); await loadRequests(); })}>Continue application</NeoButton>}
