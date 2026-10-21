@@ -1,7 +1,7 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { AccountRecord, CapabilitiesDTO, DraftDTO, DraftListDTO, ManualContent, MembershipRecord, OrganizationDTO, VerificationRecord, VersionDTO } from '../types';
-import { checkManualContent, checkSchema, hash } from './contract';
+import { checkDraftContent, checkManualContent, checkSchema, hash } from './contract';
 import { conflict, denied, invalid, notFound, PlatformError } from './errors';
 import type { PlatformStore, PlatformTransaction } from './store';
 
@@ -111,7 +111,7 @@ export class PlatformService {
     });
   }
   async createDraft(actor: Actor, body: unknown, key: string): Promise<DraftDTO> {
-    this.fresh(actor); checkSchema<{ organization_id: string; content: ManualContent }>('CreateQuestionnaireRequest', body); checkManualContent(body.content);
+    this.fresh(actor); checkSchema<{ organization_id: string; content: ManualContent }>('CreateQuestionnaireRequest', body); checkDraftContent(body.content);
     const operation = 'createQuestionnaire', resource = body.organization_id, receiptId = this.key(actor, operation, resource, key), at = this.time();
     return this.store.transaction(async tx => {
       await this.authority(tx, actor, body.organization_id);
@@ -136,14 +136,39 @@ export class PlatformService {
     return this.store.transaction(async tx => this.output('QuestionnaireDraftDTO', draftDTO(await this.scopedDraft(tx, actor, id))));
   }
   async updateDraft(actor: Actor, id: string, body: unknown, key: string): Promise<DraftDTO> {
-    this.fresh(actor); checkSchema('Id', id); checkSchema<{ expected_revision: number; content: ManualContent }>('UpdateQuestionnaireRequest', body); checkManualContent(body.content);
+    this.fresh(actor); checkSchema('Id', id); checkSchema<{ expected_revision: number; content: ManualContent }>('UpdateQuestionnaireRequest', body); checkDraftContent(body.content);
     const operation = 'updateQuestionnaire', receiptId = this.key(actor, operation, id, key), at = this.time();
     return this.store.transaction(async tx => {
       const current = await this.scopedDraft(tx, actor, id);
       const old = await this.receipt<DraftDTO>(tx, receiptId, actor, operation, id, body);
       if (old) return this.output('QuestionnaireDraftDTO', draftDTO(old));
       if (current.revision !== body.expected_revision) throw conflict();
+      // Origin only changes through confirmAiDraftReview; the browser cannot flip it by saving.
+      if (current.content.origin !== body.content.origin) throw invalid();
       const result: DraftDTO = { id: current.id, organization_id: current.organization_id, psychologist_uid: actor.uid, revision: current.revision + 1, content: body.content, created_at: current.created_at, updated_at: at };
+      tx.set('questionnaires', id, result);
+      this.record(tx, receiptId, actor, operation, id, body, result, at, result.organization_id);
+      return this.output('QuestionnaireDraftDTO', result);
+    });
+  }
+  /** Gate for AI drafting: recent sign-in plus an active, verified psychologist account. */
+  async authorizeAiDraft(actor: Actor): Promise<void> {
+    this.fresh(actor);
+    await this.store.transaction(async tx => { await this.authority(tx, actor); return true; });
+  }
+  /** Server-side "I reviewed this draft": ai_drafted -> manual on the caller's own draft, audited. */
+  async confirmAiDraftReview(actor: Actor, id: string, body: unknown, key: string): Promise<DraftDTO> {
+    this.fresh(actor); checkSchema('Id', id);
+    const fields = body && typeof body === 'object' && !Array.isArray(body) ? Object.keys(body) : [];
+    const revision = (body as { expected_revision?: unknown } | null)?.expected_revision;
+    if (fields.length !== 1 || fields[0] !== 'expected_revision' || !Number.isSafeInteger(revision) || (revision as number) < 1) throw invalid();
+    const operation = 'confirmAiDraftReview', receiptId = this.key(actor, operation, id, key), at = this.time();
+    return this.store.transaction(async tx => {
+      const current = await this.scopedDraft(tx, actor, id);
+      const old = await this.receipt<DraftDTO>(tx, receiptId, actor, operation, id, body);
+      if (old) return this.output('QuestionnaireDraftDTO', draftDTO(old));
+      if (current.revision !== revision || current.content.origin !== 'ai_drafted') throw conflict();
+      const result: DraftDTO = { ...draftDTO(current), revision: current.revision + 1, content: { ...current.content, origin: 'manual' }, updated_at: at };
       tx.set('questionnaires', id, result);
       this.record(tx, receiptId, actor, operation, id, body, result, at, result.organization_id);
       return this.output('QuestionnaireDraftDTO', result);

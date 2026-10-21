@@ -8,6 +8,7 @@ import { contentIssues, emptyContent } from '@/lib/platform/content';
 import { PlatformClientError, type ProfessionalApi } from '@/lib/platform/client';
 import type { CapabilitiesDTO, DraftDTO, DraftListDTO, ManualContent, OrganizationDTO, VersionDTO } from '@/lib/platform/types';
 import QuestionnaireEditor from './QuestionnaireEditor';
+import AiDraftPanel, { AiReviewBanner, type AiProvenance } from './AiDraftPanel';
 import PublishedQuestionnaire from './PublishedQuestionnaire';
 import PatientManagement from './PatientManagement';
 
@@ -22,7 +23,7 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
   const [draft, setDraft] = useState<DraftDTO | null>(null), [content, setContent] = useState<ManualContent | null>(null);
   const [version, setVersion] = useState<VersionDTO | null>(null), [inspectRevision, setInspectRevision] = useState(1);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
-  const [issues, setIssues] = useState<string[]>([]);
+  const [issues, setIssues] = useState<string[]>([]), [aiInfo, setAiInfo] = useState<AiProvenance | null>(null);
   const [showPatients, setShowPatients] = useState(false);
   useEffect(() => { const view = new URLSearchParams(window.location.search).get('view'); if (view && view !== 'questionnaires') setShowPatients(true); }, []);
   const busyRef = useRef(false), alive = useRef(true);
@@ -80,8 +81,19 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
   const openDraft = async (id: string) => {
     const saved = await api.request<DraftDTO>(`/api/v1/professional/questionnaires/${encodeURIComponent(id)}`);
     if (!alive.current) return;
-    setDraft(saved); setContent(saved.content); setVersion(null); setIssues([]); setInspectRevision(saved.revision);
+    setDraft(saved); setContent(saved.content); setVersion(null); setIssues([]); setInspectRevision(saved.revision); setAiInfo(null);
   };
+  const loadAiDraft = (next: ManualContent, provenance: AiProvenance) => {
+    if (!discard()) return;
+    setDraft(null); setContent(next); setAiInfo(provenance); setVersion(null); setIssues([]); setError(''); setMessage('AI draft loaded. It is not saved yet.');
+  };
+  const buildManually = () => { if (discard()) { setDraft(null); setContent(emptyContent()); setAiInfo(null); setVersion(null); setIssues([]); setError(''); setMessage(''); } };
+  const confirmReview = () => run(async () => {
+    if (!draft || dirty) return;
+    const saved = await api.request<DraftDTO>(`/api/v1/professional/questionnaires/${draft.id}/confirm-review`, 'POST', { expected_revision: draft.revision });
+    if (!alive.current) return;
+    setDraft(saved); setContent(saved.content); setInspectRevision(saved.revision); setAiInfo(null); setMessage(`Review confirmed. Revision ${saved.revision} can now be published.`); if (org) await loadList(org);
+  });
   const save = () => run(async () => {
     if (!content || !org) return;
     const found = contentIssues(content); setIssues(found);
@@ -104,17 +116,19 @@ export default function ProfessionalWorkspace({ api, onSessionExpired }: { api: 
         setOrg(result.id); setOrgName(result.name); setMessage('Organization created.'); await loadList(result.id);
       }); }}><NeoInput label="Organization name" aria-label="Organization name" value={organizationName} maxLength={160} required disabled={busy} onChange={event => setOrganizationName(event.target.value)} /><NeoButton type="submit" loading={busy} disabled={!organizationName.trim()}>Create organization</NeoButton></form>
     </NeoCard> : <>
-      <NeoCard className="professional-card"><div className="professional-row professional-between"><h2 id="professional-questionnaires">Your questionnaires</h2><NeoButton disabled={busy} onClick={() => { if (discard()) { setDraft(null); setContent(emptyContent()); setVersion(null); setIssues([]); setError(''); setMessage(''); } }}>New questionnaire</NeoButton></div>
+      <NeoCard className="professional-card"><div className="professional-row professional-between"><h2 id="professional-questionnaires">Your questionnaires</h2><NeoButton disabled={busy} onClick={() => { if (discard()) { setDraft(null); setContent(emptyContent()); setAiInfo(null); setVersion(null); setIssues([]); setError(''); setMessage(''); } }}>New questionnaire</NeoButton></div>
         {!items.length && <p className="professional-muted">No saved drafts yet. Create your first manual questionnaire.</p>}
         <ul className="professional-stack">{items.map(item => <li key={item.id} className="professional-row professional-between"><div><strong>{item.content.title[item.content.locales[0]]}</strong><p className="professional-muted">Draft revision {item.revision}</p></div><NeoButton variant="ghost" disabled={busy} onClick={() => { if (discard()) void run(() => openDraft(item.id)); }}>Open draft: {item.content.title[item.content.locales[0]]}</NeoButton></li>)}</ul>
         {cursor && <NeoButton variant="ghost" disabled={busy} onClick={() => void run(() => loadList(org, cursor))}>Load more questionnaires</NeoButton>}
       </NeoCard>
-      {content && <NeoCard className="professional-card" aria-busy={busy}><div className="professional-row professional-between"><h2>{draft ? `Edit draft · Revision ${draft.revision}` : 'New manual questionnaire'}</h2><span className="professional-muted">{dirty ? 'Unsaved changes' : 'Saved'}</span></div>
+      <AiDraftPanel api={api} disabled={busy} onDraft={loadAiDraft} onManual={buildManually} onSessionError={handleError} />
+      {content && <NeoCard className="professional-card" aria-busy={busy}><div className="professional-row professional-between"><h2>{draft ? `Edit draft · Revision ${draft.revision}` : content.origin === 'ai_drafted' ? 'New AI-assisted draft' : 'New manual questionnaire'}</h2><span className="professional-muted">{dirty ? 'Unsaved changes' : 'Saved'}</span></div>
+        {content.origin === 'ai_drafted' && <AiReviewBanner provenance={aiInfo} saved={!!draft && !dirty} busy={busy} onConfirm={() => void confirmReview()} />}
         <p className="professional-muted">Fill in every selected language before saving. Published versions always keep their original questions and pictures.</p>
         {issues.length > 0 && <ul role="alert" className="professional-error">{issues.map((issue, i) => <li key={i}>{issue}</li>)}</ul>}
         <QuestionnaireEditor content={content} disabled={busy} onChange={next => { setContent(next); setIssues([]); }} />
         <div className="professional-row"><NeoButton disabled={busy || !dirty} onClick={save}>Save draft</NeoButton>
-          {draft && <><NeoButton variant="secondary" disabled={busy || dirty} onClick={() => {
+          {draft && <><NeoButton variant="secondary" disabled={busy || dirty || content.origin === 'ai_drafted'} onClick={() => {
             if (!window.confirm('Publish this saved revision? Its published version cannot be edited.')) return;
             void run(async () => {
               const result = await api.request<VersionDTO>(`/api/v1/professional/questionnaires/${draft.id}/publish`, 'POST', { expected_revision: draft.revision, expected_content_sha256: await browserContentHash(draft.content) });

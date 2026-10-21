@@ -10,7 +10,7 @@ export interface Question {
 }
 export interface ManualContent {
   kind: 'custom_questionnaire'; validation_status: 'not_validated';
-  title: LocalizedText; locales: Locale[]; questions: Question[]; origin: 'manual';
+  title: LocalizedText; locales: Locale[]; questions: Question[]; origin: 'manual' | 'ai_drafted';
 }
 export interface OrganizationDTO { id: string; owner_uid: string; name: string; state: 'active' | 'suspended'; created_at: string }
 export interface DraftDTO {

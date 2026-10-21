@@ -17,9 +17,14 @@ export function checkSchema<T>(name: string, value: unknown): asserts value is T
   try { validate(compiled.get(name), { value }); canonicalJson(value); } catch { throw invalid(); }
 }
 export const hash = (value: unknown) => createHash('sha256').update(canonicalJson(value)).digest('hex');
-export function checkManualContent(value: unknown): asserts value is ManualContent {
+/** Save gate: manual or AI-drafted content. Publishing still requires checkManualContent. */
+export function checkDraftContent(value: unknown): asserts value is ManualContent {
   checkSchema<ManualContent>('CustomQuestionnaireContent', value);
   const content = value as ManualContent;
-  // WEB-1 implements manual content only. AI-generated drafts remain disconnected.
-  if (content.origin !== 'manual' || contentIssues(content).length || Buffer.byteLength(canonicalJson(content), 'utf8') > 400_000) throw invalid();
+  if (contentIssues(content).length || Buffer.byteLength(canonicalJson(content), 'utf8') > 400_000) throw invalid();
+}
+export function checkManualContent(value: unknown): asserts value is ManualContent {
+  checkDraftContent(value);
+  // Publishing requires a psychologist-reviewed (origin "manual") draft; "ai_drafted" is blocked here.
+  if ((value as ManualContent).origin !== 'manual') throw invalid();
 }
