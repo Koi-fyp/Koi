@@ -70,7 +70,7 @@ export default function AppointmentsBoard({ api, relationships, professional = f
             <NeoInput aria-label="Proposed start time" label="Proposed start (local time)" type="datetime-local" value={draft.start} aria-invalid={started && !!issues.start} aria-describedby={`${id}-${a.id}-start`} onChange={e => setDraft({ start: e.target.value })} />
             <NeoInput aria-label="Proposed end time" label="Proposed end (local time)" type="datetime-local" value={draft.end} aria-invalid={started && !!issues.end} aria-describedby={`${id}-${a.id}-end`} onChange={e => setDraft({ end: e.target.value })} />
           </div>
-          {started && <div className="professional-error"><p id={`${id}-${a.id}-start`}>{issues.start}</p><p id={`${id}-${a.id}-end`}>{issues.end}</p></div>}
+          {started && invalid && <div className="professional-error"><p id={`${id}-${a.id}-start`}>{issues.start}</p><p id={`${id}-${a.id}-end`}>{issues.end}</p></div>}
           <p className="professional-muted">Start must be in the future; the appointment lasts 10 to 240 minutes.</p>
         </div>}
         <div className="professional-row">

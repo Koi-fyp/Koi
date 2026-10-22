@@ -72,7 +72,7 @@ it('lets the psychologist propose on the request itself with inline validation',
   fireEvent.change(within(row).getByLabelText('Proposed end time'), { target: { value: local(110) } });
   expect(within(row).getByText('The end time must be after the start time.')).toBeInTheDocument(); expect(propose).toBeDisabled();
   fireEvent.change(within(row).getByLabelText('Proposed end time'), { target: { value: local(170) } });
-  expect(propose).toBeEnabled(); fireEvent.click(propose);
+  expect(propose).toBeEnabled(); expect(row.querySelector('.professional-error')).toBeNull(); fireEvent.click(propose);
   fireEvent.click(within(await screen.findByRole('alertdialog', { name: 'Propose this time?' })).getByRole('button', { name: 'Propose time' }));
   await screen.findByText('Time proposed');
   const post = request.mock.calls.find(([path]) => path === '/api/v1/appointments/a-mid/transition')!;

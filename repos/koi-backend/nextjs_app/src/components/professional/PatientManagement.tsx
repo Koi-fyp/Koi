@@ -67,6 +67,8 @@ export default function PatientManagement({ api, organizationId, publishedVersio
   };
   // "View submission" links from the dashboard open the review directly.
   useEffect(() => { if (active && view === 'submissions' && selectedSubmissionId && selectedSubmissionId !== submission) void inspect(selectedSubmissionId); }, [active, view, selectedSubmissionId]);
+  // A result message belongs to the view that produced it.
+  useEffect(() => { setMessage(''); }, [view]);
   const roster = patients.filter(p => p.patient_uid.toLocaleLowerCase().includes(search.toLocaleLowerCase()) && (stateFilter === 'all' || p.state === stateFilter));
   return <section className="professional-stack" aria-label="Practice patients and submissions">
     {error && <p role="alert" className="professional-error">{error}</p>}
@@ -78,7 +80,7 @@ export default function PatientManagement({ api, organizationId, publishedVersio
     {view === 'submissions' && <><SubmissionNotifications api={api} organizationId={organizationId} onInspect={inspect} onError={failure} />
       <NeoCard className="professional-card"><h2 id="submissions">Submitted questionnaires</h2>
         {!submissions.length && <p>No submissions yet. Assigned questionnaires appear here after a patient submits their answers.</p>}
-        {submissions.map(s => <div key={s.id} className="professional-row professional-between"><span>{s.patient_uid} · {new Date(s.submitted_at).toLocaleString()}</span><NeoButton disabled={busy} onClick={() => inspect(s.id)}>Inspect submission</NeoButton></div>)}
+        {[...submissions].sort((a, b) => Date.parse(b.submitted_at) - Date.parse(a.submitted_at)).map(s => <div key={s.id} className="professional-row professional-between"><span>{s.patient_uid} · {new Date(s.submitted_at).toLocaleString()}</span><NeoButton disabled={busy} onClick={() => inspect(s.id)}>Inspect submission</NeoButton></div>)}
         {cursors.submissions && <NeoButton onClick={() => void run(() => load('submissions', cursors.submissions!))}>More submissions</NeoButton>}
       </NeoCard></>}
     {view === 'appointments' && selectedRelationshipId && !conversation && patients.length > 0 && <p role="status">This patient is not available for appointments in the loaded active roster.</p>}
